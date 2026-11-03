@@ -4,7 +4,7 @@
 
 ## Atomic reservation and owned ledger
 
-A `DurableState` adapter must transact a unique creation intent, immutable binding (tenant, agent, project, task), canonical argument fingerprint, server-derived absolute expiry, resource ceiling and integer smallest-currency worst-case reservation **before** the first side effect. Persist every deterministic child target or provider idempotency key before its creation. Account for storage, egress, retries, minimum billable periods and delayed teardown. A caller-supplied spend limit is not a cost model. Unknown/unbounded worst-case cost refuses creation.
+A `DurableState` adapter must transact a unique creation intent, immutable binding (tenant, agent, project, task), canonical argument fingerprint and immutable artifact digest, server-derived absolute expiry, resource ceiling and integer smallest-currency worst-case reservation **before** the first side effect. Persist every deterministic child target or provider idempotency key before its creation. Account for storage, egress, retries, minimum billable periods and delayed teardown. A caller-supplied spend limit is not a cost model. Unknown/unbounded worst-case cost refuses creation.
 
 Reservations are global across processes sharing the budget domain, not counters local to one worker. Lock/transaction/CAS the aggregate count and outstanding cost together with creation. Do not expire budget holds merely because the lease time passed: an expired resource may still incur costs. Pending/ambiguous resources retain the whole reservation until reconciliation and verified deletion. Stop provisioning when cleanup or budget health is unavailable. Define overflow-safe totals, currency, billing window, reconciliation and incident behavior per service.
 

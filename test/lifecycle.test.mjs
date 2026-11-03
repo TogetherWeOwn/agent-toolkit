@@ -63,7 +63,7 @@ for (const ttl of [1, 60]) {
 }
 test('atomic budget and count caps across processes', async t => {
   const f = fixture(t);
-  const input = { binding: demoBinding, now: 1000, expiresAt: 61000, worstCaseMinor: 50, limits: demoLimits, fingerprint: hash(provision()) };
+  const input = { binding: demoBinding, now: 1000, expiresAt: 61000, worstCaseMinor: 50, limits: demoLimits, fingerprint: hash(provision()), artifactDigest: provision().options.artifact };
   const outcomes = await Promise.all(['one', 'two', 'three', 'four'].map(n => processCall(f.path, 'reserve', { ...input, handle: `demo-${n}` })));
   assert.equal(outcomes.filter(x => x === 'reserved').length, 2);
   assert.equal(outcomes.filter(x => x === 'cap').length, 2);
@@ -73,7 +73,7 @@ test('atomic budget and count caps across processes', async t => {
 });
 test('count and spend enforce independent caps; zero cost is explicit', async t => {
   const f = fixture(t);
-  const input = { binding: demoBinding, now: 1000, expiresAt: 61000, fingerprint: hash(provision()) };
+  const input = { binding: demoBinding, now: 1000, expiresAt: 61000, fingerprint: hash(provision()), artifactDigest: provision().options.artifact };
   const zero = { ...demoLimits, unitWorstCaseMinor: 0, maxSpendMinor: 0, maxResources: 1 };
   await f.state.reserve({ ...input, handle: 'demo-one', worstCaseMinor: 0, limits: zero });
   await assert.rejects(f.state.reserve({ ...input, handle: 'demo-two', worstCaseMinor: 0, limits: zero }), { code: 'cap' });
@@ -103,6 +103,7 @@ for (const mode of ['partial', 'ambiguous', 'missing-fields', 'secret-unavailabl
     noEscape(f, result); f.transport.assertComplete();
     const reopened = new SqliteFixture(f.path);
     try {
+      assert.equal((await reopened.get('demo-one')).artifactDigest, provision().options.artifact);
       f.host.unavailableSecret = false; configure(f, cleanupCalls(f));
       const handler = new DemoHandler(f.host, reopened, reopened, reopened, f.transport);
       assert.deepEqual(await handler.recover('orphan'), { ok: true, status: 'removed' });

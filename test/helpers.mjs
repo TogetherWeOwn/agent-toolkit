@@ -32,7 +32,7 @@ export function configure(f, calls, limits = demoLimits, approval = f.state, aud
   f.handler = new DemoHandler(f.host, state, approval, audit, f.transport, limits);
 }
 export async function seed(f, handle = 'demo-one', binding = demoBinding, state = 'active') {
-  await f.state.reserve({ handle, binding, fingerprint: hash(provision(handle)), now: 1000, expiresAt: 61000, worstCaseMinor: 50, limits: demoLimits });
+  await f.state.reserve({ handle, binding, fingerprint: hash(provision(handle)), artifactDigest: artifact, now: 1000, expiresAt: 61000, worstCaseMinor: 50, limits: demoLimits });
   if (state !== 'intent') await f.state.transition(handle, ['intent'], state);
 }
 export function noEscape(f, result) {

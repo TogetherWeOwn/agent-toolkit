@@ -24,6 +24,7 @@ export interface Lease {
   handle: string;
   binding: Binding;
   fingerprint: string;
+  artifactDigest: string;
   createdAt: number;
   expiresAt: number;
   reservedMinor: number;
@@ -57,6 +58,7 @@ export interface Reservation {
   handle: string;
   binding: Binding;
   fingerprint: string;
+  artifactDigest: string;
   now: number;
   expiresAt: number;
   worstCaseMinor: number;

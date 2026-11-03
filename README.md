@@ -31,7 +31,7 @@ These tests **do not** prove a provider integration, a production store, native 
 
 ### Observed bootstrap verification
 
-On 2026-11-03, Node 24.21.0 / npm 11.19.0: `npm ci --ignore-scripts --no-audit --no-fund` succeeded, followed by `npm run check` (type-check, build and 149 passing tests, no skipped tests). Actionlint 1.7.7 passed for all four workflow files. Gitleaks 8.30.1 reported no leaks in the baseline git history and a separate snapshot of all proposed source files. These are local observations, not a statement that PR checks or Security acceptance have passed.
+On 2026-11-03, Node 24.21.0 / npm 11.19.0: `npm ci --ignore-scripts --no-audit --no-fund` succeeded, followed by `npm run check` (type-check, build and 157 passing tests, no skipped tests). Actionlint 1.7.7 passed for all four workflow files. Gitleaks 8.30.1 reported no leaks in the baseline git history and a separate snapshot of all proposed source files. These are local observations, not a statement that PR checks or Security acceptance have passed.
 
 ## Contribution and merge gates
 

@@ -23,6 +23,8 @@ Run the actual dispatcher via `DemoHandler.invoke` for the implemented synthetic
 | Manually driven expiry/completion/cancellation/orphan recovery; repeated teardown | `test/lifecycle.test.mjs`: `manually driven recovery contract …`, `expiry never cleans unexpired active leases; orphan never sweeps by prefix` |
 | Child deletion failure, partial/paginated/positive relist cannot release budget | `test/lifecycle.test.mjs`: `cleanup incomplete/partial verification …`, `one child deletion fails but the other is attempted; new work stops`, `cleanup with unavailable secret or foreign ledger cannot claim removal` |
 
+Additional review regressions in `test/revalidation.test.mjs` cover current approval time after awaited lookup, independently approved artifact drift from the persisted intent, identity revocation during ledger lookup/DELETE, paginated negative-presence evidence, late creation responses at expiry, per-lease recovery failure isolation, and method-based host clocks. All eight tests were observed failing before their fixes; they do not establish production fencing or scheduler coverage.
+
 All preflight assertion helpers check zero secret resolution, zero outbound calls, unchanged resource state and a safe refusal audit record. Audit-outage tests cannot assert an unavailable sink contains a record. Reserve-time capacity denial occurs after safe audit intent but before credentials or provider calls. Tests measure the SQLite fixture, not a future adapter.
 
 ## Required production acceptance record (intentionally open)

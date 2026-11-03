@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import {
-  hash, requireThat, Refusal, integer, limitsSchema,
+  hash, requireThat, Refusal, digest, integer, limitsSchema,
   type ApprovalAuthority, type ApprovalTarget, type AuditRecord, type DurableAudit,
   type DurableState, type Lease, type Lifecycle, type Reservation,
 } from "../../policy/src/index.js";
@@ -19,7 +19,7 @@ export class SqliteFixture implements DurableState, ApprovalAuthority, DurableAu
       PRAGMA journal_mode=WAL;
       PRAGMA synchronous=FULL;
       CREATE TABLE IF NOT EXISTS leases (
-        handle TEXT PRIMARY KEY, binding TEXT NOT NULL, fingerprint TEXT NOT NULL,
+        handle TEXT PRIMARY KEY, binding TEXT NOT NULL, fingerprint TEXT NOT NULL, artifact TEXT NOT NULL,
         created INTEGER NOT NULL, expires INTEGER NOT NULL, cost INTEGER NOT NULL,
         state TEXT NOT NULL
       );
@@ -46,13 +46,14 @@ export class SqliteFixture implements DurableState, ApprovalAuthority, DurableAu
     const row = this.db.prepare("SELECT * FROM leases WHERE handle=?").get(handle);
     if (!row) return null;
     return {
-      handle: String(row.handle), binding: JSON.parse(String(row.binding)), fingerprint: String(row.fingerprint),
+      handle: String(row.handle), binding: JSON.parse(String(row.binding)), fingerprint: String(row.fingerprint), artifactDigest: String(row.artifact),
       createdAt: Number(row.created), expiresAt: Number(row.expires), reservedMinor: Number(row.cost),
       state: String(row.state) as Lifecycle,
     };
   }
   async reserve(input: Reservation): Promise<Lease> {
     const limits = limitsSchema.parse(input.limits);
+    digest.parse(input.artifactDigest);
     integer(0, Number.MAX_SAFE_INTEGER).parse(input.worstCaseMinor);
     integer(0, Number.MAX_SAFE_INTEGER).parse(input.now);
     integer(0, Number.MAX_SAFE_INTEGER).parse(input.expiresAt);
@@ -62,8 +63,8 @@ export class SqliteFixture implements DurableState, ApprovalAuthority, DurableAu
       requireThat(!this.db.prepare("SELECT 1 FROM leases WHERE state IN ('uncertain','cleaning')").get(), "unavailable");
       const usage = this.db.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(cost),0) AS cost FROM leases WHERE state!='closed'").get()!;
       requireThat(Number(usage.n) < limits.maxResources && Number(usage.cost) + input.worstCaseMinor <= limits.maxSpendMinor, "cap");
-      this.db.prepare("INSERT INTO leases VALUES (?,?,?,?,?,?,?)").run(
-        input.handle, JSON.stringify(input.binding), input.fingerprint, input.now, input.expiresAt, input.worstCaseMinor, "intent",
+      this.db.prepare("INSERT INTO leases VALUES (?,?,?,?,?,?,?,?)").run(
+        input.handle, JSON.stringify(input.binding), input.fingerprint, input.artifactDigest, input.now, input.expiresAt, input.worstCaseMinor, "intent",
       );
     });
     return (await this.get(input.handle))!;
