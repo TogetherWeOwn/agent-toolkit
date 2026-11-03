@@ -22,7 +22,7 @@ jobs:
   changes:
     uses: TogetherWeOwn/.github/.github/workflows/changes.yml@773ee91a904b9e1b65eddaaad4400d36e05fa717
     with:
-      areas-json: '{"code":["packages/**","test/**"],"docs":["*.md","docs/**"]}'
+      areas-json: '{"code":["packages/**","plugins/**","test/**"],"docs":["*.md","docs/**"]}'
       full-run-globs-json: '["package.json","**/package.json","package-lock.json","**/package-lock.json","npm-shrinkwrap.json","**/npm-shrinkwrap.json","tsconfig*.json","**/tsconfig*.json",".npmrc",".github/**"]'
       docs-areas-json: '["docs"]'
 

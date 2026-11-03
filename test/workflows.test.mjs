@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createRequire } from "node:module";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 
@@ -19,6 +22,43 @@ function run(source, variables) {
   assert.equal(result.error, undefined);
   return result;
 }
+
+test("plugin-source-only changes select the CI code area", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
+  const areas = JSON.parse(workflow.match(/areas-json: '([^']+)'/)[1]);
+  const source = "plugins/example/src/tools/provision.ts";
+  assert.ok(areas.code.some(pattern => pattern.endsWith("/**") && source.startsWith(pattern.slice(0, -2))));
+  assert.match(workflow, /fromJSON\(needs\.changes\.outputs\.areas\)\.code/);
+});
+
+test("root build and typecheck reject invalid plugin source", () => {
+  const directory = mkdtempSync(join(tmpdir(), "toolkit-plugin-check-"));
+  try {
+    mkdirSync(join(directory, "plugins/example/src/tools"), { recursive: true });
+    writeFileSync(join(directory, "plugins/example/src/tools/provision.ts"), 'export const count: number = "invalid";\n');
+    writeFileSync(join(directory, "tsconfig.json"), readFileSync(new URL("../tsconfig.json", import.meta.url)));
+    const require = createRequire(import.meta.url);
+    const tsc = require.resolve("typescript/bin/tsc");
+    const { scripts } = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+    for (const name of ["build", "typecheck"]) {
+      const [command, ...args] = scripts[name].split(" ");
+      assert.equal(command, "tsc");
+      const result = spawnSync(process.execPath, [tsc, ...args], {
+        cwd: directory, encoding: "utf8", timeout: 10000,
+      });
+      assert.equal(result.error, undefined);
+      assert.notEqual(result.status, 0);
+      assert.match(result.stdout, /TS2322/, `${name} must diagnose the plugin type error, not just missing inputs`);
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("root tests invoke provider workspace test scripts", () => {
+  const { scripts } = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+  assert.match(scripts.test, /npm run test --workspaces --if-present/);
+});
 
 const lint = script("pr-lint.yml");
 const base = {

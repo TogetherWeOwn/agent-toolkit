@@ -11,5 +11,5 @@
     "rootDir": ".",
     "skipLibCheck": true
   },
-  "include": ["packages/*/src/**/*.ts"]
+  "include": ["packages/*/src/**/*.ts", "plugins/*/src/**/*.ts"]
 }
