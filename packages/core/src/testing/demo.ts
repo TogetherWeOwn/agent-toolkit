@@ -1,9 +1,10 @@
+import { randomUUID } from "node:crypto";
 import {
   bindingSchema, boundary, closed, digest, dispatch, expiry, hash, integer, jsonData, limitsSchema,
   name, owned, prefixedName, Refusal, requireThat,
   type ApprovalAuthority, type ApprovalTarget, type Attempt, type Binding, type DurableAudit,
   type DurableState, type Host, type Lease, type Limits, type Operation, type Schema,
-} from "../../policy/src/index.js";
+} from "../index.js";
 import type { SyntheticResponse, Transport } from "./transport.js";
 
 export const syntheticOrigin = "https://fixture.invalid";
@@ -76,55 +77,68 @@ export class DemoHandler {
         // A repeated/ambiguous handle must be reconciled; never extend or reissue.
         requireThat(await this.state.get(args.handle) === null, "conflict");
         await intent();
-        await this.state.reserve({ handle: args.handle, binding, fingerprint: hash(input), artifactDigest: input.options.artifact, now, expiresAt,
-          worstCaseMinor: this.limits.unitWorstCaseMinor, limits: this.limits });
-        try {
-          await this.current(binding);
-          requireThat(this.now() < expiresAt, "expired");
-          const secret = await this.host.secrets.resolve("fixture-service");
-          // Persisted intent identifies BOTH deterministic child paths before any call.
-          for (const child of ["a", "b"]) {
+        return this.exclusive(args.handle, async (): Promise<"ready" | "removed"> => {
+          await this.state.reserve({ handle: args.handle, binding, fingerprint: hash(input), artifactDigest: input.options.artifact, now, expiresAt,
+            worstCaseMinor: this.limits.unitWorstCaseMinor, limits: this.limits });
+          try {
             await this.current(binding);
             requireThat(this.now() < expiresAt, "expired");
-            const response = await this.request("POST", `${args.handle}/${child}`, secret, { artifact: input.options.artifact });
-            requireThat(response.status === 201 && this.present(response) === true, "upstream");
+            const secret = await this.host.secrets.resolve("fixture-service");
+            // Persisted intent identifies BOTH deterministic child paths before any call.
+            for (const child of ["a", "b"]) {
+              await this.current(binding);
+              requireThat(this.now() < expiresAt, "expired");
+              const response = await this.request("POST", `${args.handle}/${child}`, secret, { artifact: input.options.artifact });
+              requireThat(response.status === 201 && this.present(response) === true, "upstream");
+            }
+            await this.current(binding);
+            requireThat(this.now() < expiresAt, "expired");
+            await this.state.transition(args.handle, ["intent"], "active");
+          } catch {
+            await this.state.transition(args.handle, ["intent"], "uncertain");
+            throw new Refusal("reconcile");
           }
-          await this.current(binding);
-          requireThat(this.now() < expiresAt, "expired");
-          await this.state.transition(args.handle, ["intent"], "active");
-        } catch {
-          await this.state.transition(args.handle, ["intent"], "uncertain");
-          throw new Refusal("reconcile");
-        }
-        await this.active(args.handle, binding);
-        return "ready";
+          await this.active(args.handle, binding);
+          return "ready";
+        });
       }
 
       const lease = await this.active(args.handle, binding);
       if (operation === "destroy") {
         const input = parsed.args as ReturnType<typeof destroySchema.parse>;
         requireThat(input.artifact === lease.artifactDigest, "scope");
-        requireThat(await this.approval.consume(this.host.approvalReference(), approvalTarget(binding, input), this.now()), "approval");
       }
       await intent();
-      await this.active(args.handle, binding);
-      if (operation === "destroy") {
-        await this.state.transition(args.handle, ["active"], "cleaning");
-        await this.remove(args.handle);
-        return "removed";
-      }
-      const secret = await this.host.secrets.resolve("fixture-service");
-      await this.active(args.handle, binding);
-      for (const child of ["a", "b"]) {
+      return this.exclusive(args.handle, async (): Promise<"ready" | "removed"> => {
+        const current = await this.active(args.handle, binding);
+        if (operation === "destroy") {
+          const input = parsed.args as ReturnType<typeof destroySchema.parse>;
+          requireThat(input.artifact === current.artifactDigest, "scope");
+          requireThat(await this.approval.consume(this.host.approvalReference(), approvalTarget(binding, input), this.now()), "approval");
+          await this.active(args.handle, binding);
+          await this.state.transition(args.handle, ["active"], "cleaning");
+          await this.remove(args.handle);
+          return "removed";
+        }
+        const secret = await this.host.secrets.resolve("fixture-service");
         await this.active(args.handle, binding);
-        const response = await this.request("GET", `${args.handle}/${child}`, secret, null);
-        requireThat(response.status === 200 && this.present(response) === true, "upstream");
-      }
-      await this.active(args.handle, binding);
-      return "ready";
+        for (const child of ["a", "b"]) {
+          await this.active(args.handle, binding);
+          const response = await this.request("GET", `${args.handle}/${child}`, secret, null);
+          requireThat(response.status === 200 && this.present(response) === true, "upstream");
+        }
+        await this.active(args.handle, binding);
+        return "ready";
+      });
     });
   }
 
+  private async exclusive<T>(handle: string, run: () => Promise<T>): Promise<T> {
+    const owner = randomUUID();
+    requireThat(await this.state.claim(handle, owner), "conflict");
+    try { return await run(); }
+    finally { await this.state.release(handle, owner); }
+  }
   private now(): number { return integer(0, Number.MAX_SAFE_INTEGER).parse(this.host.clock()); }
   private async current(binding: Binding): Promise<void> {
     let current: Binding;
@@ -186,11 +200,18 @@ export class DemoHandler {
         try {
           prefixedName(lease.handle, "demo-");
           requireThat(hash(lease.binding) === hash(demoBinding), "scope");
-          if (cause === "expiry" && lease.expiresAt > this.now()) continue;
-          // Orphans/partial intents are reconcilable; active unexpired leases are not orphans.
-          if (cause === "orphan" && lease.state === "active") continue;
-          if (lease.state !== "cleaning") await this.state.transition(lease.handle, ["intent", "uncertain", "active"], "cleaning");
-          await this.remove(lease.handle);
+          await this.exclusive(lease.handle, async () => {
+            // The scan is only discovery; re-read lifecycle under the durable claim.
+            const current = await this.state.get(lease.handle);
+            await this.current(demoBinding);
+            requireThat(current && hash(current.binding) === hash(demoBinding), "scope");
+            if (current.state === "closed") return;
+            if (cause === "expiry" && current.expiresAt > this.now()) return;
+            // Orphans/partial intents are reconcilable; active leases are not orphans.
+            if (cause === "orphan" && current.state === "active") return;
+            if (current.state !== "cleaning") await this.state.transition(lease.handle, ["intent", "uncertain", "active"], "cleaning");
+            await this.remove(lease.handle);
+          });
         } catch (error) {
           if (!failed) failure = error;
           failed = true;

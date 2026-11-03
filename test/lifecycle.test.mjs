@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { hash } from '../dist/packages/policy/src/index.js';
-import { approvalTarget } from '../dist/packages/test-support/src/demo.js';
+import { hash } from '../dist/packages/core/src/index.js';
+import { approvalTarget } from '../dist/packages/core/src/testing/demo.js';
 import { fixture, preflight, provision, destroy, seed, demoBinding, demoLimits, configure, call, cleanupCalls, noEscape, SqliteFixture, DemoHandler } from './helpers.mjs';
 
 for (const variant of ['missing', 'forged', 'expired', 'future', 'revoked', 'replay', 'binding', 'handle', 'arguments', 'artifact', 'version', 'policy']) {
@@ -165,12 +165,35 @@ test('cleanup with unavailable secret or foreign ledger cannot claim removal', a
   noEscape(f, {}); f.transport.assertComplete(); foreign.transport.assertComplete();
 });
 
+test('operation claims exclude separate processes and never expire on reopen', async t => {
+  const f = fixture(t); await seed(f);
+  const outcomes = await Promise.all(['owner-a', 'owner-b'].map(owner => processCall(f.path, 'claim', { handle: 'demo-one', owner })));
+  assert.equal(outcomes.filter(x => x === 'true').length, 1);
+  assert.equal(outcomes.filter(x => x === 'false').length, 1);
+  const owner = outcomes[0] === 'true' ? 'owner-a' : 'owner-b';
+  const reopened = new SqliteFixture(f.path);
+  try {
+    await assert.rejects(reopened.release('demo-one', 'foreign'), { code: 'conflict' });
+    assert.equal(await reopened.claim('demo-one', 'takeover'), false);
+    f.host.now = Number.MAX_SAFE_INTEGER;
+    const handler = new DemoHandler(f.host, reopened, reopened, reopened, f.transport);
+    assert.deepEqual(await handler.recover('expiry'), { ok: false, code: 'conflict' });
+    assert.equal((await reopened.get('demo-one')).state, 'active');
+    assert.equal(f.host.secretCalls, 0); f.transport.assertComplete();
+    // Only the original owner releases; the fixture has no unsafe time-only takeover.
+    await reopened.release('demo-one', owner);
+    assert.equal(await reopened.claim('demo-one', 'next-owner'), true);
+    await reopened.release('demo-one', 'next-owner');
+  } finally { reopened.close(); }
+});
+
 function processCall(path, operation, input) {
-  const url = new URL('../dist/packages/test-support/src/sqlite.js', import.meta.url).href;
+  const url = new URL('../dist/packages/core/src/testing/sqlite.js', import.meta.url).href;
   const source = `import {SqliteFixture} from ${JSON.stringify(url)};
     const s = new SqliteFixture(process.argv[1]);
     try { const input = JSON.parse(process.argv[3]);
-      const result = process.argv[2] === 'approval' ? await s.consume('approval-one',input,1000) : await s.reserve(input).then(()=>'reserved');
+      const result = process.argv[2] === 'approval' ? await s.consume('approval-one',input,1000)
+        : process.argv[2] === 'claim' ? await s.claim(input.handle,input.owner) : await s.reserve(input).then(()=>'reserved');
       process.stdout.write(String(result));
     } catch(e) { process.stdout.write(e.code || 'failed'); } finally { s.close(); }`;
   return new Promise((resolve, reject) => {
@@ -178,6 +201,6 @@ function processCall(path, operation, input) {
     let stdout = ''; let stderr = '';
     child.stdout.on('data', b => { stdout += b; }); child.stderr.on('data', b => { stderr += b; });
     child.on('error', reject);
-    child.on('exit', code => code === 0 ? resolve(stdout) : reject(new Error(`fixture child failed ${code}: ${stderr}`)));
+    child.on('close', code => code === 0 ? resolve(stdout) : reject(new Error(`fixture child failed ${code}: ${stderr}`)));
   });
 }

@@ -1,8 +1,8 @@
-# Inert service package outline
+# Inert provider plugin outline
 
 This directory is **documentation only**: no plugin manifest, runtime entrypoint, registered tools, provider credential, network client or installable package. Do not list it as an operational broker.
 
-Use one new private plugin package for each cohesive service/tool boundary. Start only after evidenced demand and provider-native scoping assessment. Do not duplicate an existing broker.
+Use one independently versioned, reviewed and installed private package under `plugins/<provider>` per provider credential trust boundary. Split sharply different production/test trust levels. Share a pinned `packages/core` library separately in each worker, never credential bindings or authority. Expose many small single-purpose tool modules under `src/tools`, not a `provider(action=…)` multiplexer. Each tool declares a read/write/destructive risk class, its threat-model section and refusal tests. Verify worker/capability/secret isolation on the exact host version; process separation alone is not an OS sandbox. Start only after evidenced demand and provider-native scoping assessment. Do not duplicate an existing broker.
 
 Before adding executable code, specify `THREAT-MODEL.md`, a credential-ceiling versus exposed-subset table, exact supported SDK/API versions, maintainer role, tool schemas, denied capabilities, real durable state/approval/audit/cleanup adapters and `ACCEPTANCE.md` mapping every branch to tests through actual registered handlers. See [STANDARD.md](../../STANDARD.md) and [ADAPTER-CONTRACTS.md](../../ADAPTER-CONTRACTS.md).
 

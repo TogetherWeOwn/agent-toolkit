@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { boundary } from '../dist/packages/policy/src/index.js';
-import { cloudflareFixture, githubFixture } from '../dist/packages/test-support/src/transport.js';
+import { boundary } from '../dist/packages/core/src/index.js';
+import { cloudflareFixture, githubFixture } from '../dist/packages/core/src/testing/transport.js';
 import { fixture, provision, seed, demoLimits, configure, call, noEscape, StrictTransport } from './helpers.mjs';
 
 test('safe success/error projection discards broad and internal-derived reflections', async t => {
@@ -60,7 +60,7 @@ test('state lookup/reservation outages prevent secret resolution and provider ca
   for (const method of ['get', 'reserve']) {
     await t.test(method, async s => {
       const f = fixture(s);
-      const state = { get: f.state.get.bind(f.state), reserve: f.state.reserve.bind(f.state), transition: f.state.transition.bind(f.state), recoverable: f.state.recoverable.bind(f.state) };
+      const state = { get: f.state.get.bind(f.state), reserve: f.state.reserve.bind(f.state), transition: f.state.transition.bind(f.state), recoverable: f.state.recoverable.bind(f.state), claim: f.state.claim.bind(f.state), release: f.state.release.bind(f.state) };
       state[method] = async () => { throw new Error(f.broad + f.derived); };
       configure(f, [], demoLimits, f.state, f.state, state);
       assert.deepEqual(await f.handler.invoke('provision', provision()), { ok: false, code: 'unavailable' });

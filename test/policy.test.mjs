@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { closed, text, oneOf, integer, jsonData, name, prefixedName, expiry, hash } from '../dist/packages/policy/src/index.js';
+import { closed, text, oneOf, integer, jsonData, name, prefixedName, expiry, hash } from '../dist/packages/core/src/index.js';
 import { fixture, preflight, provision, seed, demoBinding, demoLimits, configure, call, noEscape } from './helpers.mjs';
 
 for (const tool of ['__proto__', 'constructor', 'toString', 'fetch', 'shell', 'stripe.refund', 'cloudflare.provision', 'github.merge', '', null, 1, {}, 'inspect\n']) {

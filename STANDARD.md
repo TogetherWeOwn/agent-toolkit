@@ -11,24 +11,30 @@ Prefer a provider's genuinely resource-scoped credential when it meets the task.
 
 REA angle: study the existing Cloudflare test-environment plugin's scoping and fixture design, and Paperclip's managed GitHub credential broker, before adding another implementation. Reuse public interfaces and documented behavior; do not copy private deployment data or assume an existing broker has passed this standard.
 
-## 1. Package and evidence layout
+## Architecture
 
-Use one Paperclip plugin package per broker tool or cohesive upstream service, plus shared policy and fixture packages:
+1. **One plugin per provider credential trust boundary.** Use independently installed packages such as `cloudflare-broker`, `github-broker` and `planetscale-broker`. Paperclip's plugin model uses a worker process per installed plugin, with capabilities and secret references scoped to that plugin. Bind only that provider's credential to its worker; one provider's tools must have no capability or secret binding that resolves another provider's key. Split one provider into separate plugins only when trust levels differ sharply, for example production deployment versus disposable test-environment minting. Verify worker, capability and secret-resolution isolation on the exact target host version before acceptance; process separation alone is not a claim of an OS sandbox or protection against host compromise.
+2. **Many small, single-purpose tools inside each plugin.** Do not expose a `provider(action=…)` multiplexer. Each exact tool name declares its own read, write or destructive risk class so MCP Access Governance can bind access, rate-limit and require approval per tool. Verify actual native-plugin governance coverage as required in §6; declaration alone does not enforce it. A new function means a new tool module, its threat-model section and its refusal tests.
+3. **One monorepo, independently shipped plugins.** `agent-toolkit` holds the shared broker library in `packages/core` and one versioned Paperclip plugin package per provider boundary in `plugins/<provider>`. Core supplies call-time secret-resolution helpers, deny-by-default schemas, scope guards, TTL/spend caps, safe audit records and the refusal-test harness. It is a library loaded separately in each worker, not a central credential-bearing service. Each plugin is versioned, reviewed and installed independently; record the exact core version in its acceptance evidence and reassess affected plugins after security-relevant core changes.
+4. **No mega-plugin.** Combining providers would hold every credential with the union of capabilities, expand review scope on every change and let one worker crash take down every tool. Sharing code in the monorepo must not share credential bindings or runtime authority.
+
+## 1. Package and evidence layout
 
 ```text
 packages/
-  policy/                 # closed schemas, authorization and scope guards, caps, safe audit
-  test-support/           # injected transports, synthetic secrets, clock, audit/state fixtures
-  <service>-broker/       # plugin manifest, tools, service adapter, and its own tests
-    THREAT-MODEL.md
+  core/                   # policy, call-time secrets, caps, safe audit, refusal/fixture harness
+plugins/
+  <provider>/             # independently versioned plugin for one credential trust boundary
+    THREAT-MODEL.md        # provider ceiling and a section for each tool
     ACCEPTANCE.md
     src/
-    test/
+      tools/              # one module per single-purpose tool
+    test/                 # refusal and handler fixtures for every tool
 STANDARD.md
 CATALOG.md
 ```
 
-Do not relocate an existing external plugin merely to match this layout. Catalog its source and compatibility instead. The shared helper supplies reusable primitives, not an authorization decision independent of each tool's threat model. An empty scaffold is not an installed or accepted broker.
+Do not relocate an existing external plugin merely to match this layout. Catalog its source and compatibility instead. The existing Cloudflare test-environment plugin remains in its repository on the first container tool's critical path. A later migration to `plugins/cloudflare` is backlog work only after that tool ships and `packages/core` exists, with its own review and compatibility assessment. The shared helper supplies reusable primitives, not an authorization decision independent of each tool's threat model. An empty scaffold is not an installed or accepted broker.
 
 Each package must identify its maintainer role, exact SDK and upstream API versions, permission inventory, supported tool names and schemas, and the installation/revocation procedure. Pin dependencies through a lockfile. CI runs offline fixtures and checks; no production secrets or live cloud calls.
 

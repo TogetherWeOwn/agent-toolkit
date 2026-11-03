@@ -25,14 +25,16 @@ Run the actual dispatcher via `DemoHandler.invoke` for the implemented synthetic
 
 Additional review regressions in `test/revalidation.test.mjs` cover current approval time after awaited lookup, independently approved artifact drift from the persisted intent, identity revocation during ledger lookup/DELETE, paginated negative-presence evidence, late creation responses at expiry, per-lease recovery failure isolation, and method-based host clocks. All eight tests were observed failing before their fixes; they do not establish production fencing or scheduler coverage.
 
-All preflight assertion helpers check zero secret resolution, zero outbound calls, unchanged resource state and a safe refusal audit record. Audit-outage tests cannot assert an unavailable sink contains a record. Reserve-time capacity denial occurs after safe audit intent but before credentials or provider calls. Tests measure the SQLite fixture, not a future adapter.
+Additional regressions in `test/review-regressions.test.mjs` cover sparse arrays masked by named properties, insertion-order-independent hashes for locale-equivalent keys, preservation of original transaction errors when rollback also fails, audit failure preserving a destruction grant, and all four recovery causes competing with an in-flight creation. These cases were observed failing before fixes. `test/lifecycle.test.mjs`: `operation claims exclude separate processes and never expire on reopen` checks persisted exclusion, owner-only release and refusal of time-only takeover; no pre-fix run is claimed for that added contract test.
+
+All preflight assertion helpers check zero secret resolution, zero outbound calls, unchanged resource state and a safe audit decision: `refused` before intent, or `outcome` if a durable intent already exists (including approval denial). Audit-outage tests cannot assert an unavailable sink contains a record. Reserve-time capacity denial occurs after safe audit intent but before credentials or provider calls. Tests measure the SQLite fixture, not a future adapter.
 
 ## Required production acceptance record (intentionally open)
 
 - Exact source revision, built artifact digest, supported tool/API/SDK versions and configuration envelope: **no production artifact**.
 - Security Engineer acceptance of the exact artifact/permission inventory: **not obtained**.
 - Verified native governance evaluator and call-event path on the target host/version; least-privilege agent/project/task MCP profile, destructive `require_approval`: **not verified; install forbidden**.
-- Real durable scheduler/fencing, budget worst-case calculation, provider scopes, idempotency, complete pagination and audit outbox: **not implemented here**.
+- Real durable scheduler/provider fencing, safe crash takeover, budget worst-case calculation, provider scopes, idempotency, complete pagination and audit outbox: **not implemented here**. Fixture operation claims provide cross-process exclusion, not provider fencing; a crashed owner's non-expiring claim blocks cleanup until externally proven safe recovery, for which no implementation is supplied.
 - Operator install/configuration/secret binding/revocation runbook: use a service-specific accepted package; this reference is not installable. No credential creation/rotation or security exception is authorized.
 
 The root README records observed local commands. CI/reviewer status must be read from the actual PR, never inferred from this matrix. Add real service packages only after their own threat model, contract implementation and refusal matrix are complete.

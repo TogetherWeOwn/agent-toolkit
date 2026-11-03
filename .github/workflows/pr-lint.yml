@@ -39,6 +39,9 @@ jobs:
 
           types = 'feat|fix|perf|refactor|test|docs|build|ci|chore|revert|style|security'
           header = re.compile(rf'^({types})(\([A-Za-z0-9._/,-]+\))?!?: \S.*$')
+          # Keep tracker detection conservative without publishing private prefixes.
+          # Only these public standards/encoding/digest spellings are exempt.
+          public_id = re.compile(r'\b(?:RFC-\d+|ISO-\d+|UTF-(?:8|16|32)|SHA-(?:1|224|256|384|512))\b')
           internal_id = re.compile(r'\b[A-Z]{2,10}-\d+\b')
           ui_link = re.compile(r'/[A-Z]{2,6}/(?:issues|agents|projects|approvals|runs)/')
           failures = []
@@ -49,7 +52,7 @@ jobs:
 
           def check_internal(text, where):
               # Report only the category, never echo a potentially sensitive value.
-              if internal_id.search(text) or ui_link.search(text):
+              if internal_id.search(public_id.sub('', text)) or ui_link.search(text):
                   failures.append(f'{where}: internal tracker references are forbidden; describe the problem and link only public GitHub issues')
 
           def sections(text):
@@ -66,6 +69,8 @@ jobs:
           def has_content(lines):
               for line in lines:
                   value = re.sub(r'^\s*(?:[-*]\s+|\d+[.)]\s+)?', '', line).strip()
+                  if re.match(r'^\[\s*\](?:\s|$)', value):
+                      continue
                   if len(value) >= 6 and not re.fullmatch(r'\[[^\]]*\]', value) and not value.endswith((' ...', ' …')):
                       return True
               return False

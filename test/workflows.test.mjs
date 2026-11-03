@@ -61,6 +61,20 @@ test("PR lint refuses invalid titles, empty sections and internal references wit
   }
 });
 
+test("PR lint accepts standardized public identifiers without allowing tracker references", () => {
+  for (const reference of ["RFC-1918", "ISO-8601", "UTF-8", "SHA-256"]) {
+    assert.equal(run(lint, { ...base, BODY: `${base.BODY}\n${reference}` }).status, 0);
+  }
+});
+
+test("PR lint rejects unchecked Verification placeholders", () => {
+  for (const placeholder of ["- [ ] Run tests", "* [ ] Run tests", "1. [ ] Run tests"]) {
+    const BODY = `## Linked Issues or Issue Description\nReusable synthetic policy coverage.\n## Verification\n${placeholder}`;
+    assert.equal(run(lint, { ...base, BODY }).status, 1);
+    assert.equal(run(lint, { ...base, BODY: `${BODY}\nOffline tests passed with strict fixtures.` }).status, 0);
+  }
+});
+
 test("ci-ok rejects failed or cancelled prerequisites and accepts intentional skips", () => {
   const aggregate = script("ci.yml");
   for (const result of ["failure", "cancelled", "timed_out", "unknown"]) {

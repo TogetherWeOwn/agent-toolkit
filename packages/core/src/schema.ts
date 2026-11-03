@@ -43,7 +43,10 @@ export function jsonData(value: unknown): void {
     requireThat(keys.length <= 65, "schema");
     for (const key of keys) {
       requireThat(typeof key === "string" && !forbidden.has(key), "schema");
-      if (Array.isArray(v) && key === "length") continue;
+      if (Array.isArray(v)) {
+        if (key === "length") continue;
+        requireThat(/^(0|[1-9][0-9]*)$/.test(key) && Number(key) < v.length, "schema");
+      }
       const d = Object.getOwnPropertyDescriptor(v, key)!;
       requireThat(d.enumerable && Object.hasOwn(d, "value"), "schema");
       visit(d.value, depth + 1);

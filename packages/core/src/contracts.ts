@@ -13,7 +13,7 @@ export function hash(value: unknown): string {
   const canonical = (v: unknown): unknown => {
     if (Array.isArray(v)) return v.map(canonical);
     if (v !== null && typeof v === "object") {
-      return Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b, "en")).map(([k, x]) => [k, canonical(x)]));
+      return Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([k, x]) => [k, canonical(x)]));
     }
     return v;
   };
@@ -73,6 +73,12 @@ export interface DurableState {
   reserve(input: Reservation): Promise<Lease>;
   transition(handle: string, from: Lifecycle[], to: Lifecycle): Promise<void>;
   recoverable(): Promise<Lease[]>;
+  /** Exclude competing operations across processes for the full asynchronous call.
+   * Claims must not expire while their owner's provider requests can still finish.
+   * Crash takeover requires external quiescence/fencing, never a time-only expiry.
+   */
+  claim(handle: string, owner: string): Promise<boolean>;
+  release(handle: string, owner: string): Promise<void>;
 }
 
 export interface ApprovalTarget {

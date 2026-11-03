@@ -3,7 +3,7 @@ import {
   hash, requireThat, Refusal, digest, integer, limitsSchema,
   type ApprovalAuthority, type ApprovalTarget, type AuditRecord, type DurableAudit,
   type DurableState, type Lease, type Lifecycle, type Reservation,
-} from "../../policy/src/index.js";
+} from "../index.js";
 
 /** Test-only transactional fixture. Disk reopen and process contention are real;
  * provider reconciliation, deployment HA, scheduler and operator recovery are not.
@@ -28,6 +28,7 @@ export class SqliteFixture implements DurableState, ApprovalAuthority, DurableAu
         expires INTEGER NOT NULL, revoked INTEGER NOT NULL DEFAULT 0, used INTEGER NOT NULL DEFAULT 0
       );
       CREATE TABLE IF NOT EXISTS audit (sequence INTEGER PRIMARY KEY, record TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS operation_claims (handle TEXT PRIMARY KEY, owner TEXT NOT NULL);
     `);
   }
   close(): void { this.db.close(); }
@@ -38,7 +39,7 @@ export class SqliteFixture implements DurableState, ApprovalAuthority, DurableAu
       this.db.exec("COMMIT");
       return result;
     } catch (error) {
-      this.db.exec("ROLLBACK");
+      try { this.db.exec("ROLLBACK"); } catch { /* Preserve the original failure. */ }
       throw error;
     }
   }
@@ -82,6 +83,14 @@ export class SqliteFixture implements DurableState, ApprovalAuthority, DurableAu
   async recoverable(): Promise<Lease[]> {
     const rows = this.db.prepare("SELECT handle FROM leases WHERE state!='closed' ORDER BY handle").all();
     return Promise.all(rows.map(async r => (await this.get(String(r.handle)))!));
+  }
+  async claim(handle: string, owner: string): Promise<boolean> {
+    const result = this.db.prepare("INSERT INTO operation_claims(handle,owner) VALUES (?,?) ON CONFLICT(handle) DO NOTHING").run(handle, owner);
+    return result.changes === 1;
+  }
+  async release(handle: string, owner: string): Promise<void> {
+    const result = this.db.prepare("DELETE FROM operation_claims WHERE handle=? AND owner=?").run(handle, owner);
+    requireThat(result.changes === 1, "conflict");
   }
   grant(reference: string, target: ApprovalTarget, issued: number, expires: number): void {
     requireThat(expires > issued, "approval");

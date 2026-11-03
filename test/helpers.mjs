@@ -3,10 +3,10 @@ import { randomUUID } from 'node:crypto';
 import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { hash } from '../dist/packages/policy/src/index.js';
-import { SqliteFixture } from '../dist/packages/test-support/src/sqlite.js';
-import { StrictTransport } from '../dist/packages/test-support/src/transport.js';
-import { DemoHandler, FakeHost, demoBinding, demoLimits, syntheticOrigin } from '../dist/packages/test-support/src/demo.js';
+import { hash } from '../dist/packages/core/src/index.js';
+import { SqliteFixture } from '../dist/packages/core/src/testing/sqlite.js';
+import { StrictTransport } from '../dist/packages/core/src/testing/transport.js';
+import { DemoHandler, FakeHost, demoBinding, demoLimits, syntheticOrigin } from '../dist/packages/core/src/testing/demo.js';
 
 export { DemoHandler, SqliteFixture, StrictTransport, demoBinding, demoLimits };
 export const artifact = 'a'.repeat(64);
@@ -44,13 +44,16 @@ export function noEscape(f, result) {
 }
 export async function preflight(f, tool, args, code) {
   const before = await f.state.recoverable();
+  const auditCount = f.state.audits().length;
   const result = await f.handler.invoke(tool, args);
   assert.deepEqual(result, { ok: false, code });
   assert.equal(f.host.secretCalls, 0);
   assert.equal(f.transport.calls.length, 0);
   f.transport.assertComplete();
   assert.deepEqual(await f.state.recoverable(), before);
-  assert.equal(f.state.audits().at(-1).phase, 'refused');
+  const audits = f.state.audits().slice(auditCount);
+  assert.equal(audits.at(-1).phase, audits[0].phase === 'intent' ? 'outcome' : 'refused');
+  assert.equal(audits.at(-1).decision, code);
   noEscape(f, result);
 }
 export function cleanupCalls(f, handle = 'demo-one') {

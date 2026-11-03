@@ -1,11 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { approvalTarget } from '../dist/packages/test-support/src/demo.js';
+import { approvalTarget } from '../dist/packages/core/src/testing/demo.js';
 import { fixture, seed, configure, call, cleanupCalls, preflight, noEscape, provision, destroy, demoBinding, demoLimits, DemoHandler } from './helpers.mjs';
 
 function stateWithGet(f, get) {
   return {
     get,
+    claim: (...args) => f.state.claim(...args),
+    release: (...args) => f.state.release(...args),
     reserve: input => f.state.reserve(input),
     transition: (...args) => f.state.transition(...args),
     recoverable: () => f.state.recoverable(),
