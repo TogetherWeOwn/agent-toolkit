@@ -1,0 +1,106 @@
+# Adapted from the organization starter-ci template: no workflow-level path filter.
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  merge_group: {}
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    uses: TogetherWeOwn/.github/.github/workflows/changes.yml@773ee91a904b9e1b65eddaaad4400d36e05fa717
+    with:
+      areas-json: '{"code":["packages/**","test/**"],"docs":["*.md","docs/**"]}'
+      full-run-globs-json: '["package.json","**/package.json","package-lock.json","**/package-lock.json","npm-shrinkwrap.json","**/npm-shrinkwrap.json","tsconfig*.json","**/tsconfig*.json",".npmrc",".github/**"]'
+      docs-areas-json: '["docs"]'
+
+  full_run:
+    name: full run context
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      force: ${{ steps.ctx.outputs.force }}
+    steps:
+      - id: ctx
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then
+            echo 'force=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'force=false' >> "$GITHUB_OUTPUT"
+          fi
+
+  lint:
+    needs: [changes]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck
+      - name: Lint workflows
+        run: |
+          set -euo pipefail
+          lint_dir=$(mktemp -d "$RUNNER_TEMP/actionlint.XXXXXX")
+          curl -fsSL -o "$lint_dir/actionlint.tgz" \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.7/actionlint_1.7.7_linux_amd64.tar.gz
+          echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  $lint_dir/actionlint.tgz" | sha256sum -c -
+          tar -xzf "$lint_dir/actionlint.tgz" -C "$lint_dir" actionlint
+          "$lint_dir/actionlint" -shellcheck= -pyflakes=
+
+  test:
+    needs: [changes, full_run]
+    if: needs.full_run.outputs.force == 'true' || needs.changes.outputs.full_run == 'true' || (fromJSON(needs.changes.outputs.areas).code && (github.event_name != 'pull_request' || github.event.pull_request.draft == false))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm test
+
+  ci-ok:
+    name: ci-ok
+    needs: [changes, full_run, lint, test]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require all needed jobs to succeed or be intentionally skipped
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          python3 -I - <<'PY'
+          import json, os, sys
+          needs = json.loads(os.environ['NEEDS_JSON'])
+          bad = {k: v.get('result') for k, v in needs.items()
+                 if v.get('result') not in ('success', 'skipped')}
+          if bad:
+              print(f'failing jobs: {bad}')
+              sys.exit(1)
+          print('ci-ok: every needed job succeeded or was skipped')
+          PY

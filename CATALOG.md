@@ -1,0 +1,46 @@
+# Agent-tool catalog
+
+Status: initial inventory with Product and Infrastructure consultation incorporated, 2026-11-03. Listing is not Security Engineer acceptance and does not authorize installation, credential changes or production use.
+
+## Existing brokers (remain in their current homes)
+
+| Broker | Source / provenance | What it narrows | Credential exposure and acceptance status |
+| --- | --- | --- | --- |
+| Cloudflare test environments | [TogetherWeOwn/paperclip-plugin-cf-test-env](https://github.com/TogetherWeOwn/paperclip-plugin-cf-test-env) | Disposable `pct-*` Worker with supporting resources; D1 operations through an environment-bound tool; completion/expiry cleanup and orphan sweep | Existing delegated-credential model: `provision` returns a short-lived per-Worker token, with documented resource restrictions, IP filtering and at most 3 h TTL. The broad minting credential remains server-side. This is **not** the toolkit's strict no-credential-output model. New internal container credentials must stay inside the broker. Do not claim conformance without a separate gap assessment. |
+| Paperclip-managed GitHub broker | Managed Paperclip runtime component, not a package in this repository. A separately versioned public source location and release-level audit have not yet been verified for this catalog. | Brokered access used by managed GitHub tooling, rather than manually distributing the owner's standing credential | Present in the managed environment. Exact repository, operation, tenant and approval enforcement guarantees require source/version verification. Not certified by this catalog. Prefer assessing/extending this broker over adding a duplicate GitHub transport. |
+
+The [GitHub upstream watcher](https://github.com/TogetherWeOwn/paperclip-plugin-github-upstream) is an adjacent read/sync/audit plugin, **not** the managed GitHub operation broker. Its post-hoc upstream audit is not pre-call authorization.
+
+The existing Cloudflare broker stays in its repository. Reuse its synthetic API fixture/scoping patterns where suitable; do not migrate it for cosmetic consistency. Its source README documents known limitations and unverified provider behavior; those are not passed controls.
+
+## Candidate backlog
+
+Order uses observed demand first, not the breadth of a provider's API. Product consultation confirms one active Cloudflare blocker, but does not establish new GitHub broker scope demand; Infrastructure independently confirms the same current Cloudflare blocker and existing GitHub reliability need. This is a bounded consultation, not a claim of full team consensus. Frequencies over the last 30 days are unknown unless explicitly measured; unknown does not mean zero.
+
+| Provisional order | Candidate | Coarse-scope problem | Narrow candidate surface (proposal, not installed) | Demand evidence / next validation |
+| --- | --- | --- | --- | --- |
+| 1 — confirmed current blocker | Cloudflare containers, extending the existing broker | Container edit permission cannot currently be assumed to isolate one disposable application; an account also containing production cannot be exposed to an agent | Deploy only an immutable image to the broker-owned environment's Worker/DO/container binding; fixed instance/size/TTL/spend limits; list only owned state; independently approved early teardown | Product confirms one active blocked sandbox/container proof of concept; operation frequency over 30 days is unknown. Implementation remains in the existing Cloudflare plugin and proceeds independently of toolkit bootstrap. Verify actual resource-level provider permissions before choosing any credential. |
+| Assessment only — no proven new broker request | GitHub operation-policy assessment, reusing the managed broker | A generic account/App identity can have broader capabilities than one repository/task, but a concrete missing provider permission or policy escape has not been established here | Assess exact repository-bound read/check/PR operations and reviewed-head merges in the existing broker before proposing extensions; no credential/settings/admin surface | Product reports recurring identity-provisioning failures, not proven missing coarse provider scope. Treat reliability repair as existing operational work, not justification for a parallel broker or broad PAT/App expansion. A previously missing secret-scanning read permission is reported resolved through a dedicated read-only identity and is not current backlog demand. |
+| Unranked | Stripe sandbox task broker | Provider keys may span multiple objects and consequential payment/billing operations rather than one test workflow | Test-mode-only object fixtures with account/customer ownership checks, fixed amount/currency/count caps, explicit operation allowlist; live charge/refund/payout/subscription mutation excluded | No current Product coarse-permission pain evidenced. Infrastructure reports staging billing setup waiting on an account/test credential, not demonstrated coarse-scope pain; restricted native test credentials are unassessed. A broker does not solve account provisioning. Thirty-day frequency unknown. Financial effects require their separate approval route. |
+| Unranked | PlanetScale disposable branch broker | Database organization/service credentials may administer more databases or branches than one agent needs | Create/use/delete broker-owned ephemeral non-production branches; short TTL, branch-count cap, no production promotion or organization/admin operations; no broad credential returned | No current Product or Infrastructure coarse-permission pain evidenced. Thirty-day frequency unknown, not zero. Verify native branch/credential scope before proposing work. |
+| Unranked | Discord narrowly scoped test/community operations | A bot token may reach multiple guilds/channels or expose moderation and role-management operations not needed by one task | Fixed allowlisted guild/channel operations, bounded content/rate, no arbitrary endpoint or token; destructive or public-post actions behind the appropriate approval | No current Product or Infrastructure coarse-permission pain evidenced. Thirty-day frequency unknown, not zero. Prefer native role/channel restrictions where sufficient. |
+
+## Demand ranking protocol
+
+Request concrete examples from product and infrastructure leads: service and workflow, who is blocked, currently missing operation, coarse credential permission, frequency in the last 30 days, number of agents/projects affected, urgency, and a source that can be summarized publicly. A response of “no current pain” is useful and must not be inflated into demand.
+
+Rank confirmed blockers first, then repeated manual operator work, then speculative candidates. Within a tier, use measured frequency and breadth of users; if evidence is absent, keep candidates tied/unranked rather than inventing a score. Record dates and sanitised rationale here; private task IDs, deployment details, credentials and internal host data stay out of the public catalog.
+
+## Admission and maintenance
+
+A catalog entry includes source/version, maintainer role, exposure class (pure broker versus delegated credential), verified operations, principal/resource boundaries, test evidence, target governance coverage and acceptance status. New packages must satisfy [STANDARD.md](STANDARD.md). Security acceptance binds the exact artifact and configuration envelope, not the provider name. Operator installation/configuration follows acceptance; no catalog row itself grants access.
+
+REA angle: compare shipped Cloudflare scoping/fixtures and managed GitHub broker behavior with provider-native permissions before implementing candidates. Prefer an existing narrow mechanism to a new broker. Do not infer guarantees from a tool name or an available connection.
+
+## Implementation and evidence limits
+
+This repository currently supplies policy primitives, adapter contracts, and an offline synthetic reference handler only. No live Cloudflare, GitHub, Stripe, PlanetScale or Discord adapter is installed or accepted here. The SQLite fixture uses disk transactions and independent-process tests, but is not a production store or teardown scheduler.
+
+Source inspection on 2026-11-03 covered the existing Cloudflare scoping builders and injected API fixture. Its nested per-Worker resource policy, explicit expiry, minted-policy verification and cursor handling inform the acceptance tests; they do not prove this toolkit's provider integration. The inspected managed GitHub command launcher obtains credentials for an individual command and passes them to its subprocess environment. That is a distinct trusted-client exposure boundary, not proof of a no-credential-output tool. Its server-side repository/operation/tenant/approval policy and release provenance remain unverified. No broader credential was requested.
+
+Demand evidence is bounded: one active Cloudflare workflow, not a 30-day operation count. Infrastructure's 24-hour GitHub reliability sample contained 32 log-verified failures across 12 work items and 2,692 total runs, including already-completed work; it is not 32 currently blocked workflows or a 30-day frequency. No new harvest or live-provider permission test was run for this catalog.

@@ -1,0 +1,11 @@
+# Inert service package outline
+
+This directory is **documentation only**: no plugin manifest, runtime entrypoint, registered tools, provider credential, network client or installable package. Do not list it as an operational broker.
+
+Use one new private plugin package for each cohesive service/tool boundary. Start only after evidenced demand and provider-native scoping assessment. Do not duplicate an existing broker.
+
+Before adding executable code, specify `THREAT-MODEL.md`, a credential-ceiling versus exposed-subset table, exact supported SDK/API versions, maintainer role, tool schemas, denied capabilities, real durable state/approval/audit/cleanup adapters and `ACCEPTANCE.md` mapping every branch to tests through actual registered handlers. See [STANDARD.md](../../STANDARD.md) and [ADAPTER-CONTRACTS.md](../../ADAPTER-CONTRACTS.md).
+
+At call time, validate dispatch, bounded closed arguments, trusted context, owned resource and independent approval before `ctx.secrets.resolve`. Never accept credentials, destinations or identity in arguments; never return or persist broad/internal-derived credentials. Native governance coverage on the target host must be demonstrated, not assumed from MCP profiles. Destructive calls require the supported independent approval path.
+
+An accepted service runbook must pin the reviewed source/artifact/configuration/permission set, bind secrets by trusted reference, install the least-privilege profile, run deny-by-default and reflected-secret canaries, prove durable teardown and budget controls, and define operator rollback/revocation. Operator installation/configuration follows Security acceptance; credential creation/rotation or any security weakening requires its separate authorization. Nothing in this outline authorizes installation or production use.
