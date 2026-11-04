@@ -1,0 +1,3 @@
+# Requires uv with relative exclude-newer support; tested with 0.13.6.
+exclude-newer = "P3D"
+no-build = true

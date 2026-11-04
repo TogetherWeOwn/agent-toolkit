@@ -22,7 +22,7 @@ jobs:
   changes:
     uses: TogetherWeOwn/.github/.github/workflows/changes.yml@773ee91a904b9e1b65eddaaad4400d36e05fa717
     with:
-      areas-json: '{"code":["packages/**","plugins/**","test/**"],"docs":["*.md","docs/**"]}'
+      areas-json: '{"code":["packages/**","plugins/**","test/**","policies/**","skills/**"],"docs":["*.md","docs/**"]}'
       full-run-globs-json: '["package.json","**/package.json","package-lock.json","**/package-lock.json","npm-shrinkwrap.json","**/npm-shrinkwrap.json","tsconfig*.json","**/tsconfig*.json",".npmrc",".github/**"]'
       docs-areas-json: '["docs"]'
 
@@ -83,9 +83,14 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm test
 
+  native-policy:
+    needs: [changes, full_run]
+    if: needs.full_run.outputs.force == 'true' || needs.changes.outputs.full_run == 'true' || (fromJSON(needs.changes.outputs.areas).code && (github.event_name != 'pull_request' || github.event.pull_request.draft == false))
+    uses: ./.github/workflows/supply-chain-policy.yml
+
   ci-ok:
     name: ci-ok
-    needs: [changes, full_run, lint, test]
+    needs: [changes, full_run, lint, test, native-policy]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
