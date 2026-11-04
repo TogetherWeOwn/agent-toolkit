@@ -8,6 +8,7 @@ A real tool keeps broad and internal-derived credentials in its trusted broker p
 
 - `packages/core`: shared bounded closed JSON schemas, ASCII scope guards, binding/lease/cap checks, exact dispatch, fixed-field audit and result/error boundary, durable adapter interfaces.
 - `packages/core/src/testing`: fake host clock/secrets, strict no-network transport, Cloudflare/GitHub fixture builders, disk-backed transactional SQLite state/approval/audit fixture and a synthetic-only reference handler. Test-only modules are separate from the core policy entrypoint.
+- `packages/work-supply`: inert, offline JSON work-inventory classifier/CLI, with synthetic fixtures and no API or credential access.
 - `plugins/<provider>`: reserved for independently versioned, reviewed and installed plugins, one per provider credential trust boundary. No provider implementation is included.
 - `plugins/_template`: **inert documentation outline**, not an installable tool.
 - [STANDARD.md](STANDARD.md): full proposed per-tool security and acceptance standard, including OWASP/MCP rationale.
@@ -29,6 +30,14 @@ npm run check
 After dependencies are installed, `npm run check`, `npm test`, `npm run typecheck` and `npm run build` require no network or provider credential. Tests use strict injected synthetic messages—there is no fetch/network fallback. Independent subprocesses contend on the same temporary SQLite database for reservation/approval tests; reopen tests exercise persisted intent and recovery transitions. Runtime-generated canaries are checked against results, audit/call records and database bytes, then temporary databases are removed.
 
 These tests **do not** prove a provider integration, a production store, native plugin governance or autonomous restart-safe teardown. The reference's manually driven recovery function is not a scheduler. See the explicit gaps in the evidence matrix. Never install a destructive tool until the exact artifact/configuration/permission set has Security acceptance and a verified approval/governance path, followed by operator installation and trusted secret binding.
+
+## Offline work-supply report
+
+```sh
+npm run --silent work-supply -- --input packages/work-supply/fixtures/example.json --at 2026-11-04T12:00:00Z
+```
+
+This credential-free command distinguishes observed running/queued executions, assigned actionable **candidates**, pending reviewers, monitor waits, blockers, interactions, backlog, terminal and unknown evidence in explicit JSON exports. It never infers readiness from status alone. The synthetic example has 1 running run, 1 queued run and 2 candidates (only 1 Sol-only), not 4 running jobs. Buckets can overlap; missing/stale evidence is caveated. It measures neither current capacity nor provider quota, makes no API calls and installs nothing. See the [input contract and interpretation limits](packages/work-supply/README.md).
 
 ### Observed bootstrap verification
 
