@@ -25,13 +25,14 @@ The reviewed adoption procedure and official sources live in the
 
 ## Initial install-hook inventory
 
-The toolkit default branch initially contains only README and LICENSE. The
-proposed package-workspace baseline at commit
-`68ab51922d0ebb6048bec328d26d755a1d88f56a` has no root install/prepare hooks and no
-locked `hasInstallScript` entries. Its dependencies are TypeScript 5.9.3,
-`@types/node` 24.10.0 and `undici-types` 7.16.0; builds run explicitly through
-reviewed `npm run` commands. No dependency-script exception is needed for that
-inventory. Re-inventory the merged/current lock before final adoption.
+The merged package-workspace baseline at commit
+`1da384d726fca9cc0f4b84757eceb0d3f72d3bfd` was re-inventoried before adoption:
+no root install/prepare hooks and no locked `hasInstallScript` entries. Its
+dependencies are TypeScript 5.9.3, `@types/node` 24.10.0 and `undici-types`
+7.16.0; builds run explicitly through reviewed `npm run` commands. With this
+policy, a clean `npm ci --no-audit --no-fund`, typecheck, build and all 174 tests
+passed. No dependency-script exception was needed. Re-inventory changed locks
+before subsequent adoption.
 
 Read-only inventory of the four attached plugin snapshots found these candidates:
 
@@ -62,8 +63,11 @@ probe checks timestamp selection and source-build refusal; pip checks wheel-only
 source refusal and, on 26.1+, its age filter. Config checks cover every template.
 
 Missing managers or unsupported old versions are reported as skips, not passes.
-The CI workflow pins project-local npm/pnpm probe tools and requires npm age
-capability before running; other managers are tested only when available. Those
+Required `ci-ok` includes the reusable native-policy workflow as a prerequisite,
+with the same change gating as the regular tests. Policy/skill paths select the
+code area; main, scheduled and manual runs execute the probes in full. The native
+workflow pins project-local npm/pnpm probe tools and requires npm age capability
+before running; other managers are tested only when available. Those
 skips do not establish rollout acceptance. Fixture policy is not an audit of
 existing locks, direct URLs, VCS sources, malicious wheels or runtime imports.
 

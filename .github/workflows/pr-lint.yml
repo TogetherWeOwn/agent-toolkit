@@ -1,0 +1,107 @@
+# Adapted from the organization pr-lint template, with no instance-specific data.
+name: PR lint
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+  merge_group: {}
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-lint-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  REQUIRE_CARD_REF: 'false'
+  INTERNAL_ID_LEVEL: 'error'
+  PR_STANDARDS_MODE: 'error'
+
+jobs:
+  pr-lint:
+    name: pr-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check title, body, branch and commits
+        env:
+          EVENT: ${{ github.event_name }}
+          TITLE: ${{ github.event.pull_request.title }}
+          BODY: ${{ github.event.pull_request.body }}
+          BRANCH: ${{ github.head_ref }}
+          COMMITS: ${{ toJSON(github.event.commits) }}
+        run: |
+          python3 -I - <<'PY'
+          import json, os, re, sys
+
+          types = 'feat|fix|perf|refactor|test|docs|build|ci|chore|revert|style|security'
+          header = re.compile(rf'^({types})(\([A-Za-z0-9._/,-]+\))?!?: \S.*$')
+          # Keep tracker detection conservative without publishing private prefixes.
+          # Only these public standards/encoding/digest spellings are exempt.
+          public_id = re.compile(r'\b(?:RFC-\d+|ISO-\d+|UTF-(?:8|16|32)|SHA-(?:1|224|256|384|512))\b')
+          internal_id = re.compile(r'\b[A-Z]{2,10}-\d+\b')
+          ui_link = re.compile(r'/[A-Z]{2,6}/(?:issues|agents|projects|approvals|runs)/')
+          failures = []
+
+          def check_header(text, where):
+              if not header.fullmatch(text) or len(text) > 100 or text.endswith('.'):
+                  failures.append(f'{where}: use a Conventional Commits header of at most 100 characters, without a final period')
+
+          def check_internal(text, where):
+              # Report only the category, never echo a potentially sensitive value.
+              if internal_id.search(public_id.sub('', text)) or ui_link.search(text):
+                  failures.append(f'{where}: internal tracker references are forbidden; describe the problem and link only public GitHub issues')
+
+          def sections(text):
+              result, current = {}, None
+              for line in text.splitlines():
+                  match = re.match(r'^##\s+(.+?)\s*#*\s*$', line)
+                  if match:
+                      current = match[1].lower()
+                      result[current] = []
+                  elif current:
+                      result[current].append(line)
+              return result
+
+          def has_content(lines):
+              for line in lines:
+                  value = re.sub(r'^\s*(?:[-*]\s+|\d+[.)]\s+)?', '', line).strip()
+                  if re.match(r'^\[\s*\](?:\s|$)', value):
+                      continue
+                  if len(value) >= 6 and not re.fullmatch(r'\[[^\]]*\]', value) and not value.endswith((' ...', ' …')):
+                      return True
+              return False
+
+          if os.environ['REQUIRE_CARD_REF'] != 'false' or os.environ['INTERNAL_ID_LEVEL'] != 'error':
+              failures.append('internal-reference policy configuration must remain strict')
+          if os.environ['EVENT'] == 'pull_request':
+              title = os.environ.get('TITLE', '').strip()
+              body = re.sub(r'<!--.*?-->', '', os.environ.get('BODY', ''), flags=re.S)
+              check_header(title, 'PR title')
+              for where, text in [('title', title), ('body', body), ('branch', os.environ.get('BRANCH', ''))]:
+                  check_internal(text, where)
+              if len(re.sub(r'\s', '', body)) < 40:
+                  failures.append('PR body: describe the change and verification')
+              parsed = sections(body)
+              required = ['Verification']
+              if title.split(':', 1)[0].split('(', 1)[0].rstrip('!') in {'feat', 'fix', 'perf', 'refactor', 'security'}:
+                  required.append('Linked Issues or Issue Description')
+              for name in required:
+                  if not has_content(parsed.get(name.lower(), [])):
+                      failures.append(f'PR body: section {name} needs real content')
+          else:
+              for commit in json.loads(os.environ.get('COMMITS') or '[]') or []:
+                  message = commit.get('message') or ''
+                  subject = message.splitlines()[0] if message else ''
+                  check_internal(message, 'commit')
+                  if not subject.startswith(('Merge ', 'Revert "')):
+                      check_header(subject, 'default-branch commit')
+          for failure in failures:
+              print(f'::error::{failure}')
+          if failures:
+              sys.exit(1)
+          print('PR conventions OK')
+          PY
