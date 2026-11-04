@@ -1,0 +1,4 @@
+[install]
+# Age is measured in seconds; existing bun.lock entries are not re-resolved.
+minimumReleaseAge = 259200
+ignoreScripts = true

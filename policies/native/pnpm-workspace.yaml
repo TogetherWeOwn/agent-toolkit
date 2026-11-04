@@ -1,0 +1,4 @@
+# pnpm 10.16+; merge into the existing workspace file, preserving packages.
+# Age is measured in minutes.
+minimumReleaseAge: 4320
+ignoreScripts: true
