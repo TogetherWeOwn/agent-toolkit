@@ -69,6 +69,26 @@ class PolicyFiles(unittest.TestCase):
                     self.assertIn(line, skill, str(path))
         self.assertNotIn("](../../", skill, "Installed skill must not depend on files outside its package")
 
+    def test_required_ci_calls_native_policy_and_propagates_failure(self):
+        workflow = (ROOT / ".github/workflows/ci.yml").read_text()
+        self.assertIn("uses: ./.github/workflows/supply-chain-policy.yml", workflow)
+        aggregate = workflow.split("  ci-ok:\n", 1)[1]
+        self.assertIn("needs: [changes, full_run, lint, test, native-policy]", aggregate)
+        source = aggregate.split("          python3 -I - <<'PY'\n", 1)[1].split("          PY", 1)[0]
+        source = "\n".join(line[10:] for line in source.splitlines())
+        for result in ["failure", "cancelled", "success"]:
+            with self.subTest(result=result):
+                env = {"NEEDS_JSON": json.dumps({"native-policy": {"result": result}})}
+                run = subprocess.run([sys.executable, "-I", "-c", source], env=env,
+                                     capture_output=True, text=True, timeout=5)
+                self.assertEqual(run.returncode, 0 if result == "success" else 1, run.stdout)
+        areas = json.loads(workflow.split("areas-json: '", 1)[1].split("'", 1)[0])
+        for pattern in ["policies/**", "skills/**", "test/**"]:
+            self.assertIn(pattern, areas["code"])
+        native = (ROOT / ".github/workflows/supply-chain-policy.yml").read_text()
+        self.assertIn("  workflow_call:", native)
+        self.assertNotIn("  pull_request:", native, "CI owns PR scheduling; do not duplicate probes")
+
     def test_no_broad_exemptions_and_explicit_dependabot_cooldown(self):
         for path in [ROOT / ".npmrc", *NATIVE.iterdir()]:
             content = "\n".join(line for line in path.read_text().splitlines() if not line.lstrip().startswith("#"))
