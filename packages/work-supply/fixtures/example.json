@@ -1,0 +1,46 @@
+{
+  "capturedAt": "2026-11-04T12:00:00Z",
+  "issues": [
+    {"id":"issue-running","identifier":"DEMO-1","companyId":"demo-company","status":"in_progress","executionRunId":"run-running","activeRun":{"id":"run-running","status":"running","agentId":"agent-sol"}},
+    {"id":"issue-running","identifier":"DEMO-1","companyId":"demo-company","status":"in_progress","executionRunId":"run-running","activeRun":{"id":"run-running","status":"running","agentId":"agent-sol"}},
+    {"id":"issue-queued","identifier":"DEMO-2","companyId":"demo-company","status":"todo","executionRunId":"run-queued"},
+    {
+      "id":"issue-candidate-sol","identifier":"DEMO-3","companyId":"demo-company","status":"todo",
+      "assigneeAgentId":"agent-sol","assigneeUserId":null,"checkoutRunId":null,"executionRunId":null,"activeRun":null,
+      "blockedBy":[],"blockerAttention":null,"executionBlocker":null,"scheduledRetry":null,
+      "executionState":null,"executionPolicy":null,"monitorNextCheckAt":null
+    },
+    {
+      "id":"issue-candidate-other","identifier":"DEMO-4","companyId":"demo-company","status":"in_progress",
+      "assigneeAgentId":"agent-other","assigneeUserId":null,"checkoutRunId":null,"executionRunId":null,"activeRun":null,
+      "blockedBy":[],"blockerAttention":null,"executionBlocker":null,"scheduledRetry":null,
+      "executionState":null,"executionPolicy":null,"monitorNextCheckAt":null
+    },
+    {"id":"issue-review","identifier":"DEMO-5","status":"in_progress","executionState":{"status":"pending","currentStageId":"security-stage","currentStageType":"review","currentParticipant":{"type":"agent","agentId":"agent-sol"},"returnAssignee":{"type":"agent","agentId":"agent-other"}}},
+    {"id":"issue-monitor-future","identifier":"DEMO-6","status":"in_review","assigneeAgentId":"agent-sol","assigneeUserId":null,"monitorNextCheckAt":"2026-11-04T12:10:00Z","monitorAttemptCount":0,"executionPolicy":{"monitor":{"timeoutAt":"2026-11-04T13:00:00Z","maxAttempts":4}}},
+    {"id":"issue-monitor-overdue","identifier":"DEMO-7","status":"in_progress","assigneeAgentId":"agent-sol","assigneeUserId":null,"monitorNextCheckAt":"2026-11-04T11:50:00Z","monitorAttemptCount":1,"executionPolicy":{"monitor":{"timeoutAt":"2026-11-04T13:00:00Z","maxAttempts":4}}},
+    {"id":"issue-blocked","identifier":"DEMO-8","status":"blocked","assigneeAgentId":"agent-sol","assigneeUserId":null,"blockedBy":[{"id":"dependency","status":"in_progress"}],"monitorNextCheckAt":"2026-11-04T12:10:00Z","monitorAttemptCount":0,"executionPolicy":{"monitor":{"timeoutAt":"2026-11-04T13:00:00Z","maxAttempts":4}}},
+    {"id":"issue-human","identifier":"DEMO-9","status":"todo"},
+    {"id":"issue-agent","identifier":"DEMO-10","status":"todo"},
+    {"id":"issue-backlog","identifier":"DEMO-11","status":"backlog"},
+    {"id":"issue-terminal","identifier":"DEMO-12","status":"done"},
+    {"id":"issue-unknown","identifier":"DEMO-13","status":"todo"},
+    {"id":"issue-missing-run","identifier":"DEMO-14","status":"in_progress","executionRunId":"missing-run"},
+    {"id":"issue-retry","identifier":"DEMO-15","status":"in_progress"}
+  ],
+  "runs": [
+    {"id":"run-running","status":"running","agentId":"agent-sol","companyId":"demo-company","issueId":"issue-running"},
+    {"id":"run-running","status":"running","agentId":"agent-sol","companyId":"demo-company","issueId":"issue-running"},
+    {"id":"run-queued","status":"queued","agentId":"agent-other","companyId":"demo-company","issueId":"issue-queued"},
+    {"id":"run-retry","status":"scheduled_retry","agentId":"agent-sol","companyId":"demo-company","issueId":"issue-retry"}
+  ],
+  "agents": [
+    {"id":"agent-sol","companyId":"demo-company","status":"idle","reportsTo":null,"adapterConfig":{"model":"gpt-6.1-sol"}},
+    {"id":"agent-other","companyId":"demo-company","status":"idle","reportsTo":null,"adapterConfig":{"model":"other-model"}}
+  ],
+  "interactions": [
+    {"id":"interaction-human","issueId":"issue-human","status":"pending","effectiveResolverPolicy":"human_only"},
+    {"id":"interaction-agent","issueId":"issue-agent","status":"pending","addresseeAgentId":"agent-other"}
+  ],
+  "pools": [{"id":"demo-pool","agentIds":["agent-sol"]}]
+}
