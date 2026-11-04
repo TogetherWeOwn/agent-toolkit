@@ -372,6 +372,76 @@ test("known non-Sol per-issue overrides cannot enter the roster-Sol subtotal", (
   assert.equal(running.solOnly.runs.unknown_eligibility, 1);
 });
 
+for (const runId of [null, undefined, "/private/run"]) {
+  test(`invalid run ID retains linked issue uncertainty: ${runId}`, () => {
+    const issue = candidate();
+    const report = run(snapshot({ runs: [{ id: runId, issueId: issue.id, status: "running" }] }));
+    assert.equal(report.runs.unknown, 1);
+    assert.equal(report.caveats.invalid_run_ids, 1);
+    assert.equal(count(report, "assigned_actionable_candidates"), 0);
+    assert.deepEqual(report.issues.unknown, { count: 1, issueIdentifiers: [issue.identifier] });
+  });
+}
+
+test("invalid run IDs retain safe orphan issue evidence without reflecting arbitrary content", () => {
+  const issueId = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+  const report = run(snapshot({ issues: [], runs: [
+    { id: "/private/run", issueId, status: "running", description: "private-canary" },
+    { id: null, issueId, status: "queued" },
+    { id: null, issueId: "opaque-issue", status: "running" },
+    { id: null, issueId: "/private/issue", status: "running" },
+  ] }));
+  assert.equal(report.runs.unknown, 4);
+  assert.deepEqual(report.issues.unknown, { count: 2, issueIdentifiers: [issueId] });
+  assert.ok(!JSON.stringify(report).includes("private"));
+  assert.equal(count(report, "running"), 0);
+  assert.equal(count(report, "queued"), 0);
+});
+
+for (const agentId of [null, undefined, "/private/agent"]) {
+  test(`missing or invalid assignee fails eligibility without crashing: ${agentId}`, () => {
+    const report = run(snapshot({ issues: [candidate({ assigneeAgentId: agentId, assigneeUserId: null })] }));
+    assert.equal(count(report, "assigned_actionable_candidates"), 0);
+    assert.equal(count(report, "unknown"), 1);
+    assert.equal(report.caveats.unknown_agent_eligibility, 1);
+  });
+  for (const status of ["running", "queued"]) {
+    test(`ownerless ${status} run retains observations and unknown eligibility: ${agentId}`, () => {
+      const issue = candidate();
+      const report = run(snapshot({ runs: [{ id: "ownerless-run", issueId: issue.id, companyId: issue.companyId, agentId, status }] }));
+      assert.equal(report.runs[status], 1);
+      assert.equal(count(report, status), 1);
+      assert.equal(count(report, "assigned_actionable_candidates"), 0);
+      assert.equal(report.solOnly.runs[status], 0);
+      assert.equal(report.solOnly.runs.unknown_eligibility, 1);
+    });
+  }
+}
+
+for (const [audience, restriction, category] of [
+  ["human", { effectiveResolverPolicy: "human_only" }, "pending_human_interactions"],
+  ["agent", { addresseeAgentId: "agent-other" }, "pending_agent_interactions"],
+  ["open", { effectiveResolverPolicy: "anyone" }, "unknown"],
+]) {
+  for (const issueId of ["aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "opaque-issue"]) {
+    test(`orphan ${audience} interaction preserves deduplicated safe evidence: ${issueId}`, () => {
+      const interaction = { id: "orphan-question", issueId, status: "pending", payload: { body: "private-canary" }, ...restriction };
+      const report = run(snapshot({ issues: [], interactions: [interaction, interaction] }));
+      const expected = { count: 1, issueIdentifiers: issueId === "opaque-issue" ? [] : [issueId] };
+      assert.deepEqual(report.issues.pending_interactions, expected);
+      assert.deepEqual(report.issues[category], expected);
+      assert.deepEqual(report.issues.unknown, expected);
+      assert.ok(report.caveats.unknown_interactions > 0);
+      assert.equal(count(report, "assigned_actionable_candidates"), 0);
+      assert.ok(!JSON.stringify(report).includes("private-canary"));
+      const answered = run(snapshot({ issues: [], interactions: [{ ...interaction, status: "answered" }] }));
+      assert.equal(count(answered, "pending_interactions"), 0);
+      assert.equal(count(answered, "unknown"), 0);
+      assert.equal(answered.caveats.unknown_interactions, 0);
+    });
+  }
+}
+
 test("classification is pure and does not read a live provider", () => {
   const input = snapshot();
   const before = structuredClone(input);

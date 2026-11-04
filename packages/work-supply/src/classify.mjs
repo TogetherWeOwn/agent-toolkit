@@ -125,6 +125,7 @@ function noWaitEvidence(issue) {
 }
 
 function invokable(agentId, companyId, agents) {
+  if (!id(agentId)) return false;
   const seen = new Set();
   let current = agentId;
   let first = true;
@@ -192,6 +193,9 @@ export function classify(snapshot, { at, pool = null } = {}) {
         } else if (issue[key] != null) badRunIssues.add(issueId);
       }
     }
+  }
+  for (const row of runRows) {
+    if (!id(row.id) && id(row.issueId)) badRunIssues.add(row.issueId);
   }
   const runs = groups(runRows, caveats, "run");
   const liveByIssue = new Map();
@@ -313,6 +317,15 @@ export function classify(snapshot, { at, pool = null } = {}) {
     if (!issues.has(issueId)) for (const status of statuses) {
       buckets[status === "scheduled_retry" ? "unknown" : status].add(issueId);
       buckets.unknown.add(issueId);
+    }
+  }
+  for (const issueId of badRunIssues) if (id(issueId)) buckets.unknown.add(issueId);
+  for (const [issueId, categories] of pending) {
+    if (!issues.has(issueId)) {
+      buckets.pending_interactions.add(issueId);
+      for (const category of categories) buckets[category].add(issueId);
+      buckets.unknown.add(issueId);
+      caveats.unknown_interactions++;
     }
   }
   for (const rows of issues.values()) if (!safeIdentifier(rows)) caveats.redacted_issue_identifiers++;
