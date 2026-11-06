@@ -2,17 +2,36 @@ import { definePlugin, type PluginContext, type ToolRunContext } from "@papercli
 import { Broker, tools } from "./broker.js";
 import { Denied, type Host } from "./types.js";
 
-// Timeouts abandon the await, not native IPC. Keep its worker-wide slot until
-// the actual operation settles, including late resolution or rejection.
-let hostInFlight = 0;
+// Timeouts abandon the await, not native IPC. Retain its slot until settlement.
+// Healthy contention gets a bounded FIFO; detached operations close admission.
+let hostInFlight = 0, hostDetached = 0;
+const hostWaiters: (() => void)[] = [];
 export async function hostCall<T>(action: () => Promise<T>, timeoutMs = 30000): Promise<T> {
-  if (hostInFlight >= 4) throw new Denied("host.capacity");
-  hostInFlight++;
-  const pending = Promise.resolve().then(action).finally(() => { hostInFlight--; });
+  const deadline = Date.now() + timeoutMs;
+  if (hostInFlight >= 4) {
+    if (hostDetached > 0 || hostWaiters.length >= 4) throw new Denied("host.capacity");
+    await new Promise<void>((resolve, reject) => {
+      const wake = () => { clearTimeout(timer); resolve(); };
+      const timer = setTimeout(() => {
+        hostWaiters.splice(hostWaiters.indexOf(wake), 1);
+        reject(new Denied("host.timeout"));
+      }, timeoutMs);
+      hostWaiters.push(wake);
+    });
+  } else hostInFlight++;
+  let detached = false;
+  const release = () => {
+    if (detached) hostDetached--;
+    const wake = hostWaiters.shift();
+    if (wake) wake(); else hostInFlight--;
+  };
+  const remaining = deadline - Date.now();
+  if (remaining <= 0) { release(); throw new Denied("host.timeout"); }
+  const pending = Promise.resolve().then(action).finally(release);
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([pending, new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new Denied("host.timeout")), timeoutMs);
+      timer = setTimeout(() => { detached = true; hostDetached++; reject(new Denied("host.timeout")); }, remaining);
     })]);
   } finally { if (timer !== undefined) clearTimeout(timer); }
 }

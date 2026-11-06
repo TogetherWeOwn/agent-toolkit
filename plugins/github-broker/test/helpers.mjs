@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { generateKeyPairSync, createPublicKey, verify } from 'node:crypto';
-import { register } from '../../../dist/plugins/github-broker/src/plugin.js';
+import { register } from '../dist/plugins/github-broker/src/plugin.js';
 
 export const key = generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey.export({ type: 'pkcs8', format: 'pem' });
 export const token = 'ghs_DISTINCT_SYNTHETIC_INSTALLATION_CANARY_0123456789';
@@ -50,10 +50,12 @@ export function fixture() {
     },
   });
   f.identity = (id = 101) => f.steps.push({ method: 'GET', path: '/repos/synthetic-org/sandbox', body: { id }, inspect: req => assert.equal(req.headers.Authorization, `Bearer ${token}`) });
-  f.read = (path, body, overrides = {}) => f.steps.push({ method: 'GET', path: '/repos/synthetic-org/sandbox' + path, body, ...overrides });
+  f.read = (path, body, overrides = {}) => f.steps.push({ method: 'GET', path: '/repos/synthetic-org/sandbox' + path, body, ...overrides,
+    inspect(req) { assert.equal(req.headers.Authorization, `Bearer ${token}`); overrides.inspect?.(req); },
+  });
   f.revoke = (overrides = {}) => f.steps.push({ method: 'DELETE', path: '/installation/token', status: 204, inspect: req => assert.equal(req.headers.Authorization, `Bearer ${token}`), ...overrides });
   f.hygiene = result => {
-    const visible = JSON.stringify({ result, events: f.events, logs: f.logs });
+    const visible = JSON.stringify({ result, events: f.events, logs: f.logs }, (_, value) => value instanceof Error ? { ...value, name: value.name, message: value.message, stack: value.stack, cause: value.cause } : value);
     for (const secret of [key, ...key.split('\n').filter(x => x.length >= 16), token, f.jwt].filter(Boolean)) assert.ok(!visible.includes(secret), 'Credential escaped through an observable sink');
   };
   f.done = () => assert.equal(f.steps.length, 0, 'Expected outbound request was not made');

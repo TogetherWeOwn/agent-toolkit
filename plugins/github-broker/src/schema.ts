@@ -16,6 +16,8 @@ export const baseJson = {
 export const pageJson = { type: "integer", minimum: 1, maximum: 100 };
 export const shaJson = { type: "string", pattern: "^[a-f0-9]{40}$" };
 export const refJson = { type: "string", pattern: String.raw`^(?!.*\.\.)(?!.*//)(?!.*(?:^|/)\.(?:/|$))(?!.*\.lock(?:/|$))(?!.*[/]$)[A-Za-z0-9][A-Za-z0-9._/-]*$`, maxLength: 200 };
+export const qualifiedRefJson = { ...refJson, pattern: "^(?=[^/]+/.+)" + refJson.pattern.slice(1) };
+export const qualifiedRef = text(200, new RegExp(qualifiedRefJson.pattern));
 export const pathJson = { type: "string", pattern: String.raw`^(?!\.{1,2}(?:/|$))(?!.*[/]\.{1,2}(?:/|$))[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$`, maxLength: 1000 };
 export function define(name: Tool["name"], identityLane: Tool["identityLane"], description: string, shape: Record<string, Schema<unknown>>, properties: Record<string, unknown>, requests: Tool["requests"], project: Tool["project"]): Tool {
   return {

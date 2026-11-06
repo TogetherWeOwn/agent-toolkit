@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fixture, base, run, pull, token, key, refused } from './helpers.mjs';
-import { Broker, tools } from '../../../dist/plugins/github-broker/src/broker.js';
-import { mintScope, withInstallationToken, request } from '../../../dist/packages/github/src/index.js';
-import manifest from '../../../dist/plugins/github-broker/src/manifest.js';
+import { Broker, tools } from '../dist/plugins/github-broker/src/broker.js';
+import { mintScope, withInstallationToken, request } from '../dist/packages/github/src/index.js';
+import manifest from '../dist/plugins/github-broker/src/manifest.js';
 
 globalThis.fetch = () => { throw Error('Live network is forbidden in fixtures'); };
 const paged = { page: 1, perPage: 10 };
@@ -191,6 +191,58 @@ test('policy revocation or assignment drift between mint and read prevents the r
   }
 });
 
+test('a recovered audit sink records refused when the allow intent was not acknowledged', async () => {
+  const f = fixture(); let attempts = 0;
+  f.ctx.activity.log = async entry => { if (++attempts === 1) throw Error(token); f.events.push(entry.metadata); };
+  const result = await f.call('github.pr_get', { ...base, number: 1 });
+  assert.equal(result.error, 'audit.unavailable'); assert.equal(attempts, 2);
+  assert.equal(f.events.length, 1); assert.equal(f.events[0].phase, 'refused'); assert.equal(f.events[0].decision, 'deny');
+  assert.equal(f.secretCalls, 0); assert.equal(f.calls.length, 0); f.hygiene(result);
+});
+
+test('credential hygiene detects Error message and stack log arguments', () => {
+  const f = fixture(); f.logs.push({ args: [Error(token)] });
+  assert.throws(() => f.hygiene({}), /Credential escaped/);
+  f.logs = [{ args: [Object.assign(Error('safe'), { stack: token })] }];
+  assert.throws(() => f.hygiene({}), /Credential escaped/);
+  f.logs = [{ args: [Error('safe')] }]; f.hygiene({});
+});
+
+test('every repository read checks its scoped bearer even with a custom inspector', () => {
+  const f = fixture(); let inspected = 0;
+  f.read('/pulls/1', pull, { inspect: () => { inspected++; } });
+  const step = f.steps.shift();
+  assert.throws(() => step.inspect({ headers: {} })); assert.equal(inspected, 0);
+  step.inspect({ headers: { Authorization: `Bearer ${token}` } }); assert.equal(inspected, 1); f.done();
+});
+
+test('ref mode rejects unqualified or malformed refs before resolving credentials', async () => {
+  for (const ref of ['main', 'heads/', 'heads//main', 'heads/../main', 'heads/x.lock', 'heads/.']) {
+    const f = fixture(); const result = await f.call('github.repo_read', { ...base, mode: 'ref', ref });
+    assert.ok(result.error); assert.equal(f.secretCalls, 0); assert.equal(f.calls.length, 0); f.hygiene(result);
+  }
+  const f = fixture(); f.mint({ contents: 'read' }); f.identity();
+  f.read('/git/ref/tags/v1.0', { ref: 'refs/tags/v1.0', object: { type: 'commit', sha: 'a'.repeat(40) } }); f.revoke();
+  assert.equal((await f.call('github.repo_read', { ...base, mode: 'ref', ref: 'tags/v1.0' })).error, undefined); f.done();
+});
+
+test('healthy parallel native calls queue without stealing active IPC capacity', async () => {
+  const { hostCall } = await import('../dist/plugins/github-broker/src/plugin.js');
+  const release = []; let started, active = 0, peak = 0;
+  const entered = new Promise(resolve => { started = resolve; });
+  const calls = Array.from({ length: 4 }, () => hostCall(async () => {
+    peak = Math.max(peak, ++active);
+    await new Promise(resolve => { release.push(resolve); if (release.length === 4) started(); });
+    active--; return 'ok';
+  }, 1000));
+  await entered;
+  calls.push(hostCall(async () => { peak = Math.max(peak, ++active); active--; return 'ok'; }, 1000));
+  const results = Promise.allSettled(calls);
+  try { assert.equal(release.length, 4); } finally { for (const resolve of release) resolve(); }
+  assert.deepEqual(await results, Array.from({ length: 5 }, () => ({ status: 'fulfilled', value: 'ok' })));
+  assert.equal(peak, 4);
+});
+
 test('audit outage prevents mint and never reports unqualified success', async () => {
   const f = fixture(); f.failAudit = true; const result = await f.call('github.pr_get', { ...base, number: 1 });
   assert.equal(result.error, 'audit.unavailable'); assert.equal(f.secretCalls, 0); assert.equal(f.calls.length, 0); f.hygiene(result);
@@ -337,13 +389,56 @@ test('unique complete first-page checks retain producer-qualified success', asyn
   assert.ok(result.data.signals.every(s => s.current && s.producerTrusted && s.passing)); f.hygiene(result); f.done();
 });
 
+test('native IPC waiters are bounded and expired waiters never start an operation', async () => {
+  const { hostCall } = await import('../dist/plugins/github-broker/src/plugin.js');
+  const release = []; let entered, starts = 0;
+  const ready = new Promise(resolve => { entered = resolve; });
+  const active = Array.from({ length: 4 }, () => hostCall(async () => {
+    starts++; return new Promise(resolve => { release.push(resolve); if (release.length === 4) entered(); });
+  }, 1000));
+  await ready;
+  try {
+    await assert.rejects(hostCall(async () => { starts++; }, 5), /host.timeout/);
+    assert.equal(starts, 4);
+    const waiting = Array.from({ length: 4 }, () => hostCall(async () => { starts++; return 'queued'; }, 1000));
+    await assert.rejects(hostCall(async () => { starts++; }, 1000), /host.capacity/);
+    for (const resolve of release) resolve('active');
+    assert.deepEqual(await Promise.all(waiting), Array(4).fill('queued'));
+    assert.deepEqual(await Promise.all(active), Array(4).fill('active'));
+    assert.equal(starts, 8);
+  } finally { for (const resolve of release) resolve('active'); await Promise.allSettled(active); }
+  assert.equal(await hostCall(async () => 'recovered', 100), 'recovered');
+});
+
+test('healthy parallel registered calls preserve successful reads and audits', async () => {
+  const release = []; let entered;
+  const ready = new Promise(resolve => { entered = resolve; });
+  const fixtures = Array.from({ length: 5 }, () => fixture());
+  for (const [i, f] of fixtures.entries()) {
+    f.mint({ pull_requests: 'read' }); f.identity(); f.read('/pulls/1', pull); f.revoke();
+    const get = f.ctx.config.get; let first = true;
+    f.ctx.config.get = async (...args) => {
+      if (first && i < 4) { first = false; await new Promise(resolve => { release.push(resolve); if (release.length === 4) entered(); }); }
+      return get(...args);
+    };
+  }
+  const calls = fixtures.slice(0, 4).map(f => f.call('github.pr_get', { ...base, number: 1 })); await ready;
+  calls.push(fixtures[4].call('github.pr_get', { ...base, number: 1 }));
+  for (const resolve of release) resolve();
+  const results = await Promise.all(calls);
+  for (const [i, result] of results.entries()) {
+    assert.equal(result.error, undefined); assert.equal(fixtures[i].events.at(-1).outcome, 'success');
+    fixtures[i].hygiene(result); fixtures[i].done();
+  }
+});
+
 test('timed-out native IPC retains its worker budget until the underlying operations settle', async () => {
-  const { hostCall } = await import('../../../dist/plugins/github-broker/src/plugin.js');
+  const { hostCall } = await import('../dist/plugins/github-broker/src/plugin.js');
   const settle = [], native = []; let starts = 0;
   try {
     const calls = Array.from({ length: 4 }, (_, i) => {
       const pending = new Promise((resolve, reject) => { settle.push(() => i % 2 ? reject(Error('late failure')) : resolve('late secret')); });
-      native.push(pending); return hostCall(() => { starts++; return pending; }, 1);
+      native.push(pending); return hostCall(() => { starts++; return pending; }, 10);
     });
     const results = await Promise.allSettled(calls);
     assert.ok(results.every(r => r.status === 'rejected' && r.reason.rule === 'host.timeout'));
@@ -359,7 +454,7 @@ test('timed-out native IPC retains its worker budget until the underlying operat
 });
 
 test('board policy supports all advertised repositories and agents without widening tool JSON bounds', async () => {
-  const { parseConfig } = await import('../../../dist/plugins/github-broker/src/policy.js');
+  const { parseConfig } = await import('../dist/plugins/github-broker/src/policy.js');
   const f = fixture();
   f.config.policy.repositories = Array.from({ length: 32 }, (_, i) => ({ id: 101 + i, owner: 'synthetic-org', name: `repo-${i}`, projectId: run.projectId, workspaceId: `workspace-${i}` }));
   f.config.policy.agents = Array.from({ length: 32 }, (_, i) => ({ agentId: `agent-${i}`, profile: 'builder', identityLane: 'app', repositoryIds: f.config.policy.repositories.map(r => r.id) }));
@@ -446,7 +541,7 @@ test('provider backoff only grows and installation budgets are shared across com
 });
 
 test('host call deadlines reject stalled IPC and ignore late results', async () => {
-  const { hostCall } = await import('../../../dist/plugins/github-broker/src/plugin.js'); let resolve;
+  const { hostCall } = await import('../dist/plugins/github-broker/src/plugin.js'); let resolve;
   const pending = new Promise(r => { resolve = r; });
   await assert.rejects(hostCall(() => pending, 1), /host.timeout/); resolve('late');
   assert.equal(await hostCall(async () => 'ok', 100), 'ok');
@@ -460,8 +555,8 @@ test('ruleset completeness includes nested required-context fields', async () =>
 });
 
 test('published ref and path patterns match outbound rejection boundaries', async () => {
-  const { refJson, pathJson, segment, filePath } = await import('../../../dist/plugins/github-broker/src/schema.js');
-  for (const [schema, parse, values] of [[refJson, segment, ['main', 'a', 'heads/topic', 'a.b', 'a..b', 'a//b', 'a/.', 'x.lock', 'x.lock/y', 'main/', '../a']], [pathJson, filePath, ['README.md', 'dir/file.txt', '../a', 'a/../b', 'a/./b', 'a//b', 'a\\b', '/file']]]) {
+  const { refJson, qualifiedRefJson, qualifiedRef, pathJson, segment, filePath } = await import('../dist/plugins/github-broker/src/schema.js');
+  for (const [schema, parse, values] of [[qualifiedRefJson, value => qualifiedRef.parse(value), ['main', 'heads/main', 'tags/v1.0', 'heads/', 'heads//x', 'heads/.', 'heads/x.lock']], [refJson, segment, ['main', 'a', 'heads/topic', 'a.b', 'a..b', 'a//b', 'a/.', 'x.lock', 'x.lock/y', 'main/', '../a']], [pathJson, filePath, ['README.md', 'dir/file.txt', '../a', 'a/../b', 'a/./b', 'a//b', 'a\\b', '/file']]]) {
     for (const value of values) { let accepted = true; try { parse(value); } catch { accepted = false; } assert.equal(new RegExp(schema.pattern).test(value), accepted, value); }
   }
 });

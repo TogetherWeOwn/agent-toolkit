@@ -77,7 +77,9 @@ export class Broker {
       this.reserve(this.agents, agentKey, 1, 30, 60000, host.clock());
       guard(this.inFlight < 4, "rate.concurrency");
       this.inFlight++; reserved = true;
-      phase = "intent"; await emit("allow", "policy.allow", "pending");
+      phase = "intent";
+      try { await emit("allow", "policy.allow", "pending"); }
+      catch (error) { phase = "refused"; throw error; }
       const revalidate = async () => {
         guard(policyHash(parseConfig(await host.config())) === policyDigest, "policy.changed");
         await authorize(host, config.policy, caller!, tool, args!);
