@@ -36,6 +36,7 @@ export interface Audit {
   phase: "intent" | "outcome" | "refused"; decision: "allow" | "deny"; rule: string;
   requestIds: string[]; outcome: "pending" | "success" | "error";
   providerFailure?: { rule: "rate.github"; retryAfterSeconds: number };
+  revocation?: import("../../../packages/github/src/index.js").RevocationEvidence;
 }
 export interface Host {
   config(): Promise<unknown>;

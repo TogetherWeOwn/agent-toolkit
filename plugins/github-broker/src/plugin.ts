@@ -1,4 +1,5 @@
 import { definePlugin, type PluginContext, type ToolRunContext } from "@paperclipai/plugin-sdk";
+import { SdkNullBodyRevokeFailure, type Request, type Response } from "../../../packages/github/src/index.js";
 import { Broker, tools } from "./broker.js";
 import { Denied, type Host } from "./types.js";
 
@@ -36,20 +37,28 @@ export async function hostCall<T>(action: () => Promise<T>, timeoutMs = 30000): 
   } finally { if (timer !== undefined) clearTimeout(timer); }
 }
 
+export function githubHttp(ctx: Pick<PluginContext, "http">, req: Request): Promise<Response> {
+  return hostCall(async () => {
+    // Host 2026.1023.0 uses a single DNS-pinned node:https request, never
+    // follows redirects, has a 5s DNS + 30s request deadline and 200 MiB cap.
+    // SDK drops redirect/signal; safety relies on that verified host contract.
+    let res;
+    try { res = await ctx.http.fetch(req.url, { method: req.method, headers: req.headers, ...(req.body === undefined ? {} : { body: req.body }) }); }
+    catch (error) {
+      if (error instanceof TypeError && error.message === "Response constructor: Invalid response status code 204" && req.method === "DELETE" && req.url === "https://api.github.com/installation/token") throw new SdkNullBodyRevokeFailure();
+      throw error;
+    }
+    return { status: res.status, headers: Object.fromEntries(res.headers.entries()), body: await res.text() };
+  });
+}
+
 function hostFor(ctx: PluginContext, run: ToolRunContext): Host {
   return {
     config: () => hostCall(() => ctx.config.get(run.companyId)),
     issue: id => hostCall(() => ctx.issues.get(id, run.companyId)),
     workspace: (projectId, workspaceId) => hostCall(async () => (await ctx.projects.listWorkspaces(projectId, run.companyId)).find(w => w.id === workspaceId) ?? null),
     secret: (ref, companyId) => hostCall(() => ctx.secrets.resolve(ref, { companyId, configPath: "privateKeySecretRef" })),
-    http: req => hostCall(async () => {
-      // Host 2026.1023.0 uses a single DNS-pinned node:https request, never
-      // follows redirects, has a 5s DNS + 30s request deadline and 200 MiB cap.
-      // SDK drops redirect/signal; safety here relies on that verified host
-      // contract, NOT on ignored fetch options. Broker rejects >1 MiB bodies.
-      const res = await ctx.http.fetch(req.url, { method: req.method, headers: req.headers, ...(req.body === undefined ? {} : { body: req.body }) });
-      return { status: res.status, headers: Object.fromEntries(res.headers.entries()), body: await res.text() };
-    }),
+    http: req => githubHttp(ctx, req),
     audit: record => hostCall(() => ctx.activity.log({ companyId: run.companyId, message: "github-broker.call", metadata: { ...record } })),
     clock: Date.now,
   };

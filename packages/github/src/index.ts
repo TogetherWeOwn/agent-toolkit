@@ -12,6 +12,18 @@ export type Transport = (request: Request) => Promise<Response>;
 export class GitHubFailure extends Error {
   constructor(readonly rule: string, readonly retryAfterSeconds?: number) { super(rule); }
 }
+// Temporary SDK boundary signal, not a Response or proof of revocation.
+// Retire after compatible adoption of a published fix for paperclipai/paperclip
+// #13084/#17282, verified in the resolved worker with status/header regressions.
+export class SdkNullBodyRevokeFailure extends Error {
+  constructor() { super("http.sdk_null_body_revoke"); }
+}
+export interface RevocationEvidence {
+  outcome: "revoked" | "revoked_verified_by_probe" | "unverified";
+  deleteRequestId: string | null;
+  probeRequestId?: string | null;
+  unavailableReason?: "sdk_null_body";
+}
 function check(value: unknown, rule: string): asserts value { if (!value) throw new GitHubFailure(rule); }
 const id = integer(1, Number.MAX_SAFE_INTEGER);
 const permissionNames = ["contents", "pull_requests", "checks", "statuses", "actions", "metadata", "issues"] as const;
@@ -52,20 +64,19 @@ export function retryAfter(response: Response, now: number): number {
   if (reset && /^\d{1,12}$/.test(reset)) return Math.min(86400, Math.max(1, Math.ceil((Number(reset) * 1000 - now) / 1000)));
   return 60;
 }
-export async function request(transport: Transport, method: Request["method"], path: string, credential: string, options: { body?: string; etag?: string } = {}): Promise<Response> {
+export async function request(transport: Transport, method: Request["method"], path: string, credential: string, options: { body?: string } = {}): Promise<Response> {
   check(path.startsWith("/") && !path.startsWith("//") && !/[\r\n\\#]/.test(path), "http.path");
   const url = new URL(path, API_ORIGIN);
   check(url.origin === API_ORIGIN && !url.username && !url.password, "http.origin");
   check(credential.length > 0 && !/[\r\n]/.test(credential), "secret.invalid");
   const headers: Record<string, string> = { Accept: "application/vnd.github+json", "User-Agent": "agent-toolkit-github-broker/0.1.0", "X-GitHub-Api-Version": API_VERSION, Authorization: `Bearer ${credential}` };
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
-  if (options.etag !== undefined) {
-    check(options.etag.length <= 200 && /^[\x20-\x7e]+$/.test(options.etag), "http.etag");
-    headers["If-None-Match"] = options.etag;
-  }
   let response: Response;
   try { response = await transport({ method, url: url.href, headers, ...(options.body === undefined ? {} : { body: options.body }) }); }
-  catch { throw new GitHubFailure("http.unavailable"); }
+  catch (error) {
+    if (error instanceof SdkNullBodyRevokeFailure && method === "DELETE" && url.href === `${API_ORIGIN}/installation/token`) throw error;
+    throw new GitHubFailure("http.unavailable");
+  }
   check(response && typeof response.body === "string" && Buffer.byteLength(response.body) <= 1048576, "http.response_limit");
   check(Number.isInteger(response.status) && response.status >= 100 && response.status <= 599, "http.status");
   check(response.status < 300 || response.status >= 400 || response.status === 304, "http.redirect");
@@ -81,7 +92,8 @@ export function parse(response: Response): unknown {
  */
 export async function withInstallationToken<T>(options: {
   transport: Transport; appId: number; installationId: number; privateKey: string; scope: unknown; now: number;
-  observe(response: Response, sensitive: readonly string[]): void;
+  observe(response: Response, sensitive: readonly string[]): string | undefined;
+  onRevocation?(evidence: RevocationEvidence): void;
 }, use: (token: string, sensitive: readonly string[]) => Promise<T>): Promise<T> {
   const scope = mintScope(options.scope); // Hard guard BEFORE signing or HTTP.
   id.parse(options.installationId);
@@ -106,9 +118,27 @@ export async function withInstallationToken<T>(options: {
     return await use(token, [options.privateKey, jwt, token]);
   } finally {
     try {
-      const revoked = await request(options.transport, "DELETE", "/installation/token", token);
-      options.observe(revoked, [options.privateKey, jwt, token]);
-      check(revoked.status === 204, "mint.revoke_failed");
+      const sensitive = [options.privateKey, jwt, token];
+      let revoked: Response | undefined;
+      try { revoked = await request(options.transport, "DELETE", "/installation/token", token); }
+      catch (error) {
+        if (!(error instanceof SdkNullBodyRevokeFailure)) throw error;
+        const evidence: RevocationEvidence = { outcome: "unverified", deleteRequestId: null, unavailableReason: "sdk_null_body", probeRequestId: null };
+        options.onRevocation?.(evidence);
+        // Exactly one independent rejection check, never a retry or assumed 204.
+        const probe = await request(options.transport, "GET", "/installation/repositories?per_page=1", token);
+        const probeRequestId = options.observe(probe, sensitive);
+        options.onRevocation?.({ ...evidence, probeRequestId: probeRequestId ?? null });
+        check(probe.status === 401 && probeRequestId, "mint.revoke_failed");
+        const body = parse(probe);
+        check(body && typeof body === "object" && !Array.isArray(body) && (body as Record<string, unknown>).message === "Bad credentials", "mint.revoke_failed");
+        options.onRevocation?.({ ...evidence, outcome: "revoked_verified_by_probe", probeRequestId });
+      }
+      if (revoked) {
+        const deleteRequestId = options.observe(revoked, sensitive) ?? null;
+        check(revoked.status === 204, "mint.revoke_failed");
+        options.onRevocation?.({ outcome: "revoked", deleteRequestId });
+      }
     } catch { throw new GitHubFailure("mint.revoke_failed"); }
   }
 }

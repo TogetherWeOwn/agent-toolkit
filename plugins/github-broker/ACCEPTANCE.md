@@ -1,16 +1,45 @@
 # GitHub read broker acceptance record
 
-**NOT ACCEPTED FOR ENABLEMENT.** Source and offline fixtures are not evidence of a working live service. The baseline SDK's empty-body response reconstruction and the host MCP result-envelope projection are known release blockers; see [README](README.md#known-host-compatibility-blockers). Offline fixtures generate and resolve synthetic RSA keys and use a synthetic installation-token canary; their green results do not prove compatibility with the host.
+**NOT ACCEPTED FOR ENABLEMENT.** Source and offline fixtures are not evidence of a working live service. The pinned SDK's empty-body response reconstruction is addressed by the temporary mitigation below, pending renewed verification; the separate host MCP result-envelope projection blocker remains unchanged. See [README](README.md#known-host-compatibility-blockers). Acceptance of the design is **not** acceptance of an artifact, configuration, installation or running service. Offline fixtures use synthetic RSA keys and installation tokens; historical green results do not apply to a new mitigation head. No runtime changes or live credential calls are part of this source repair.
 
 ## Version envelope
 
 - Plugin 0.1.0; core 0.1.0; extracted GitHub helpers 0.1.0.
 - Exact SDK dependency: `@paperclipai/plugin-sdk@2026.1023.0` and lockfile integrity.
 - Native host baseline: 2026.1023.0; Node 24.11+; GitHub REST 2022-11-28.
-- Tools and per-tool endpoints/permission/refusal matrix: [README](README.md), [threat model](THREAT-MODEL.md), and `test/broker.test.mjs` through actual `register()` handlers.
+- Tools and per-tool endpoints/permission/refusal matrix: [README](README.md), [endpoint/null-body inventory](THREAT-MODEL.md#endpoint-and-null-body-inventory), and `test/broker.test.mjs` through actual `register()` handlers. The inventory covers mint, immutable repository-ID verification, revoke, the contract's one cleanup probe, and every path/query variant in all eight tool modules. It is source-derived, not live endpoint/status evidence; only DELETE has an intended 204 success, no endpoint has an accepted 205 success, and no conditional GET/304 success is allowed by the mitigation.
 - Intended credential ceiling: narrow App with contents, pull requests, issues, checks, statuses and Actions read plus metadata read (the sole explicit permission for ruleset GETs). Administration, all write permissions and the `workflows` permission are excluded from minting; workflow-run metadata reads use `actions: read`. Only the separately approved narrow App may be bound; there is no broad interim-key fallback.
 
+## Accepted temporary mitigation: required evidence, not a sign-off
+
+The following contract is implemented with offline regressions in `test/revocation.test.mjs`, `test/sdk-http.test.mjs` and `test/broker.test.mjs`. Verification and acceptance must be bound to the exact reviewed artifact before enablement; implementation alone is not a passed gate.
+
+| Boundary | Required behavior and evidence |
+| --- | --- |
+| Exact SDK failure classification | Pinned `@paperclipai/plugin-sdk@2026.1023.0` throws reconstructing empty-string 204. Plugin transport matches only `TypeError` with message exactly `Response constructor: Invalid response status code 204` for fixed `DELETE https://api.github.com/installation/token`, and exposes a typed failure. No fake status, response, headers or request ID. Other URLs/methods/types/messages and 205/304 errors cannot trigger the fallback |
+| Shared cleanup probe | Only after that typed failure, exactly one `GET https://api.github.com/installation/repositories?per_page=1` with the identical installation token through the same `ctx.http.fetch`, IPC budget and deadline. No retries, remint or alternate HTTP path. A real DELETE 204 is `revoked`, with no probe |
+| Strict positive evidence | Only status 401, a JSON object with `message` exactly `Bad credentials`, and a sanitized valid `x-github-request-id` establishes `revoked_verified_by_probe`. ID must match `^[A-F0-9]{4,8}(?::[A-F0-9]{2,12}){3,5}$` and be unchanged by credential scrubbing. This proves rejection **now**, not causal success of DELETE; expiry or independent revocation may explain it |
+| Negative cleanup cases | Every other status (including 200, 403, 404, 429), malformed/non-object JSON, message mismatch, missing/invalid/credential-bearing ID or throw retains `mint.revoke_failed`, mint pause until maximum token expiry and no cache publication. Exercise strict matcher negatives too. Audit outage stays fail-closed and cannot bypass the pause |
+| Audit distinction | Add `revocation` with successful cleanup `outcome` of `revoked` or `revoked_verified_by_probe`, separate from call-level pending/success/error. Fallback requires `deleteRequestId: null`, `unavailableReason: "sdk_null_body"`, valid sanitized `probeRequestId`. Normal path records actual sanitized DELETE request ID when available. Do not substitute probe ID for DELETE ID or log probe body/error/credentials |
+| Pre-secret reservation | Reserve `N+4` for mint + repository-ID verification + `N` data reads + DELETE + possible one probe **before secret resolution**. `checks_get` reserves seven, other uncached tools five. Probe admission failure is failed cleanup, not a cleanup-budget exemption |
+| Cache/null-body refusal | No `If-None-Match` or ETag revalidation. Retain only 10-second fresh projected-data cache with authorization rechecked on hits. After freshness expires, read unconditionally. Unsolicited 304 fails closed, never reuses cached data; 205 has no supported success path. Revoke and audit must succeed before publishing updates |
+
+Required exact-head CI regressions exercise the actual published SDK over RPC as well as broker handlers; synthetic native `Response` objects alone do not test SDK deserialization. The original 204/205/304 reproduction remains diagnostic. Added registered-broker RPC cases exercise evidence-bearing 401 cleanup, the observed-204 control and ambiguous probes; separate fixtures cover strict matching, evidence scrubbing, N+4 budgets, audit failure and cache controls.
+
+The [sandbox runbook](README.md#install-and-rollback-runbook) replaces the old ETag/304 success canary: QA must record an uncached upstream 200 plus real 204 cleanup or the qualifying one-probe fallback and honest audit fields, then verify authorization-checked fresh caching and an unconditional read after 10 seconds without `If-None-Match`. No live 304 is required. Exact-head Actions, required Devin Review and finding dispositions, independent Security and cryptography delta/artifact/config acceptance remain required before Operator installation and QA sandbox checks. The separate host MCP projection repair must be present and evidenced in the actual host/fresh agent session; the public repair PR or a REST execute result alone does not clear that gate.
+
+### Removal gate
+
+Remove the fallback only after all of the following:
+
+1. Adopt a compatible **published** SDK containing [upstream #17282](https://github.com/paperclipai/paperclip/pull/17282); record the resolved version/integrity and evidence that the actual installed worker loads it. Upstream merge or a manifest/lockfile edit alone is insufficient.
+2. Flip the real-RPC null-body regression from expected failure to successful status/request-ID preservation for 204/205/304, with the normal 200 control. Those diagnostic statuses do not authorize new broker success paths or ETag revalidation.
+3. Delete the temporary matcher, typed-failure/probe-specific fallback and obsolete fallback expectations; verify ordinary DELETE 204 cleanup and honest request-ID audit through the repaired SDK. Do not retain a silently dormant fallback.
+4. Obtain normal exact-head Actions/Devin gates, independent Security/cryptography acceptance, reviewed artifact/config evidence, authorized Operator installation and QA fresh-session/sandbox acceptance, including the host bridge caveat. Keep disabled until gates settle; no operational acceptance is recorded here.
+
 ## Verification ledger
+
+The historical rows below remain scoped to their named heads and are not verification or acceptance evidence for a new mitigation head. Record new exact-head Actions run/job links on the mitigation PR and its tracked work product; do not reuse an older green run.
 
 | Evidence | State |
 | --- | --- |
