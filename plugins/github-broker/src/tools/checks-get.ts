@@ -4,12 +4,12 @@ import { object, pick, list, run } from "../output.js";
 // Required CI contexts are Actions-produced; unknown contexts are evidence only.
 // Status payloads have a creator, not an App ID: only Devin's fixed bot identity
 // is accepted there. A human-created success with a matching name never passes.
-const actionsContexts = new Set(["ci-ok", "gitleaks", "pr-lint", "e2e-ok", "pr-standards", "CodeQL", "Analyze (actions)", "Analyze (javascript-typescript)", "Analyze (python)"]);
+const actionsContexts = new Set(["ci-ok", "gitleaks", "pr-lint", "e2e-ok", "pr-standards", "Analyze (actions)", "Analyze (javascript-typescript)", "Analyze (python)"]);
 function producer(value: unknown, fields: string[]): Record<string, unknown> | null {
   return value === undefined || value === null ? null : pick(value, fields);
 }
 function expectedApp(context: unknown): number | null {
-  return context === "Devin Review" ? 811515 : typeof context === "string" && actionsContexts.has(context) ? 15368 : null;
+  return context === "CodeQL" ? 57789 : context === "Devin Review" ? 811515 : typeof context === "string" && actionsContexts.has(context) ? 15368 : null;
 }
 export const checksGet = define("github.checks_get", "app", "Read producer-qualified check runs, commit statuses and workflow runs for an exact SHA, one page each. No overall merge verdict.", { sha, ...listShape }, { sha: shaJson, ...listJson },
   a => [

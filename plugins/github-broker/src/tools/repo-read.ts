@@ -10,7 +10,7 @@ const variants = [
 ];
 export const repoRead: Tool = {
   ...variants[0]!, description: "Read an authorized repository file/tree/ref/compare. No arbitrary endpoint or binary downloads.",
-  inputSchema: { oneOf: variants.map(v => v.inputSchema) },
+  inputSchema: { type: "object", oneOf: variants.map(v => v.inputSchema) },
   schema: { parse(value) { for (const v of variants) { try { return v.schema.parse(value); } catch { /* Try the next closed variant. */ } } return variants[0]!.schema.parse(value); } },
   requests(a) { return variants.find(v => { try { v.schema.parse(a); return true; } catch { return false; } })!.requests(a); },
 };

@@ -27,13 +27,15 @@ export class Broker {
   private inFlight = 0;
   private generation = 0;
 
-  private pause(key: string, seconds: number, now: number): void {
+  private pause(key: string, seconds: number, now: number): number {
     const b = this.installations.get(key);
-    if (b) b.blockedUntil = Math.max(b.blockedUntil, now + seconds * 1000);
+    const blockedUntil = Math.max(b?.blockedUntil ?? 0, now + seconds * 1000);
+    if (b) b.blockedUntil = blockedUntil;
     else {
       guard(this.installations.size < 128, "rate.capacity");
-      this.installations.set(key, { start: now, count: 0, blockedUntil: now + seconds * 1000 });
+      this.installations.set(key, { start: now, count: 0, blockedUntil });
     }
+    return Math.max(1, Math.ceil((blockedUntil - now) / 1000));
   }
 
   private reserve(map: Map<string, Bucket>, key: string, count: number, limit: number, window: number, now: number): void {
@@ -53,10 +55,11 @@ export class Broker {
     let operation: Operation | "unknown" = "unknown", policyDigest = hash(null), revision: number | null = null;
     let phase: Audit["phase"] = "refused", reserved = false, installationKey: string | null = null;
     const requestIds: string[] = [];
+    let providerFailure: Audit["providerFailure"];
     const emit = async (decision: Audit["decision"], rule: string, outcome: Audit["outcome"]) => {
       try {
         await host.audit({ event, time: host.clock(), agentId: caller?.agentId ?? null, runId: caller?.runId ?? null, companyId: caller?.companyId ?? null,
-          policyHash: policyDigest, policyRevision: revision, repoId: args?.repoId ?? null, operation, phase, decision, rule, requestIds: [...requestIds], outcome });
+          policyHash: policyDigest, policyRevision: revision, repoId: args?.repoId ?? null, operation, phase, decision, rule, requestIds: [...requestIds], outcome, ...(providerFailure ? { providerFailure } : {}) });
       } catch { throw new Denied("audit.unavailable"); }
     };
     try {
@@ -100,8 +103,9 @@ export class Broker {
           if (requestId && /^[A-F0-9]{4,8}(?::[A-F0-9]{2,12}){3,5}$/.test(requestId) && scrub(requestId, [...sensitive]) === requestId) requestIds.push(requestId);
           if (res.status === 429 || (res.status === 403 && (header(res, "retry-after") || header(res, "x-ratelimit-remaining") === "0"))) {
             const seconds = retryAfter(res, host.clock());
-            this.pause(budgetKey, seconds, host.clock());
-            throw new Denied("rate.github", seconds);
+            const effective = this.pause(budgetKey, seconds, host.clock());
+            providerFailure = { rule: "rate.github", retryAfterSeconds: effective };
+            throw new Denied("rate.github", effective);
           }
         };
         values = await withInstallationToken({ transport: host.http.bind(host), appId: config.appId, installationId: config.installationId, privateKey,

@@ -28,7 +28,7 @@ const getting = define("github.rulesets_get", "app", "Read one ruleset's enforce
   { rulesetId: id }, { rulesetId: { type: "integer", minimum: 1, maximum: Number.MAX_SAFE_INTEGER } }, a => [{ permission: "metadata", path: `/rulesets/${a.rulesetId}` }], detail);
 export const rulesetsGet: Tool = {
   ...listing, description: `${listing.description} Supply rulesetId instead of pagination to read a rule's details. Read-only; never a bypass actor.`,
-  inputSchema: { oneOf: [listing.inputSchema, getting.inputSchema] },
+  inputSchema: { type: "object", oneOf: [listing.inputSchema, getting.inputSchema] },
   schema: { parse(v) { try { return listing.schema.parse(v); } catch { return getting.schema.parse(v); } } },
   requests(a) { return a.rulesetId === undefined ? listing.requests(a) : getting.requests(a); },
   project(b, a) { return a.rulesetId === undefined ? listing.project(b, a) : getting.project(b, a); },

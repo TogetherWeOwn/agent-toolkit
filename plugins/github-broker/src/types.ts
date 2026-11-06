@@ -35,6 +35,7 @@ export interface Audit {
   policyHash: string; policyRevision: number | null; repoId: number | null; operation: Operation | "unknown";
   phase: "intent" | "outcome" | "refused"; decision: "allow" | "deny"; rule: string;
   requestIds: string[]; outcome: "pending" | "success" | "error";
+  providerFailure?: { rule: "rate.github"; retryAfterSeconds: number };
 }
 export interface Host {
   config(): Promise<unknown>;

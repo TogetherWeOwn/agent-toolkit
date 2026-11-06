@@ -248,13 +248,14 @@ test('checks merge producer-qualified checks and latest statuses without trustin
   const f = fixture(); f.mint({ checks: 'read', statuses: 'read', actions: 'read' }); f.identity();
   const sha = 'a'.repeat(40);
   const check = { head_sha: sha, status: 'completed', conclusion: 'success' };
-  f.read(`/commits/${sha}/check-runs?per_page=10&page=1`, { total_count: 6, check_runs: [
+  f.read(`/commits/${sha}/check-runs?per_page=10&page=1`, { total_count: 7, check_runs: [
     { ...check, id: 1, name: 'ci-ok', app: { id: 15368, slug: 'github-actions' } },
     { ...check, id: 2, name: 'gitleaks', app: { id: 999, slug: 'github-actions' } },
     { ...check, id: 3, name: 'pr-lint' },
-    { ...check, id: 4, name: 'CodeQL', app: { id: 15368 } },
+    { ...check, id: 4, name: 'CodeQL', app: { id: 57789, slug: 'github-advanced-security' } },
     { ...check, id: 5, name: 'Devin Review', app: { id: 811515 } },
     { ...check, id: 6, name: 'e2e-ok', head_sha: 'b'.repeat(40), app: { id: 15368 } },
+    { ...check, id: 7, name: 'CodeQL', app: { id: 15368, slug: 'github-actions' } },
   ] });
   f.read(`/commits/${sha}/statuses?per_page=10&page=1`, [
     { id: 10, context: 'Devin Review', state: 'success', creator: { login: 'devin-ai-integration[bot]', type: 'Bot' } },
@@ -267,7 +268,7 @@ test('checks merge producer-qualified checks and latest statuses without trustin
   assert.equal(result.error, undefined);
   assert.deepEqual(result.data.signals.map(s => [s.source, s.context, s.passing]), [
     ['check', 'ci-ok', true], ['check', 'gitleaks', false], ['check', 'pr-lint', false], ['check', 'CodeQL', true],
-    ['check', 'Devin Review', true], ['check', 'e2e-ok', false], ['status', 'Devin Review', true],
+    ['check', 'Devin Review', true], ['check', 'e2e-ok', false], ['check', 'CodeQL', false], ['status', 'Devin Review', true],
     ['status', 'Devin Review', false], ['status', 'ci-ok', false], ['status', 'gitleaks', false],
   ]);
   assert.equal(result.data.pages[1].statuses[1].current, false); f.hygiene(result); f.done();
@@ -376,7 +377,7 @@ test('an older in-flight response cannot overwrite a later successful cached rea
 
 test('provider backoff only grows and installation budgets are shared across companies', () => {
   const broker = new Broker();
-  broker.pause('42:99', 120, 1000); broker.pause('42:99', 1, 2000);
+  broker.pause('42:99', 120, 1000); assert.equal(broker.pause('42:99', 1, 2000), 119);
   assert.equal(broker.installations.get('42:99').blockedUntil, 121000);
   assert.throws(() => broker.reserve(broker.installations, '42:99', 1, 4000, 3600000, 3000), /rate.retry_after/);
   broker.reserve(broker.installations, '42:100', 1, 4000, 3600000, 3000);
@@ -402,6 +403,24 @@ test('published ref and path patterns match outbound rejection boundaries', asyn
   for (const [schema, parse, values] of [[refJson, segment, ['main', 'a', 'heads/topic', 'a.b', 'a..b', 'a//b', 'a/.', 'x.lock', 'x.lock/y', 'main/', '../a']], [pathJson, filePath, ['README.md', 'dir/file.txt', '../a', 'a/../b', 'a/./b', 'a//b', 'a\\b', '/file']]]) {
     for (const value of values) { let accepted = true; try { parse(value); } catch { accepted = false; } assert.equal(new RegExp(schema.pattern).test(value), accepted, value); }
   }
+});
+
+test('gateway-published tool schemas all retain a root object type', () => {
+  const f = fixture();
+  for (const tool of manifest.tools) {
+    assert.equal(tool.parametersSchema.type, 'object');
+    assert.deepEqual(f.handlers.get(tool.name).metadata.parametersSchema, tool.parametersSchema);
+  }
+});
+
+test('a revoke failure retains the provider delay in audit and cannot shorten its pause', async () => {
+  const f = fixture(); f.mint({ pull_requests: 'read' }); f.identity();
+  f.read('/pulls/1', {}, { status: 429, headers: { 'retry-after': '12000' } }); f.revoke({ status: 500 });
+  const result = await f.call('github.pr_get', { ...base, number: 1 });
+  assert.equal(result.error, 'mint.revoke_failed');
+  assert.deepEqual(f.events.at(-1).providerFailure, { rule: 'rate.github', retryAfterSeconds: 12000 });
+  const next = await f.call('github.pr_get', { ...base, number: 2 });
+  assert.equal(next.error, 'rate.retry_after'); assert.ok(next.data.retryAfterSeconds >= 11999); f.hygiene(result); f.done();
 });
 
 test('transport refuses other origins and malformed destinations before outbound', async () => {
