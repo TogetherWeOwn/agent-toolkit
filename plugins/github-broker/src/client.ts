@@ -5,7 +5,11 @@ import { scrub } from "./output.js";
 const pluginKey = "togetherweown.github-broker";
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const code = /^[a-z][a-z0-9_.]{0,79}$/;
-const maxInput = 16384, maxResponse = 1048576;
+const maxInput = 16384;
+// Data: three 256-KiB pages plus signals copying at most two pages, <=200
+// signals with 128 bytes extra each, and 4 KiB metadata. The wire duplicates
+// data in content (up to 2x JSON escaping) and data (1x): <4 MiB in total.
+const maxResponse = 4 * 1048576;
 type Environment = Record<string, string | undefined>;
 type RecordValue = Record<string, unknown>;
 export interface ClientResult extends RecordValue { ok: boolean; error?: string }

@@ -5,6 +5,7 @@ import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { executeBrokerRead } from '../dist/plugins/github-broker/src/client.js';
+import { fixture as brokerFixture, base as brokerBase } from './helpers.mjs';
 
 const ids = Array.from({ length: 7 }, (_, i) => `${String(i + 1).repeat(8)}-1111-4111-8111-111111111111`);
 const [agentId, runId, companyId, projectId, issueId, workspaceId, interactionId] = ids;
@@ -135,11 +136,38 @@ test('REST client scrubs run bearer from reflected response keys and values and 
   assert.deepEqual(failure, { ok: false, error: 'client.transport' });
 });
 
+test('REST client accepts large escaped checks output from the registered broker within a finite wire cap', async () => {
+  const f = brokerFixture(), sha = 'a'.repeat(40), text = '\\"'.repeat(28000);
+  f.mint({ checks: 'read', statuses: 'read', actions: 'read' }); f.identity();
+  f.read(`/commits/${sha}/check-runs?per_page=2&page=1`, { total_count: 2, check_runs: [1, 2].map(id => ({ id, name: text, head_sha: sha, status: 'completed', conclusion: 'success', app: { id: 15368 } })) });
+  f.read(`/commits/${sha}/statuses?per_page=2&page=1`, [1, 2].map(id => ({ id, context: text, state: 'success', creator: { id: 1, login: 'synthetic-bot', type: 'Bot' } })));
+  f.read(`/actions/runs?head_sha=${sha}&per_page=2&page=1`, { total_count: 2, workflow_runs: [1, 2].map(id => ({ id, name: text, head_sha: sha })) });
+  f.revoke();
+  const toolResult = await f.call('github.checks_get', { ...brokerBase, sha, page: 1, perPage: 2 });
+  assert.equal(toolResult.error, undefined);
+  assert.equal(toolResult.data.signals.length, 4);
+  for (const page of toolResult.data.pages) assert.ok(Buffer.byteLength(JSON.stringify(page)) <= 262144);
+  const wire = JSON.stringify({ pluginId: 'togetherweown.github-broker', toolName: 'github.checks_get', result: toolResult });
+  assert.ok(Buffer.byteLength(wire) > 3 * 1048576);
+  assert.ok(Buffer.byteLength(wire) < 4 * 1048576);
+  const result = await executeBrokerRead(environment(), projectId, 'github.checks_get', { ...base, sha, page: 1, perPage: 2 }, async () => new Response(wire));
+  assert.equal(result.ok, true); assert.deepEqual(result.data, toolResult.data);
+  f.done(); f.hygiene(toolResult);
+});
+
 test('REST client bounds response bytes, decoding and JSON without exposing raw failures', async () => {
-  for (const [body, status] of [['x'.repeat(1048577), 200], ['not-json', 200], ['not-json', 503], [new Uint8Array([255]), 200]]) {
+  for (const [body, status] of [['x'.repeat(4 * 1048576 + 1), 200], ['not-json', 200], ['not-json', 503], [new Uint8Array([255]), 200]]) {
     const result = await executeBrokerRead(environment(), projectId, 'github.pr_get', args, async () => new Response(body, { status }));
     assert.deepEqual(result, { ok: false, error: status === 200 ? 'client.response' : 'client.http', status });
   }
+});
+
+test('REST client cancels an oversized response before waiting for an unbounded tail', async () => {
+  let cancelled = false;
+  const body = new ReadableStream({ start(controller) { controller.enqueue(new Uint8Array(4 * 1048576 + 1)); }, cancel() { cancelled = true; } });
+  const result = await executeBrokerRead(environment(), projectId, 'github.pr_get', args, async () => new Response(body));
+  assert.deepEqual(result, { ok: false, error: 'client.response', status: 200 });
+  assert.equal(cancelled, true);
 });
 
 test('REST client timeout aborts the one request without retry', async t => {
