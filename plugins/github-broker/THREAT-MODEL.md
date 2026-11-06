@@ -1,0 +1,54 @@
+# GitHub read broker threat model
+
+Version 0.1.0; status **pending independent Security and cryptography acceptance**. This is not an installation approval. SDK/host baseline 2026.1023.0, REST 2022-11-28, core 0.1.0, shared GitHub 0.1.0.
+
+## Assets, principals and boundaries
+
+Assets: the company-secret App RSA key, signed JWT, scoped installation token, private repository content, trustworthy policy/audit and the shared GitHub installation rate budget. A compromised key inherits the App's **whole configured ceiling**, not merely this plugin's reads. The intended ceiling is metadata plus contents, pull requests, issues, checks, statuses, Actions and administration **read**. No workflow, secret, organization-member, environment or write permission is requested by minting. A broader App key is not made intrinsically narrow by this broker and is unapproved absent explicit independent acceptance.
+
+The authenticated gateway supplies company/agent/run/project identity. Tool selectors are untrusted. Policy comes only from board configuration. The host issues/projects APIs resolve current company, project, assignee, checkout/execution run, active status and selected workspace; the workspace URL must exactly equal board configuration. Numeric repository scope is enforced both at mint and by an ID verification read. Native host authorization, gateway provenance, company isolation and config-write controls are dependencies, not reimplemented authority. The plugin has no task mutation, checkout, database, filesystem, shell, scheduler or plugin-state capability.
+
+The credential-bearing worker and host HTTP bridge are trusted processes, **not an OS sandbox**. A same-user host/process compromise or alternate credential-readable filesystem path defeats this trust model; this plugin does not remediate host credential isolation. No other provider's secret is bound here.
+
+## Per-tool exposed surface
+
+All data endpoints below are `GET /repos/{board-owner}/{board-name}`-relative. Shared internal endpoints are solely `POST /app/installations/{board-id}/access_tokens` with a mandatory explicit scope and `DELETE /installation/token` for revocation. Every uncached call also verifies `GET /repos/{owner}/{name}` returns the board's immutable numeric ID. Redirects never become authority to change destination.
+
+| Tool | Data endpoints / minimal explicit read permission | Output and deliberate exclusions | Named fixture coverage |
+| --- | --- | --- | --- |
+| `github.repo_read` | `/contents/{safe-path}?ref=...`, `/git/trees/{safe-ref}`, `/git/ref/{safe-ref}`, `/compare/{base}...{head}`; contents | Decoded UTF-8 files, shallow tree, ref SHA, bounded compare. No download URLs followed, binaries, recursive crawl or write | `registered github.repo_read ...`, `base64 file reflection...`, `closed schemas...` |
+| `github.pr_list` | `/pulls`; pull_requests | Bounded PR metadata/body/refs only. No search proxy or mutation | `registered github.pr_list ...`, numerical/schema boundaries |
+| `github.pr_get` | `/pulls/{number}`; pull_requests | One PR and head/base data. No merge/review/approval | `registered github.pr_get ...`, identity, drift and secret-reflection cases |
+| `github.pr_files` | `/pulls/{number}/files`; pull_requests | Bounded patch/name/count fields. No arbitrary blob endpoint | `registered github.pr_files ...`, coordinator profile denial |
+| `github.checks_get` | `/commits/{sha}/check-runs`, `/commits/{sha}/status`, `/actions/runs?head_sha=...`; checks, statuses, actions | One page of each. No rerun, output blob, log or conclusion fabrication | `registered github.checks_get ...` |
+| `github.rulesets_get` | `/rulesets` including parents, `/rulesets/{id}`; administration | Summaries or supported rule parameters with incomplete markers. Conditions/bypass actors not included. No bypass enrollment or config change | `registered github.rulesets_get ...` |
+| `github.actions_runs_list` | `/actions/runs`; actions | Run metadata only. No dispatch/rerun/log/artifact/secret access | `registered github.actions_runs_list ...` |
+| `github.issue_read` | `/issues/{number}`; issues | Body/metadata only. No comments, write or arbitrary issue graph | `registered github.issue_read ...` |
+
+Each tool has its own module and exact registry/manifest declaration. Unknown names (including prototype names), unknown keys, malformed shapes, unsupported enums, identities, Unicode/control/path ambiguities and out-of-range/fractional/coerced values are denied. Core schema limits bound overall input depth, nodes and bytes. Tool metadata is marked read-only; that label is not proof of native MCP governance coverage.
+
+## Confused deputy and revocation
+
+Every call resolves its issue server-side; assignee alone is insufficient, so either authoritative checkoutRunId or executionRunId must match the gateway's run. A different issue assigned to the same agent is not an automatic alternate audience. Closed tasks, foreign project/workspace/repository, unknown agents and `none` profiles deny before secret resolution. No caller-supplied token/secret/header/base URL/approval flag is recognized.
+
+Configuration hash, assignment and workspace binding are revalidated before secret resolution, after mint and before each data read. Scoped tokens independently prevent a rename/transfer/TOCTOU from opening a second repository. Any policy change invalidates cache keys; assignment is checked even for fresh cache hits. Remaining same-repository timing races do not widen permission/resource scope. There is no claim of an atomic transaction across board policy and GitHub.
+
+## Injection and credential escape
+
+Repository/task/API content is inert data. No content determines authorization, scope, destination, secret choice or execution. Results are explicit projections, not raw bodies. Known key/JWT/token strings and PEM lines are removed from projected text; files are decoded before scrubbing; selected request-ID headers are grammar-checked and scrubbed before audit; ETags containing credentials are not retained. HTTP failures expose fixed rule codes, not request headers, response messages, stack traces or error causes. Credentials are never put in state, files, environment variables or subprocesses. The only legitimate credential transfer is transient in-memory IPC to the trusted native HTTPS host.
+
+Tests use generated synthetic RSA material and a distinctive installation-token canary, with success/error/decoded-file reflection. No real credentials are fixtures. Redaction is defense in depth, not a cryptographic proof against arbitrary adversarial transformations of secrets. Worker crashes, heap dumps, debugger access and unrelated same-user filesystem exposure remain host-level risks.
+
+## Lifecycle, caps, audit and failure
+
+No cloud resources or billable jobs are created. Provisioning ledgers, paid-spend reservations, resource teardown jobs and destructive approval consumption are therefore not applicable. Internal installation tokens are minted per uncached call and revoked in `finally`; returned scope and expiry are checked first. GitHub's one-hour token expiry (61-minute validation tolerance) is the independent automatic teardown after worker crash or ambiguous mint. No token is persisted for a restart-time sweep. Failed revocation is an error and pauses minting in that worker until maximum expiry; the Operator must investigate repeated cleanup failures. A restart resets this process-local pause. This limitation must be accepted explicitly, not described as durable revocation recovery.
+
+Four concurrent calls, 30 calls/agent/minute, a conservative 4,000-request installation/hour reservation (at most six requests per call), bounded maps, explicit one-page reads, 1-MiB broker response limit, 256-KiB projected page cap, 128-KiB file cap and 10/60-second data/ETag caches bound ordinary abuse. No retries or sleeps. Native HTTP is DNS-pinned, single-request/no-follow, bounded by 5-second DNS and 30-second request timeouts and a 200-MiB host buffer; the smaller broker check occurs after that host buffering. Request budgets reset on restart and are not a durable quota across replicas; GitHub enforces the actual installation limit. No broad credential cache is retained.
+
+A durable activity intent precedes secret access/mint. Outcome/refusal records include event/time, gateway principal/run/company, full config policy hash/revision, repository ID, exact operation, decision/rule, safe GitHub request IDs and outcome. No arbitrary args or payloads are logged. Audit outage before mint prevents outbound traffic; post-read audit failure is an error, never unqualified success. GitHub reads are safe to repeat but minting is not blindly retried. Audit retention/integrity/access and native invocation audit must be verified at install; an activity API alone does not certify them.
+
+## Acceptance and recovery
+
+Kill switch: disable plugin, remove binding, and perform authorized key/token revocation if required. Existing grants/connectors stay intact. No production install, credential creation/rotation, security exception, host/core modification or write-tool authority is supplied by this source change. Required independent reviewers must assess the host IPC/logging, redirect contract, activity durability, governance, broad-key ceiling, ambiguous-mint/expiry and same-user isolation limits on the exact artifact. QA then verifies only an approved sandbox repository after Operator installation.
+
+REA angle: existing GitHub App watcher signing/HTTP and test-env authoritative issue checks are studied and adapted; their unscoped mint, token-return contract and permissive parser behavior are expressly not reused.

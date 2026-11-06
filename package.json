@@ -6,7 +6,7 @@
   "workspaces": ["packages/*", "plugins/*"],
   "engines": {"node": ">=24.0.0 <25"},
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && npm run build --workspaces --if-present",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "npm run build && node --test --test-timeout=30000 test/*.test.mjs && npm run test --workspaces --if-present",
     "check": "npm run typecheck && npm test",
