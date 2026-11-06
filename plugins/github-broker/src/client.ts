@@ -1,4 +1,5 @@
 import { pathToFileURL } from "node:url";
+import { realpathSync } from "node:fs";
 import { tools } from "./broker.js";
 import { scrub } from "./output.js";
 
@@ -130,4 +131,7 @@ export async function main(argv = process.argv.slice(2), env: Environment = proc
   process.stdout.write(`${JSON.stringify(result)}\n`);
   if (!result.ok) process.exitCode = 1;
 }
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
+let entrypoint: string | undefined;
+try { if (process.argv[1]) entrypoint = pathToFileURL(realpathSync(process.argv[1])).href; }
+catch { /* Imports may have no filesystem entry point. */ }
+if (import.meta.url === entrypoint) await main();

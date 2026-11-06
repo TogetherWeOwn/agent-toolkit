@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { mkdtempSync, rmSync, symlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { test } from 'node:test';
 import { executeBrokerRead } from '../dist/plugins/github-broker/src/client.js';
 import { fixture as brokerFixture, base as brokerBase } from './helpers.mjs';
@@ -182,6 +185,34 @@ test('REST client timeout aborts the one request without retry', async t => {
   assert.equal(calls, 1);
 });
 
+test('REST client classifies a stalled response body as timeout and aborts without retry', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let calls = 0;
+  const pending = executeBrokerRead(environment(), projectId, 'github.pr_get', args, async (_, request) => {
+    calls++;
+    return new Response(new ReadableStream({ start(controller) {
+      request.signal.addEventListener('abort', () => controller.error(new Error('synthetic body timeout')), { once: true });
+    } }));
+  });
+  await Promise.resolve();
+  t.mock.timers.tick(45000);
+  assert.deepEqual(await pending, { ok: false, error: 'client.timeout', status: 200 });
+  assert.equal(calls, 1);
+});
+
+test('REST client refuses an actual HTTP redirect without following it', async t => {
+  const paths = [];
+  const server = createServer((req, res) => {
+    paths.push(req.url); req.resume();
+    res.writeHead(302, { Location: '/redirected' }); res.end();
+  });
+  server.listen(0, '127.0.0.1'); await once(server, 'listening');
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  const env = { ...environment(), PAPERCLIP_API_URL: `http://127.0.0.1:${server.address().port}` };
+  assert.deepEqual(await executeBrokerRead(env, projectId, 'github.pr_get', args), { ok: false, error: 'client.transport' });
+  assert.deepEqual(paths, ['/api/plugins/tools/execute']);
+});
+
 test('REST client CLI returns truthful exit status across the actual HTTP and stdout path', async t => {
   let body = wrapper(), requests = 0;
   const env = environment();
@@ -209,6 +240,47 @@ test('REST client CLI returns truthful exit status across the actual HTTP and st
     assert.ok(!stdout.includes(env.PAPERCLIP_API_KEY));
   }
   assert.equal(requests, 2);
+});
+
+test('REST client CLI resolves symlink entry points without running on import', async t => {
+  const dir = mkdtempSync(join(tmpdir(), 'broker-client-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const script = fileURLToPath(new URL('../dist/plugins/github-broker/src/client.js', import.meta.url));
+  const link = join(dir, 'client.mjs'); symlinkSync(script, link);
+  let requests = 0;
+  const env = environment();
+  const server = createServer((req, res) => {
+    requests++;
+    assert.equal(req.url, '/api/plugins/tools/execute');
+    assert.equal(req.headers.authorization, `Bearer ${env.PAPERCLIP_API_KEY}`);
+    req.resume(); res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(wrapper({ ok: false, rule: 'policy.agent' }, 'policy.agent')));
+  });
+  server.listen(0, '127.0.0.1'); await once(server, 'listening');
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  env.PAPERCLIP_API_URL = `http://127.0.0.1:${server.address().port}`;
+  const child = spawn(process.execPath, [link, projectId, 'github.pr_get'], { env: { PATH: process.env.PATH, ...env }, stdio: ['pipe', 'pipe', 'pipe'], timeout: 10000 });
+  let stdout = '', stderr = '';
+  child.stdout.on('data', chunk => { stdout += chunk; }); child.stderr.on('data', chunk => { stderr += chunk; });
+  child.stdin.end(JSON.stringify(args));
+  const [status] = await once(child, 'close');
+  assert.equal(status, 1, stderr); assert.equal(stderr, '');
+  assert.equal(JSON.parse(stdout).error, 'policy.agent'); assert.equal(requests, 1);
+  assert.ok(!stdout.includes(env.PAPERCLIP_API_KEY));
+  const imported = spawnSync(process.execPath, ['--input-type=module', '-e', 'await import(process.argv[1]); process.stdout.write("imported\\n");', pathToFileURL(script).href], { env: { PATH: process.env.PATH }, encoding: 'utf8', timeout: 10000 });
+  assert.equal(imported.status, 0, imported.stderr);
+  assert.equal(imported.stdout, 'imported\n'); assert.equal(imported.stderr, '');
+});
+
+test('REST client CLI bounds stalled stdin with a nonzero input failure', async t => {
+  const script = fileURLToPath(new URL('../dist/plugins/github-broker/src/client.js', import.meta.url));
+  const child = spawn(process.execPath, [script, projectId, 'github.pr_get'], { env: { PATH: process.env.PATH }, stdio: ['pipe', 'pipe', 'pipe'], timeout: 10000 });
+  t.after(() => { child.stdin.destroy(); child.kill(); });
+  let stdout = '', stderr = '';
+  child.stdout.on('data', chunk => { stdout += chunk; }); child.stderr.on('data', chunk => { stderr += chunk; });
+  const [status] = await once(child, 'close');
+  assert.equal(status, 1, stderr); assert.equal(stderr, '');
+  assert.deepEqual(JSON.parse(stdout), { ok: false, error: 'client.input' });
 });
 
 test('REST client CLI emits nonzero sanitized failures for invalid or oversized stdin', () => {
