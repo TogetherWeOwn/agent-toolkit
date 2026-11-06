@@ -35,7 +35,7 @@ for (const [name, args, permissions, reads] of cases) test(`registered ${name} $
     'github.repo_read:compare': { status: 'ahead', ahead_by: 1, behind_by: 0, total_commits: 1, commits: [{ sha: 'a'.repeat(40) }], files: [], filesTruncated: false },
     'github.pr_list:': [pull], 'github.pr_get:': pull,
     'github.pr_files:': [{ sha: 'a'.repeat(40), filename: 'file.ts', status: 'modified', patch: '+safe' }],
-    'github.checks_get:': { total_count: 1, checkRuns: [{ id: 1, name: 'CI', head_sha: 'a'.repeat(40), status: 'completed', conclusion: 'success', app: null, producerTrusted: false, passing: false }] },
+    'github.checks_get:': { total_count: 1, checksComplete: true, checkRuns: [{ id: 1, name: 'CI', head_sha: 'a'.repeat(40), status: 'completed', conclusion: 'success', app: null, current: true, producerTrusted: false, passing: false }] },
     'github.rulesets_get:': [{ id: 1, name: 'protected', enforcement: 'active' }],
     'github.actions_runs_list:': { total_count: 0, workflowRuns: [] },
     'github.issue_read:': { id: 1, number: 1, title: 'Synthetic', body: 'Data only', state: 'open' },
@@ -267,7 +267,7 @@ test('checks merge producer-qualified checks and latest statuses without trustin
   const result = await f.call('github.checks_get', { ...base, sha, ...paged });
   assert.equal(result.error, undefined);
   assert.deepEqual(result.data.signals.map(s => [s.source, s.context, s.passing]), [
-    ['check', 'ci-ok', true], ['check', 'gitleaks', false], ['check', 'pr-lint', false], ['check', 'CodeQL', true],
+    ['check', 'ci-ok', true], ['check', 'gitleaks', false], ['check', 'pr-lint', false], ['check', 'CodeQL', false],
     ['check', 'Devin Review', true], ['check', 'e2e-ok', false], ['check', 'CodeQL', false], ['status', 'Devin Review', true],
     ['status', 'Devin Review', false], ['status', 'ci-ok', false], ['status', 'gitleaks', false],
   ]);
@@ -295,6 +295,63 @@ test('latest untrusted or failed status cannot be rescued by an older trusted su
     const result = await f.call('github.checks_get', { ...base, sha, ...paged });
     assert.equal(result.error, undefined); assert.ok(result.data.signals.every(s => !s.passing)); f.hygiene(result); f.done();
   }
+});
+
+test('ambiguous or incomplete check-run collections never report an obsolete success as passing', async () => {
+  const sha = 'a'.repeat(40), check = { id: 1, name: 'ci-ok', head_sha: sha, status: 'completed', conclusion: 'success', app: { id: 15368 } };
+  for (const newer of [{ id: 2, conclusion: 'failure' }, { id: 2, status: 'queued', conclusion: null }, { id: 2, app: { id: 999 } }, { id: 2 }]) {
+    for (const reversed of [false, true]) {
+      const f = fixture(); f.mint({ checks: 'read', statuses: 'read', actions: 'read' }); f.identity();
+      const checks = [check, { ...check, ...newer }];
+      f.read(`/commits/${sha}/check-runs?per_page=10&page=1`, { total_count: 2, check_runs: reversed ? checks.reverse() : checks });
+      f.read(`/commits/${sha}/statuses?per_page=10&page=1`, []);
+      f.read(`/actions/runs?head_sha=${sha}&per_page=10&page=1`, { total_count: 0, workflow_runs: [] }); f.revoke();
+      const result = await f.call('github.checks_get', { ...base, sha, ...paged });
+      assert.equal(result.error, undefined); assert.ok(result.data.signals.every(s => s.current === false && s.passing === false)); f.hygiene(result); f.done();
+    }
+  }
+  for (const [page, total_count] of [[1, 2], [2, 1], [1, undefined]]) {
+    const f = fixture(); f.mint({ checks: 'read', statuses: 'read', actions: 'read' }); f.identity();
+    f.read(`/commits/${sha}/check-runs?per_page=10&page=${page}`, { total_count, check_runs: [check] });
+    f.read(`/commits/${sha}/statuses?per_page=10&page=${page}`, []);
+    f.read(`/actions/runs?head_sha=${sha}&per_page=10&page=${page}`, { total_count: 0, workflow_runs: [] }); f.revoke();
+    const result = await f.call('github.checks_get', { ...base, sha, page, perPage: 10 });
+    assert.equal(result.error, undefined); assert.equal(result.data.pages[0].checksComplete, false);
+    assert.equal(result.data.signals[0].passing, false); assert.equal(result.data.signals[0].current, false); f.done();
+  }
+});
+
+test('unique complete first-page checks retain producer-qualified success', async () => {
+  const f = fixture(), sha = 'a'.repeat(40); f.mint({ checks: 'read', statuses: 'read', actions: 'read' }); f.identity();
+  f.read(`/commits/${sha}/check-runs?per_page=10&page=1`, { total_count: 3, check_runs: [
+    { id: 1, name: 'ci-ok', app: { id: 15368 } }, { id: 2, name: 'CodeQL', app: { id: 57789 } }, { id: 3, name: 'Devin Review', app: { id: 811515 } },
+  ].map(c => ({ ...c, head_sha: sha, status: 'completed', conclusion: 'success' })) });
+  f.read(`/commits/${sha}/statuses?per_page=10&page=1`, []);
+  f.read(`/actions/runs?head_sha=${sha}&per_page=10&page=1`, { total_count: 0, workflow_runs: [] }); f.revoke();
+  const result = await f.call('github.checks_get', { ...base, sha, ...paged });
+  assert.equal(result.error, undefined); assert.equal(result.data.pages[0].checksComplete, true);
+  assert.ok(result.data.signals.every(s => s.current && s.producerTrusted && s.passing)); f.hygiene(result); f.done();
+});
+
+test('timed-out native IPC retains its worker budget until the underlying operations settle', async () => {
+  const { hostCall } = await import('../../../dist/plugins/github-broker/src/plugin.js');
+  const settle = [], native = []; let starts = 0;
+  try {
+    const calls = Array.from({ length: 4 }, (_, i) => {
+      const pending = new Promise((resolve, reject) => { settle.push(() => i % 2 ? reject(Error('late failure')) : resolve('late secret')); });
+      native.push(pending); return hostCall(() => { starts++; return pending; }, 1);
+    });
+    const results = await Promise.allSettled(calls);
+    assert.ok(results.every(r => r.status === 'rejected' && r.reason.rule === 'host.timeout'));
+    for (let i = 0; i < 8; i++) await assert.rejects(hostCall(async () => { starts++; }, 1), /host.capacity/);
+    assert.equal(starts, 4);
+    const f = fixture(), result = await f.call('github.pr_get', { ...base, number: 1 });
+    assert.equal(result.error, 'audit.unavailable'); assert.equal(f.secretCalls, 0); assert.equal(f.calls.length, 0); f.hygiene(result);
+  } finally {
+    for (const release of settle) release();
+    await Promise.allSettled(native);
+  }
+  assert.equal(await hostCall(async () => 'recovered', 100), 'recovered');
 });
 
 test('board policy supports all advertised repositories and agents without widening tool JSON bounds', async () => {

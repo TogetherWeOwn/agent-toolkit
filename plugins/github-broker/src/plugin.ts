@@ -2,12 +2,16 @@ import { definePlugin, type PluginContext, type ToolRunContext } from "@papercli
 import { Broker, tools } from "./broker.js";
 import { Denied, type Host } from "./types.js";
 
-// Native control-plane IPC is not covered by the HTTPS deadline. Abandon a
-// stalled await without starting further work; the host operation is not aborted.
+// Timeouts abandon the await, not native IPC. Keep its worker-wide slot until
+// the actual operation settles, including late resolution or rejection.
+let hostInFlight = 0;
 export async function hostCall<T>(action: () => Promise<T>, timeoutMs = 30000): Promise<T> {
+  if (hostInFlight >= 4) throw new Denied("host.capacity");
+  hostInFlight++;
+  const pending = Promise.resolve().then(action).finally(() => { hostInFlight--; });
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    return await Promise.race([Promise.resolve().then(action), new Promise<never>((_, reject) => {
+    return await Promise.race([pending, new Promise<never>((_, reject) => {
       timer = setTimeout(() => reject(new Denied("host.timeout")), timeoutMs);
     })]);
   } finally { if (timer !== undefined) clearTimeout(timer); }

@@ -30,12 +30,21 @@ export const checksGet = define("github.checks_get", "app", "Read producer-quali
       }) };
     }
     const v = object(b);
-    if (Array.isArray(v.check_runs)) return { ...pick(v, ["total_count"]), checkRuns: list(v.check_runs, c => {
-      const check = object(c), app = producer(check.app, ["id", "slug"]), expected = expectedApp(check.name);
-      const producerTrusted = expected !== null && app?.id === expected;
-      return { ...pick(check, ["id", "name", "head_sha", "status", "conclusion", "details_url", "started_at", "completed_at"]), app, producerTrusted,
-        passing: producerTrusted && check.head_sha === a.sha && check.status === "completed" && check.conclusion === "success" };
-    }) };
+    if (Array.isArray(v.check_runs)) {
+      // GitHub's latest filter is per suite, not a unique context across suites.
+      // A bounded page cannot prove freshness if a duplicate may be off-page;
+      // neither timestamps nor numeric IDs establish workflow/rerun precedence.
+      const checksComplete = a.page === 1 && v.total_count === v.check_runs.length;
+      const counts = new Map<unknown, number>();
+      for (const c of v.check_runs) { const name = object(c).name; counts.set(name, (counts.get(name) ?? 0) + 1); }
+      return { ...pick(v, ["total_count"]), checksComplete, checkRuns: list(v.check_runs, c => {
+        const check = object(c), app = producer(check.app, ["id", "slug"]), expected = expectedApp(check.name);
+        const producerTrusted = expected !== null && app?.id === expected;
+        const current = checksComplete && counts.get(check.name) === 1;
+        return { ...pick(check, ["id", "name", "head_sha", "status", "conclusion", "details_url", "started_at", "completed_at"]), app, current, producerTrusted,
+          passing: current && producerTrusted && check.head_sha === a.sha && check.status === "completed" && check.conclusion === "success" };
+      }) };
+    }
     return { ...pick(v, ["total_count"]), workflowRuns: list(v.workflow_runs, run) };
   });
 
@@ -47,11 +56,11 @@ export function checkSignals(pages: unknown[]): unknown[] {
     const v = object(page);
     if (Array.isArray(v.checkRuns)) return v.checkRuns.map(c => {
       const check = object(c);
-      return { source: "check", context: check.name, id: check.id, producer: check.app, producerTrusted: check.producerTrusted, passing: check.passing };
+      return { source: "check", context: check.name, id: check.id, producer: check.app, current: check.current, producerTrusted: check.producerTrusted, passing: check.passing };
     });
     if (Array.isArray(v.statuses)) return v.statuses.map(c => {
       const status = object(c);
-      return { source: "status", context: status.context, id: status.id, producer: status.creator, producerTrusted: status.producerTrusted, passing: status.passing };
+      return { source: "status", context: status.context, id: status.id, producer: status.creator, current: status.current, producerTrusted: status.producerTrusted, passing: status.passing };
     });
     return [];
   });
