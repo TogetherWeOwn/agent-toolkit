@@ -37,7 +37,7 @@ export const checksGet = define("github.checks_get", "app", "Read producer-quali
       const checksComplete = a.page === 1 && v.total_count === v.check_runs.length;
       const counts = new Map<unknown, number>();
       for (const c of v.check_runs) { const name = object(c).name; counts.set(name, (counts.get(name) ?? 0) + 1); }
-      return { ...pick(v, ["total_count"]), checksComplete, checkRuns: list(v.check_runs, c => {
+      return { ...(v.total_count === undefined ? {} : pick(v, ["total_count"])), checksComplete, checkRuns: list(v.check_runs, c => {
         const check = object(c), app = producer(check.app, ["id", "slug"]), expected = expectedApp(check.name);
         const producerTrusted = expected !== null && app?.id === expected;
         const current = checksComplete && counts.get(check.name) === 1;

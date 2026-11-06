@@ -310,15 +310,19 @@ test('ambiguous or incomplete check-run collections never report an obsolete suc
       assert.equal(result.error, undefined); assert.ok(result.data.signals.every(s => s.current === false && s.passing === false)); f.hygiene(result); f.done();
     }
   }
-  for (const [page, total_count] of [[1, 2], [2, 1], [1, undefined]]) {
-    const f = fixture(); f.mint({ checks: 'read', statuses: 'read', actions: 'read' }); f.identity();
-    f.read(`/commits/${sha}/check-runs?per_page=10&page=${page}`, { total_count, check_runs: [check] });
-    f.read(`/commits/${sha}/statuses?per_page=10&page=${page}`, []);
-    f.read(`/actions/runs?head_sha=${sha}&per_page=10&page=${page}`, { total_count: 0, workflow_runs: [] }); f.revoke();
-    const result = await f.call('github.checks_get', { ...base, sha, page, perPage: 10 });
-    assert.equal(result.error, undefined); assert.equal(result.data.pages[0].checksComplete, false);
-    assert.equal(result.data.signals[0].passing, false); assert.equal(result.data.signals[0].current, false); f.done();
-  }
+});
+
+for (const [page, total_count] of [[1, 2], [2, 1], [1, undefined], [1, null], [1, '1']]) test(`incomplete checks page=${page} total_count=${total_count} remain non-passing and revoke successfully`, async () => {
+  const sha = 'a'.repeat(40), check = { id: 1, name: 'ci-ok', head_sha: sha, status: 'completed', conclusion: 'success', app: { id: 15368 } };
+  const f = fixture(); f.mint({ checks: 'read', statuses: 'read', actions: 'read' }); f.identity();
+  f.read(`/commits/${sha}/check-runs?per_page=10&page=${page}`, { total_count, check_runs: [check] });
+  f.read(`/commits/${sha}/statuses?per_page=10&page=${page}`, []);
+  f.read(`/actions/runs?head_sha=${sha}&per_page=10&page=${page}`, { total_count: 0, workflow_runs: [] }); f.revoke();
+  const result = await f.call('github.checks_get', { ...base, sha, page, perPage: 10 });
+  assert.equal(result.error, undefined); assert.equal(result.data.pages[0].checksComplete, false);
+  assert.equal(result.data.signals[0].passing, false); assert.equal(result.data.signals[0].current, false);
+  assert.equal(f.calls.length, 6); assert.equal(f.calls.at(-1).method, 'DELETE');
+  assert.equal(f.calls.at(-1).url, 'https://api.github.com/installation/token'); f.hygiene(result); f.done();
 });
 
 test('unique complete first-page checks retain producer-qualified success', async () => {
