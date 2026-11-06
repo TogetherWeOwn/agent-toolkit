@@ -23,7 +23,7 @@ export function fixture() {
     config: { get: async companyId => { assert.equal(companyId, run.companyId); return f.config; } },
     issues: { get: async (issueId, companyId) => { f.issueReads++; assert.equal(companyId, run.companyId); return issueId === base.issueId ? f.issue : null; } },
     projects: { listWorkspaces: async (projectId, companyId) => { f.workspaceReads++; assert.equal(projectId, run.projectId); assert.equal(companyId, run.companyId); return [f.workspace]; } },
-    secrets: { resolve: async (ref, scope) => { f.secretCalls++; assert.deepEqual(ref, f.config.privateKeySecretRef); assert.deepEqual(scope, { companyId: run.companyId, configPath: 'privateKeySecretRef' }); if (f.secret instanceof Error) throw f.secret; return f.secret; } },
+    secrets: { resolve: async (ref, scope) => { f.secretCalls++; assert.equal(Object.getPrototypeOf(ref), null); assert.deepEqual({ ...ref }, f.config.privateKeySecretRef); assert.deepEqual(scope, { companyId: run.companyId, configPath: 'privateKeySecretRef' }); if (f.secret instanceof Error) throw f.secret; return f.secret; } },
     activity: { log: async entry => { if (f.failAudit) throw Error(key + token); f.events.push(entry.metadata); } },
     logger: Object.fromEntries(['info', 'warn', 'error', 'debug'].map(level => [level, (...args) => f.logs.push({ level, args })])),
     http: { fetch: async (url, init) => {
