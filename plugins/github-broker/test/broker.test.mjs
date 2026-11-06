@@ -52,7 +52,7 @@ for (const [name, args, permissions, reads] of cases) test(`registered ${name} $
 
 test('exact tool inventory and read-only capability surface', () => {
   assert.equal(tools.length, 8); assert.deepEqual(manifest.tools.map(t => t.name), tools.map(t => t.name));
-  for (const c of manifest.capabilities) assert.ok(!/update|create|checkout|database|state.write|jobs|events/.test(c));
+  assert.deepEqual([...manifest.capabilities].sort(), ['agent.tools.register', 'issues.read', 'projects.read', 'project.workspaces.read', 'http.outbound', 'secrets.read-ref', 'activity.log.write'].sort());
 });
 
 test('every tool declares the app lane and every enabled profile refuses the owner lane', async () => {
@@ -430,6 +430,60 @@ test('healthy parallel registered calls preserve successful reads and audits', a
     assert.equal(result.error, undefined); assert.equal(fixtures[i].events.at(-1).outcome, 'success');
     fixtures[i].hygiene(result); fixtures[i].done();
   }
+});
+
+test('mint, read, revoke and response bodies share the worker-wide native IPC budget', async () => {
+  const { hostCall } = await import('../dist/plugins/github-broker/src/plugin.js');
+  for (const phase of ['mint', 'read', 'revoke', 'body']) {
+    let entered, release, blocked = 0, probeStarts = 0;
+    const ready = new Promise(resolve => { entered = resolve; }), pending = new Promise(resolve => { release = resolve; });
+    const fixtures = Array.from({ length: 4 }, () => fixture());
+    for (const f of fixtures) {
+      f.mint({ pull_requests: 'read' }); f.identity(); f.read('/pulls/1', pull); f.revoke();
+      const fetch = f.ctx.http.fetch;
+      f.ctx.http.fetch = async (url, init) => {
+        const response = await fetch(url, init);
+        const block = async () => { if (++blocked === 4) entered(); await pending; };
+        if (phase === 'body' && url.endsWith('/pulls/1')) {
+          const text = response.text.bind(response);
+          response.text = async () => { await block(); return text(); };
+        } else if ((phase === 'mint' && init.method === 'POST') || (phase === 'read' && url.endsWith('/pulls/1')) || (phase === 'revoke' && init.method === 'DELETE')) await block();
+        return response;
+      };
+    }
+    const calls = fixtures.map(f => f.call('github.pr_get', { ...base, number: 1 }));
+    try {
+      await ready;
+      await assert.rejects(hostCall(async () => { probeStarts++; }, 5), /host.timeout/);
+      assert.equal(probeStarts, 0, phase);
+    } finally { release(); await Promise.allSettled(calls); }
+    for (const [i, result] of (await Promise.all(calls)).entries()) {
+      assert.equal(result.error, undefined, phase); assert.equal(fixtures[i].events.at(-1).outcome, 'success');
+      fixtures[i].hygiene(result); fixtures[i].done();
+    }
+    assert.equal(await hostCall(async () => 'recovered', 100), 'recovered');
+  }
+});
+
+test('IPC-refused revocation pauses minting even when saturation also prevents outcome audit', async () => {
+  const { hostCall } = await import('../dist/plugins/github-broker/src/plugin.js');
+  const f = fixture(), retained = []; let release, queuedStarts = 0;
+  const pending = new Promise(resolve => { release = resolve; });
+  f.mint({ pull_requests: 'read' }); f.identity();
+  f.read('/pulls/1', pull, { effect: async () => {
+    const active = Array.from({ length: 3 }, () => hostCall(() => pending, 5));
+    retained.push(...active, hostCall(() => { queuedStarts++; return pending; }, 1000));
+    await Promise.allSettled(active);
+  } });
+  let result;
+  try {
+    result = await f.call('github.pr_get', { ...base, number: 1 });
+    assert.equal(result.error, 'audit.unavailable'); assert.equal(queuedStarts, 1);
+    assert.equal(f.calls.length, 3); assert.ok(f.calls.every(c => c.method !== 'DELETE'));
+  } finally { release(); await Promise.allSettled(retained); }
+  const next = await f.call('github.pr_get', { ...base, number: 2 });
+  assert.equal(next.error, 'rate.retry_after'); assert.ok(next.data.retryAfterSeconds >= 3659);
+  assert.equal(f.secretCalls, 1); assert.equal(f.calls.length, 3); f.hygiene(result); f.hygiene(next); f.done();
 });
 
 test('timed-out native IPC retains its worker budget until the underlying operations settle', async () => {
