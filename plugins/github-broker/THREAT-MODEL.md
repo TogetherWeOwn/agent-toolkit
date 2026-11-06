@@ -25,7 +25,7 @@ All data endpoints below are `GET /repos/{board-owner}/{board-name}`-relative. S
 | `github.actions_runs_list` | `/actions/runs`; actions | Run metadata only. No dispatch/rerun/log/artifact/secret access | `registered github.actions_runs_list ...` |
 | `github.issue_read` | `/issues/{number}`; issues | Body/metadata only. No comments, write or arbitrary issue graph | `registered github.issue_read ...` |
 
-Each tool has its own module and exact registry/manifest declaration. Unknown names (including prototype names), unknown keys, malformed shapes, unsupported enums, identities, Unicode/control/path ambiguities and out-of-range/fractional/coerced values are denied. Core schema limits bound overall input depth, nodes and bytes. Tool metadata is marked read-only; that label is not proof of native MCP governance coverage.
+Each tool has its own module and exact registry/manifest declaration. Unknown names (including prototype names), unknown keys, malformed shapes, unsupported enums, identities, Unicode/control/path ambiguities and out-of-range/fractional/coerced values are denied. Core schema limits bound overall input depth, nodes and bytes. Discovery schemas are flat root objects for MCP-client compatibility; they deliberately cannot express every mode-specific required/forbidden combination. Closed runtime variants still enforce those combinations before secret resolution or HTTP, as tested in `test/discovery.test.mjs`. Tool metadata is marked read-only; that label is not proof of native MCP governance coverage.
 
 ## Confused deputy and revocation
 
