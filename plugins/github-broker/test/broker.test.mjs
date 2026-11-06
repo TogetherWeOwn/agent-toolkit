@@ -280,12 +280,16 @@ test('per-agent attempt bucket denies the 31st call even when using fresh cache'
   assert.equal((await f.call('github.pr_get', { ...base, number: 1 })).error, 'rate.bucket'); assert.equal(f.calls.length, 4); f.done();
 });
 
-test('ETag revalidation uses scrubbed data and re-mints after the short TTL', async t => {
+test('expired fresh cache never sends conditionals and unsolicited 304 fails closed', async t => {
   const f = fixture(); let now = Date.now(); t.mock.method(Date, 'now', () => now);
   f.mint({ pull_requests: 'read' }); f.identity(); f.read('/pulls/1', pull, { headers: { etag: '"synthetic-etag"' } }); f.revoke();
   const args = { ...base, number: 1 }; assert.equal((await f.call('github.pr_get', args)).error, undefined); now += 11000;
-  f.mint({ pull_requests: 'read' }); f.identity(); f.read('/pulls/1', null, { status: 304, inspect: req => assert.equal(req.headers['If-None-Match'], '"synthetic-etag"') }); f.revoke();
-  const result = await f.call('github.pr_get', args); assert.equal(result.error, undefined); assert.equal(f.secretCalls, 2); f.hygiene(result); f.done();
+  f.mint({ pull_requests: 'read' }); f.identity(); f.read('/pulls/1', null, { status: 304, inspect: req => assert.equal(req.headers['If-None-Match'], undefined) }); f.revoke();
+  const result = await f.call('github.pr_get', args); assert.equal(result.error, 'upstream.read'); assert.equal(f.secretCalls, 2);
+  f.mint({ pull_requests: 'read' }); f.identity(); f.read('/pulls/1', { ...pull, title: 'new' }); f.revoke();
+  assert.equal((await f.call('github.pr_get', args)).data.pages[0].title, 'new');
+  for (const req of f.calls) assert.ok(Object.keys(req.headers).every(k => !k.toLowerCase().startsWith('if-')));
+  f.hygiene(result); f.done();
 });
 
 test('post-read audit outage and revoke failure are errors, never cached success', async () => {
@@ -434,12 +438,14 @@ test('healthy parallel registered calls preserve successful reads and audits', a
 
 test('mint, read, revoke and response bodies share the worker-wide native IPC budget', async () => {
   const { hostCall } = await import('../dist/plugins/github-broker/src/plugin.js');
-  for (const phase of ['mint', 'read', 'revoke', 'body']) {
+  for (const phase of ['mint', 'read', 'revoke', 'probe', 'body']) {
     let entered, release, blocked = 0, probeStarts = 0;
     const ready = new Promise(resolve => { entered = resolve; }), pending = new Promise(resolve => { release = resolve; });
     const fixtures = Array.from({ length: 4 }, () => fixture());
     for (const f of fixtures) {
-      f.mint({ pull_requests: 'read' }); f.identity(); f.read('/pulls/1', pull); f.revoke();
+      f.mint({ pull_requests: 'read' }); f.identity(); f.read('/pulls/1', pull);
+      f.revoke(phase === 'probe' ? { error: new TypeError('Response constructor: Invalid response status code 204') } : {});
+      if (phase === 'probe') f.steps.push({ method: 'GET', path: '/installation/repositories?per_page=1', status: 401, body: { message: 'Bad credentials' }, inspect: req => assert.equal(req.headers.Authorization, `Bearer ${token}`) });
       const fetch = f.ctx.http.fetch;
       f.ctx.http.fetch = async (url, init) => {
         const response = await fetch(url, init);
@@ -447,7 +453,7 @@ test('mint, read, revoke and response bodies share the worker-wide native IPC bu
         if (phase === 'body' && url.endsWith('/pulls/1')) {
           const text = response.text.bind(response);
           response.text = async () => { await block(); return text(); };
-        } else if ((phase === 'mint' && init.method === 'POST') || (phase === 'read' && url.endsWith('/pulls/1')) || (phase === 'revoke' && init.method === 'DELETE')) await block();
+        } else if ((phase === 'mint' && init.method === 'POST') || (phase === 'read' && url.endsWith('/pulls/1')) || (phase === 'revoke' && init.method === 'DELETE') || (phase === 'probe' && url.endsWith('/installation/repositories?per_page=1'))) await block();
         return response;
       };
     }
@@ -552,14 +558,14 @@ test('policy drift during awaited host authorization prevents repository access'
   assert.equal((await f.call('github.pr_get', { ...base, number: 1 })).error, 'policy.changed'); f.done();
 });
 
-test('expired validators and validators absent from a changed 200 are not reused', async t => {
+test('ETags are ignored and expired cache always fetches the new 200 representation', async t => {
   for (const expired of [false, true]) {
     const f = fixture(); let now = Date.now(); t.mock.method(Date, 'now', () => now);
     const args = { ...base, number: 1 };
     f.mint({ pull_requests: 'read' }); f.identity(); f.read('/pulls/1', pull, { headers: { etag: '"old"' } }); f.revoke();
     assert.equal((await f.call('github.pr_get', args)).error, undefined); now += expired ? 61000 : 11000;
     f.mint({ pull_requests: 'read' }); f.identity();
-    f.read('/pulls/1', { ...pull, title: 'new' }, { inspect: req => assert.equal(req.headers['If-None-Match'], expired ? undefined : '"old"') }); f.revoke();
+    f.read('/pulls/1', { ...pull, title: 'new' }, { inspect: req => assert.equal(req.headers['If-None-Match'], undefined) }); f.revoke();
     assert.equal((await f.call('github.pr_get', args)).data.pages[0].title, 'new'); now += 11000;
     f.mint({ pull_requests: 'read' }); f.identity(); f.read('/pulls/1', pull, { inspect: req => assert.equal(req.headers['If-None-Match'], undefined) }); f.revoke();
     assert.equal((await f.call('github.pr_get', args)).error, undefined); f.done(); t.mock.restoreAll();

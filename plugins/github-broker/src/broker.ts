@@ -16,7 +16,7 @@ import { issueRead } from "./tools/issue-read.js";
 export const tools = [repoRead, prList, prGet, prFiles, checksGet, rulesetsGet, actionsRunsList, issueRead];
 const registry = new Map(tools.map(t => [t.name, t]));
 const schemas = new Map(tools.map(t => [t.name, t.schema]));
-interface Cache { value: unknown; etag: string | undefined; at: number; generation: number }
+interface Cache { value: unknown; at: number; generation: number }
 interface Bucket { start: number; count: number; blockedUntil: number }
 const response = (data: unknown, isError: boolean): Result => ({ content: [{ type: "text", text: JSON.stringify(data) }], isError });
 
@@ -55,11 +55,11 @@ export class Broker {
     let operation: Operation | "unknown" = "unknown", policyDigest = hash(null), revision: number | null = null;
     let phase: Audit["phase"] = "refused", reserved = false, installationKey: string | null = null;
     const requestIds: string[] = [];
-    let providerFailure: Audit["providerFailure"];
+    let providerFailure: Audit["providerFailure"], revocation: Audit["revocation"];
     const emit = async (decision: Audit["decision"], rule: string, outcome: Audit["outcome"]) => {
       try {
         await host.audit({ event, time: host.clock(), agentId: caller?.agentId ?? null, runId: caller?.runId ?? null, companyId: caller?.companyId ?? null,
-          policyHash: policyDigest, policyRevision: revision, repoId: args?.repoId ?? null, operation, phase, decision, rule, requestIds: [...requestIds], outcome, ...(providerFailure ? { providerFailure } : {}) });
+          policyHash: policyDigest, policyRevision: revision, repoId: args?.repoId ?? null, operation, phase, decision, rule, requestIds: [...requestIds], outcome, ...(providerFailure ? { providerFailure } : {}), ...(revocation ? { revocation } : {}) });
       } catch { throw new Denied("audit.unavailable"); }
     };
     try {
@@ -93,8 +93,8 @@ export class Broker {
         await revalidate();
         values = cached.map(c => c!.value);
       } else {
-        // Worst case: mint + immutable repository-ID read + N reads + revoke.
-        this.reserve(this.installations, budgetKey, requests.length + 3, 4000, 3600000, host.clock());
+        // Worst case: mint + immutable repository-ID read + N reads + revoke + rejection probe.
+        this.reserve(this.installations, budgetKey, requests.length + 4, 4000, 3600000, host.clock());
         await revalidate();
         let privateKey: string;
         try { privateKey = await host.secret(config.privateKeySecretRef, caller.companyId); }
@@ -102,16 +102,18 @@ export class Broker {
         guard(typeof privateKey === "string" && privateKey.trim().length > 0, "secret.unavailable");
         const observe = (res: Response, sensitive: readonly string[]) => {
           const requestId = header(res, "x-github-request-id");
-          if (requestId && /^[A-F0-9]{4,8}(?::[A-F0-9]{2,12}){3,5}$/.test(requestId) && scrub(requestId, [...sensitive]) === requestId) requestIds.push(requestId);
+          const safeId = requestId && /^[A-F0-9]{4,8}(?::[A-F0-9]{2,12}){3,5}$/.test(requestId) && scrub(requestId, [...sensitive]) === requestId ? requestId : undefined;
+          if (safeId) requestIds.push(safeId);
           if (res.status === 429 || (res.status === 403 && (header(res, "retry-after") || header(res, "x-ratelimit-remaining") === "0"))) {
             const seconds = retryAfter(res, host.clock());
             const effective = this.pause(budgetKey, seconds, host.clock());
             providerFailure = { rule: "rate.github", retryAfterSeconds: effective };
             throw new Denied("rate.github", effective);
           }
+          return safeId;
         };
         values = await withInstallationToken({ transport: host.http.bind(host), appId: config.appId, installationId: config.installationId, privateKey,
-          scope: { repository_ids: [repo.id], permissions: Object.fromEntries(requests.map(r => [r.permission, "read"])) }, now: host.clock(), observe }, async (token, sensitive) => {
+          scope: { repository_ids: [repo.id], permissions: Object.fromEntries(requests.map(r => [r.permission, "read"])) }, now: host.clock(), observe, onRevocation: evidence => { revocation = evidence; } }, async (token, sensitive) => {
           const clean = (v: unknown) => scrub(v, [...sensitive]);
           await revalidate();
           const prefix = `/repos/${repo.owner}/${repo.name}`;
@@ -121,18 +123,13 @@ export class Broker {
           const output: unknown[] = [];
           for (const [i, spec] of requests.entries()) {
             await revalidate();
-            const old = cached[i] && host.clock() - cached[i]!.at < 60000 ? cached[i] : undefined;
-            const res = await request(host.http.bind(host), "GET", prefix + spec.path, token, old?.etag ? { etag: old.etag } : {});
+            const res = await request(host.http.bind(host), "GET", prefix + spec.path, token);
             observe(res, sensitive);
-            let value: unknown;
-            if (res.status === 304) { guard(old && host.clock() - old.at < 60000, "cache.miss"); value = old.value; }
-            else { guard(res.status === 200, "upstream.read"); value = clean(tool.project(parse(res), args!)); }
+            guard(res.status === 200, "upstream.read"); // Unsolicited 304 never serves stale data.
+            const value = clean(tool.project(parse(res), args!));
             guard(Buffer.byteLength(JSON.stringify(value)) <= 262144, "output.limit");
             output.push(value);
-            const etag = header(res, "etag");
-            guard(etag === undefined || (etag.length <= 200 && /^[\x20-\x7e]+$/.test(etag)), "upstream.etag");
-            const candidate = res.status === 304 ? etag ?? old?.etag : etag;
-            updates.set(keys[i]!, { value, at: host.clock(), generation, etag: candidate !== undefined && clean(candidate) === candidate ? candidate : undefined });
+            updates.set(keys[i]!, { value, at: host.clock(), generation });
           }
           // Request IDs are provider-controlled too; scrub before durable audit.
           requestIds.splice(0, requestIds.length, ...(clean(requestIds) as string[]).filter(x => x !== "[REDACTED]"));
