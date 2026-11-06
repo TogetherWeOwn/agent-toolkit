@@ -1,6 +1,6 @@
 import { define, sha, shaJson, listShape, listJson, pagination } from "../schema.js";
 import { object, pick, list, run } from "../output.js";
-export const checksGet = define("github.checks_get", "Read check runs, commit statuses and workflow runs for an exact SHA, one page each.", { sha, ...listShape }, { sha: shaJson, ...listJson },
+export const checksGet = define("github.checks_get", "app", "Read check runs, commit statuses and workflow runs for an exact SHA, one page each.", { sha, ...listShape }, { sha: shaJson, ...listJson },
   a => [
     { permission: "checks", path: `/commits/${a.sha}/check-runs?${pagination(a)}` },
     { permission: "statuses", path: `/commits/${a.sha}/status?${pagination(a)}` },

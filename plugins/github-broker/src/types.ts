@@ -2,6 +2,7 @@ import type { Schema } from "../../../packages/core/src/index.js";
 
 export const operations = ["github.repo_read", "github.pr_list", "github.pr_get", "github.pr_files", "github.checks_get", "github.rulesets_get", "github.actions_runs_list", "github.issue_read"] as const;
 export type Operation = typeof operations[number];
+export type IdentityLane = "app" | "owner";
 export type Profile = "builder" | "lead" | "reviewer-read" | "release" | "coordinator-read" | "none";
 export type Permission = "contents" | "pull_requests" | "checks" | "statuses" | "actions" | "administration" | "issues";
 export type Permissions = Partial<Record<Permission, "read">>;
@@ -12,7 +13,7 @@ export interface Policy {
   companyId: string;
   revision: number;
   repositories: Repository[];
-  agents: { agentId: string; profile: Profile; repositoryIds: number[] }[];
+  agents: { agentId: string; profile: Profile; identityLane: IdentityLane; repositoryIds: number[] }[];
 }
 export interface SecretRef { type: "secret_ref"; secretId: string }
 export interface Config { appId: number; installationId: number; privateKeySecretRef: SecretRef; policy: Policy }
@@ -20,6 +21,7 @@ export interface Arguments { issueId: string; workspaceId: string; repoId: numbe
 export interface Request { path: string; permission: Permission }
 export interface Tool {
   name: Operation;
+  identityLane: IdentityLane;
   description: string;
   inputSchema: Record<string, unknown>;
   schema: Schema<Arguments>;

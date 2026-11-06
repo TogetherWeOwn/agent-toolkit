@@ -16,9 +16,9 @@ export const baseJson = {
 export const pageJson = { type: "integer", minimum: 1, maximum: 100 };
 export const shaJson = { type: "string", pattern: "^[a-f0-9]{40}$" };
 export const refJson = { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._/-]*$", maxLength: 200 };
-export function define(name: Tool["name"], description: string, shape: Record<string, Schema<unknown>>, properties: Record<string, unknown>, requests: Tool["requests"], project: Tool["project"]): Tool {
+export function define(name: Tool["name"], identityLane: Tool["identityLane"], description: string, shape: Record<string, Schema<unknown>>, properties: Record<string, unknown>, requests: Tool["requests"], project: Tool["project"]): Tool {
   return {
-    name, description, schema: closed({ ...base, ...shape }) as Schema<Arguments>,
+    name, identityLane, description, schema: closed({ ...base, ...shape }) as Schema<Arguments>,
     inputSchema: { type: "object", additionalProperties: false, properties: { ...baseJson, ...properties }, required: [...Object.keys(base), ...Object.keys(properties)] },
     requests, project,
   };

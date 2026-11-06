@@ -10,7 +10,7 @@ export function config() {
   return { appId: 42, installationId: 99, privateKeySecretRef: { type: 'secret_ref', secretId: 'secret-one' }, policy: {
     version: 1, revision: 1, companyId: run.companyId,
     repositories: [{ id: 101, owner: 'synthetic-org', name: 'sandbox', projectId: run.projectId, workspaceId: base.workspaceId }],
-    agents: [{ agentId: run.agentId, profile: 'builder', repositoryIds: [101] }],
+    agents: [{ agentId: run.agentId, profile: 'builder', identityLane: 'app', repositoryIds: [101] }],
   } };
 }
 export const pull = { id: 11, number: 1, title: 'Synthetic PR', state: 'open', body: 'Untrusted text', head: { sha: 'a'.repeat(40), ref: 'topic' }, base: { sha: 'b'.repeat(40), ref: 'main' } };

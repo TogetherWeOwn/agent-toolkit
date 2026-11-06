@@ -2,7 +2,7 @@ import { define, id, listShape, listJson, pagination } from "../schema.js";
 import { list, object, pick } from "../output.js";
 import { guard, type Tool } from "../types.js";
 const summary = (r: unknown) => pick(r, ["id", "name", "target", "source_type", "source", "enforcement"]);
-const listing = define("github.rulesets_get", "Read one page of repository and inherited ruleset summaries.", listShape, listJson,
+const listing = define("github.rulesets_get", "app", "Read one page of repository and inherited ruleset summaries.", listShape, listJson,
   a => [{ permission: "administration", path: `/rulesets?includes_parents=true&${pagination(a)}` }], b => list(b, summary));
 function detail(body: unknown): unknown {
   const v = object(body);
@@ -23,7 +23,7 @@ function detail(body: unknown): unknown {
     return result;
   }), conditionsIncluded: false, bypassActorsIncluded: false };
 }
-const getting = define("github.rulesets_get", "Read one ruleset's enforcement and supported rule parameters. Unknown parameters are explicitly marked incomplete; bypass actors are excluded.",
+const getting = define("github.rulesets_get", "app", "Read one ruleset's enforcement and supported rule parameters. Unknown parameters are explicitly marked incomplete; bypass actors are excluded.",
   { rulesetId: id }, { rulesetId: { type: "integer", minimum: 1, maximum: Number.MAX_SAFE_INTEGER } }, a => [{ permission: "administration", path: `/rulesets/${a.rulesetId}` }], detail);
 export const rulesetsGet: Tool = {
   ...listing, description: `${listing.description} Supply rulesetId instead of pagination to read a rule's details. Read-only; never a bypass actor.`,

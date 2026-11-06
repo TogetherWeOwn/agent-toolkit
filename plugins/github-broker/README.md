@@ -37,12 +37,16 @@ Synthetic example (replace all identifiers with verified native metadata):
     "revision": 1,
     "companyId": "company-one",
     "repositories": [{ "id": 101, "owner": "synthetic-org", "name": "sandbox", "projectId": "project-one", "workspaceId": "workspace-one" }],
-    "agents": [{ "agentId": "agent-one", "profile": "reviewer-read", "repositoryIds": [101] }]
+    "agents": [{ "agentId": "agent-one", "profile": "reviewer-read", "identityLane": "app", "repositoryIds": [101] }]
   }
 }
 ```
 
 Profiles `builder`, `lead`, `reviewer-read` and `release` explicitly allow the eight reads on selected repositories. `coordinator-read` excludes file/tree/compare reads and PR patches. `none`, absent agents and empty repository grants deny everything. No write privileges are implied by the profile names. Arrays cap at 32 entries and all config also passes core's 256-node/16-KiB JSON bound. Duplicate agents, repository IDs or workspace bindings are rejected. Increment `policy.revision` for changes; the canonical hash includes the complete non-secret configuration, including App/installation/binding IDs. Configuration and issue assignment are re-read immediately before secret resolution and each data read; cache entries are policy/principal/run/issue/request scoped.
+
+## Identity lanes
+
+Each agent binding must explicitly select `identityLane: "app"`, the default and only implemented credential lane. Each tool and each enabled policy profile declares its allowed lane in code; `none` allows no lane. `owner` is a reserved name, not a second credential path: selecting it is refused with `identity.owner_disabled` before secret resolution or HTTP, even for an otherwise permitted read. Missing/unknown lanes and caller-supplied lane arguments fail closed. No owner secret is accepted or resolved, and there is no fallback between identities. The selected lane is part of the canonical configuration hash and every cache key. Future owner-lane support requires separate approved operations, policy and credential handling.
 
 ## Credential, transport and rate behavior
 

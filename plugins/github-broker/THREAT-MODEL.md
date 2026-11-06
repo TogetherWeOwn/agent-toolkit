@@ -33,6 +33,8 @@ Every call resolves its issue server-side; assignee alone is insufficient, so ei
 
 Configuration hash, assignment and workspace binding are revalidated before secret resolution, after mint and before each data read. Scoped tokens independently prevent a rename/transfer/TOCTOU from opening a second repository. Any policy change invalidates cache keys; assignment is checked even for fresh cache hits. Remaining same-repository timing races do not widen permission/resource scope. There is no claim of an atomic transaction across board policy and GitHub.
 
+Each tool and policy profile declares its identity lane independently of its operation/repository scope. Agent policy must explicitly select `app`; the reserved `owner` lane is disabled before credential resolution or HTTP. Caller arguments cannot select a lane. There is no owner-secret configuration or fallback path. Lane changes alter the policy hash and invalidate caches; revalidation repeats the lane checks before each read.
+
 ## Injection and credential escape
 
 Repository/task/API content is inert data. No content determines authorization, scope, destination, secret choice or execution. Results are explicit projections, not raw bodies. Known key/JWT/token strings and PEM lines are removed from projected text; files are decoded before scrubbing; selected request-ID headers are grammar-checked and scrubbed before audit; ETags containing credentials are not retained. HTTP failures expose fixed rule codes, not request headers, response messages, stack traces or error causes. Credentials are never put in state, files, environment variables or subprocesses. The only legitimate credential transfer is transient in-memory IPC to the trusted native HTTPS host.

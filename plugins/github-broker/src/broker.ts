@@ -54,7 +54,7 @@ export class Broker {
       const tool = registry.get(operation as Operation)!;
       const config = parseConfig(await host.config());
       policyDigest = policyHash(config); revision = config.policy.revision;
-      const repo = await authorize(host, config.policy, caller, tool.name, args);
+      const repo = await authorize(host, config.policy, caller, tool, args);
       const requests = tool.requests(args); // Path validation precedes secrets and outbound calls.
       const now = host.clock();
       const agentKey = `${caller.companyId}:${caller.agentId}`;
@@ -66,7 +66,7 @@ export class Broker {
       phase = "intent"; await emit("allow", "policy.allow", "pending");
       const revalidate = async () => {
         guard(policyHash(parseConfig(await host.config())) === policyDigest, "policy.changed");
-        await authorize(host, config.policy, caller!, tool.name, args!);
+        await authorize(host, config.policy, caller!, tool, args!);
       };
       const keys = requests.map(r => hash({ policyDigest, caller, args, path: r.path }));
       const cached = keys.map(k => this.cache.get(k));

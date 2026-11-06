@@ -38,6 +38,18 @@ test('exact tool inventory and read-only capability surface', () => {
   for (const c of manifest.capabilities) assert.ok(!/update|create|checkout|database|state.write|jobs|events/.test(c));
 });
 
+test('every tool declares the app lane and every enabled profile refuses the owner lane', async () => {
+  for (const tool of tools) assert.equal(tool.identityLane, 'app');
+  for (const profile of ['builder', 'lead', 'reviewer-read', 'release', 'coordinator-read']) {
+    const f = fixture(); Object.assign(f.config.policy.agents[0], { profile, identityLane: 'owner' });
+    refused(f, await f.call('github.pr_get', { ...base, number: 1 }), 'identity.owner_disabled');
+  }
+  for (const identityLane of [undefined, 'arbitrary', null]) {
+    const f = fixture(); f.config.policy.agents[0].identityLane = identityLane;
+    refused(f, await f.call('github.pr_get', { ...base, number: 1 }), 'validation.schema');
+  }
+});
+
 test('mint hard guard rejects missing, broad and malformed scopes before signing or HTTP', async () => {
   for (const scope of [undefined, null, {}, { permissions: { contents: 'read' } }, { repository_ids: [101] }, { repository_ids: [], permissions: {} },
     { repository_ids: [101, 102], permissions: { contents: 'read' } }, { repository_ids: [101], permissions: {} },
@@ -75,7 +87,7 @@ for (const [label, change, rule] of [
 
 test('spoofed issue ID and identity arguments fail closed', async () => {
   const f = fixture(); refused(f, await f.call('github.pr_get', { ...base, issueId: 'foreign-issue', number: 1 }), 'identity.issue_project');
-  for (const key of ['agentId', 'runId', 'companyId', 'projectId', 'token', 'secretRef', 'url', 'headers', 'approved', 'command', 'query']) {
+  for (const key of ['agentId', 'runId', 'companyId', 'projectId', 'identityLane', 'token', 'secretRef', 'url', 'headers', 'approved', 'command', 'query']) {
     const g = fixture(); refused(g, await g.call('github.pr_get', { ...base, number: 1, [key]: 'spoof' }), 'validation.schema');
   }
 });
@@ -154,7 +166,7 @@ test('reflected errors, malformed bodies and redirects never escape or follow', 
 });
 
 test('policy revocation or assignment drift between mint and read prevents the read', async () => {
-  for (const mutate of [f => { f.config.policy.revision++; }, f => { f.issue.assigneeAgentId = 'another-agent'; }]) {
+  for (const mutate of [f => { f.config.policy.revision++; }, f => { f.issue.assigneeAgentId = 'another-agent'; }, f => { f.config.policy.agents[0].identityLane = 'owner'; }]) {
     const f = fixture(); f.mint({ pull_requests: 'read' }); f.steps[0].effect = () => mutate(f); f.revoke();
     const result = await f.call('github.pr_get', { ...base, number: 1 }); assert.ok(result.error); assert.equal(f.calls.length, 2); f.done();
   }
