@@ -61,6 +61,15 @@ test("root tests invoke provider workspace build and test scripts", () => {
   assert.match(scripts.test, /npm run test --workspaces --if-present/);
 });
 
+test("standalone broker tests build explicitly with lifecycle scripts disabled", () => {
+  const config = readFileSync(new URL("../.npmrc", import.meta.url), "utf8");
+  assert.match(config, /^ignore-scripts=true$/m);
+  const { scripts } = JSON.parse(readFileSync(new URL("../plugins/github-broker/package.json", import.meta.url), "utf8"));
+  assert.match(scripts.test, /^npm run build && node --test /);
+  assert.equal(scripts.build, "tsc -p tsconfig.json");
+  assert.equal(scripts.pretest, undefined);
+});
+
 const lint = script("pr-lint.yml");
 const base = {
   EVENT: "pull_request",
