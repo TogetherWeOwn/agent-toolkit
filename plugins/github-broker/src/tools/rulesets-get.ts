@@ -3,7 +3,7 @@ import { list, object, pick } from "../output.js";
 import { guard, type Tool } from "../types.js";
 const summary = (r: unknown) => pick(r, ["id", "name", "target", "source_type", "source", "enforcement"]);
 const listing = define("github.rulesets_get", "app", "Read one page of repository and inherited ruleset summaries.", listShape, listJson,
-  a => [{ permission: "administration", path: `/rulesets?includes_parents=true&${pagination(a)}` }], b => list(b, summary));
+  a => [{ permission: "metadata", path: `/rulesets?includes_parents=true&${pagination(a)}` }], b => list(b, summary));
 function detail(body: unknown): unknown {
   const v = object(body);
   return { ...summary(v), rules: list(v.rules, r => {
@@ -18,13 +18,14 @@ function detail(body: unknown): unknown {
         projected.allowed_merge_methods = params.allowed_merge_methods;
       }
       result.parameters = projected;
-      result.parametersComplete = Object.keys(params).every(k => scalar.includes(k) || k === "required_status_checks" || k === "allowed_merge_methods");
+      result.parametersComplete = Object.keys(params).every(k => scalar.includes(k) || k === "required_status_checks" || k === "allowed_merge_methods")
+        && (params.required_status_checks === undefined || (params.required_status_checks as unknown[]).every(c => Object.keys(object(c)).every(k => k === "context" || k === "integration_id")));
     }
     return result;
   }), conditionsIncluded: false, bypassActorsIncluded: false };
 }
 const getting = define("github.rulesets_get", "app", "Read one ruleset's enforcement and supported rule parameters. Unknown parameters are explicitly marked incomplete; bypass actors are excluded.",
-  { rulesetId: id }, { rulesetId: { type: "integer", minimum: 1, maximum: Number.MAX_SAFE_INTEGER } }, a => [{ permission: "administration", path: `/rulesets/${a.rulesetId}` }], detail);
+  { rulesetId: id }, { rulesetId: { type: "integer", minimum: 1, maximum: Number.MAX_SAFE_INTEGER } }, a => [{ permission: "metadata", path: `/rulesets/${a.rulesetId}` }], detail);
 export const rulesetsGet: Tool = {
   ...listing, description: `${listing.description} Supply rulesetId instead of pagination to read a rule's details. Read-only; never a bypass actor.`,
   inputSchema: { oneOf: [listing.inputSchema, getting.inputSchema] },

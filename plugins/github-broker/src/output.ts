@@ -39,9 +39,13 @@ export function repositoryRead(value: unknown, mode: unknown): unknown {
     guard(Buffer.from(content).equals(bytes), "upstream.utf8");
     return { ...pick(v, ["name", "path", "sha", "size"]), content, encoding: "utf-8" };
   }
-  if (mode === "tree") return { ...pick(v, ["sha", "truncated"]), tree: list(v.tree, entry => pick(entry, ["path", "mode", "type", "sha", "size"])) };
+  if (mode === "tree") {
+    guard(Array.isArray(v.tree) && typeof v.truncated === "boolean", "upstream.tree");
+    return { ...pick(v, ["sha"]), truncated: v.truncated || v.tree.length > 100, tree: list(v.tree.slice(0, 100), entry => pick(entry, ["path", "mode", "type", "sha", "size"])) };
+  }
   if (mode === "ref") return { ...pick(v, ["ref"]), object: pick(v.object, ["type", "sha"]) };
-  return { ...pick(v, ["status", "ahead_by", "behind_by", "total_commits"]), commits: list(v.commits, c => pick(c, ["sha"])), files: list(v.files, changedFile) };
+  guard(Array.isArray(v.files), "upstream.files");
+  return { ...pick(v, ["status", "ahead_by", "behind_by", "total_commits"]), commits: list(v.commits, c => pick(c, ["sha"])), files: list(v.files.slice(0, 100), changedFile), filesTruncated: v.files.length > 100 };
 }
 
 /** Redact only after explicit projection, including decoded file contents. Never

@@ -17,10 +17,10 @@ const cases = [
   ['github.pr_files', { number: 1, ...paged }, { pull_requests: 'read' }, [['/pulls/1/files?per_page=10&page=1', [{ sha: 'a'.repeat(40), filename: 'file.ts', status: 'modified', patch: '+safe' }]]]],
   ['github.checks_get', { sha: 'a'.repeat(40), ...paged }, { checks: 'read', statuses: 'read', actions: 'read' }, [
     [`/commits/${'a'.repeat(40)}/check-runs?per_page=10&page=1`, { total_count: 1, check_runs: [{ id: 1, name: 'CI', head_sha: 'a'.repeat(40), status: 'completed', conclusion: 'success' }] }],
-    [`/commits/${'a'.repeat(40)}/status?per_page=10&page=1`, { sha: 'a'.repeat(40), state: 'success', total_count: 0, statuses: [] }],
+    [`/commits/${'a'.repeat(40)}/statuses?per_page=10&page=1`, []],
     [`/actions/runs?head_sha=${'a'.repeat(40)}&per_page=10&page=1`, { total_count: 0, workflow_runs: [] }],
   ]],
-  ['github.rulesets_get', paged, { administration: 'read' }, [['/rulesets?includes_parents=true&per_page=10&page=1', [{ id: 1, name: 'protected', enforcement: 'active' }]]]],
+  ['github.rulesets_get', paged, { metadata: 'read' }, [['/rulesets?includes_parents=true&per_page=10&page=1', [{ id: 1, name: 'protected', enforcement: 'active' }]]]],
   ['github.actions_runs_list', paged, { actions: 'read' }, [['/actions/runs?per_page=10&page=1', { total_count: 0, workflow_runs: [] }]]],
   ['github.issue_read', { number: 1 }, { issues: 'read' }, [['/issues/1', { id: 1, number: 1, title: 'Synthetic', body: 'Data only', state: 'open' }]]],
 ];
@@ -28,6 +28,23 @@ for (const [name, args, permissions, reads] of cases) test(`registered ${name} $
   const f = fixture(); f.mint(permissions); f.identity(); for (const [path, body] of reads) f.read(path, body); f.revoke();
   const result = await f.call(name, { ...base, ...args });
   assert.equal(result.error, undefined); assert.equal(result.data.ok, true); assert.equal(result.data.pages.length, reads.length);
+  const expected = {
+    'github.repo_read:file': { name: 'README.md', path: 'README.md', sha: 'a'.repeat(40), size: 5, content: 'hello', encoding: 'utf-8' },
+    'github.repo_read:tree': { sha: 'a'.repeat(40), truncated: false, tree: [{ path: 'README.md', type: 'blob', sha: 'b'.repeat(40) }] },
+    'github.repo_read:ref': { ref: 'refs/heads/main', object: { type: 'commit', sha: 'a'.repeat(40) } },
+    'github.repo_read:compare': { status: 'ahead', ahead_by: 1, behind_by: 0, total_commits: 1, commits: [{ sha: 'a'.repeat(40) }], files: [], filesTruncated: false },
+    'github.pr_list:': [pull], 'github.pr_get:': pull,
+    'github.pr_files:': [{ sha: 'a'.repeat(40), filename: 'file.ts', status: 'modified', patch: '+safe' }],
+    'github.checks_get:': { total_count: 1, checkRuns: [{ id: 1, name: 'CI', head_sha: 'a'.repeat(40), status: 'completed', conclusion: 'success', app: null, producerTrusted: false, passing: false }] },
+    'github.rulesets_get:': [{ id: 1, name: 'protected', enforcement: 'active' }],
+    'github.actions_runs_list:': { total_count: 0, workflowRuns: [] },
+    'github.issue_read:': { id: 1, number: 1, title: 'Synthetic', body: 'Data only', state: 'open' },
+  };
+  assert.deepEqual(result.data.pages[0], expected[`${name}:${args.mode ?? ''}`]);
+  if (name === 'github.checks_get') {
+    assert.deepEqual(result.data.pages[1], { sha: 'a'.repeat(40), statuses: [] });
+    assert.deepEqual(result.data.pages[2], { total_count: 0, workflowRuns: [] });
+  }
   assert.equal(f.secretCalls, 1); assert.equal(f.events.length, 2); assert.equal(f.events[0].phase, 'intent'); assert.equal(f.events[1].phase, 'outcome'); assert.equal(f.events[1].outcome, 'success');
   assert.equal(f.events[0].event, f.events[1].event); assert.equal(f.events[1].agentId, run.agentId); assert.equal(f.events[1].runId, run.runId); assert.equal(f.events[1].policyHash.length, 64); assert.ok(f.events[1].requestIds.length > 0);
   f.hygiene(result); f.done();
@@ -54,7 +71,9 @@ test('mint hard guard rejects missing, broad and malformed scopes before signing
   for (const scope of [undefined, null, {}, { permissions: { contents: 'read' } }, { repository_ids: [101] }, { repository_ids: [], permissions: {} },
     { repository_ids: [101, 102], permissions: { contents: 'read' } }, { repository_ids: [101], permissions: {} },
     { repository_ids: [101], permissions: { contents: 'write' } }, { repository_ids: [101], permissions: { workflows: 'read' } },
-    { repository_ids: [101], permissions: { contents: 'read' }, extra: true }]) {
+    { repository_ids: [101], permissions: { administration: 'read' } }, { repository_ids: [101], permissions: { statuses: 'write' } },
+    { repository_ids: [101], permissions: { checks: 'write' } }, { repository_ids: [101], permissions: { actions: 'write' } },
+    { repository_ids: [101], permissions: { workflows: 'write' } }, { repository_ids: [101], permissions: { contents: 'read' }, extra: true }]) {
     assert.throws(() => mintScope(scope)); let calls = 0;
     await assert.rejects(withInstallationToken({ scope, transport: async () => { calls++; throw Error('must not call'); }, privateKey: 'invalid', appId: 42, installationId: 99, now: Date.now(), observe() {} }, async () => {}));
     assert.equal(calls, 0);
@@ -62,7 +81,7 @@ test('mint hard guard rejects missing, broad and malformed scopes before signing
 });
 
 test('unknown tool and prototype dispatch have no secret or outbound access', async () => {
-  for (const name of ['constructor', '__proto__', 'toString', 'github.graphql', 'github.pr_merge', 'github.http', 'github.actions_rerun']) {
+  for (const name of ['constructor', '__proto__', 'toString', 'github.graphql', 'github.pr_merge', 'github.http', 'github.actions_rerun', 'github.review_approve', 'github.status_create', 'github.check_run_create', 'github.workflow_write', 'github.issue_comment']) {
     const events = [];
     const result = await new Broker().execute({ audit: async e => events.push(e), clock: Date.now }, name, base, run);
     assert.equal(result.isError, true); assert.equal(JSON.parse(result.content[0].text).rule, 'validation.unknown_tool'); assert.equal(events.length, 1);
@@ -191,7 +210,7 @@ test('Retry-After blocks installation calls without sleeping or retrying', async
 });
 
 test('ruleset details expose supported enforcement rules without bypass actors', async () => {
-  const f = fixture(); f.mint({ administration: 'read' }); f.identity();
+  const f = fixture(); f.mint({ metadata: 'read' }); f.identity();
   f.read('/rulesets/1', { id: 1, name: 'main', enforcement: 'active', bypass_actors: [{ secret: token }], rules: [{ type: 'required_status_checks', parameters: { strict_required_status_checks_policy: false, required_status_checks: [{ context: 'CI', integration_id: 1 }] } }] }); f.revoke();
   const result = await f.call('github.rulesets_get', { ...base, rulesetId: 1 });
   assert.equal(result.error, undefined); assert.equal(result.data.pages[0].rules[0].parametersComplete, true); assert.equal(result.data.pages[0].bypassActorsIncluded, false); f.hygiene(result); f.done();
@@ -223,6 +242,166 @@ test('post-read audit outage and revoke failure are errors, never cached success
   const g = fixture(); g.mint({ pull_requests: 'read' }); g.identity(); g.read('/pulls/1', pull); g.revoke({ status: 500, body: { message: key + token } });
   assert.equal((await g.call('github.pr_get', { ...base, number: 1 })).error, 'mint.revoke_failed');
   assert.equal((await g.call('github.pr_get', { ...base, number: 1 })).error, 'rate.retry_after'); assert.equal(g.calls.length, 4); g.done();
+});
+
+test('checks merge producer-qualified checks and latest statuses without trusting aggregate success', async () => {
+  const f = fixture(); f.mint({ checks: 'read', statuses: 'read', actions: 'read' }); f.identity();
+  const sha = 'a'.repeat(40);
+  const check = { head_sha: sha, status: 'completed', conclusion: 'success' };
+  f.read(`/commits/${sha}/check-runs?per_page=10&page=1`, { total_count: 6, check_runs: [
+    { ...check, id: 1, name: 'ci-ok', app: { id: 15368, slug: 'github-actions' } },
+    { ...check, id: 2, name: 'gitleaks', app: { id: 999, slug: 'github-actions' } },
+    { ...check, id: 3, name: 'pr-lint' },
+    { ...check, id: 4, name: 'CodeQL', app: { id: 15368 } },
+    { ...check, id: 5, name: 'Devin Review', app: { id: 811515 } },
+    { ...check, id: 6, name: 'e2e-ok', head_sha: 'b'.repeat(40), app: { id: 15368 } },
+  ] });
+  f.read(`/commits/${sha}/statuses?per_page=10&page=1`, [
+    { id: 10, context: 'Devin Review', state: 'success', creator: { login: 'devin-ai-integration[bot]', type: 'Bot' } },
+    { id: 9, context: 'Devin Review', state: 'failure', creator: { login: 'devin-ai-integration[bot]', type: 'Bot' } },
+    { id: 8, context: 'ci-ok', state: 'success', creator: { login: 'github-actions[bot]', type: 'Bot' } },
+    { id: 7, context: 'gitleaks', state: 'success', creator: { login: 'attacker', type: 'User' } },
+  ]);
+  f.read(`/actions/runs?head_sha=${sha}&per_page=10&page=1`, { total_count: 0, workflow_runs: [] }); f.revoke();
+  const result = await f.call('github.checks_get', { ...base, sha, ...paged });
+  assert.equal(result.error, undefined);
+  assert.deepEqual(result.data.signals.map(s => [s.source, s.context, s.passing]), [
+    ['check', 'ci-ok', true], ['check', 'gitleaks', false], ['check', 'pr-lint', false], ['check', 'CodeQL', true],
+    ['check', 'Devin Review', true], ['check', 'e2e-ok', false], ['status', 'Devin Review', true],
+    ['status', 'Devin Review', false], ['status', 'ci-ok', false], ['status', 'gitleaks', false],
+  ]);
+  assert.equal(result.data.pages[1].statuses[1].current, false); f.hygiene(result); f.done();
+});
+
+test('queued suites with no runs give no signal and historical status pages cannot pass', async () => {
+  for (const page of [1, 2]) {
+    const f = fixture(); f.mint({ checks: 'read', statuses: 'read', actions: 'read' }); f.identity(); const sha = 'a'.repeat(40);
+    f.read(`/commits/${sha}/check-runs?per_page=10&page=${page}`, { total_count: 0, check_runs: [], check_suites: [{ status: 'queued' }] });
+    f.read(`/commits/${sha}/statuses?per_page=10&page=${page}`, page === 1 ? [] : [{ id: 1, context: 'Devin Review', state: 'success', creator: { login: 'devin-ai-integration[bot]', type: 'Bot' } }]);
+    f.read(`/actions/runs?head_sha=${sha}&per_page=10&page=${page}`, { total_count: 0, workflow_runs: [] }); f.revoke();
+    const result = await f.call('github.checks_get', { ...base, sha, page, perPage: 10 });
+    assert.equal(result.error, undefined); assert.ok(result.data.signals.every(s => !s.passing));
+    if (page === 1) assert.deepEqual(result.data.signals, []); f.done();
+  }
+});
+
+test('latest untrusted or failed status cannot be rescued by an older trusted success', async () => {
+  for (const latest of [{ state: 'failure', creator: { login: 'devin-ai-integration[bot]', type: 'Bot' } }, { state: 'success', creator: { login: 'attacker', type: 'User' } }, { state: 'success' }]) {
+    const f = fixture(); f.mint({ checks: 'read', statuses: 'read', actions: 'read' }); f.identity(); const sha = 'a'.repeat(40);
+    f.read(`/commits/${sha}/check-runs?per_page=10&page=1`, { total_count: 0, check_runs: [] });
+    f.read(`/commits/${sha}/statuses?per_page=10&page=1`, [{ id: 2, context: 'Devin Review', ...latest }, { id: 1, context: 'Devin Review', state: 'success', creator: { login: 'devin-ai-integration[bot]', type: 'Bot' } }]);
+    f.read(`/actions/runs?head_sha=${sha}&per_page=10&page=1`, { total_count: 0, workflow_runs: [] }); f.revoke();
+    const result = await f.call('github.checks_get', { ...base, sha, ...paged });
+    assert.equal(result.error, undefined); assert.ok(result.data.signals.every(s => !s.passing)); f.hygiene(result); f.done();
+  }
+});
+
+test('board policy supports all advertised repositories and agents without widening tool JSON bounds', async () => {
+  const { parseConfig } = await import('../../../dist/plugins/github-broker/src/policy.js');
+  const f = fixture();
+  f.config.policy.repositories = Array.from({ length: 32 }, (_, i) => ({ id: 101 + i, owner: 'synthetic-org', name: `repo-${i}`, projectId: run.projectId, workspaceId: `workspace-${i}` }));
+  f.config.policy.agents = Array.from({ length: 32 }, (_, i) => ({ agentId: `agent-${i}`, profile: 'builder', identityLane: 'app', repositoryIds: f.config.policy.repositories.map(r => r.id) }));
+  const parsed = parseConfig(f.config); assert.equal(parsed.policy.agents.length, 32); assert.equal(parsed.policy.repositories.length, 32);
+  for (const target of [f.config, f.config.policy, f.config.policy.repositories, f.config.policy.agents]) {
+    Object.defineProperty(target, 'hidden', { value: true, configurable: true });
+    assert.throws(() => parseConfig(f.config)); delete target.hidden;
+  }
+  const agent = f.config.policy.agents[0];
+  Object.defineProperty(f.config.policy.agents, '0', { enumerable: true, configurable: true, get() { assert.fail('array getter invoked'); } });
+  assert.throws(() => parseConfig(f.config), /policy.array/);
+  Object.defineProperty(f.config.policy.agents, '0', { value: agent, writable: true, enumerable: true, configurable: true });
+  Object.defineProperty(f.config, 'policy', { enumerable: true, configurable: true, get() { assert.fail('config getter invoked'); } });
+  assert.throws(() => parseConfig(f.config), /policy.object/);
+});
+
+test('large trees and compare files return explicitly truncated bounded evidence', async () => {
+  for (const mode of ['tree', 'compare']) {
+    const f = fixture(); f.mint({ contents: 'read' }); f.identity();
+    const entries = Array.from({ length: 150 }, (_, i) => ({ path: `file-${i}`, filename: `file-${i}`, sha: 'a'.repeat(40), type: 'blob', status: 'modified' }));
+    f.read(mode === 'tree' ? '/git/trees/main' : '/compare/main...topic?per_page=100&page=1', mode === 'tree'
+      ? { sha: 'a'.repeat(40), truncated: false, tree: entries }
+      : { status: 'ahead', total_commits: 1, commits: [{ sha: 'a'.repeat(40) }], files: entries }); f.revoke();
+    const result = await f.call('github.repo_read', { ...base, mode, ...(mode === 'tree' ? { ref: 'main' } : { base: 'main', head: 'topic' }) });
+    assert.equal(result.error, undefined); const page = result.data.pages[0];
+    assert.equal((page.tree ?? page.files).length, 100); assert.equal(mode === 'tree' ? page.truncated : page.filesTruncated, true); f.done();
+  }
+});
+
+test('recoverable rejected token shapes are revoked before reporting failure', async () => {
+  const f = fixture(), malformed = 'x'.repeat(1025); f.mint({ pull_requests: 'read' }, { token: malformed });
+  f.revoke({ inspect: req => assert.equal(req.headers.Authorization, `Bearer ${malformed}`) });
+  const result = await f.call('github.pr_get', { ...base, number: 1 });
+  assert.equal(result.error, 'mint.response'); assert.ok(!result.content.includes(malformed)); f.hygiene(result); f.done();
+});
+
+test('policy drift during awaited host authorization prevents repository access', async () => {
+  const f = fixture(), get = f.ctx.issues.get;
+  f.ctx.issues.get = async (...args) => { const issue = await get(...args); if (f.issueReads === 3) f.config.policy.revision++; return issue; };
+  f.mint({ pull_requests: 'read' }); f.revoke();
+  assert.equal((await f.call('github.pr_get', { ...base, number: 1 })).error, 'policy.changed'); f.done();
+});
+
+test('expired validators and validators absent from a changed 200 are not reused', async t => {
+  for (const expired of [false, true]) {
+    const f = fixture(); let now = Date.now(); t.mock.method(Date, 'now', () => now);
+    const args = { ...base, number: 1 };
+    f.mint({ pull_requests: 'read' }); f.identity(); f.read('/pulls/1', pull, { headers: { etag: '"old"' } }); f.revoke();
+    assert.equal((await f.call('github.pr_get', args)).error, undefined); now += expired ? 61000 : 11000;
+    f.mint({ pull_requests: 'read' }); f.identity();
+    f.read('/pulls/1', { ...pull, title: 'new' }, { inspect: req => assert.equal(req.headers['If-None-Match'], expired ? undefined : '"old"') }); f.revoke();
+    assert.equal((await f.call('github.pr_get', args)).data.pages[0].title, 'new'); now += 11000;
+    f.mint({ pull_requests: 'read' }); f.identity(); f.read('/pulls/1', pull, { inspect: req => assert.equal(req.headers['If-None-Match'], undefined) }); f.revoke();
+    assert.equal((await f.call('github.pr_get', args)).error, undefined); f.done(); t.mock.restoreAll();
+  }
+});
+
+test('refused calls do not flush authorized cached data', async () => {
+  const f = fixture(); f.mint({ pull_requests: 'read' }); f.identity(); f.read('/pulls/1', pull); f.revoke();
+  assert.equal((await f.call('github.pr_get', { ...base, number: 1 })).error, undefined);
+  assert.ok((await f.call('github.pr_get', { ...base, number: 1, agentId: 'spoof' })).error);
+  assert.equal((await f.call('github.pr_get', { ...base, number: 1 })).error, undefined);
+  assert.equal(f.calls.length, 4); f.done();
+});
+
+test('an older in-flight response cannot overwrite a later successful cached read', async () => {
+  const f = fixture(); let release, entered;
+  const pending = new Promise(resolve => { release = resolve; }), started = new Promise(resolve => { entered = resolve; });
+  f.mint({ pull_requests: 'read' }); f.identity(); f.read('/pulls/1', { ...pull, title: 'older' }, { effect: async () => { entered(); await pending; } });
+  const first = f.call('github.pr_get', { ...base, number: 1 }); await started;
+  f.mint({ pull_requests: 'read' }); f.identity(); f.read('/pulls/1', { ...pull, title: 'newer' }); f.revoke();
+  assert.equal((await f.call('github.pr_get', { ...base, number: 1 })).data.pages[0].title, 'newer');
+  f.revoke(); release(); assert.equal((await first).data.pages[0].title, 'older');
+  assert.equal((await f.call('github.pr_get', { ...base, number: 1 })).data.pages[0].title, 'newer'); f.done();
+});
+
+test('provider backoff only grows and installation budgets are shared across companies', () => {
+  const broker = new Broker();
+  broker.pause('42:99', 120, 1000); broker.pause('42:99', 1, 2000);
+  assert.equal(broker.installations.get('42:99').blockedUntil, 121000);
+  assert.throws(() => broker.reserve(broker.installations, '42:99', 1, 4000, 3600000, 3000), /rate.retry_after/);
+  broker.reserve(broker.installations, '42:100', 1, 4000, 3600000, 3000);
+  assert.equal(broker.installations.size, 2);
+});
+
+test('host call deadlines reject stalled IPC and ignore late results', async () => {
+  const { hostCall } = await import('../../../dist/plugins/github-broker/src/plugin.js'); let resolve;
+  const pending = new Promise(r => { resolve = r; });
+  await assert.rejects(hostCall(() => pending, 1), /host.timeout/); resolve('late');
+  assert.equal(await hostCall(async () => 'ok', 100), 'ok');
+});
+
+test('ruleset completeness includes nested required-context fields', async () => {
+  const f = fixture(); f.mint({ metadata: 'read' }); f.identity();
+  f.read('/rulesets/1', { id: 1, name: 'main', rules: [{ type: 'required_status_checks', parameters: { required_status_checks: [{ context: 'ci-ok', integration_id: 15368, unsupported: true }] } }] }); f.revoke();
+  const result = await f.call('github.rulesets_get', { ...base, rulesetId: 1 });
+  assert.equal(result.error, undefined); assert.equal(result.data.pages[0].rules[0].parametersComplete, false); f.done();
+});
+
+test('published ref and path patterns match outbound rejection boundaries', async () => {
+  const { refJson, pathJson, segment, filePath } = await import('../../../dist/plugins/github-broker/src/schema.js');
+  for (const [schema, parse, values] of [[refJson, segment, ['main', 'a', 'heads/topic', 'a.b', 'a..b', 'a//b', 'a/.', 'x.lock', 'x.lock/y', 'main/', '../a']], [pathJson, filePath, ['README.md', 'dir/file.txt', '../a', 'a/../b', 'a/./b', 'a//b', 'a\\b', '/file']]]) {
+    for (const value of values) { let accepted = true; try { parse(value); } catch { accepted = false; } assert.equal(new RegExp(schema.pattern).test(value), accepted, value); }
+  }
 });
 
 test('transport refuses other origins and malformed destinations before outbound', async () => {

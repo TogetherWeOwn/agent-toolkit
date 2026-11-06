@@ -1,13 +1,24 @@
 import { definePlugin, type PluginContext, type ToolRunContext } from "@paperclipai/plugin-sdk";
 import { Broker, tools } from "./broker.js";
-import type { Host } from "./types.js";
+import { Denied, type Host } from "./types.js";
+
+// Native control-plane IPC is not covered by the HTTPS deadline. Abandon a
+// stalled await without starting further work; the host operation is not aborted.
+export async function hostCall<T>(action: () => Promise<T>, timeoutMs = 30000): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([Promise.resolve().then(action), new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Denied("host.timeout")), timeoutMs);
+    })]);
+  } finally { if (timer !== undefined) clearTimeout(timer); }
+}
 
 function hostFor(ctx: PluginContext, run: ToolRunContext): Host {
   return {
-    config: () => ctx.config.get(run.companyId),
-    issue: id => ctx.issues.get(id, run.companyId),
-    workspace: async (projectId, workspaceId) => (await ctx.projects.listWorkspaces(projectId, run.companyId)).find(w => w.id === workspaceId) ?? null,
-    secret: (ref, companyId) => ctx.secrets.resolve(ref, { companyId, configPath: "privateKeySecretRef" }),
+    config: () => hostCall(() => ctx.config.get(run.companyId)),
+    issue: id => hostCall(() => ctx.issues.get(id, run.companyId)),
+    workspace: (projectId, workspaceId) => hostCall(async () => (await ctx.projects.listWorkspaces(projectId, run.companyId)).find(w => w.id === workspaceId) ?? null),
+    secret: (ref, companyId) => hostCall(() => ctx.secrets.resolve(ref, { companyId, configPath: "privateKeySecretRef" })),
     http: async req => {
       // Host 2026.1023.0 uses a single DNS-pinned node:https request, never
       // follows redirects, has a 5s DNS + 30s request deadline and 200 MiB cap.
@@ -16,7 +27,7 @@ function hostFor(ctx: PluginContext, run: ToolRunContext): Host {
       const res = await ctx.http.fetch(req.url, { method: req.method, headers: req.headers, ...(req.body === undefined ? {} : { body: req.body }) });
       return { status: res.status, headers: Object.fromEntries(res.headers.entries()), body: await res.text() };
     },
-    audit: record => ctx.activity.log({ companyId: run.companyId, message: "github-broker.call", metadata: { ...record } }),
+    audit: record => hostCall(() => ctx.activity.log({ companyId: run.companyId, message: "github-broker.call", metadata: { ...record } })),
     clock: Date.now,
   };
 }

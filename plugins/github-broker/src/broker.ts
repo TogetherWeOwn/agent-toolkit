@@ -8,7 +8,7 @@ import { repoRead } from "./tools/repo-read.js";
 import { prList } from "./tools/pr-list.js";
 import { prGet } from "./tools/pr-get.js";
 import { prFiles } from "./tools/pr-files.js";
-import { checksGet } from "./tools/checks-get.js";
+import { checksGet, checkSignals } from "./tools/checks-get.js";
 import { rulesetsGet } from "./tools/rulesets-get.js";
 import { actionsRunsList } from "./tools/actions-runs-list.js";
 import { issueRead } from "./tools/issue-read.js";
@@ -16,7 +16,7 @@ import { issueRead } from "./tools/issue-read.js";
 export const tools = [repoRead, prList, prGet, prFiles, checksGet, rulesetsGet, actionsRunsList, issueRead];
 const registry = new Map(tools.map(t => [t.name, t]));
 const schemas = new Map(tools.map(t => [t.name, t.schema]));
-interface Cache { value: unknown; etag: string | undefined; at: number }
+interface Cache { value: unknown; etag: string | undefined; at: number; generation: number }
 interface Bucket { start: number; count: number; blockedUntil: number }
 const response = (data: unknown, isError: boolean): Result => ({ content: [{ type: "text", text: JSON.stringify(data) }], isError });
 
@@ -25,6 +25,16 @@ export class Broker {
   private agents = new Map<string, Bucket>();
   private installations = new Map<string, Bucket>();
   private inFlight = 0;
+  private generation = 0;
+
+  private pause(key: string, seconds: number, now: number): void {
+    const b = this.installations.get(key);
+    if (b) b.blockedUntil = Math.max(b.blockedUntil, now + seconds * 1000);
+    else {
+      guard(this.installations.size < 128, "rate.capacity");
+      this.installations.set(key, { start: now, count: 0, blockedUntil: now + seconds * 1000 });
+    }
+  }
 
   private reserve(map: Map<string, Bucket>, key: string, count: number, limit: number, window: number, now: number): void {
     for (const [k, b] of map) if (now >= b.start + window && now >= b.blockedUntil) map.delete(k);
@@ -36,7 +46,9 @@ export class Broker {
   }
 
   async execute(host: Host, name: unknown, input: unknown, context: unknown): Promise<Result> {
-    const event = randomUUID();
+    const event = randomUUID(), generation = ++this.generation;
+    let keys: string[] = [];
+    const updates = new Map<string, Cache>();
     let caller: Caller | null = null, args: Arguments | null = null;
     let operation: Operation | "unknown" = "unknown", policyDigest = hash(null), revision: number | null = null;
     let phase: Audit["phase"] = "refused", reserved = false, installationKey: string | null = null;
@@ -56,28 +68,28 @@ export class Broker {
       policyDigest = policyHash(config); revision = config.policy.revision;
       const repo = await authorize(host, config.policy, caller, tool, args);
       const requests = tool.requests(args); // Path validation precedes secrets and outbound calls.
-      const now = host.clock();
       const agentKey = `${caller.companyId}:${caller.agentId}`;
-      const budgetKey = `${caller.companyId}:${config.appId}:${config.installationId}`;
+      const budgetKey = `${config.appId}:${config.installationId}`;
       installationKey = budgetKey;
-      this.reserve(this.agents, agentKey, 1, 30, 60000, now);
+      this.reserve(this.agents, agentKey, 1, 30, 60000, host.clock());
       guard(this.inFlight < 4, "rate.concurrency");
       this.inFlight++; reserved = true;
       phase = "intent"; await emit("allow", "policy.allow", "pending");
       const revalidate = async () => {
         guard(policyHash(parseConfig(await host.config())) === policyDigest, "policy.changed");
         await authorize(host, config.policy, caller!, tool, args!);
+        guard(policyHash(parseConfig(await host.config())) === policyDigest, "policy.changed");
       };
-      const keys = requests.map(r => hash({ policyDigest, caller, args, path: r.path }));
-      const cached = keys.map(k => this.cache.get(k));
+      keys = requests.map(r => hash({ policyDigest, caller, args, path: r.path }));
       for (const [k, v] of this.cache) if (host.clock() - v.at >= 60000) this.cache.delete(k);
+      const cached = keys.map(k => this.cache.get(k));
       let values: unknown[];
-      if (cached.every(c => c && now - c.at < 10000)) {
+      if (cached.every(c => c && host.clock() - c.at < 10000)) {
         await revalidate();
         values = cached.map(c => c!.value);
       } else {
         // Worst case: mint + immutable repository-ID read + N reads + revoke.
-        this.reserve(this.installations, budgetKey, requests.length + 3, 4000, 3600000, now);
+        this.reserve(this.installations, budgetKey, requests.length + 3, 4000, 3600000, host.clock());
         await revalidate();
         let privateKey: string;
         try { privateKey = await host.secret(config.privateKeySecretRef, caller.companyId); }
@@ -88,7 +100,7 @@ export class Broker {
           if (requestId && /^[A-F0-9]{4,8}(?::[A-F0-9]{2,12}){3,5}$/.test(requestId) && scrub(requestId, [...sensitive]) === requestId) requestIds.push(requestId);
           if (res.status === 429 || (res.status === 403 && (header(res, "retry-after") || header(res, "x-ratelimit-remaining") === "0"))) {
             const seconds = retryAfter(res, host.clock());
-            this.installations.get(budgetKey)!.blockedUntil = host.clock() + seconds * 1000;
+            this.pause(budgetKey, seconds, host.clock());
             throw new Denied("rate.github", seconds);
           }
         };
@@ -103,7 +115,7 @@ export class Broker {
           const output: unknown[] = [];
           for (const [i, spec] of requests.entries()) {
             await revalidate();
-            const old = cached[i];
+            const old = cached[i] && host.clock() - cached[i]!.at < 60000 ? cached[i] : undefined;
             const res = await request(host.http.bind(host), "GET", prefix + spec.path, token, old?.etag ? { etag: old.etag } : {});
             observe(res, sensitive);
             let value: unknown;
@@ -113,9 +125,8 @@ export class Broker {
             output.push(value);
             const etag = header(res, "etag");
             guard(etag === undefined || (etag.length <= 200 && /^[\x20-\x7e]+$/.test(etag)), "upstream.etag");
-            if (this.cache.size >= 128) this.cache.delete(this.cache.keys().next().value!);
-            const candidate = etag ?? old?.etag;
-            this.cache.set(keys[i]!, { value, at: host.clock(), etag: candidate !== undefined && clean(candidate) === candidate ? candidate : undefined });
+            const candidate = res.status === 304 ? etag ?? old?.etag : etag;
+            updates.set(keys[i]!, { value, at: host.clock(), generation, etag: candidate !== undefined && clean(candidate) === candidate ? candidate : undefined });
           }
           // Request IDs are provider-controlled too; scrub before durable audit.
           requestIds.splice(0, requestIds.length, ...(clean(requestIds) as string[]).filter(x => x !== "[REDACTED]"));
@@ -123,14 +134,20 @@ export class Broker {
         });
       }
       phase = "outcome"; await emit("allow", "policy.allow", "success");
-      return response({ ok: true, policyHash: policyDigest, policyRevision: revision, repoId: repo.id, operation, pages: values, pagination: "bounded; request subsequent pages explicitly" }, false);
+      for (const [key, update] of updates) {
+        if ((this.cache.get(key)?.generation ?? 0) > generation) continue;
+        if (this.cache.size >= 128 && !this.cache.has(key)) this.cache.delete(this.cache.keys().next().value!);
+        this.cache.set(key, update);
+      }
+      return response({ ok: true, policyHash: policyDigest, policyRevision: revision, repoId: repo.id, operation, pages: values, ...(operation === "github.checks_get" ? { signals: checkSignals(values) } : {}), pagination: "bounded; request subsequent pages explicitly" }, false);
     } catch (error) {
       const rule = error instanceof Denied || error instanceof GitHubFailure ? error.rule : error instanceof Refusal ? `validation.${error.code}` : "broker.unavailable";
       const seconds = error instanceof Denied || error instanceof GitHubFailure ? error.retryAfterSeconds : undefined;
-      this.cache.clear(); // Never serve partially read or unqualified results.
+      // Pending updates are never published until revoke and audit succeed.
+      // Refusals must not invalidate unrelated principals' cached reads.
+      for (const key of keys) if ((this.cache.get(key)?.generation ?? 0) <= generation) this.cache.delete(key);
       if (rule === "mint.revoke_failed" && installationKey) {
-        const budget = this.installations.get(installationKey);
-        if (budget) budget.blockedUntil = host.clock() + 3660000;
+        try { this.pause(installationKey, 3660, host.clock()); } catch { /* Capacity remains fail-closed. */ }
       }
       if (phase === "intent") phase = "outcome";
       try { await emit("deny", rule, "error"); } catch { return response({ ok: false, rule: "audit.unavailable" }, true); }

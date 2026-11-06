@@ -4,7 +4,7 @@ export const operations = ["github.repo_read", "github.pr_list", "github.pr_get"
 export type Operation = typeof operations[number];
 export type IdentityLane = "app" | "owner";
 export type Profile = "builder" | "lead" | "reviewer-read" | "release" | "coordinator-read" | "none";
-export type Permission = "contents" | "pull_requests" | "checks" | "statuses" | "actions" | "administration" | "issues";
+export type Permission = "contents" | "pull_requests" | "checks" | "statuses" | "actions" | "metadata" | "issues";
 export type Permissions = Partial<Record<Permission, "read">>;
 export interface Caller { agentId: string; runId: string; companyId: string; projectId: string }
 export interface Repository { id: number; owner: string; name: string; projectId: string; workspaceId: string }

@@ -45,7 +45,7 @@ export function fixture() {
       assert.deepEqual(JSON.parse(req.body), { repository_ids: [101], permissions });
       const jwt = req.headers.Authorization.slice(7); f.jwt = jwt;
       const [h, p, s] = jwt.split('.'); const header = JSON.parse(Buffer.from(h, 'base64url')); const payload = JSON.parse(Buffer.from(p, 'base64url'));
-      assert.deepEqual(header, { alg: 'RS256', typ: 'JWT' }); assert.equal(payload.iss, '42'); assert.equal(payload.exp - payload.iat, 600);
+      assert.deepEqual(header, { alg: 'RS256', typ: 'JWT' }); assert.equal(payload.iss, '42'); assert.equal(payload.exp - payload.iat, 600); assert.ok(Math.abs(payload.iat - (Math.floor(Date.now() / 1000) - 60)) <= 1);
       assert.ok(verify('RSA-SHA256', Buffer.from(`${h}.${p}`), createPublicKey(key), Buffer.from(s, 'base64url')));
     },
   });

@@ -52,7 +52,7 @@ REA angle: compare shipped Cloudflare scoping/fixtures and managed GitHub broker
 
 ## GitHub read broker implementation candidate
 
-[`plugins/github-broker`](plugins/github-broker/README.md), version 0.1.0, adds eight read-only tool handlers with per-agent/project/workspace policy and per-call repository-scoped GitHub App minting. It reuses core 0.1.0 and the extracted [`packages/github`](packages/github/README.md) protocol helpers. Maintainer: agent-toolkit maintainers. This is **not installed or security-accepted**; Actions evidence, independent Security and cryptography reviews, exact-artifact host/governance verification and sandbox QA remain gates. No credential creation, interim broad-key exception, existing-grant removal or write capability is authorized. See its [threat model](plugins/github-broker/THREAT-MODEL.md) and [pending acceptance record](plugins/github-broker/ACCEPTANCE.md).
+[`plugins/github-broker`](plugins/github-broker/README.md), version 0.1.0, adds eight read-only tool handlers with per-agent/project/workspace policy and repository-scoped GitHub App minting per uncached call. It reuses core 0.1.0 and the extracted [`packages/github`](packages/github/README.md) protocol helpers. Maintainer: agent-toolkit maintainers. This is **not installed or security-accepted**; Actions evidence, independent Security and cryptography reviews, exact-artifact host/governance verification and sandbox QA remain gates. No credential creation, interim broad-key exception, existing-grant removal or write capability is authorized. See its [threat model](plugins/github-broker/THREAT-MODEL.md) and [pending acceptance record](plugins/github-broker/ACCEPTANCE.md).
 
 ## Implementation and evidence limits
 

@@ -5,7 +5,7 @@ import { closed, integer, oneOf } from "../../core/src/index.js";
 
 export const API_ORIGIN = "https://api.github.com";
 export const API_VERSION = "2022-11-28";
-export type Permissions = Partial<Record<"contents" | "pull_requests" | "checks" | "statuses" | "actions" | "administration" | "issues", "read">>;
+export type Permissions = Partial<Record<"contents" | "pull_requests" | "checks" | "statuses" | "actions" | "metadata" | "issues", "read">>;
 export interface Request { url: string; method: "GET" | "POST" | "DELETE"; headers: Record<string, string>; body?: string }
 export interface Response { status: number; headers: Record<string, string>; body: string }
 export type Transport = (request: Request) => Promise<Response>;
@@ -14,7 +14,7 @@ export class GitHubFailure extends Error {
 }
 function check(value: unknown, rule: string): asserts value { if (!value) throw new GitHubFailure(rule); }
 const id = integer(1, Number.MAX_SAFE_INTEGER);
-const permissionNames = ["contents", "pull_requests", "checks", "statuses", "actions", "administration", "issues"] as const;
+const permissionNames = ["contents", "pull_requests", "checks", "statuses", "actions", "metadata", "issues"] as const;
 export function mintScope(value: unknown): { repository_ids: number[]; permissions: Permissions } {
   check(value && typeof value === "object" && !Array.isArray(value), "mint.scope_required");
   const v = value as Record<string, unknown>;
@@ -92,9 +92,10 @@ export async function withInstallationToken<T>(options: {
     throw new GitHubFailure("mint.failed");
   }
   const body = parse(minted) as Record<string, unknown>;
-  check(body && typeof body === "object" && typeof body.token === "string" && body.token.length > 0 && body.token.length <= 1024 && /^[\x21-\x7e]+$/.test(body.token), "mint.response");
+  check(body && typeof body === "object" && typeof body.token === "string" && body.token.length > 0, "mint.response");
   const token = body.token;
   try {
+    check(token.length <= 1024 && /^[\x21-\x7e]+$/.test(token), "mint.response");
     options.observe(minted, [options.privateKey, jwt, token]);
     const expires = typeof body.expires_at === "string" ? Date.parse(body.expires_at) : NaN;
     check(Number.isFinite(expires) && expires > options.now + 30000 && expires <= options.now + 3660000, "mint.expiry");

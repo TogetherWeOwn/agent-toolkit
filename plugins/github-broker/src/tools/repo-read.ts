@@ -1,9 +1,9 @@
-import { define, oneOf, ref, refJson, path, segment, filePath } from "../schema.js";
+import { define, oneOf, ref, refJson, path, pathJson, segment, filePath } from "../schema.js";
 import { repositoryRead } from "../output.js";
 import type { Tool } from "../types.js";
 
 const variants = [
-  define("github.repo_read", "app", "Read a UTF-8 file at a ref.", { mode: oneOf(["file"]), ref, path }, { mode: { const: "file" }, ref: refJson, path: { type: "string", maxLength: 1000 } }, a => [{ permission: "contents", path: `/contents/${filePath(a.path)}?ref=${segment(a.ref)}` }], (b, a) => repositoryRead(b, a.mode)),
+  define("github.repo_read", "app", "Read a UTF-8 file at a ref.", { mode: oneOf(["file"]), ref, path }, { mode: { const: "file" }, ref: refJson, path: pathJson }, a => [{ permission: "contents", path: `/contents/${filePath(a.path)}?ref=${segment(a.ref)}` }], (b, a) => repositoryRead(b, a.mode)),
   define("github.repo_read", "app", "Read one non-recursive tree page.", { mode: oneOf(["tree"]), ref }, { mode: { const: "tree" }, ref: refJson }, a => [{ permission: "contents", path: `/git/trees/${segment(a.ref)}` }], (b, a) => repositoryRead(b, a.mode)),
   define("github.repo_read", "app", "Read a fully qualified ref, such as heads/main.", { mode: oneOf(["ref"]), ref }, { mode: { const: "ref" }, ref: refJson }, a => [{ permission: "contents", path: `/git/ref/${ref.parse(a.ref).split("/").map(segment).join("/")}` }], (b, a) => repositoryRead(b, a.mode)),
   define("github.repo_read", "app", "Compare two refs, bounded to one page.", { mode: oneOf(["compare"]), base: ref, head: ref }, { mode: { const: "compare" }, base: refJson, head: refJson }, a => [{ permission: "contents", path: `/compare/${segment(a.base)}...${segment(a.head)}?per_page=100&page=1` }], (b, a) => repositoryRead(b, a.mode)),

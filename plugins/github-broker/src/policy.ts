@@ -3,13 +3,39 @@ import { guard, type Caller, type Config, type Policy, type Profile, type Operat
 
 const id = integer(1, Number.MAX_SAFE_INTEGER);
 function array<T>(schema: Schema<T>, max: number): Schema<T[]> {
-  return { parse(v) { guard(Array.isArray(v) && v.length <= max, "policy.array"); return v.map(x => schema.parse(x)); } };
+  return { parse(v) {
+    guard(Array.isArray(v) && v.length <= max, "policy.array");
+    const keys = Reflect.ownKeys(v);
+    guard(keys.length === v.length + 1 && keys.every(k => k === "length" || (typeof k === "string" && /^(0|[1-9][0-9]*)$/.test(k) && Number(k) < v.length)), "policy.array");
+    return Array.from({ length: v.length }, (_, i) => {
+      const d = Object.getOwnPropertyDescriptor(v, String(i));
+      guard(d && d.enumerable && Object.hasOwn(d, "value"), "policy.array");
+      return schema.parse(d.value);
+    });
+  } };
 }
 const repositorySchema = closed({ id, owner: text(39, /^[A-Za-z0-9][A-Za-z0-9-]*$/), name: text(100, /^[A-Za-z0-9_][A-Za-z0-9_.-]*$/), projectId: identifier, workspaceId: identifier });
 const agentSchema = closed({ agentId: identifier, identityLane: oneOf(["app", "owner"]), profile: oneOf(["builder", "lead", "reviewer-read", "release", "coordinator-read", "none"]), repositoryIds: array(id, 32) });
-const policySchema = closed({ version: integer(1, 1), companyId: identifier, revision: id, repositories: array(repositorySchema, 32), agents: array(agentSchema, 32) });
+// Board sections compose independently bounded leaf records instead of running
+// the tool-input 256-node cap over the whole 32-repository/32-agent policy.
+// Inspect descriptors before reading values, preserving closed JSON semantics.
+function section<S extends Record<string, Schema<unknown>>>(shape: S): Schema<{ [K in keyof S]: ReturnType<S[K]["parse"]> }> {
+  return { parse(v) {
+    guard(v !== null && typeof v === "object" && !Array.isArray(v) && (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null), "policy.object");
+    const keys = Reflect.ownKeys(v);
+    guard(keys.length === Object.keys(shape).length && keys.every(k => typeof k === "string" && Object.hasOwn(shape, k)), "policy.object");
+    const out: Record<string, unknown> = Object.create(null);
+    for (const [key, schema] of Object.entries(shape)) {
+      const d = Object.getOwnPropertyDescriptor(v, key);
+      guard(d && d.enumerable && Object.hasOwn(d, "value"), "policy.object");
+      out[key] = schema.parse(d.value);
+    }
+    return Object.freeze(out) as { [K in keyof S]: ReturnType<S[K]["parse"]> };
+  } };
+}
+const policySchema = section({ version: integer(1, 1), companyId: identifier, revision: id, repositories: array(repositorySchema, 32), agents: array(agentSchema, 32) });
 const secretSchema = closed({ type: oneOf(["secret_ref"]), secretId: identifier });
-const configSchema = closed({ appId: id, installationId: id, privateKeySecretRef: secretSchema, policy: policySchema });
+const configSchema = section({ appId: id, installationId: id, privateKeySecretRef: secretSchema, policy: policySchema });
 const callerSchema = closed({ agentId: identifier, runId: identifier, companyId: identifier, projectId: identifier });
 
 // Deliberately explicit even where read profiles share the same operations. New
