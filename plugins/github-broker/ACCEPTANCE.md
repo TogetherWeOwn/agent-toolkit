@@ -16,8 +16,8 @@
 | --- | --- |
 | Dependency provisioning: `npm install --ignore-scripts --no-audit --no-fund` | Completed; six locked dependency/workspace packages added; not test evidence |
 | Local full suite / typecheck / CI mirror | **Not run**, deliberately; GitHub Actions is CI of record |
-| Focused local reproduction | Not run; no failing Actions test identified yet |
-| Exact-head GitHub Actions full suite / lint / native-policy / gitleaks | Pending; record run/job links and exact head SHA in the PR/tracker |
+| Focused local reproduction | After Actions exposed a root-script regression, `node --test --test-timeout=30000 --test-name-pattern='root build and typecheck reject invalid plugin source' test/workflows.test.mjs` passed: 1 test, 0 failures, 467 ms. Diagnostic only, not full CI evidence. |
+| GitHub Actions initial head `b154626631662c7a5f1192309e65d85181cf6f0f` | [CI run](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42275888988): lint/typecheck and native-policy passed; test failed in the existing root script-contract fixture before broker fixtures ran. Root build was restored to its single compiler command; workspace packaging now runs from the test pipeline. Corrected-head full-suite evidence remains pending. |
 | Required Devin Review and finding dispositions | Pending |
 | Security Engineer exact-source/artifact/config-envelope acceptance | Pending |
 | Independent applied cryptography review of signing/mint/secret path | Pending |

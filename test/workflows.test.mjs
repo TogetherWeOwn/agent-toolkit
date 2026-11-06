@@ -55,8 +55,9 @@ test("root build and typecheck reject invalid plugin source", () => {
   }
 });
 
-test("root tests invoke provider workspace test scripts", () => {
+test("root tests invoke provider workspace build and test scripts", () => {
   const { scripts } = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+  assert.match(scripts.test, /npm run build --workspaces --if-present/);
   assert.match(scripts.test, /npm run test --workspaces --if-present/);
 });
 
