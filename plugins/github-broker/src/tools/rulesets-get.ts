@@ -1,4 +1,4 @@
-import { define, id, listShape, listJson, pagination } from "../schema.js";
+import { define, baseJson, id, listShape, listJson, pagination } from "../schema.js";
 import { list, object, pick } from "../output.js";
 import { guard, type Tool } from "../types.js";
 const summary = (r: unknown) => pick(r, ["id", "name", "target", "source_type", "source", "enforcement"]);
@@ -27,8 +27,11 @@ function detail(body: unknown): unknown {
 const getting = define("github.rulesets_get", "app", "Read one ruleset's enforcement and supported rule parameters. Unknown parameters are explicitly marked incomplete; bypass actors are excluded.",
   { rulesetId: id }, { rulesetId: { type: "integer", minimum: 1, maximum: Number.MAX_SAFE_INTEGER } }, a => [{ permission: "metadata", path: `/rulesets/${a.rulesetId}` }], detail);
 export const rulesetsGet: Tool = {
-  ...listing, description: `${listing.description} Supply rulesetId instead of pagination to read a rule's details. Read-only; never a bypass actor.`,
-  inputSchema: { type: "object", oneOf: [listing.inputSchema, getting.inputSchema] },
+  ...listing, description: `${listing.description} Supply both page and perPage for a list, or only rulesetId for details. Omit unused fields; do not mix rulesetId with pagination. Read-only; never a bypass actor.`,
+  // Flat discovery metadata only. Both closed execution variants remain intact.
+  inputSchema: { type: "object", additionalProperties: false, properties: {
+    ...baseJson, ...listJson, rulesetId: { type: "integer", minimum: 1, maximum: Number.MAX_SAFE_INTEGER },
+  }, required: Object.keys(baseJson) },
   schema: { parse(v) { try { return listing.schema.parse(v); } catch { return getting.schema.parse(v); } } },
   requests(a) { return a.rulesetId === undefined ? listing.requests(a) : getting.requests(a); },
   project(b, a) { return a.rulesetId === undefined ? listing.project(b, a) : getting.project(b, a); },

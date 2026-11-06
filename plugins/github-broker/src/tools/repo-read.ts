@@ -1,4 +1,4 @@
-import { define, oneOf, ref, refJson, qualifiedRef, qualifiedRefJson, path, pathJson, segment, filePath } from "../schema.js";
+import { define, oneOf, baseJson, ref, refJson, qualifiedRef, qualifiedRefJson, path, pathJson, segment, filePath } from "../schema.js";
 import { repositoryRead } from "../output.js";
 import type { Tool } from "../types.js";
 
@@ -10,7 +10,13 @@ const variants = [
 ];
 export const repoRead: Tool = {
   ...variants[0]!, description: "Read an authorized repository file/tree/ref/compare. No arbitrary endpoint or binary downloads.",
-  inputSchema: { type: "object", oneOf: variants.map(v => v.inputSchema) },
+  // Discovery clients reject top-level unions. Execution still uses the closed
+  // variants below; optional fields are not permission to mix modes.
+  inputSchema: { type: "object", additionalProperties: false, properties: {
+    ...baseJson,
+    mode: { type: "string", enum: ["file", "tree", "ref", "compare"], description: "file requires ref + path; tree requires ref; ref requires a qualified ref such as heads/main; compare requires base + head. Omit every unused field." },
+    ref: refJson, path: pathJson, base: refJson, head: refJson,
+  }, required: [...Object.keys(baseJson), "mode"] },
   schema: { parse(value) { for (const v of variants) { try { return v.schema.parse(value); } catch { /* Try the next closed variant. */ } } return variants[0]!.schema.parse(value); } },
   requests(a) { return variants.find(v => { try { v.schema.parse(a); return true; } catch { return false; } })!.requests(a); },
 };
