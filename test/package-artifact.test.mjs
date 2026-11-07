@@ -176,12 +176,15 @@ test("broker packaging is dispatch-only, read-only and fails closed before publi
   for (const action of workflow.matchAll(/uses: (actions\/[^\s]+)/g)) {
     assert.match(action[1], /@[0-9a-f]{40}$/);
   }
-  const guard = workflow.match(/run: \|\n(\s+set -euo pipefail\n\s+\[\[ "\$SOURCE_SHA"[^\n]+)\n/)[1];
-  for (const value of ["a".repeat(40), "main", "a".repeat(39), "A".repeat(40), "$(exit 0)", "a".repeat(40) + "\n"]) {
+  const approved = "2b0c7cc97c6c515af7ed14e7c347a167b6bf0337";
+  assert.match(workflow, new RegExp(`ref: ${approved}`));
+  assert.doesNotMatch(workflow, /ref: \$\{\{ inputs\.source_sha \}\}/);
+  const guard = workflow.match(/run: \|\n([\s\S]*?)      - name: Check out packaging recipe/)[1];
+  for (const value of [approved, "a".repeat(40), "main", "a".repeat(39), "A".repeat(40), "$(exit 0)", approved + "\n"]) {
     const result = spawnSync("bash", ["-c", guard], {
       env: { PATH: process.env.PATH, SOURCE_SHA: value }, timeout: 5000,
     });
     assert.equal(result.error, undefined);
-    assert.equal(result.status, value === "a".repeat(40) ? 0 : 1);
+    assert.equal(result.status, value === approved ? 0 : 1);
   }
 });

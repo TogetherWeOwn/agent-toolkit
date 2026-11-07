@@ -4,10 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       source_sha:
-        description: Full merged source commit to build (independent of the workflow revision)
+        description: Confirm the reviewed source pin (independent of the workflow revision)
         required: true
         default: 2b0c7cc97c6c515af7ed14e7c347a167b6bf0337
-        type: string
+        type: choice
+        options:
+          - 2b0c7cc97c6c515af7ed14e7c347a167b6bf0337
 
 permissions:
   contents: read
@@ -27,6 +29,7 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$SOURCE_SHA" = 2b0c7cc97c6c515af7ed14e7c347a167b6bf0337
       - name: Check out packaging recipe
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -36,7 +39,8 @@ jobs:
       - name: Check out build source
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          ref: ${{ inputs.source_sha }}
+          # A different source requires a reviewed recipe change, not a dispatch argument.
+          ref: 2b0c7cc97c6c515af7ed14e7c347a167b6bf0337
           path: source
           fetch-depth: 0
           persist-credentials: false
