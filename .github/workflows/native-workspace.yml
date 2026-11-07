@@ -1,0 +1,54 @@
+name: Native workspace witness
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'test/native-workspace/**'
+      - '.github/workflows/native-workspace.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-workspace-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  selection-revision:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.21.0'
+      - name: Locked tokenless setup without lifecycle scripts
+        run: |
+          set -euo pipefail
+          test "$(node --version)" = v24.21.0
+          test "$(npm --version)" = 11.19.0
+          env -i PATH="$PATH" HOME="$RUNNER_TEMP" \
+            npm --prefix test/native-workspace ci --ignore-scripts --workspaces=false \
+              --registry=https://registry.npmjs.org \
+              --userconfig=/nonexistent-native-witness-npmrc --globalconfig=/dev/null \
+              --cache="$RUNNER_TEMP/native-witness-npm-cache" --no-audit --no-fund
+      - name: Actual native service in rootless network isolation
+        run: |
+          set -euo pipefail
+          env -i PATH="$PATH" GITHUB_ACTIONS=true \
+            node test/native-workspace/runner.mjs "$RUNNER_TEMP/native-workspace-report"
+      - name: Sanitized evidence only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-workspace-${{ github.event.pull_request.head.sha }}
+          path: |
+            ${{ runner.temp }}/native-workspace-report/runner.json
+            ${{ runner.temp }}/native-workspace-report/assertions.json
+            ${{ runner.temp }}/native-workspace-report/test.xml
+          if-no-files-found: error
+          retention-days: 7
