@@ -478,6 +478,48 @@ for (const verified of [true, false]) {
   });
 }
 
+for (const priorFailure of ['upstream.read', 'policy.changed']) {
+  test(`verified second probe preserves ${priorFailure} and pauses before its failing denial audit`, async t => {
+    monotonic(t);
+    const f = fixture({ hostCall: immediateHostCall });
+    if (priorFailure === 'upstream.read') {
+      read(f); f.steps.at(-1).status = 500;
+    } else {
+      f.mint({ pull_requests: 'read' });
+      f.steps[0].effect = () => { f.config.policy.revision++; };
+    }
+    fallback(f); probe(f, { status: 200 }); probe(f);
+    const expectedCalls = priorFailure === 'upstream.read' ? 6 : 4;
+    const log = f.ctx.activity.log;
+    let denial, nestedResult, inspected = false;
+    f.ctx.activity.log = async entry => {
+      const record = entry.metadata;
+      if (record.decision === 'deny' && record.rule === priorFailure) {
+        denial = record;
+        nestedResult = await f.call('github.pr_get', args);
+        assert.equal(nestedResult.error, 'rate.retry_after');
+        assert.ok(nestedResult.data.retryAfterSeconds >= 3659);
+        assert.equal(f.calls.length, expectedCalls); assert.equal(f.secretCalls, 1);
+        inspected = true;
+        throw Error(key + token);
+      }
+      return log(entry);
+    };
+    const result = await f.call('github.pr_get', args);
+    assert.equal(result.error, 'audit.unavailable'); assert.equal(result.data.pages, undefined);
+    assert.equal(inspected, true, 'The recovery pause must exist before the prior failure denial is audited');
+    assert.equal(denial.rule, priorFailure, 'Verified cleanup must not overwrite the original use failure');
+    assert.deepEqual(denial.revocation, evidence([
+      attempt(1, 200, 'unexpected_status'), attempt(2, 401, 'bad_credentials'),
+    ], 'verified', true));
+    f.ctx.activity.log = log;
+    const next = await f.call('github.pr_get', args);
+    assert.equal(next.error, 'rate.retry_after'); assert.ok(next.data.retryAfterSeconds >= 3659);
+    assert.equal(f.calls.length, expectedCalls); assert.equal(f.secretCalls, 1);
+    f.hygiene(result); f.hygiene(nestedResult); f.hygiene(next); f.done();
+  });
+}
+
 test('fractional first-processing time rounds the remaining minimum wait up, never dispatching early', async t => {
   const clock = monotonic(t), r = recovery(clock, { observe: number => { if (number === 1) clock.now += 249.5; } });
   assert.equal(await r.promise, pull.title);

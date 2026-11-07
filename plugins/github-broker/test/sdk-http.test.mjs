@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PassThrough } from 'node:stream';
 import { createInterface } from 'node:readline';
-import { definePlugin, startWorkerRpcHost } from '@paperclipai/plugin-sdk';
+import { definePlugin, startWorkerRpcHost, JSONRPC_ERROR_CODES, PLUGIN_RPC_ERROR_CODES } from '@paperclipai/plugin-sdk';
 import { setImmediate as nextTurn } from 'node:timers/promises';
 import { fixture, base, run, pull, token, key } from './helpers.mjs';
 
+const explicitRpcError = Symbol('explicit RPC error response');
 let moduleId = 0;
 function isolatedPlugin() { return import(`../dist/plugins/github-broker/src/plugin.js?sdk-http=${++moduleId}`); }
 
@@ -70,7 +71,8 @@ async function rpcPlugin(t, plugin, host, options = {}) {
     const message = JSON.parse(line);
     if (message.method) {
       host(message.method, message.params).then(result => {
-        input.write(JSON.stringify({ jsonrpc: '2.0', id: message.id, result }) + '\n');
+        const response = result?.[explicitRpcError] ? { error: result[explicitRpcError] } : { result };
+        input.write(JSON.stringify({ jsonrpc: '2.0', id: message.id, ...response }) + '\n');
       }, error => {
         failures.push(error);
         input.write(JSON.stringify({ jsonrpc: '2.0', id: message.id, error: { code: -32000, message: 'synthetic host failure' } }) + '\n');
@@ -247,6 +249,77 @@ test('real SDK reconstruction errors release known-settled slots but only fixed 
   response = { status: 200, body: '{}', headers: {} };
   assert.deepEqual((await call('probe', { method: 'GET', url: 'https://api.github.com/installation/repositories?per_page=1' })).data, { status: 200 });
   assert.equal(requests, 11, 'known settled reconstruction failures must not exhaust the four slots');
+});
+
+for (const code of [JSONRPC_ERROR_CODES.INTERNAL_ERROR, PLUGIN_RPC_ERROR_CODES.CAPABILITY_DENIED]) test(`real SDK explicit host error ${code} restores shared capacity without reporting success`, async t => {
+  const { githubHttp, hostCall } = await isolatedPlugin();
+  let fail = true;
+  const requests = [];
+  const call = await rpcPlugin(t, definePlugin({ async setup(ctx) {
+    ctx.tools.register('settlement', { displayName: 'settlement', description: 'Synthetic host error settlement', parametersSchema: { type: 'object' } }, async args => {
+      try {
+        const value = args.http
+          ? (await githubHttp(ctx, { url: 'https://api.github.com/installation/repositories?per_page=1', method: 'GET', headers: {} })).status
+          : await hostCall(() => ctx.config.get(run.companyId));
+        return { data: { value } };
+      } catch (error) { return { data: { errorCode: error.code, errorName: error.name } }; }
+    });
+  } }), async (method, params) => {
+    assert.ok(method === 'config.get' || method === 'http.fetch');
+    requests.push(method);
+    if (fail) return { [explicitRpcError]: { code, message: 'synthetic completed host error' } };
+    if (method === 'config.get') { assert.equal(params.companyId, run.companyId); return 'known success'; }
+    return { status: 200, headers: {}, body: '{}' };
+  });
+  // Exercise the generic limiter as well as githubHttp: settlement belongs to
+  // their shared SDK boundary, not merely the HTTP adapter's special catches.
+  for (let round = 0; round < 6; round++) for (const http of [false, true]) {
+    assert.deepEqual((await call('settlement', { http })).data, { errorCode: code, errorName: 'JsonRpcCallError' });
+  }
+  fail = false;
+  assert.deepEqual((await call('settlement', { http: false })).data, { value: 'known success' });
+  assert.deepEqual((await call('settlement', { http: true })).data, { value: 200 });
+  assert.equal(requests.filter(method => method === 'config.get').length, 7);
+  assert.equal(requests.filter(method => method === 'http.fetch').length, 7);
+});
+
+test('githubHttp first-200 body consumption cannot reset the cleanup response clock', async t => {
+  const originalNow = performance.now.bind(performance);
+  let elapsedBodyTime = 0, firstResponseAt, bodyFinishedAt;
+  t.mock.method(globalThis.performance, 'now', () => originalNow() + elapsedBodyTime);
+  const f = fixture(); readAndDelete(f);
+  f.steps.at(-1).error = new TypeError('Response constructor: Invalid response status code 204');
+  probe(f, { status: 200, raw: key + token });
+  // This would prove rejection if incorrectly dispatched after renewing t0 at
+  // body completion. The correct path leaves this queued response untouched.
+  probe(f, { headers: { 'x-github-request-id': secondId } });
+  const fetch = f.ctx.http.fetch;
+  f.ctx.http.fetch = async (url, init) => {
+    const response = await fetch(url, init);
+    if (url.endsWith('/installation/repositories?per_page=1') && response.status === 200) {
+      firstResponseAt = performance.now();
+      const text = response.text.bind(response);
+      response.text = async () => {
+        await nextTurn();
+        elapsedBodyTime += 2001;
+        bodyFinishedAt = performance.now();
+        return text();
+      };
+    }
+    return response;
+  };
+  const result = await f.call('github.pr_get', { ...base, number: 1 });
+  assert.ok(bodyFinishedAt - firstResponseAt > 2000);
+  assert.equal(f.events.at(-1).revocation.probeStatus, 200, 'retain the exposed first 200 even when body handling exhausts D');
+  assert.equal(result.error, 'mint.revoke_failed', 'a slow first response body must consume, not renew, D=t0+2000ms');
+  assert.equal(f.events.at(-1).revocation.outcome, 'unverified');
+  assert.equal(f.events.at(-1).revocation.terminalReason, 'deadline');
+  assert.equal(f.events.at(-1).revocation.secondDispatched, false);
+  assert.equal(f.calls.length, 5);
+  assert.equal(f.calls.filter(req => req.url.endsWith('/installation/repositories?per_page=1')).length, 1);
+  assert.equal(f.steps.length, 1, 'the second-probe success response must remain undispatched');
+  assert.equal((await f.call('github.pr_get', { ...base, number: 1 })).error, 'rate.retry_after');
+  assert.equal(f.calls.length, 5); f.hygiene(result);
 });
 
 test('short pinned SDK RPC timeout never replaces host slots, even after late host replies', async t => {

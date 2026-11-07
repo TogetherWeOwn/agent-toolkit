@@ -1,4 +1,4 @@
-import { definePlugin, type PluginContext, type ToolRunContext } from "@paperclipai/plugin-sdk";
+import { definePlugin, JsonRpcCallError, PLUGIN_RPC_ERROR_CODES, type PluginContext, type ToolRunContext } from "@paperclipai/plugin-sdk";
 import { SdkNullBodyRevokeFailure, type Request, type Response } from "../../../packages/github/src/index.js";
 import { Broker, tools } from "./broker.js";
 import { Denied, type Host } from "./types.js";
@@ -41,7 +41,10 @@ export function createHostCaller() {
       emitted = true;
       return action(() => { settled = true; });
     }).then(value => { release(); return value; }, error => {
-      if (!emitted || settled) release(); else detach();
+      // In this pinned SDK, only its TIMEOUT code is a locally synthesized
+      // JsonRpcCallError; other instances arrive in completed host responses.
+      const hostReplied = error instanceof JsonRpcCallError && error.code !== PLUGIN_RPC_ERROR_CODES.TIMEOUT;
+      if (!emitted || settled || hostReplied) release(); else detach();
       throw error;
     });
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -71,8 +74,9 @@ export function githubHttp(ctx: Pick<PluginContext, "http">, req: Request, deadl
       if (error instanceof TypeError && error.message === "Response constructor: Invalid response status code 204" && req.method === "DELETE" && req.url === "https://api.github.com/installation/token") throw new SdkNullBodyRevokeFailure();
       throw error;
     }
+    const receivedAt = performance.now(); // Before body handling; part of the recovery window.
     settled();
-    return { status: res.status, headers: Object.fromEntries(res.headers.entries()), body: await res.text() };
+    return { status: res.status, headers: Object.fromEntries(res.headers.entries()), body: await res.text(), receivedAt };
   }, 30000, deadline);
 }
 

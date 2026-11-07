@@ -7,7 +7,7 @@ export const API_ORIGIN = "https://api.github.com";
 export const API_VERSION = "2022-11-28";
 export type Permissions = Partial<Record<"contents" | "pull_requests" | "checks" | "statuses" | "actions" | "metadata" | "issues", "read">>;
 export interface Request { url: string; method: "GET" | "POST" | "DELETE"; headers: Record<string, string>; body?: string }
-export interface Response { status: number; headers: Record<string, string>; body: string }
+export interface Response { status: number; headers: Record<string, string>; body: string; receivedAt?: number }
 // Deadline and dispatch marker are worker-local, never serialized to the SDK.
 export type Transport = (request: Request, deadline?: number, onDispatch?: () => void) => Promise<Response>;
 export class GitHubFailure extends Error {
@@ -72,7 +72,7 @@ export function retryAfter(response: Response, now: number): number {
   if (reset && /^\d{1,12}$/.test(reset)) return Math.min(86400, Math.max(1, Math.ceil((Number(reset) * 1000 - now) / 1000)));
   return 60;
 }
-export async function request(transport: Transport, method: Request["method"], path: string, credential: string, options: { body?: string; deadline?: number; onDispatch?: () => void; onResponse?: () => void } = {}): Promise<Response> {
+export async function request(transport: Transport, method: Request["method"], path: string, credential: string, options: { body?: string; deadline?: number; onDispatch?: () => void; onResponse?: (receivedAt: number) => void } = {}): Promise<Response> {
   check(path.startsWith("/") && !path.startsWith("//") && !/[\r\n\\#]/.test(path), "http.path");
   const url = new URL(path, API_ORIGIN);
   check(url.origin === API_ORIGIN && !url.username && !url.password, "http.origin");
@@ -87,7 +87,7 @@ export async function request(transport: Transport, method: Request["method"], p
     const rule = error && typeof error === "object" && "rule" in error ? error.rule : null;
     throw new GitHubFailure(rule === "host.capacity" ? "http.capacity" : rule === "host.timeout" || (error instanceof GitHubFailure && rule === "http.deadline") ? "http.deadline" : "http.unavailable");
   }
-  options.onResponse?.();
+  options.onResponse?.(typeof response?.receivedAt === "number" && Number.isFinite(response.receivedAt) ? response.receivedAt : performance.now());
   check(options.deadline === undefined || performance.now() < options.deadline, "http.deadline");
   check(response && typeof response.body === "string" && Buffer.byteLength(response.body) <= 1048576, "http.response_limit");
   check(Number.isInteger(response.status) && response.status >= 100 && response.status <= 599, "http.status");
@@ -141,9 +141,14 @@ async function verifyRejection(transport: Transport, token: string, sensitive: r
     snapshot();
     probes.push({ attempt: 1, status: null, requestId: null, result: "unavailable" });
     let t0 = 0;
-    const first = await request(transport, "GET", "/installation/repositories?per_page=1", token, { onResponse: () => { t0 = performance.now(); } });
+    const first = await request(transport, "GET", "/installation/repositories?per_page=1", token, { onResponse: receivedAt => { t0 = receivedAt; } });
     // Capture before ID validation, classification or observer work; never renew.
-    if (first.status === 200) deadline = t0 + 2000;
+    if (first.status === 200) {
+      deadline = t0 + 2000;
+      // Preserve the exposed 200 even if body handling already exhausted D.
+      probes[0] = { attempt: 1, status: 200, requestId: null, result: "unexpected_status" };
+      snapshot();
+    }
     if (examine(first, 1)) { finish(); return; }
     reason = "ineligible";
     check(first.status === 200 && probes[0]!.requestId !== null, "mint.revoke_failed");
