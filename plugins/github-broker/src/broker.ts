@@ -106,8 +106,8 @@ export class Broker {
         await revalidate();
         values = cached.map(c => c!.value);
       } else {
-        // Worst case: mint + repository-ID read + tool requests + revoke + probe.
-        this.reserve(this.installations, budgetKey, (tool.write?.maxRequests(args) ?? requests.length) + 4, 4000, 3600000, host.clock());
+        // Worst case: mint + repository-ID read + tool requests + revoke + two probes.
+        this.reserve(this.installations, budgetKey, (tool.write?.maxRequests(args) ?? requests.length) + 5, 4000, 3600000, host.clock());
         await revalidate();
         let privateKey: string;
         try { privateKey = await host.secret(config.privateKeySecretRef, caller.companyId); }
@@ -177,7 +177,9 @@ export class Broker {
       // Pending updates are never published until revoke and audit succeed.
       // Refusals must not invalidate unrelated principals' cached reads.
       for (const key of keys) if ((this.cache.get(key)?.generation ?? 0) <= generation) this.cache.delete(key);
-      if (rule === "mint.revoke_failed" && installationKey) {
+      // Pause recovery-branch error exits before denial audit, including a prior
+      // use failure whose cleanup verified: the denial audit can itself fail.
+      if (installationKey && (rule === "mint.revoke_failed" || revocation?.probes?.[0]?.status === 200)) {
         try { this.pause(installationKey, 3660, host.clock()); } catch { /* Capacity remains fail-closed. */ }
       }
       if (phase === "intent") phase = "outcome";

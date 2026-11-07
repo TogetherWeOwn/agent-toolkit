@@ -14,7 +14,7 @@ export function config() {
   } };
 }
 export const pull = { id: 11, number: 1, title: 'Synthetic PR', state: 'open', body: 'Untrusted text', head: { sha: 'a'.repeat(40), ref: 'topic' }, base: { sha: 'b'.repeat(40), ref: 'main' } };
-export function fixture() {
+export function fixture(options = {}) {
   const f = { config: config(), calls: [], events: [], logs: [], secretCalls: 0, steps: [], now: Date.now(), secret: key, failAudit: false, issueReads: 0, workspaceReads: 0 };
   f.issue = { companyId: run.companyId, projectId: run.projectId, assigneeAgentId: run.agentId, projectWorkspaceId: base.workspaceId, checkoutRunId: run.runId, executionRunId: run.runId, status: 'in_progress' };
   f.workspace = { id: base.workspaceId, repoUrl: 'https://github.com/synthetic-org/sandbox' };
@@ -37,7 +37,7 @@ export function fixture() {
     } },
     tools: { register: (name, metadata, handler) => { assert.ok(!f.handlers.has(name)); f.handlers.set(name, { metadata, handler }); } },
   };
-  register(f.ctx);
+  register(f.ctx, options.hostCall);
   f.call = async (name, args, context = run) => f.handlers.get(name).handler(args, context);
   f.mint = (permissions, overrides = {}) => f.steps.push({ method: 'POST', path: '/app/installations/99/access_tokens', status: 201,
     body: { token, expires_at: new Date(Date.now() + 3500000).toISOString(), repositories: [{ id: 101 }], permissions: { metadata: 'read', ...permissions }, ...overrides },

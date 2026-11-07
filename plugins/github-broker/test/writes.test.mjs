@@ -215,11 +215,11 @@ test('policy/assignment changes before each mutation stop the sequence and still
   }
 });
 
-test('write paths reserve worst-case N+4 before secrets and cannot reuse cached reads', async () => {
+test('write paths reserve worst-case N+5 before secrets and cannot reuse cached reads', async () => {
   for (const [name, args, permissions] of cases) {
     const f = writer(), broker = new Broker(); let secrets = 0;
     const host = { config: async () => f.config, issue: async () => f.issue, workspace: async () => f.workspace, secret: async () => { secrets++; throw Error('not reached'); }, audit: async () => {}, clock: Date.now };
-    const max = tools.find(t => t.name === name).write.maxRequests(args) + 4;
+    const max = tools.find(t => t.name === name).write.maxRequests(args) + 5;
     broker.reserve(broker.installations, '5646907:99', 4000 - max + 1, 4000, 3600000, Date.now());
     const result = await broker.execute(host, name, args, run); assert.equal(JSON.parse(result.content[0].text).rule, 'rate.bucket'); assert.equal(secrets, 0);
   }
