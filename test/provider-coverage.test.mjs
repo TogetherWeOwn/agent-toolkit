@@ -28,6 +28,15 @@ for (const mutation of [m => m.inventory.push('resources.delete'), m => m.operat
     assert.throws(() => validateOperationMap(m));
   });
 }
+for (const field of ['tier', 'authorization', 'entitlement', 'status']) {
+  test(`array-valued enum cannot bypass coverage semantics: ${field}`, () => {
+    const m = map();
+    const values = { tier: 'reserved', authorization: 'policy', entitlement: 'unknown', status: 'implemented' };
+    m.operations[0][field] = [values[field]];
+    m.operations[0].prerequisite = 'Verify native scope';
+    assert.throws(() => validateOperationMap(m));
+  });
+}
 for (const status of ['incomplete', 'unsupported']) {
   test(`an entitled ${status} operation cannot earn feature completeness`, () => {
     const m = map();

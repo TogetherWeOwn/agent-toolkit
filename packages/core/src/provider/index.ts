@@ -49,7 +49,7 @@ function prepared(value: Prepared): Prepared {
   keys(p.resource, ["id", "revision"]);
   resourceName.parse(p.resource.id);
   label.parse(p.resource.revision);
-  insist(p.artifactDigest === null || /^[a-f0-9]{64}$/.test(p.artifactDigest), "INVALID_ARGUMENTS");
+  insist(p.artifactDigest === null || (typeof p.artifactDigest === "string" && /^[a-f0-9]{64}$/.test(p.artifactDigest)), "INVALID_ARGUMENTS");
   return p;
 }
 function policy(value: PolicySnapshot, p: Principal, plan: Prepared): PolicySnapshot {
@@ -86,7 +86,10 @@ function noCredentialOutput(value: unknown, credentials: readonly string[]): voi
  * Dependencies are trusted per-worker adapters, not remotely supplied policy.
  */
 export function createProviderBroker(dependencies: ProviderDependencies) {
-  const d = Object.freeze({ ...dependencies });
+  const d = Object.freeze({ provider: dependencies.provider, operations: dependencies.operations,
+    host: dependencies.host, policy: dependencies.policy, authority: dependencies.authority,
+    journal: dependencies.journal, audit: dependencies.audit, credentials: dependencies.credentials,
+    clock: dependencies.clock.bind(dependencies) });
   label.parse(d.provider);
   const registry = new Map<string, ProviderOperation>();
   for (const operation of d.operations) {
@@ -96,7 +99,12 @@ export function createProviderBroker(dependencies: ProviderDependencies) {
     insist(["read", "write", "reserved"].includes(operation.tier) &&
       ["none", "managed"].includes(operation.lifecycle) && Number.isSafeInteger(operation.timeoutMs) &&
       operation.timeoutMs >= 1 && operation.timeoutMs <= 30_000, "INVALID_ARGUMENTS");
-    registry.set(operation.name, Object.freeze({ ...operation }));
+    insist(typeof operation.prepare === "function" && typeof operation.execute === "function" &&
+      typeof operation.project === "function", "INVALID_ARGUMENTS");
+    registry.set(operation.name, Object.freeze({ name: operation.name, version: operation.version,
+      tier: operation.tier, timeoutMs: operation.timeoutMs, lifecycle: operation.lifecycle,
+      prepare: operation.prepare.bind(operation), execute: operation.execute.bind(operation),
+      project: operation.project.bind(operation) }));
   }
   const clock = () => {
     const now = d.clock();
@@ -172,12 +180,15 @@ export function createProviderBroker(dependencies: ProviderDependencies) {
           failure = "AUTHORIZATION_UNAVAILABLE";
           validEvidence(evidence, target, clock());
           insist(await d.authority!.consume(evidence, target, clock()), "AUTHORIZATION_DENIED");
+          await revalidate();
+          validEvidence(evidence, target, clock());
         }
         // Provider preconditions close the remaining host/provider TOCTOU boundary.
         // A timeout cannot prove cancellation; keep the claim uncertain, never retry.
         failure = "UPSTREAM_UNAVAILABLE";
         const controller = new AbortController();
         let timer: ReturnType<typeof setTimeout> | undefined;
+        const deadline = performance.now() + operation.timeoutMs;
         started = true;
         const pending = Promise.resolve().then(() => operation!.execute(plan, credential!.value, controller.signal, journalKey!));
         let output: unknown;
@@ -185,6 +196,10 @@ export function createProviderBroker(dependencies: ProviderDependencies) {
           output = await Promise.race([pending, new Promise<never>((_, reject) => {
             timer = setTimeout(() => { controller.abort(); reject(new Error("timeout")); }, operation!.timeoutMs);
           })]);
+          if (performance.now() >= deadline) {
+            controller.abort();
+            throw new Denied("OUTCOME_UNCERTAIN");
+          }
         } finally { clearTimeout(timer); }
         failure = "OUTPUT_REFUSED";
         const value = immutable(operation.project(output));

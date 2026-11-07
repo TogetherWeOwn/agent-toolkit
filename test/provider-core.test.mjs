@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { canonicalHash, PROVIDER_CONTRACT } from '../dist/packages/core/src/provider/index.js';
+import { canonicalHash, createProviderBroker, PROVIDER_CONTRACT } from '../dist/packages/core/src/provider/index.js';
 import { ProviderJournalFixture } from '../dist/packages/core/src/testing/provider-journal.js';
 import { providerFixture, providerVector, credentialCanary, derivedCanary } from '../packages/core/testing/provider-fixture.mjs';
 
@@ -34,6 +34,52 @@ test('v1 fixture exports a separate contract without replacing existing core', a
   assert.deepEqual(f.audit.map(r => r.phase), ['intent', 'outcome']);
   assert.equal(f.audit[0].event, f.audit[1].event);
   safe(f, result);
+});
+
+test('class-based operation adapters retain prototype methods and private receiver state', async () => {
+  const f = providerFixture();
+  class Adapter {
+    name = f.operation.name;
+    version = f.operation.version;
+    tier = 'read';
+    timeoutMs = 1000;
+    lifecycle = 'none';
+    #status = 'class-ready';
+    prepare(raw) { assert.equal(this.#status, 'class-ready'); return f.operation.prepare(raw); }
+    async execute() { return { status: this.#status }; }
+    project(raw) { assert.equal(this.#status, 'class-ready'); return { status: raw.status }; }
+  }
+  f.dependencies.operations = [new Adapter()];
+  assert.deepEqual((await call(f)).value, { status: 'class-ready' });
+});
+test('dependency clock retains its original private receiver', async () => {
+  const f = providerFixture();
+  class Dependencies {
+    #now = 1000;
+    constructor(input) { Object.assign(this, input); delete this.clock; }
+    clock() { return this.#now; }
+  }
+  const broker = createProviderBroker(new Dependencies(f.dependencies));
+  assert.equal((await broker.call(f.operation.name, providerVector.arguments, 'verified-runtime', 'request-a')).ok, true);
+});
+
+test('artifact digest rejects a singleton array rather than coercing it', async () => {
+  const f = providerFixture();
+  f.vector.artifactDigest = ['a'.repeat(64)];
+  assert.equal((await call(f)).code, 'INVALID_ARGUMENTS');
+  noEffects(f);
+});
+test('synchronous provider completion beyond its monotonic deadline is uncertain', async () => {
+  const f = providerFixture({ operation: { tier: 'write', timeoutMs: 1, execute() {
+    f.calls.upstream++;
+    const until = performance.now() + 5;
+    while (performance.now() < until) { /* Simulate a blocking provider adapter. */ }
+    return Promise.resolve({ status: 'ready' });
+  } } });
+  assert.equal((await call(f)).code, 'OUTCOME_UNCERTAIN');
+  assert.equal([...f.journal.values()][0].outcome, 'uncertain');
+  assert.equal((await call(f)).code, 'REPLAY_CONFLICT');
+  assert.equal(f.calls.upstream, 1);
 });
 
 test('canonical targets sort object keys but bind arrays, Unicode, plans and artifacts', () => {
@@ -160,6 +206,30 @@ test('native replay, concurrent consumption and revocation are refused', async (
   assert.equal(f.calls.upstream, 1);
 });
 
+test('policy revocation during awaited native consumption prevents execution', async () => {
+  const f = providerFixture({ operation: { tier: 'reserved' }, authority: true });
+  const consume = f.authority.consume;
+  f.dependencies.authority.consume = async (...args) => {
+    const consumed = await consume(...args);
+    f.vector.policy.revision = 'revoked-policy';
+    return consumed;
+  };
+  assert.equal((await call(f)).code, 'POLICY_CHANGED');
+  assert.equal(f.calls.upstream, 0);
+  assert.equal(f.calls.close, 1);
+});
+test('native evidence expiring during consumption is refused before execution', async () => {
+  const f = providerFixture({ operation: { tier: 'reserved' }, authority: true });
+  const consume = f.authority.consume;
+  f.dependencies.authority.consume = async (...args) => {
+    const consumed = await consume(...args);
+    f.setNow(2000);
+    return consumed;
+  };
+  assert.equal((await call(f)).code, 'AUTHORIZATION_DENIED');
+  assert.equal(f.calls.upstream, 0);
+});
+
 test('request replay conflicts even after completion, changed args, policy or run', async () => {
   const f = providerFixture({ operation: { tier: 'write' } });
   assert.equal((await call(f)).ok, true);
@@ -208,7 +278,9 @@ test('audit outcome outage retains uncertain intent, never unqualified success',
   };
   assert.equal((await call(f)).code, 'OUTCOME_UNCERTAIN');
   assert.equal([...f.journal.values()][0].outcome, 'uncertain');
+  f.dependencies.audit.append = async record => { f.audit.push(record); };
   assert.equal((await call(f)).code, 'REPLAY_CONFLICT');
+  assert.equal(f.calls.upstream, 1);
 });
 test('ambiguous mutation and timeout are uncertain, retain tombstones and do not retry', async () => {
   const f = providerFixture({ operation: { tier: 'write', timeoutMs: 1,

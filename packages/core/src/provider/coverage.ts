@@ -84,10 +84,10 @@ export function validateOperationMap(value: unknown): { map: OperationMap; compl
     if (item.tool !== null) token.parse(item.tool);
     strings(item.sideEffects, 32);
     strings(item.tests, 32);
-    check(["read", "write", "reserved"].includes(String(item.tier)));
-    check(["policy", "native", "prohibited"].includes(String(item.authorization)));
-    check(["entitled", "not-entitled", "unknown"].includes(String(item.entitlement)));
-    check(["implemented", "incomplete", "unsupported", "prohibited"].includes(String(item.status)));
+    check(typeof item.tier === "string" && ["read", "write", "reserved"].includes(item.tier));
+    check(typeof item.authorization === "string" && ["policy", "native", "prohibited"].includes(item.authorization));
+    check(typeof item.entitlement === "string" && ["entitled", "not-entitled", "unknown"].includes(item.entitlement));
+    check(typeof item.status === "string" && ["implemented", "incomplete", "unsupported", "prohibited"].includes(item.status));
     for (const field of ["implemented", "reviewed", "enabled"]) check(typeof item[field] === "boolean");
     check(item.implemented === (item.status === "implemented"));
     check(!item.reviewed || item.implemented);
