@@ -12,9 +12,9 @@ const variants = {
   'github.rulesets_get': [{ page: 1, perPage: 10 }, { rulesetId: 1 }],
 };
 
-test('all eight tools have flat discovery schemas without weakening closed variants', async () => {
+test('all twelve tools have flat discovery schemas without weakening closed variants', async () => {
   const f = fixture();
-  assert.equal(f.handlers.size, 8);
+  assert.equal(f.handlers.size, 12);
   for (const [name, { metadata }] of f.handlers) {
     const schema = metadata.parametersSchema;
     assert.equal(schema.type, 'object');

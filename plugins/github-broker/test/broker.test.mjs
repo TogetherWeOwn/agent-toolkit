@@ -50,8 +50,8 @@ for (const [name, args, permissions, reads] of cases) test(`registered ${name} $
   f.hygiene(result); f.done();
 });
 
-test('exact tool inventory and read-only capability surface', () => {
-  assert.equal(tools.length, 8); assert.deepEqual(manifest.tools.map(t => t.name), tools.map(t => t.name));
+test('exact tool inventory and unchanged host capability surface', () => {
+  assert.equal(tools.length, 12); assert.equal(tools.filter(t => !t.write).length, 8); assert.deepEqual(manifest.tools.map(t => t.name), tools.map(t => t.name));
   assert.deepEqual([...manifest.capabilities].sort(), ['agent.tools.register', 'issues.read', 'projects.read', 'project.workspaces.read', 'http.outbound', 'secrets.read-ref', 'activity.log.write'].sort());
 });
 
@@ -81,7 +81,7 @@ test('mint hard guard rejects missing, broad and malformed scopes before signing
 });
 
 test('unknown tool and prototype dispatch have no secret or outbound access', async () => {
-  for (const name of ['constructor', '__proto__', 'toString', 'github.graphql', 'github.pr_merge', 'github.http', 'github.actions_rerun', 'github.review_approve', 'github.status_create', 'github.check_run_create', 'github.workflow_write', 'github.issue_comment']) {
+  for (const name of ['constructor', '__proto__', 'toString', 'github.graphql', 'github.pr_merge', 'github.http', 'github.actions_rerun', 'github.review_approve', 'github.status_create', 'github.check_run_create', 'github.workflow_write', 'github.pr_update']) {
     const events = [];
     const result = await new Broker().execute({ audit: async e => events.push(e), clock: Date.now }, name, base, run);
     assert.equal(result.isError, true); assert.equal(JSON.parse(result.content[0].text).rule, 'validation.unknown_tool'); assert.equal(events.length, 1);

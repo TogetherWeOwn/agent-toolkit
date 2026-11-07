@@ -57,7 +57,7 @@ export async function executeBrokerRead(env: Environment, projectId: unknown, op
   try {
     call = context(env, projectId);
     const tool = tools.find(t => t.name === operation);
-    requireValue(tool);
+    requireValue(tool && !tool.write); // This recovery caller remains read-only.
     parameters = tool.schema.parse(input);
     tool.requests(parameters as Parameters<typeof tool.requests>[0]);
     requireValue(parameters.issueId === call.issueId && parameters.workspaceId === call.workspaceId);

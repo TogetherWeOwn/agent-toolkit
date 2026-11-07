@@ -15,7 +15,11 @@ function array<T>(schema: Schema<T>, max: number): Schema<T[]> {
   } };
 }
 const repositorySchema = closed({ id, owner: text(39, /^[A-Za-z0-9][A-Za-z0-9-]*$/), name: text(100, /^[A-Za-z0-9_][A-Za-z0-9_.-]*$/), projectId: identifier, workspaceId: identifier });
-const agentSchema = closed({ agentId: identifier, identityLane: oneOf(["app", "owner"]), profile: oneOf(["builder", "lead", "reviewer-read", "release", "coordinator-read", "none"]), repositoryIds: array(id, 32) });
+const agentShape = { agentId: identifier, identityLane: oneOf(["app", "owner"]), profile: oneOf(["builder", "lead", "reviewer-read", "release", "coordinator-read", "none"]), repositoryIds: array(id, 32) };
+const agentSchema: Schema<Policy["agents"][number]> = { parse(v) {
+  const shape = v && typeof v === "object" && Object.hasOwn(v, "branchSlug") ? { ...agentShape, branchSlug: text(63, /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/) } : agentShape;
+  return closed(shape).parse(v) as Policy["agents"][number];
+} };
 // Board sections compose independently bounded leaf records instead of running
 // the tool-input 256-node cap over the whole 32-repository/32-agent policy.
 // Inspect descriptors before reading values, preserving closed JSON semantics.
@@ -42,7 +46,7 @@ const callerSchema = closed({ agentId: identifier, runId: identifier, companyId:
 // tools are not inherited automatically by any profile.
 const allReads: Operation[] = ["github.repo_read", "github.pr_list", "github.pr_get", "github.pr_files", "github.checks_get", "github.rulesets_get", "github.actions_runs_list", "github.issue_read"];
 const profiles: Record<Profile, { identityLanes: readonly IdentityLane[]; operations: ReadonlySet<Operation> }> = {
-  builder: { identityLanes: ["app"], operations: new Set(allReads) },
+  builder: { identityLanes: ["app"], operations: new Set([...allReads, "github.pr_create", "github.pr_comment", "github.issue_comment", "github.commit_files"]) },
   lead: { identityLanes: ["app"], operations: new Set(allReads) },
   "reviewer-read": { identityLanes: ["app"], operations: new Set(allReads) },
   release: { identityLanes: ["app"], operations: new Set(allReads) },
@@ -56,6 +60,8 @@ export function parseConfig(value: unknown): Config {
   guard(new Set(p.agents.map(a => a.agentId)).size === p.agents.length, "policy.duplicate_agent");
   guard(new Set(p.repositories.map(r => r.id)).size === p.repositories.length, "policy.duplicate_repo");
   guard(new Set(p.repositories.map(r => r.workspaceId)).size === p.repositories.length, "policy.duplicate_workspace");
+  const slugs = p.agents.flatMap(a => a.branchSlug ? [a.branchSlug] : []);
+  guard(new Set(slugs).size === slugs.length, "policy.duplicate_branch_slug");
   guard(p.agents.every(a => new Set(a.repositoryIds).size === a.repositoryIds.length && a.repositoryIds.every(id => p.repositories.some(r => r.id === id))), "policy.repository_ids");
   return config;
 }
@@ -67,6 +73,10 @@ export async function authorize(host: Host, policy: Policy, caller: Caller, tool
   guard(agent.identityLane !== "owner" && tool.identityLane !== "owner", "identity.owner_disabled");
   guard(profiles[agent.profile].identityLanes.includes(agent.identityLane) && tool.identityLane === agent.identityLane, "policy.identity_lane");
   guard(agent.repositoryIds.includes(args.repoId), "policy.repository");
+  if (tool.write && (tool.name === "github.pr_create" || tool.name === "github.commit_files")) {
+    const branch = tool.name === "github.pr_create" ? args.head : args.branch;
+    guard(agent.branchSlug && typeof branch === "string" && branch.startsWith(`agent/${agent.branchSlug}/`) && branch.length > `agent/${agent.branchSlug}/`.length, "policy.branch");
+  }
   const repo = policy.repositories.find(r => r.id === args.repoId);
   guard(repo && repo.projectId === caller.projectId && repo.workspaceId === args.workspaceId, "policy.workspace");
   const issue = await host.issue(args.issueId);
