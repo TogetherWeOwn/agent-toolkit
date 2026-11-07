@@ -101,7 +101,7 @@ export function metadataDescriptors(scope: MetadataScope) {
     requireThat(scripts.has(name), "scope");
     requireThat(!deployments.has(name), "schema");
     requireThat(Array.isArray(entry.deploymentIds) && entry.deploymentIds.length <= maxRows, "cap");
-    deployments.set(name, new Set(entry.deploymentIds.map(value => deploymentId.parse(value))));
+    deployments.set(name, new Set<string>(entry.deploymentIds.map((value: unknown) => deploymentId.parse(value))));
   }
   const root = `/accounts/${account}`;
   function prepared<A>(args: A, resource: string, path: string): PreparedMetadata<A> {
