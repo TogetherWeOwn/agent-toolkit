@@ -14,6 +14,9 @@ const database = closed({ databaseId });
 const databasePage = closed({ page: integer(1, 1000), perPage: integer(10, 100) });
 const bucket = closed({ bucketName });
 const bucketPage = closed({ perPage: integer(1, 100) });
+const deploymentId = databaseId;
+const deployment = closed({ scriptName, deploymentId });
+const deploymentPage = closed({ scriptName, page: integer(1, 1000), perPage: integer(1, 100) });
 const maxResponseBytes = 131072;
 const maxOutputBytes = 32768;
 const maxRows = 100;
@@ -25,6 +28,7 @@ export interface MetadataScope {
   hyperdriveIds: readonly string[];
   databaseIds?: readonly string[];
   defaultBucketNames?: readonly string[];
+  workerDeployments?: readonly { scriptName: string; deploymentIds: readonly string[] }[];
 }
 export interface MetadataRequest {
   readonly method: "GET";
@@ -89,6 +93,16 @@ export function metadataDescriptors(scope: MetadataScope) {
   requireThat(Array.isArray(databaseIds) && databaseIds.length <= 100 && Array.isArray(defaultBucketNames) && defaultBucketNames.length <= 100, "cap");
   const databases = new Set(databaseIds.map(value => databaseId.parse(value)));
   const buckets = new Set(defaultBucketNames.map(value => bucketName.parse(value)));
+  const workerDeployments = scope.workerDeployments ?? [];
+  requireThat(Array.isArray(workerDeployments) && workerDeployments.length <= maxRows, "cap");
+  const deployments = new Map<string, Set<string>>();
+  for (const entry of workerDeployments) {
+    const name = scriptName.parse(entry.scriptName);
+    requireThat(scripts.has(name), "scope");
+    requireThat(!deployments.has(name), "schema");
+    requireThat(Array.isArray(entry.deploymentIds) && entry.deploymentIds.length <= maxRows, "cap");
+    deployments.set(name, new Set(entry.deploymentIds.map(value => deploymentId.parse(value))));
+  }
   const root = `/accounts/${account}`;
   function prepared<A>(args: A, resource: string, path: string): PreparedMetadata<A> {
     return Object.freeze({
@@ -228,7 +242,42 @@ export function metadataDescriptors(scope: MetadataScope) {
       return bounded(bucketMetadata(row));
     },
   });
-  return Object.freeze({ workersList, secretNames, hyperdriveList, hyperdriveGet, d1List, d1Get, r2List, r2Get });
+  function deploymentScope(name: string, id: string) {
+    scriptScope(name);
+    requireThat(deployments.get(name)?.has(id) === true, "scope");
+  }
+  const deploymentsList: MetadataDescriptor<ReturnType<typeof deploymentPage.parse>, PartialList<{ id: string }>> = Object.freeze({
+    name: "cloudflare.workers.deployments.list", version: "1", tier: "read", providerOperationId: "worker-deployments-list-deployments",
+    prepare(raw: unknown) {
+      const args = deploymentPage.parse(raw);
+      scriptScope(args.scriptName);
+      return prepared(args, `worker:${args.scriptName}:deployments`, `${root}/workers/scripts/${encodeURIComponent(args.scriptName)}/deployments?page=${args.page}&per_page=${args.perPage}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof deploymentPage.parse>>) {
+      const args = deploymentPage.parse(input.arguments);
+      scriptScope(args.scriptName);
+      const result = rows(object(envelope(raw).result).deployments);
+      requireThat(result.length <= args.perPage, "cap");
+      const items = result.filter(row => typeof row.id === "string" && deployments.get(args.scriptName)?.has(row.id)).map(row => ({ id: providerText(row.id, deploymentId) }));
+      return bounded({ items, complete: false as const });
+    },
+  });
+  const deploymentGet: MetadataDescriptor<ReturnType<typeof deployment.parse>, { id: string }> = Object.freeze({
+    name: "cloudflare.workers.deployments.get", version: "1", tier: "read", providerOperationId: "worker-deployments-get-deployment",
+    prepare(raw: unknown) {
+      const args = deployment.parse(raw);
+      deploymentScope(args.scriptName, args.deploymentId);
+      return prepared(args, `worker:${args.scriptName}:deployment:${args.deploymentId}`, `${root}/workers/scripts/${encodeURIComponent(args.scriptName)}/deployments/${args.deploymentId}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof deployment.parse>>) {
+      const args = deployment.parse(input.arguments);
+      deploymentScope(args.scriptName, args.deploymentId);
+      const row = object(envelope(raw).result);
+      requireThat(row.id === args.deploymentId, "scope");
+      return bounded({ id: providerText(row.id, deploymentId) });
+    },
+  });
+  return Object.freeze({ workersList, secretNames, hyperdriveList, hyperdriveGet, d1List, d1Get, r2List, r2Get, deploymentsList, deploymentGet });
 }
 
 export interface ZoneMetadataScope {

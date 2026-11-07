@@ -10,10 +10,10 @@
     "openapi": "3.0.3",
     "version": "4.0.0"
   },
-  "inventorySha256": "a58f4955759ec2b4d107d8fe304e202f2c6ca779efaff216dd05759f4434d353",
-  "counts": { "paths": 2352, "operations": 3777, "apiTags": 599, "descriptors": 11, "implementedTools": 0, "reviewedTools": 0, "enabledTools": 0 },
+  "inventorySha256": "7085bf4245f91393d2134f39f5012446f7422a387ad76eba37b87e0ff0c41917",
+  "counts": { "paths": 2352, "operations": 3777, "apiTags": 599, "descriptors": 13, "implementedTools": 0, "reviewedTools": 0, "enabledTools": 0 },
   "credentialScope": {
-    "status": "awaiting-operator-attestation",
+    "status": "operation-entitlements-unresolved",
     "credentialReference": null,
     "verifiedBy": null,
     "verifiedAt": null,
@@ -21,7 +21,7 @@
     "zones": null,
     "tokenPermissions": null,
     "planEntitlements": null,
-    "note": "API annotations are permission requirements, not evidence of the main credential's scopes. No credential value is part of this manifest."
+    "note": "Private connection metadata is retained in the admission record, not this public manifest. Operation/resource/protocol entitlement remains unresolved; OAuth scopes are not API-token groups or S3 signing credentials. API annotations and credential breadth are not agent grants. An intentionally broker-held master does not require narrowing for breadth alone. No credential value is part of this manifest."
   },
   "supplementalSurfaces": [
     { "surface": "R2 S3-compatible API", "status": "documentary-inventory-only", "inventory": "r2-s3.json", "inventorySha256": "4b35efec6937566c21693e0d5f37682b4a0d343ef6e71d511cd802c0123953fe", "prerequisite": "credential-protocol-intersection-and-typed-adapters" },

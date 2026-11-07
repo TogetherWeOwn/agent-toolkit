@@ -11,7 +11,7 @@ const own = "b".repeat(32);
 const other = "c".repeat(32);
 const db = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
 const otherDb = "cccccccc-cccc-cccc-cccc-cccccccccccc";
-const scope = { accountId: account, revision: "policy-1", scriptNames: ["safe-worker"], hyperdriveIds: [own], databaseIds: [db], defaultBucketNames: ["safe-bucket"] };
+const scope = { accountId: account, revision: "policy-1", scriptNames: ["safe-worker"], hyperdriveIds: [own], databaseIds: [db], defaultBucketNames: ["safe-bucket"], workerDeployments: [{ scriptName: "safe-worker", deploymentIds: [db] }] };
 const descriptors = metadataDescriptors(scope);
 const zone = "d".repeat(32);
 const zoneScope = { accountId: account, zoneId: zone, revision: "policy-1", dnsRecordIds: [own] };
@@ -254,6 +254,74 @@ test("Cloudflare zone metadata enforces page, row, byte and upstream-error limit
   }
 });
 
+test("Cloudflare deployment metadata binds account, script and deployment without a mutation path", () => {
+  const list = descriptors.deploymentsList.prepare({ scriptName: "safe-worker", page: 2, perPage: 10 });
+  assert.equal(list.request.path, `/accounts/${account}/workers/scripts/safe-worker/deployments?page=2&per_page=10`);
+  assert.equal(list.resource.id, `cloudflare:account:${account}:worker:safe-worker:deployments`);
+  const get = descriptors.deploymentGet.prepare({ scriptName: "safe-worker", deploymentId: db });
+  assert.equal(get.request.path, `/accounts/${account}/workers/scripts/safe-worker/deployments/${db}`);
+  assert.equal(get.resource.id, `cloudflare:account:${account}:worker:safe-worker:deployment:${db}`);
+  assert.equal(get.resource.revision, "policy-1");
+  for (const [descriptor, args] of [[descriptors.deploymentsList, { scriptName: "safe-worker", page: 1, perPage: 10 }], [descriptors.deploymentGet, { scriptName: "safe-worker", deploymentId: db }]]) {
+    for (const key of ["accountId", "agentId", "approval", "force", "versions", "headers", "url", "credential", "since", "until"]) refuses(() => descriptor.prepare({ ...args, [key]: "forged" }), "schema");
+    const input = descriptor.prepare(args);
+    assert.ok(Object.isFrozen(input) && Object.isFrozen(input.arguments) && Object.isFrozen(input.resource) && Object.isFrozen(input.request));
+    assert.equal(input.request.method, "GET");
+    assert.equal(input.request.redirects, "deny");
+    assert.equal(input.request.maxRequests, 1);
+  }
+  refuses(() => descriptors.deploymentsList.prepare({ scriptName: "other-worker", page: 1, perPage: 10 }), "scope");
+  refuses(() => descriptors.deploymentGet.prepare({ scriptName: "safe-worker", deploymentId: otherDb }), "scope");
+  for (const deploymentId of [db.toUpperCase(), own, "../deployment", `${db}?force=true`]) refuses(() => descriptors.deploymentGet.prepare({ scriptName: "safe-worker", deploymentId }), "schema");
+});
+
+test("Cloudflare deployment projections omit annotations, author identity, version data and source", () => {
+  const canary = "never-return-private-deployment-data";
+  const row = { id: db, annotations: { "workers/message": canary }, author_email: canary, source: canary, versions: [{ version_id: canary, percentage: 100 }], bindings: canary };
+  const getInput = descriptors.deploymentGet.prepare({ scriptName: "safe-worker", deploymentId: db });
+  const get = descriptors.deploymentGet.project(success(row), getInput);
+  assert.deepEqual(get, { id: db });
+  const listInput = descriptors.deploymentsList.prepare({ scriptName: "safe-worker", page: 1, perPage: 10 });
+  const list = descriptors.deploymentsList.project(success({ deployments: [row, { ...row, id: otherDb }] }), listInput);
+  assert.deepEqual(list, { items: [get], complete: false });
+  assert.ok(!JSON.stringify([get, list]).includes(canary));
+  refuses(() => descriptors.deploymentGet.project(success({ ...row, id: otherDb }), getInput), "scope");
+});
+
+test("Cloudflare deployment snapshots preserve per-script IDs and default to empty", () => {
+  const input = { ...scope, scriptNames: ["safe-worker", "second-worker"], workerDeployments: [{ scriptName: "safe-worker", deploymentIds: [db] }, { scriptName: "second-worker", deploymentIds: [otherDb] }] };
+  const snapshot = metadataDescriptors(input);
+  input.workerDeployments[0].deploymentIds.push(otherDb);
+  input.workerDeployments[1].deploymentIds.push(db);
+  input.workerDeployments[0].scriptName = "second-worker";
+  input.accountId = other;
+  refuses(() => snapshot.deploymentGet.prepare({ scriptName: "second-worker", deploymentId: db }), "scope");
+  refuses(() => snapshot.deploymentGet.prepare({ scriptName: "safe-worker", deploymentId: otherDb }), "scope");
+  assert.equal(snapshot.deploymentGet.prepare({ scriptName: "safe-worker", deploymentId: db }).request.path, `/accounts/${account}/workers/scripts/safe-worker/deployments/${db}`);
+  assert.deepEqual(snapshot.deploymentsList.project(success({ deployments: [{ id: db }, { id: otherDb }] }), snapshot.deploymentsList.prepare({ scriptName: "second-worker", page: 1, perPage: 10 })), { items: [{ id: otherDb }], complete: false });
+  const empty = metadataDescriptors({ accountId: account, revision: "policy-1", scriptNames: ["safe-worker"], hyperdriveIds: [] });
+  refuses(() => empty.deploymentGet.prepare({ scriptName: "safe-worker", deploymentId: db }), "scope");
+  assert.deepEqual(empty.deploymentsList.project(success({ deployments: [{ id: db }] }), empty.deploymentsList.prepare({ scriptName: "safe-worker", page: 1, perPage: 10 })), { items: [], complete: false });
+  refuses(() => metadataDescriptors({ ...scope, workerDeployments: [{ scriptName: "other-worker", deploymentIds: [db] }] }), "scope");
+  refuses(() => metadataDescriptors({ ...scope, workerDeployments: [scope.workerDeployments[0], scope.workerDeployments[0]] }), "schema");
+  refuses(() => metadataDescriptors({ ...scope, workerDeployments: [{ scriptName: "safe-worker", deploymentIds: Array(101).fill(db) }] }), "cap");
+});
+
+test("Cloudflare deployment metadata enforces pagination, bytes and fixed error refusals", () => {
+  for (const page of [0, 1001, 1.5, "1"]) refuses(() => descriptors.deploymentsList.prepare({ scriptName: "safe-worker", page, perPage: 10 }), "schema");
+  for (const perPage of [0, 101, 1.5, "10"]) refuses(() => descriptors.deploymentsList.prepare({ scriptName: "safe-worker", page: 1, perPage }), "schema");
+  const list = descriptors.deploymentsList.prepare({ scriptName: "safe-worker", page: 1, perPage: 1 });
+  refuses(() => descriptors.deploymentsList.project(success({ deployments: [{ id: db }, { id: otherDb }] }), list), "cap");
+  refuses(() => descriptors.deploymentsList.project(success({ deployments: Array(101).fill({ id: db }) }), list), "cap");
+  for (const [descriptor, args] of [[descriptors.deploymentsList, { scriptName: "safe-worker", page: 1, perPage: 10 }], [descriptors.deploymentGet, { scriptName: "safe-worker", deploymentId: db }]]) {
+    const input = descriptor.prepare(args);
+    refuses(() => descriptor.project("x".repeat(131073), input), "cap");
+    for (const raw of ["null", "not-json", JSON.stringify({ success: false, errors: [{ message: "private-value" }], result: {} })]) refuses(() => descriptor.project(raw, input), "upstream");
+  }
+  for (const result of [[], { deployments: [null] }]) refuses(() => descriptors.deploymentsList.project(success(result), list), "upstream");
+  for (const result of [{}, { deployments: null }]) refuses(() => descriptors.deploymentsList.project(success(result), list), "cap");
+});
+
 test("Cloudflare full schema inventory is pinned, explicit about holes, and consistent with descriptors", async () => {
   const bytes = await readFile(new URL("../plugins/cloudflare-broker/coverage/operations.jsonl", import.meta.url));
   const manifest = JSON.parse(await readFile(new URL("../plugins/cloudflare-broker/coverage/source.json", import.meta.url)));
@@ -284,9 +352,9 @@ test("Cloudflare full schema inventory is pinned, explicit about holes, and cons
       assert.equal(row.implementation, "descriptor-only");
     }
   }
-  assert.equal(operations.filter(row => row.typedTool !== null).length, 11);
+  assert.equal(operations.filter(row => row.typedTool !== null).length, 13);
   assert.equal(manifest.counts.descriptors, Object.keys(allDescriptors).length);
-  assert.equal(manifest.credentialScope.status, "awaiting-operator-attestation");
+  assert.equal(manifest.credentialScope.status, "operation-entitlements-unresolved");
   assert.equal(manifest.complete, false);
   assert.deepEqual(manifest.supplementalSurfaces.map(surface => surface.status), ["documentary-inventory-only", "not-inventoried"]);
   assert.throws(() => inventory(Buffer.from("{}")), /schema source digest mismatch/);
