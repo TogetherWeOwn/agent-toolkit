@@ -22,6 +22,8 @@ export interface RevocationEvidence {
   outcome: "revoked" | "revoked_verified_by_probe" | "unverified";
   deleteRequestId: string | null;
   probeRequestId?: string | null;
+  probeStatus?: number | null;
+  probeResult?: "unavailable" | "unexpected_status" | "invalid_json" | "unexpected_body" | "bad_credentials";
   unavailableReason?: "sdk_null_body";
 }
 function check(value: unknown, rule: string): asserts value { if (!value) throw new GitHubFailure(rule); }
@@ -123,16 +125,25 @@ export async function withInstallationToken<T>(options: {
       try { revoked = await request(options.transport, "DELETE", "/installation/token", token); }
       catch (error) {
         if (!(error instanceof SdkNullBodyRevokeFailure)) throw error;
-        const evidence: RevocationEvidence = { outcome: "unverified", deleteRequestId: null, unavailableReason: "sdk_null_body", probeRequestId: null };
+        let evidence: RevocationEvidence = { outcome: "unverified", deleteRequestId: null, unavailableReason: "sdk_null_body", probeRequestId: null, probeStatus: null, probeResult: "unavailable" };
         options.onRevocation?.(evidence);
         // Exactly one independent rejection check, never a retry or assumed 204.
         const probe = await request(options.transport, "GET", "/installation/repositories?per_page=1", token);
+        let probeResult: RevocationEvidence["probeResult"] = "unexpected_status";
+        if (probe.status === 401) {
+          try {
+            const body = parse(probe);
+            probeResult = body && typeof body === "object" && !Array.isArray(body) && (body as Record<string, unknown>).message === "Bad credentials" ? "bad_credentials" : "unexpected_body";
+          } catch { probeResult = "invalid_json"; }
+        }
+        // Retain only bounded diagnostics, even if the rate-limit observer throws.
+        evidence = { ...evidence, probeStatus: probe.status, probeResult };
+        options.onRevocation?.(evidence);
         const probeRequestId = options.observe(probe, sensitive);
-        options.onRevocation?.({ ...evidence, probeRequestId: probeRequestId ?? null });
-        check(probe.status === 401 && probeRequestId, "mint.revoke_failed");
-        const body = parse(probe);
-        check(body && typeof body === "object" && !Array.isArray(body) && (body as Record<string, unknown>).message === "Bad credentials", "mint.revoke_failed");
-        options.onRevocation?.({ ...evidence, outcome: "revoked_verified_by_probe", probeRequestId });
+        evidence = { ...evidence, probeRequestId: probeRequestId ?? null };
+        options.onRevocation?.(evidence);
+        check(probe.status === 401 && probeRequestId && probeResult === "bad_credentials", "mint.revoke_failed");
+        options.onRevocation?.({ ...evidence, outcome: "revoked_verified_by_probe" });
       }
       if (revoked) {
         const deleteRequestId = options.observe(revoked, sensitive) ?? null;

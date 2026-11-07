@@ -24,10 +24,39 @@ test('one same-token rejection probe records distinct evidence before cache publ
   const f = fixture(); read(f); fallback(f); probe(f);
   const result = await f.call('github.pr_get', args);
   assert.equal(result.error, undefined); assert.equal(result.data.pages[0].title, pull.title);
-  assert.deepEqual(f.events.at(-1).revocation, { outcome: 'revoked_verified_by_probe', deleteRequestId: null, unavailableReason: 'sdk_null_body', probeRequestId: requestId });
+  assert.deepEqual(f.events.at(-1).revocation, { outcome: 'revoked_verified_by_probe', deleteRequestId: null, unavailableReason: 'sdk_null_body', probeRequestId: requestId, probeStatus: 401, probeResult: 'bad_credentials' });
   assert.equal(f.events.at(-1).requestIds.length, 4); // mint, identity, read, probe; no fabricated DELETE ID.
   assert.equal((await f.call('github.pr_get', args)).error, undefined);
   assert.equal(f.calls.length, 5); f.hygiene(result); f.done();
+});
+
+test('probe diagnostics distinguish exposed status, body and unavailable evidence without weakening cleanup', async () => {
+  for (const [overrides, status, classification, safeId] of [
+    [{ status: 200, raw: key + token }, 200, 'unexpected_status', requestId],
+    [{ status: 403, raw: key + token }, 403, 'unexpected_status', requestId],
+    [{ status: 429, headers: { 'x-github-request-id': requestId, 'retry-after': '12000' } }, 429, 'unexpected_status', null],
+    [{ body: { message: key + token, extra: key + token } }, 401, 'unexpected_body', requestId],
+    [{ raw: '{' + key + token }, 401, 'invalid_json', requestId],
+    [{ raw: 'null' }, 401, 'unexpected_body', requestId],
+    [{ body: [{ message: 'Bad credentials' }] }, 401, 'unexpected_body', requestId],
+    [{ body: { message: 'Bad credentials', extra: key + token }, headers: {} }, 401, 'bad_credentials', null],
+    [{ headers: { 'x-github-request-id': token } }, 401, 'bad_credentials', null],
+    [{ error: Error(key + token) }, null, 'unavailable', null],
+    [{ status: 302 }, null, 'unavailable', null],
+  ]) {
+    const f = fixture(); read(f); fallback(f); probe(f, overrides);
+    const result = await f.call('github.pr_get', args);
+    assert.equal(result.error, 'mint.revoke_failed');
+    assert.deepEqual(f.events.at(-1).revocation, {
+      outcome: 'unverified', deleteRequestId: null, unavailableReason: 'sdk_null_body',
+      probeRequestId: safeId, probeStatus: status, probeResult: classification,
+    });
+    const next = await f.call('github.pr_get', args);
+    assert.equal(next.error, 'rate.retry_after');
+    assert.ok(next.data.retryAfterSeconds >= (status === 429 ? 11999 : 3659));
+    assert.equal(f.calls.length, 5); assert.equal(f.secretCalls, 1);
+    f.hygiene(result); f.hygiene(next); f.done();
+  }
 });
 
 test('directly observed 204 records its ID and never probes', async () => {

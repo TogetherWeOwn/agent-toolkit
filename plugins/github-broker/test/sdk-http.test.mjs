@@ -114,7 +114,7 @@ for (const nullDeleteBody of [false, true]) test(`real SDK RPC broker cleanup: $
   assert.equal(result.error, undefined); assert.equal(result.data.pages[0].title, pull.title);
   assert.deepEqual(f.events.at(-1).revocation, nullDeleteBody
     ? { outcome: 'revoked', deleteRequestId: 'ABCD:1234:5678:90AB' }
-    : { outcome: 'revoked_verified_by_probe', deleteRequestId: null, unavailableReason: 'sdk_null_body', probeRequestId: 'BEEF:1234:5678:90AB' });
+    : { outcome: 'revoked_verified_by_probe', deleteRequestId: null, unavailableReason: 'sdk_null_body', probeRequestId: 'BEEF:1234:5678:90AB', probeStatus: 401, probeResult: 'bad_credentials' });
   for (const req of f.calls) assert.ok(Object.keys(req.headers).every(k => !k.toLowerCase().startsWith('if-')));
   assert.equal((await call()).error, undefined); assert.equal(f.calls.length, nullDeleteBody ? 4 : 5);
   f.hygiene(result); f.done();
@@ -125,6 +125,25 @@ for (const status of [200, 403, 304, 500]) test(`real SDK RPC ambiguous probe st
   f.steps.push({ method: 'GET', path: '/installation/repositories?per_page=1', status, body: { message: 'Bad credentials' } });
   const call = await rpcBroker(t, f), result = await call();
   assert.equal(result.error, 'mint.revoke_failed');
-  assert.equal(f.events.at(-1).revocation.outcome, 'unverified');
+  assert.deepEqual(f.events.at(-1).revocation, {
+    outcome: 'unverified', deleteRequestId: null, unavailableReason: 'sdk_null_body',
+    probeRequestId: status === 304 ? null : 'ABCD:1234:5678:90AB',
+    probeStatus: status === 304 ? null : status, probeResult: status === 304 ? 'unavailable' : 'unexpected_status',
+  });
+  assert.equal((await call()).error, 'rate.retry_after'); assert.equal(f.calls.length, 5); f.hygiene(result); f.done();
+});
+
+for (const [body, classification] of [
+  [{ message: token, extra: key }, 'unexpected_body'],
+  [[{ message: 'Bad credentials' }], 'unexpected_body'],
+]) test(`real SDK RPC nonqualifying 401 diagnostics for ${Array.isArray(body) ? 'array' : 'reflected message'}`, async t => {
+  const f = fixture(); f.mint({ pull_requests: 'read' }); f.identity(); f.read('/pulls/1', pull); f.revoke();
+  f.steps.push({ method: 'GET', path: '/installation/repositories?per_page=1', status: 401, body });
+  const call = await rpcBroker(t, f), result = await call();
+  assert.equal(result.error, 'mint.revoke_failed');
+  assert.deepEqual(f.events.at(-1).revocation, {
+    outcome: 'unverified', deleteRequestId: null, unavailableReason: 'sdk_null_body',
+    probeRequestId: 'ABCD:1234:5678:90AB', probeStatus: 401, probeResult: classification,
+  });
   assert.equal((await call()).error, 'rate.retry_after'); assert.equal(f.calls.length, 5); f.hygiene(result); f.done();
 });
