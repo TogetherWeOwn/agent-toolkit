@@ -1,0 +1,77 @@
+# PlanetScale acceptance ledger
+
+Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
+This staged source PR does not deliver the complete package. The operation map's
+missing rows are actual missing implementation, not a promise of dormant access.
+
+## Exact prerequisites and accountable roles
+
+| Missing evidence/implementation | Accountable role | Release condition |
+| --- | --- | --- |
+| Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
+| Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
+| 283 adapters and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
+| Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
+| Fixed catalog/ACL metadata | Package builder + Operator | Native supported read-only connector plus exact staging allowlist/window, caps and closure evidence; no arbitrary SQL |
+| Exact-head full-suite and required checks | Package builder | GitHub Actions run/job links, Devin and rulesets satisfied; no local substitute |
+| Independent complete-package/tier reviews | Security, Crypto, final QA | Exact source/core/API pin and configuration envelope accepted, findings dispositioned |
+| Runtime install/enablement and production actions | Operator + Release Manager as applicable | Exact-artifact native authorizations and qualification receipts; no implied authority from source merge |
+
+No new credential is requested. Existing scope is a ceiling, not permission to
+expand it. Discovery yielded no matching PlanetScale connection; unrelated
+connections are not a supported route. Do not bypass discovery by reading raw
+keys, creating a replacement connector or making an unauthenticated assumption.
+
+## Catalog coverage: fixed outputs, no SQL escape hatch
+
+| Required capability | Current state | Required implementation/evidence |
+| --- | --- | --- |
+| Relation existence | Offline control-plane projection only | API semantics/non-waking validation; namespace/keyspace disambiguation and reviewed core policy |
+| Schema/namespace existence | Missing | Fixed engine-aware metadata operation, actual supported connector and reviewed bounded staging policy |
+| Role metadata | Offline API ID/name/flag/inheritance projection | Actual entitlement and reviewed authorization; no passwords, hashes, DSNs or addresses |
+| Effective direct/transitive ACL | Missing | Fixed PostgreSQL/Vitess metadata templates where supported, role closure/cycle handling and direct/effective distinctions; portable receipts and engine-specific tests |
+| Non-secret binding identity | Configured resource target only | Operator-verified binding receipt and native current caller/resource resolution |
+
+A main credential's control-plane permissions do not establish SQL data-plane
+access. Metadata SQL can wake compute and is never labeled non-waking. SQL needs
+an exact staging resource allowlist and approved bounded window, server-enforced
+read-only transactions, statement/lock/row/byte/page/time caps and native closure
+evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
+API-to-SQL fallback. A production-classified branch remains production regardless
+of a database's staging-like name, and uses its own Release Manager gate.
+
+## Tests and observations
+
+`test/metadata.test.mjs` defines mocked contracts for all eight source adapters:
+fixed origin/method/path, closed scope/argument shapes, resource mismatch,
+pagination completeness/caps, invalid UTF-8/JSON/oversized bodies, secret fields
+excluded from output, role enums and existence-only schema projection. The API-map
+test checks unique operation/route coverage, source hash, separated permission
+schemes, source paths and honest incomplete/review/enablement states.
+
+These are **not** cross-agent or approval-replay tests. No registered native handler
+exists yet. Such tests, durable contention/restart behavior, all tier authorization
+and refusal cases, final secret-reflection enforcement, transport redirects,
+provider errors, audit failure and write ambiguity remain required before delivery.
+A synthetic canary in an ignored secret field only proves that projection, not
+immunity to secret reflection in every selected field.
+
+Initial observation: tests have not yet run. Record exact-head Actions evidence
+on the source task/PR; do not turn this sentence into a passing claim based on a
+mock, skipped job or local full-suite output.
+
+## Metrics preregistration — required before enablement
+
+Baseline and matched post-window measurements are **not yet collected or approved**.
+No prior handoff counts are rerun or treated as current downstream blockers.
+Before enablement, save exact UTC windows, affected agent/resource cohort, source
+trace query/version, handoff and genuine access-failure numerator/denominator,
+full-surface policy coverage by tier, and numeric improvement thresholds. Match
+windows/cohorts, report missing scopes separately and retain raw counts.
+
+Guardrails: zero leaked secrets/customer rows, zero unapproved wakes or reserved
+actions, zero broadened grants, zero replay/cross-agent/resource successes, no
+recurring always-on staging cost and no skipped qualification. A source-map count
+or mocked test result is not an adoption/productivity outcome. Missing baseline,
+threshold or live-authority evidence holds enablement, not independent source work.
