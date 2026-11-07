@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
@@ -10,7 +12,7 @@ const fixture = `
 import io, pathlib, runpy, sys, tarfile, tempfile
 api = runpy.run_path(sys.argv[1])
 with tempfile.TemporaryDirectory() as temp:
-    root = pathlib.Path(temp)
+    root = pathlib.Path(temp).resolve()
     package = root / "plugin"
     dist = package / "dist/plugins/github-broker/src"
     dist.mkdir(parents=True)
@@ -34,11 +36,18 @@ with tempfile.TemporaryDirectory() as temp:
 `;
 
 function python(body) {
-  const result = spawnSync("python3", ["-I", "-c", fixture + body, helper], {
-    encoding: "utf8", timeout: 10000,
-  });
-  assert.equal(result.error, undefined);
-  assert.equal(result.status, 0, result.stdout + result.stderr);
+  const temp = mkdtempSync(join(tmpdir(), "broker-artifact-test-"));
+  const link = join(temp, "linked-temp");
+  symlinkSync(temp, link, "dir");
+  try {
+    const result = spawnSync("python3", ["-I", "-c", fixture + body, helper], {
+      encoding: "utf8", timeout: 10000, env: { ...process.env, TMPDIR: link },
+    });
+    assert.equal(result.error, undefined);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+  } finally {
+    rmSync(temp, { recursive: true, force: true });
+  }
 }
 
 test("broker package evidence matches every packed byte including worker and REST client", () => {
@@ -90,20 +99,29 @@ test("broker package evidence refuses tampering, missing entries, links and unsa
 
 test("broker package evidence bounds archive work and package bytes", () => {
   python(`
-    api["verify_archive"].__globals__["MAX_FILES"] = 1
+    limits = api["verify_archive"].__globals__
+    max_files, max_bytes = limits["MAX_FILES"], limits["MAX_BYTES"]
+    limits["MAX_FILES"] = 1
     try:
-        api["verify_archive"](archive(entries), files)
-    except ValueError:
-        pass
-    else:
-        raise AssertionError("unbounded members")
-    api["package_files"].__globals__["MAX_BYTES"] = 1
+        try:
+            api["verify_archive"](archive(entries), files)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("unbounded members")
+    finally:
+        limits["MAX_FILES"] = max_files
+    assert api["package_files"](package) == files
+    limits["MAX_BYTES"] = 1
     try:
-        api["package_files"](package)
-    except ValueError:
-        pass
-    else:
-        raise AssertionError("unbounded build files")
+        try:
+            api["package_files"](package)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("unbounded build files")
+    finally:
+        limits["MAX_BYTES"] = max_bytes
 `);
 });
 
@@ -165,12 +183,13 @@ test("broker packaging is dispatch-only, read-only and fails closed before publi
   assert.match(workflow, /persist-credentials: false/g);
   assert.match(workflow, /git merge-base --is-ancestor "\$SOURCE_SHA" refs\/remotes\/origin\/main/);
   assert.match(workflow, /test "\$\(git rev-parse HEAD\)" = "\$SOURCE_SHA"/);
+  const recipeTests = workflow.indexOf("run: node --test --test-timeout=10000 recipe/test/package-artifact.test.mjs");
   const install = workflow.indexOf("run: npm ci --ignore-scripts");
   const tests = workflow.indexOf("run: npm test");
   const pack = workflow.indexOf("npm pack --ignore-scripts");
   const verify = workflow.indexOf("run: python3 -I recipe/.github/scripts/broker-artifact.py");
   const upload = workflow.indexOf("uses: actions/upload-artifact@");
-  assert.ok(install < tests && tests < pack && pack < verify && verify < upload);
+  assert.ok(recipeTests >= 0 && recipeTests < install && install < tests && tests < pack && pack < verify && verify < upload);
   assert.match(workflow, /if-no-files-found: error/);
   assert.match(workflow, /retention-days: 14/);
   for (const action of workflow.matchAll(/uses: (actions\/[^\s]+)/g)) {
