@@ -20,6 +20,9 @@ const descriptors = new Map([
   ["GET /accounts/{account_id}/d1/database/{database_id}", "cloudflare.d1.get"],
   ["GET /accounts/{account_id}/r2/buckets", "cloudflare.r2.list"],
   ["GET /accounts/{account_id}/r2/buckets/{bucket_name}", "cloudflare.r2.get"],
+  ["GET /zones/{zone_id}", "cloudflare.zones.get"],
+  ["GET /zones/{zone_id}/dns_records", "cloudflare.dns.list"],
+  ["GET /zones/{zone_id}/dns_records/{dns_record_id}", "cloudflare.dns.get"],
 ]);
 const digest = value => createHash("sha256").update(value).digest("hex");
 

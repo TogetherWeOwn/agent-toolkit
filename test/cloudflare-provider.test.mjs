@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { metadataDescriptors } from "../dist/plugins/cloudflare-broker/src/metadata.js";
+import { metadataDescriptors, zoneMetadataDescriptors } from "../dist/plugins/cloudflare-broker/src/metadata.js";
 import { inventory, source } from "../plugins/cloudflare-broker/scripts/inventory.mjs";
+import { supplementalInventory, supplementalSource } from "../plugins/cloudflare-broker/scripts/supplemental.mjs";
 
 const account = "a".repeat(32);
 const own = "b".repeat(32);
@@ -12,6 +13,10 @@ const db = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
 const otherDb = "cccccccc-cccc-cccc-cccc-cccccccccccc";
 const scope = { accountId: account, revision: "policy-1", scriptNames: ["safe-worker"], hyperdriveIds: [own], databaseIds: [db], defaultBucketNames: ["safe-bucket"] };
 const descriptors = metadataDescriptors(scope);
+const zone = "d".repeat(32);
+const zoneScope = { accountId: account, zoneId: zone, revision: "policy-1", dnsRecordIds: [own] };
+const zoneDescriptors = zoneMetadataDescriptors(zoneScope);
+const allDescriptors = { ...descriptors, ...zoneDescriptors };
 const success = result => JSON.stringify({ success: true, errors: [], messages: [], result });
 const refuses = (callback, code) => assert.throws(callback, error => error.message === code && error.code === code);
 
@@ -100,7 +105,7 @@ test("Cloudflare descriptor limits refuse oversized results and never imply comp
 });
 
 test("Cloudflare descriptors supply no credential, execution, approval or generic transport entry point", () => {
-  for (const descriptor of Object.values(descriptors)) {
+  for (const descriptor of Object.values(allDescriptors)) {
     assert.equal(descriptor.tier, "read");
     assert.deepEqual(Object.keys(descriptor).sort(), ["name", "prepare", "project", "providerOperationId", "tier", "version"]);
     assert.equal(descriptor.execute, undefined);
@@ -182,6 +187,73 @@ test("Cloudflare storage descriptors enforce provider pagination shapes and fail
   }
 });
 
+test("Cloudflare zone context is trusted and cannot be supplied in model arguments", () => {
+  assert.equal(zoneDescriptors.zoneGet.prepare({}).request.path, `/zones/${zone}`);
+  assert.equal(zoneDescriptors.dnsList.prepare({ page: 2, perPage: 10 }).request.path, `/zones/${zone}/dns_records?page=2&per_page=10`);
+  const get = zoneDescriptors.dnsGet.prepare({ dnsRecordId: own });
+  assert.equal(get.request.path, `/zones/${zone}/dns_records/${own}`);
+  assert.equal(get.resource.id, `cloudflare:account:${account}:zone:${zone}:dns:${own}`);
+  assert.equal(get.resource.revision, "policy-1");
+  for (const [descriptor, args] of [[zoneDescriptors.zoneGet, {}], [zoneDescriptors.dnsList, { page: 1, perPage: 10 }], [zoneDescriptors.dnsGet, { dnsRecordId: own }]]) {
+    for (const key of ["accountId", "zoneId", "agentId", "approval", "headers", "url", "credential", "content", "search", "name"]) {
+      refuses(() => descriptor.prepare({ ...args, [key]: "forged" }), "schema");
+    }
+    const input = descriptor.prepare(args);
+    assert.ok(Object.isFrozen(input) && Object.isFrozen(input.arguments) && Object.isFrozen(input.resource) && Object.isFrozen(input.request));
+    assert.equal(input.request.method, "GET");
+    assert.equal(input.request.redirects, "deny");
+    assert.equal(input.request.maxRequests, 1);
+  }
+  refuses(() => zoneDescriptors.dnsGet.prepare({ dnsRecordId: other }), "scope");
+  for (const dnsRecordId of [own.toUpperCase(), "../records", `${own}?zone=other`]) refuses(() => zoneDescriptors.dnsGet.prepare({ dnsRecordId }), "schema");
+});
+
+test("Cloudflare zone metadata refuses foreign accounts and DNS projections omit contents and names", () => {
+  const canary = "never-return-private-dns-content";
+  const zoneInput = zoneDescriptors.zoneGet.prepare({});
+  assert.deepEqual(zoneDescriptors.zoneGet.project(success({ id: zone, account: { id: account, name: canary }, name: canary, name_servers: [canary], plan: canary }), zoneInput), { id: zone });
+  refuses(() => zoneDescriptors.zoneGet.project(success({ id: zone, account: { id: other } }), zoneInput), "scope");
+  refuses(() => zoneDescriptors.zoneGet.project(success({ id: other, account: { id: account } }), zoneInput), "scope");
+  refuses(() => zoneDescriptors.zoneGet.project(success({ id: zone }), zoneInput), "upstream");
+  const row = { id: own, zone_id: zone, content: canary, name: canary, comment: canary, tags: [canary], data: { value: canary }, meta: canary };
+  const getInput = zoneDescriptors.dnsGet.prepare({ dnsRecordId: own });
+  const get = zoneDescriptors.dnsGet.project(success(row), getInput);
+  assert.deepEqual(get, { id: own });
+  const listInput = zoneDescriptors.dnsList.prepare({ page: 1, perPage: 10 });
+  const list = zoneDescriptors.dnsList.project(success([row, { ...row, id: other }]), listInput);
+  assert.deepEqual(list, { items: [get], complete: false });
+  assert.ok(!JSON.stringify([get, list]).includes(canary));
+  refuses(() => zoneDescriptors.dnsGet.project(success({ ...row, id: other }), getInput), "scope");
+  refuses(() => zoneDescriptors.dnsGet.project(success({ ...row, zone_id: other }), getInput), "scope");
+  refuses(() => zoneDescriptors.dnsList.project(success([{ ...row, zone_id: other }]), listInput), "scope");
+});
+
+test("Cloudflare zone snapshots resist mutation and empty record allowlists expose nothing", () => {
+  const input = { ...zoneScope, dnsRecordIds: [own] };
+  const snapshot = zoneMetadataDescriptors(input);
+  input.dnsRecordIds.push(other);
+  input.zoneId = other;
+  input.accountId = other;
+  refuses(() => snapshot.dnsGet.prepare({ dnsRecordId: other }), "scope");
+  assert.equal(snapshot.zoneGet.prepare({}).request.path, `/zones/${zone}`);
+  assert.deepEqual(snapshot.zoneGet.project(success({ id: zone, account: { id: account } }), snapshot.zoneGet.prepare({})), { id: zone });
+  const empty = zoneMetadataDescriptors({ ...zoneScope, dnsRecordIds: [] });
+  refuses(() => empty.dnsGet.prepare({ dnsRecordId: own }), "scope");
+  assert.deepEqual(empty.dnsList.project(success([{ id: own }]), empty.dnsList.prepare({ page: 1, perPage: 10 })), { items: [], complete: false });
+});
+
+test("Cloudflare zone metadata enforces page, row, byte and upstream-error limits", () => {
+  for (const page of [0, 1001, 1.5, "1"]) refuses(() => zoneDescriptors.dnsList.prepare({ page, perPage: 10 }), "schema");
+  for (const perPage of [0, 101, 1.5, "10"]) refuses(() => zoneDescriptors.dnsList.prepare({ page: 1, perPage }), "schema");
+  const list = zoneDescriptors.dnsList.prepare({ page: 1, perPage: 1 });
+  refuses(() => zoneDescriptors.dnsList.project(success([{ id: own }, { id: other }]), list), "cap");
+  for (const [descriptor, args] of [[zoneDescriptors.zoneGet, {}], [zoneDescriptors.dnsList, { page: 1, perPage: 10 }], [zoneDescriptors.dnsGet, { dnsRecordId: own }]]) {
+    const prepared = descriptor.prepare(args);
+    refuses(() => descriptor.project("x".repeat(131073), prepared), "cap");
+    for (const raw of ["null", "not-json", JSON.stringify({ success: false, errors: [{ message: "private-value" }], result: [] })]) refuses(() => descriptor.project(raw, prepared), "upstream");
+  }
+});
+
 test("Cloudflare full schema inventory is pinned, explicit about holes, and consistent with descriptors", async () => {
   const bytes = await readFile(new URL("../plugins/cloudflare-broker/coverage/operations.jsonl", import.meta.url));
   const manifest = JSON.parse(await readFile(new URL("../plugins/cloudflare-broker/coverage/source.json", import.meta.url)));
@@ -205,17 +277,79 @@ test("Cloudflare full schema inventory is pinned, explicit about holes, and cons
       assert.equal(row.approvalRoute, "unresolved");
       assert.deepEqual(row.tests, []);
     } else {
-      const descriptor = Object.values(descriptors).find(entry => entry.name === row.typedTool);
+      const descriptor = Object.values(allDescriptors).find(entry => entry.name === row.typedTool);
       assert.ok(descriptor);
       assert.equal(row.operationId, descriptor.providerOperationId);
       assert.equal(row.tier, descriptor.tier);
       assert.equal(row.implementation, "descriptor-only");
     }
   }
-  assert.equal(operations.filter(row => row.typedTool !== null).length, 8);
-  assert.equal(manifest.counts.descriptors, Object.keys(descriptors).length);
+  assert.equal(operations.filter(row => row.typedTool !== null).length, 11);
+  assert.equal(manifest.counts.descriptors, Object.keys(allDescriptors).length);
   assert.equal(manifest.credentialScope.status, "awaiting-operator-attestation");
   assert.equal(manifest.complete, false);
-  assert.equal(manifest.supplementalSurfaces.every(surface => surface.status === "not-inventoried"), true);
+  assert.deepEqual(manifest.supplementalSurfaces.map(surface => surface.status), ["documentary-inventory-only", "not-inventoried"]);
   assert.throws(() => inventory(Buffer.from("{}")), /schema source digest mismatch/);
+});
+
+test("Cloudflare supplemental S3 inventory retains every documented operation without claiming delivery", async () => {
+  const bytes = await readFile(new URL("../plugins/cloudflare-broker/coverage/r2-s3.json", import.meta.url));
+  const manifest = JSON.parse(await readFile(new URL("../plugins/cloudflare-broker/coverage/source.json", import.meta.url)));
+  const supplemental = JSON.parse(bytes);
+  assert.equal(createHash("sha256").update(bytes).digest("hex"), manifest.supplementalSurfaces[0].inventorySha256);
+  assert.deepEqual(supplemental.source, supplementalSource);
+  assert.equal(supplemental.complete, false);
+  assert.deepEqual(supplemental.counts, { operations: 73, providerSupported: 26, providerUnsupported: 47, descriptors: 0, implementedTools: 0, reviewedTools: 0, enabledTools: 0 });
+  assert.equal(supplemental.operations.length, 73);
+  assert.equal(new Set(supplemental.operations.map(row => row.key)).size, 73);
+  assert.equal(supplemental.operations.filter(row => row.providerSupport === "supported").length, 26);
+  assert.equal(supplemental.operations.filter(row => row.providerSupport === "unsupported").length, 47);
+  for (const row of supplemental.operations) {
+    assert.equal(row.key, `S3 ${row.operationId}`);
+    assert.equal(row.reference, `https://docs.aws.amazon.com/AmazonS3/latest/API/API_${row.operationId}.html`);
+    assert.ok(["bucket", "object"].includes(row.level));
+    assert.ok(Number.isInteger(row.sourceLine) && row.sourceLine > 0);
+    assert.equal(row.typedTool, null);
+    assert.equal(row.credentialScope, "unknown");
+    assert.equal(row.resourceScope, "unclassified");
+    assert.equal(row.tier, "unclassified");
+    assert.equal(row.approvalRoute, "unresolved");
+    assert.equal(row.implementation, "missing");
+    assert.equal(row.review, "not-reviewed");
+    assert.equal(row.enablement, "disabled");
+    assert.deepEqual(row.tests, []);
+    assert.equal(row.prerequisiteOwner, "provider-package-maintainer");
+    assert.ok(row.prerequisites.includes("typed-adapter-and-tier-classification"));
+    assert.equal(row.prerequisites.includes("provider-operation-support"), row.providerSupport === "unsupported");
+    for (const feature of row.features) assert.ok(["heading", "supported", "unsupported", "experimental"].includes(feature.status));
+  }
+});
+
+test("Cloudflare S3 feature inventory distinguishes unsupported preconditions and copy semantics", async () => {
+  const supplemental = JSON.parse(await readFile(new URL("../plugins/cloudflare-broker/coverage/r2-s3.json", import.meta.url)));
+  const operation = id => supplemental.operations.find(row => row.operationId === id);
+  const feature = (id, name) => operation(id).features.find(row => row.feature === name)?.status;
+  assert.equal(feature("HeadBucket", "x-amz-expected-bucket-owner"), "unsupported");
+  assert.equal(feature("CopyObject", "x-amz-source-expected-bucket-owner"), "unsupported");
+  assert.equal(feature("CopyObject", "x-amz-copy-source-if-match"), "supported");
+  assert.equal(feature("UploadPartCopy", "x-amz-copy-source-if-match"), "unsupported");
+  assert.equal(feature("PutObject", "If-Match"), "supported");
+  assert.equal(feature("PutObject", "x-amz-server-side-encryption-aws-kms-key-id"), "unsupported");
+  assert.equal(feature("PutObject", "x-amz-server-side-encryption-customer-key"), "supported");
+  assert.equal(feature("ListMultipartUploads", "max-uploads"), "supported");
+  assert.equal(operation("GetObjectTagging").providerSupport, "unsupported");
+  const constraints = supplemental.constraints.map(row => row.text).join("\n");
+  assert.ok(constraints.includes("`https://<ACCOUNT_ID>.r2.cloudflarestorage.com`"));
+  assert.ok(constraints.includes("region for an R2 bucket is `auto`"));
+  assert.ok(constraints.includes("`FULL_OBJECT` | `COMPOSITE`"));
+  assert.ok(constraints.includes("CRC-64/NVME (`CRC64NVME`) | ✅ | ❌"));
+  assert.ok(constraints.includes("the original part is lost and must be re-uploaded"));
+  assert.ok(constraints.includes("`412 PreconditionFailed`"));
+  assert.ok(constraints.includes("use `ListObjectsV2` instead"));
+});
+
+test("Cloudflare supplemental source refuses modified or unpinned documentary inputs", () => {
+  for (const bytes of [Buffer.from(""), Buffer.from("{}"), Buffer.from("| ✅ [ListBuckets](https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListBuckets.html) | |")]) {
+    assert.throws(() => supplementalInventory(bytes), /supplemental source digest mismatch/);
+  }
 });

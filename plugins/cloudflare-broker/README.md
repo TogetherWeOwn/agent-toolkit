@@ -6,7 +6,7 @@ This directory is an interface-first provider lane, **not an installable plugin 
 
 `coverage/source.json` pins the official Cloudflare OpenAPI file by revision, version and exact-byte SHA-256. `coverage/operations.jsonl` retains every method/path in that schema, including deprecated and SDK-ignored operations. It records original API areas, permission/token-group/security/plan annotations, parameter names, request/response-shape fingerprints, typed descriptor association, tier, authority route and implementation/review/enablement state. Shape fingerprints reference the pinned schema; they are not substitute input validators. No generated row is a callable tool or grant.
 
-The initial universe contains 3,777 operations on 2,352 paths across 599 API tags. **All credential entitlements are unknown.** Eight operations have typed metadata descriptors; zero are integrated tools, reviewed, enabled or package-complete. The other 3,769 operations remain explicitly missing and unclassified. Unknown tier/authority/scope, a deny-all placeholder or a descriptor alone never counts as implemented. Counts describe the pinned OpenAPI universe, not the actual credential intersection or every Cloudflare protocol. R2 S3-compatible and GraphQL surfaces are explicitly pending supplemental inventory; additional surfaces discovered during scope attestation must be added, not dropped.
+The initial universe contains 3,777 operations on 2,352 paths across 599 API tags. **All credential entitlements are unknown.** Eleven operations have typed metadata descriptors; zero are integrated tools, reviewed, enabled or package-complete. The other 3,766 operations remain explicitly missing and unclassified. Unknown tier/authority/scope, a deny-all placeholder or a descriptor alone never counts as implemented. Counts describe the pinned OpenAPI universe, not the actual credential intersection or every Cloudflare protocol. The supplemental `coverage/r2-s3.json` retains 73 documented S3 operations (26 provider-supported, 47 unsupported), feature restrictions, region/checksum tables and behavioral limitations at a separately pinned official docs revision. All 73 remain missing/unclassified/unreviewed/disabled in this package, with unknown credential compatibility and explicit owning prerequisites; an unsupported provider operation is not a completed adapter. S3 counts are separate from the REST OpenAPI counts. GraphQL's exact entitled dataset/field schema remains uninventoried; reference examples are not a schema. Additional surfaces discovered during scope attestation must be added, not dropped.
 
 Operator scope attestation must contain metadata only: credential reference/type, validity, accounts/zones/resource restrictions, permissions and plan entitlements. API annotations are requirements, not proof of entitlement. Do not retrieve raw credentials to perform inventory, mint a token, broaden access or bypass a 403.
 
@@ -23,6 +23,19 @@ cmp plugins/cloudflare-broker/coverage/operations.jsonl "$schema_dir/operations.
 
 The generator verifies the full source hash before JSON parsing and fails on unexpected source/descriptor identity. CI reproduces the entire map from the pinned official file. Run tests/builds through GitHub Actions; there is no need to install dependencies locally for this slice.
 
+The supplemental generator likewise verifies the exact public docs hash before parsing, checks operation identities/counts, retains line citations and feature markers, and fails rather than accepting an unparsed operation row. Reproduce its separate ledger with:
+
+```sh
+docs_dir=$(mktemp -d)
+curl -fsS --max-time 120 --max-filesize 1000000 \
+  https://raw.githubusercontent.com/cloudflare/cloudflare-docs/53ce9b502646fdc019b8184b29b9f1054939e1b6/src/content/docs/r2/api/s3/api.mdx \
+  -o "$docs_dir/r2-s3.mdx"
+node plugins/cloudflare-broker/scripts/supplemental.mjs "$docs_dir/r2-s3.mdx" "$docs_dir/r2-s3.json"
+cmp plugins/cloudflare-broker/coverage/r2-s3.json "$docs_dir/r2-s3.json"
+```
+
+Compatibility facts and documentation excerpts are attributed to [Cloudflare's S3 compatibility reference](https://github.com/cloudflare/cloudflare-docs/blob/53ce9b502646fdc019b8184b29b9f1054939e1b6/src/content/docs/r2/api/s3/api.mdx), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) ([source license](https://github.com/cloudflare/cloudflare-docs/blob/53ce9b502646fdc019b8184b29b9f1054939e1b6/LICENSE)), supplied as-is without warranty. The supplemental ledger extracts/restructures rows and normalizes table cells and prose whitespace without upgrading provider support to package support. No Cloudflare endorsement is implied. In particular, `x-amz-expected-bucket-owner` is unsupported, `UploadPartCopy` lacks copy-source conditional headers that `CopyObject` supports, and replacing a multipart part can lose the original on failure. These restrictions must constrain future adapters; no S3 client, signing or credential lookup is introduced here. Exact source pins describe a snapshot, not future provider behavior.
+
 ## First typed descriptors
 
 `src/metadata.ts` provides immutable request/projection descriptors for:
@@ -37,6 +50,11 @@ The generator verifies the full source hash before JSON parsing and fails on une
 | `cloudflare.d1.get` | `d1-get-database` | allowed database UUID | matching UUID only; request selects `fields=uuid` |
 | `cloudflare.r2.list` | `r2-list-buckets` | bounded per-page | allowed default-jurisdiction bucket names only |
 | `cloudflare.r2.get` | `r2-get-bucket` | allowed default-jurisdiction bucket name | matching name only |
+| `cloudflare.zones.get` | `zones-0-get` | none; trusted account and zone | matching zone ID only, after account-ID check |
+| `cloudflare.dns.list` | `dns-records-for-a-zone-list-dns-records` | bounded page/per-page; trusted zone | allowed record IDs only |
+| `cloudflare.dns.get` | `dns-records-for-a-zone-dns-record-details` | allowed DNS record ID; trusted zone | matching record ID only |
+
+`zoneMetadataDescriptors` captures the account/zone relationship and record allowlist from trusted context, never model arguments. The future core must validate that relationship before calling DNS endpoints; record responses may omit zone/account metadata and cannot establish provenance. Explicit foreign `zone_id` values refuse, zone-detail account IDs must match, and each record list item is filtered locally. These descriptors never expose DNS names, TXT/content/data, tags, comments, zone names/nameservers or plan details, and never mutate records. They do not constitute full DNS tools or native authority tests.
 
 D1 identifiers are canonical lowercase UUIDs, never database names or SQL. R2 descriptors cover only the default jurisdiction and the first bounded list page; non-default jurisdictions and cursor continuation are still incomplete. The future transport must not inject a jurisdiction header or change the captured account. Explicit non-default jurisdiction responses refuse. Storage projections omit database names/rows/schema, object keys/content, cursors, location and other descriptive payloads. Optional storage allowlists default empty and are copied at construction. These local checks do not establish native per-agent authority, cross-account response provenance or current credential scope.
 

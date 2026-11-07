@@ -38,3 +38,12 @@ jobs:
             -o "$schema_dir/openapi.json"
           node plugins/cloudflare-broker/scripts/inventory.mjs "$schema_dir/openapi.json" "$schema_dir/operations.jsonl"
           cmp plugins/cloudflare-broker/coverage/operations.jsonl "$schema_dir/operations.jsonl"
+      - name: Reproduce pinned supplemental R2 S3 compatibility inventory
+        run: |
+          set -euo pipefail
+          docs_dir=$(mktemp -d "$RUNNER_TEMP/cloudflare-docs.XXXXXX")
+          curl -fsS --max-time 120 --max-filesize 1000000 \
+            https://raw.githubusercontent.com/cloudflare/cloudflare-docs/53ce9b502646fdc019b8184b29b9f1054939e1b6/src/content/docs/r2/api/s3/api.mdx \
+            -o "$docs_dir/r2-s3.mdx"
+          node plugins/cloudflare-broker/scripts/supplemental.mjs "$docs_dir/r2-s3.mdx" "$docs_dir/r2-s3.json"
+          cmp plugins/cloudflare-broker/coverage/r2-s3.json "$docs_dir/r2-s3.json"

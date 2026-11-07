@@ -230,3 +230,75 @@ export function metadataDescriptors(scope: MetadataScope) {
   });
   return Object.freeze({ workersList, secretNames, hyperdriveList, hyperdriveGet, d1List, d1Get, r2List, r2Get });
 }
+
+export interface ZoneMetadataScope {
+  accountId: string;
+  zoneId: string;
+  revision: string;
+  dnsRecordIds: readonly string[];
+}
+const dnsRecord = closed({ dnsRecordId: resourceId });
+
+// Account/zone association must be established by the core before construction;
+// DNS responses without zone metadata cannot establish their own provenance.
+export function zoneMetadataDescriptors(scope: ZoneMetadataScope) {
+  const account = accountId.parse(scope.accountId);
+  const zone = resourceId.parse(scope.zoneId);
+  const revision = text(80, /^[A-Za-z0-9][A-Za-z0-9_.-]*$/).parse(scope.revision);
+  requireThat(Array.isArray(scope.dnsRecordIds) && scope.dnsRecordIds.length <= maxRows, "cap");
+  const records = new Set(scope.dnsRecordIds.map(value => resourceId.parse(value)));
+  const root = `/zones/${zone}`;
+  function prepared<A>(args: A, resource: string, path: string): PreparedMetadata<A> {
+    return Object.freeze({
+      arguments: args,
+      resource: Object.freeze({ id: `cloudflare:account:${account}:zone:${zone}${resource}`, revision }),
+      request: Object.freeze({ method: "GET", path, maxResponseBytes, timeoutMs: 10000, maxRequests: 1, redirects: "deny" }),
+    });
+  }
+  function recordScope(id: string) { requireThat(records.has(id), "scope"); }
+  function recordMetadata(row: Row): { id: string } {
+    const id = providerText(row.id, resourceId);
+    recordScope(id);
+    requireThat(row.zone_id === undefined || row.zone_id === zone, "scope");
+    return { id };
+  }
+  const zoneGet: MetadataDescriptor<ReturnType<typeof empty.parse>, { id: string }> = Object.freeze({
+    name: "cloudflare.zones.get", version: "1", tier: "read", providerOperationId: "zones-0-get",
+    prepare(raw: unknown) { return prepared(empty.parse(raw), "", root); },
+    project(raw: string) {
+      const row = object(envelope(raw).result);
+      requireThat(row.id === zone && object(row.account).id === account, "scope");
+      return bounded({ id: zone });
+    },
+  });
+  const dnsList: MetadataDescriptor<ReturnType<typeof page.parse>, PartialList<{ id: string }>> = Object.freeze({
+    name: "cloudflare.dns.list", version: "1", tier: "read", providerOperationId: "dns-records-for-a-zone-list-dns-records",
+    prepare(raw: unknown) {
+      const args = page.parse(raw);
+      return prepared(args, ":dns", `${root}/dns_records?page=${args.page}&per_page=${args.perPage}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof page.parse>>) {
+      const args = page.parse(input.arguments);
+      const result = rows(envelope(raw).result);
+      requireThat(result.length <= args.perPage, "cap");
+      const items = result.filter(row => typeof row.id === "string" && records.has(row.id)).map(recordMetadata);
+      return bounded({ items, complete: false as const });
+    },
+  });
+  const dnsGet: MetadataDescriptor<ReturnType<typeof dnsRecord.parse>, { id: string }> = Object.freeze({
+    name: "cloudflare.dns.get", version: "1", tier: "read", providerOperationId: "dns-records-for-a-zone-dns-record-details",
+    prepare(raw: unknown) {
+      const args = dnsRecord.parse(raw);
+      recordScope(args.dnsRecordId);
+      return prepared(args, `:dns:${args.dnsRecordId}`, `${root}/dns_records/${args.dnsRecordId}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof dnsRecord.parse>>) {
+      const args = dnsRecord.parse(input.arguments);
+      recordScope(args.dnsRecordId);
+      const row = object(envelope(raw).result);
+      requireThat(row.id === args.dnsRecordId, "scope");
+      return bounded(recordMetadata(row));
+    },
+  });
+  return Object.freeze({ zoneGet, dnsList, dnsGet });
+}
