@@ -344,7 +344,8 @@ test("Cloudflare deletion plans are exact, bounded, reserved and never claim pro
     const prepared = descriptor.prepare(args);
     assert.equal(descriptor.tier, "reserved");
     assert.deepEqual(Object.keys(descriptor).sort(), ["name", "prepare", "providerOperationId", "tier", "version"]);
-    assert.deepEqual(prepared.arguments, args);
+    assert.equal(Object.getPrototypeOf(prepared.arguments), null);
+    assert.deepEqual({ ...prepared.arguments }, args);
     assert.deepEqual(prepared.resource, { id: resource, revision: "resource-1" });
     assert.deepEqual(prepared.request, { method: "DELETE", path, maxResponseBytes: 131072, timeoutMs: 10000, maxRequests: 1, redirects: "deny", retries: "never" });
     assert.equal(prepared.plan.kind, "validated-local-plan");
