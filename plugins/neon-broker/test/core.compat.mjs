@@ -112,14 +112,15 @@ test('project-only policy cannot authorize collection reads or child endpoints',
 });
 
 test('branch/endpoint resource binding and revocation are revalidated after credential resolution', async () => {
-  for (const mode of ['resource', 'policy']) {
+  for (const mode of ['resource', 'policy-revoked', 'policy-revision']) {
     const [name, args, raw] = cases[4];
     const f = brokerFixture(name, args, raw);
     const original = f.common.dependencies.credentials.resolve;
     f.common.dependencies.credentials.resolve = async (...parameters) => {
       const lease = await original(...parameters);
       if (mode === 'resource') f.common.dependencies.host.revalidate = async () => false;
-      else f.common.vector.policy.agents = [];
+      else if (mode === 'policy-revoked') f.common.vector.policy.agents = [];
+      else f.common.vector.policy.revision = 'policy-v2';
       return lease;
     };
     // Broker snapshots operation descriptors, not the implementations of trusted
@@ -127,7 +128,8 @@ test('branch/endpoint resource binding and revocation are revalidated after cred
     f.broker = f.common.broker();
     const result = await f.call();
     assert.equal(result.ok, false);
-    assert.equal(result.code, mode === 'resource' ? 'RESOURCE_CHANGED' : 'POLICY_CHANGED');
+    assert.equal(result.code, mode === 'resource' ? 'RESOURCE_CHANGED' :
+      mode === 'policy-revoked' ? 'POLICY_DENIED' : 'POLICY_CHANGED');
     assert.equal(f.provider.requests.length, 0);
     assert.equal(f.common.calls.close, 1);
   }

@@ -78,10 +78,18 @@ export function createNeonMetadataOperations(scope: NeonMetadataScope, transport
   const root = `neon/projects/${projectId}`;
 
   function parse(name: MetadataOperation, raw: unknown): { project_id: string; branch_id?: string; endpoint_id?: string } {
-    const args = name === "getProjectEndpoint" ? endpointArguments.parse(raw) :
-      name === "getProjectBranch" || name === "listProjectBranchEndpoints" ? branchArguments.parse(raw) : projectArguments.parse(raw);
-    if (args.project_id !== projectId || ("branch_id" in args && !branches.has(args.branch_id)) ||
-      ("endpoint_id" in args && !endpoints.has(args.endpoint_id))) throw Error("INVALID_ARGUMENTS");
+    if (name === "getProjectEndpoint") {
+      const args = endpointArguments.parse(raw);
+      if (args.project_id !== projectId || !endpoints.has(args.endpoint_id)) throw Error("INVALID_ARGUMENTS");
+      return args;
+    }
+    if (name === "getProjectBranch" || name === "listProjectBranchEndpoints") {
+      const args = branchArguments.parse(raw);
+      if (args.project_id !== projectId || !branches.has(args.branch_id)) throw Error("INVALID_ARGUMENTS");
+      return args;
+    }
+    const args = projectArguments.parse(raw);
+    if (args.project_id !== projectId) throw Error("INVALID_ARGUMENTS");
     return args;
   }
   function branch(raw: unknown): Json {

@@ -73,7 +73,8 @@ class PolicyFiles(unittest.TestCase):
         workflow = (ROOT / ".github/workflows/ci.yml").read_text()
         self.assertIn("uses: ./.github/workflows/supply-chain-policy.yml", workflow)
         aggregate = workflow.split("  ci-ok:\n", 1)[1]
-        self.assertIn("needs: [changes, full_run, lint, test, native-policy]", aggregate)
+        needs = aggregate.split("    needs: [", 1)[1].split("]", 1)[0].split(", ")
+        self.assertTrue({"changes", "full_run", "lint", "test", "neon-compat", "native-policy"}.issubset(needs))
         source = aggregate.split("          python3 -I - <<'PY'\n", 1)[1].split("          PY", 1)[0]
         source = "\n".join(line[10:] for line in source.splitlines())
         for result in ["failure", "cancelled", "success"]:
