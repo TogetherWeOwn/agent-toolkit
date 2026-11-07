@@ -142,7 +142,7 @@ test('complete official map distinguishes mapped, source-adapted, reviewed and e
       await readFile(new URL('../' + row.adapter, import.meta.url));
     } else {
       assert.equal(row.implementation, 'missing');
-      assert.equal(row.tier, 'unresolved');
+      assert.equal(row.tier, row.policyCandidate ? 'reserved' : 'unresolved');
       assert.equal(row.test, null);
     }
   }

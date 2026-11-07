@@ -42,10 +42,11 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-Only the fourteen adapter rows have a provisional read tier. All others say
-`unresolved`; the intended tools are not registered and their policy routes are
-not approved. GET alone is not proof of harmless, non-waking or non-billable
-behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
+Fourteen adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 261
+rows stay `unresolved`. None of these classifications is runtime policy or
+approved authority. The intended tools are not registered. GET alone is not proof
+of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
 backups/restore, schema/deploy, topology, maintenance and every other official
 area remain in the map even when access or implementation is missing.
 
@@ -119,6 +120,48 @@ revocation, session termination, or timeout/cancellation closure. A query hash i
 provenance, not permission. SQL can wake compute; the lifecycle declaration
 requires an explicitly authorized bounded window and forbids silent API fallback.
 No connector or replacement broker is introduced.
+
+## Local mutation-plan artifacts — not executors
+
+`src/mutation-plans.ts` supplies three pure, bounded previews. They are **not API
+adapters**, do not consume authority and do not increase the 14-adapter count.
+Each artifact labels itself `validated-local-plan-not-provider-dry-run`, with
+execution not implemented, remote preconditions not verified and provider dry-run
+not performed. No network executor, output projector or secret placement exists.
+
+| Operation | Bounded plan | Candidate mandatory deciders |
+| --- | --- | --- |
+| `delete_branch` | One configured branch; explicit `delete_descendants=false`; refuses a deletion-protected snapshot | Release Manager for destructive data change |
+| `create_backup` | Named non-emergency backup; explicit hourly retention 1–24 | Release Manager and owner Money decision; no price/budget assumption |
+| `disable_safe_migrations` | Exact configured branch; requires the snapshot to have safe migrations enabled | Release Manager and owner Security decision |
+
+The broker-owned target includes organization/database/branch names, immutable
+branch ID, a trusted binding/classification revision digest, production and safety
+flags. This is a required **input shape**, not proof of an existing host binding or
+a provider ETag. Plans snapshot the target/arguments; later caller mutation cannot
+retarget the artifact. All request paths, methods, bodies and authority labels are
+fixed by the specific builder. Caller approval, credential, SQL, URL, environment,
+descendant-delete and emergency-backup fields are rejected. Production never
+removes required deciders. A preview's requested name is not remote identity:
+before any future execution, the host/provider must revalidate current immutable
+ID/name/revision, protection, environment and plan, and enforce remote fencing.
+Missing native preconditions or fencing remain an owning prerequisite, never
+permission to use a stale preview.
+
+The operation map separately records sixteen unreviewed policy candidates: the
+three above, SSO/directory enforcement removal, billing payment-method changes,
+and nine credential creation/refresh/renewal/reset operations (including signed
+log access). These require their actual decider; provider permissions do not
+substitute. Conditional production/data/schema/deploy, new-spend, security-weakening
+and approved host/secret-placement obligations are conjunctive, never alternatives.
+The candidates only document requirements; native routing, expiry, exact-target
+binding, atomic consumption, replay/concurrent-use refusal and approved placement
+are **not implemented or tested as authority enforcement here**. Credential routes
+remain incomplete until a broker-only sink and reconciliation are accepted. The
+other 261 tier classifications are unresolved, not automatically harmless reads or
+ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
+implementation/review/enablement evidence. Full optional capability remains missing
+in these bounded subsets, including recursive deletion and extended backup options.
 
 ## Required common interface
 
