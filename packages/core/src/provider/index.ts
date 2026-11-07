@@ -185,13 +185,13 @@ export function createProviderBroker(dependencies: ProviderDependencies) {
         insist(claimed, "REPLAY_CONFLICT");
         failure = "CREDENTIAL_UNAVAILABLE";
         credential = await d.credentials.resolve(target);
-        insist(typeof credential.value === "string" && credential.value.length > 0 && credential.value.length <= 16384 &&
+        insist(typeof credential.value === "string" && Buffer.byteLength(credential.value) >= 5 && credential.value.length <= 16384 &&
           Array.isArray(credential.redactions) && credential.redactions.length <= 64 &&
           Reflect.ownKeys(credential.redactions).length === credential.redactions.length + 1, "CREDENTIAL_UNAVAILABLE");
         for (let i = 0; i < credential.redactions.length; ++i) {
           const item = Object.getOwnPropertyDescriptor(credential.redactions, String(i));
           insist(item?.enumerable && Object.hasOwn(item, "value") && typeof item.value === "string" &&
-            item.value.length > 0 && item.value.length <= 16384, "CREDENTIAL_UNAVAILABLE");
+            Buffer.byteLength(item.value) >= 5 && item.value.length <= 16384, "CREDENTIAL_UNAVAILABLE");
         }
         await revalidate();
         if (evidence !== null) {

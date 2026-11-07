@@ -88,8 +88,11 @@ never feed secrets into audit target material.
 
 `credentials.resolve(target)` occurs only on the authorized path. Return a
 `CredentialLease` with broker-only value, every derived credential in `redactions`,
-and idempotent `close` that revokes/verifies attenuation where supported. Without
-attenuation, document the broad credential's residual process boundary. Core
+and idempotent `close` that revokes/verifies attenuation where supported. Every
+broad/derived value must contain at least five UTF-8 bytes so the common base64
+refusal has a stable core at every alignment; shorter values refuse the lease
+before execution with `CREDENTIAL_UNAVAILABLE`. This is not an entropy guarantee.
+Without attenuation, document the broad credential's residual process boundary. Core
 never returns the credential or raw upstream exceptions and never logs raw args,
 provider responses, headers or errors. No managed-runtime zeroization claim.
 

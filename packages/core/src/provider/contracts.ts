@@ -84,8 +84,11 @@ export interface ProviderAuditRecord {
   readonly targetHash: string | null;
 }
 export interface CredentialLease {
+  /** At least five UTF-8 bytes, allowing an embedded base64 core at every alignment. */
   readonly value: string;
-  /** Include every internal derived credential; common encodings are refused too. */
+  /** Include every internal derived credential (also at least five UTF-8 bytes);
+   * common encodings are refused too. Short values refuse the lease before execution.
+   */
   readonly redactions: readonly string[];
   /** Revoke attenuated credentials and verify cleanup; never throw raw diagnostics. */
   close(): Promise<void>;

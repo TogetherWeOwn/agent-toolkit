@@ -122,6 +122,38 @@ for (const malformed of [() => new Array(1), () => Object.assign(new Array(1), {
   });
 }
 
+for (const secret of ['a', 'ab', 'abc', 'abcd', '😀']) {
+  for (const derived of [false, true]) {
+    test(`short ${derived ? 'derived' : 'broad'} credential is refused before effects: ${Buffer.byteLength(secret)} bytes`, async () => {
+      const f = providerFixture({ operation: { tier: 'write' } });
+      f.dependencies.credentials.resolve = async () => {
+        f.calls.secret++;
+        return { value: derived ? credentialCanary : secret, redactions: derived ? [secret] : [],
+          async close() { f.calls.close++; } };
+      };
+      assert.equal((await call(f)).code, 'CREDENTIAL_UNAVAILABLE');
+      assert.equal(f.calls.upstream, 0);
+      assert.equal(f.calls.close, 1);
+      assert.equal([...f.journal.values()][0].outcome, 'refused');
+    });
+  }
+}
+for (const prefix of ['', 'x', 'xx']) {
+  test(`minimum five-byte credential embedded reflection is refused: ${prefix.length}`, async () => {
+    const secret = 'abcde';
+    const f = providerFixture({ operation: { project() {
+      return { encoded: Buffer.from(prefix + secret + ':suffix').toString('base64') };
+    } } });
+    f.dependencies.credentials.resolve = async () => ({ value: secret, redactions: [], async close() {} });
+    assert.equal((await call(f)).code, 'OUTPUT_REFUSED');
+  });
+}
+test('minimum five-byte credential permits safe projected output', async () => {
+  const f = providerFixture({ operation: { async execute() { return { status: 'ready' }; } } });
+  f.dependencies.credentials.resolve = async () => ({ value: 'abcde', redactions: [], async close() {} });
+  assert.deepEqual((await call(f)).value, { status: 'ready' });
+});
+
 for (const encoding of ['base64', 'base64url']) {
   for (const prefix of ['', 'x', 'xx', 'prefix:', 'x-access-token:']) {
     for (const suffix of ['', ':suffix']) {
