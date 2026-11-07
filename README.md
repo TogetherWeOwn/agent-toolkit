@@ -15,6 +15,7 @@ A real tool keeps broad and internal-derived credentials in its trusted broker p
 - [CATALOG.md](CATALOG.md): existing brokers, exposure models and evidence-based candidate demand.
 - [ADAPTER-CONTRACTS.md](ADAPTER-CONTRACTS.md): what production state, approval, audit, secrets and cleanup adapters must actually guarantee.
 - [Provider broker v1](packages/core/PROVIDER-V1.md): additive `providerV1` execution contract, exact native targets, replay/audit obligations, operation maps and shared synthetic fixtures. [Threat model and acceptance status](packages/core/PROVIDER-THREAT-MODEL.md); not an installed/accepted provider.
+- [Native workspace selection](docs/native-workspace-selection.md): native-first capability boundary, canonical task identity, preservation limits and acceptance runbook; not an installed workspace broker.
 - [Reference threat model](packages/core/testing/THREAT-MODEL.md) and [refusal/evidence matrix](packages/core/testing/ACCEPTANCE.md).
 
 Share core code, not credentials or runtime authority: each provider worker loads its own pinned core version. Split sharply different production/test trust levels and expose many small single-purpose tools with their own read/write/destructive classifications, threat-model sections and refusal tests—not a provider action multiplexer. Verify actual worker, secret and native tool governance isolation; process separation is not an OS sandbox. Existing external plugins stay in their own repositories. Packages are private and no npm publishing workflow is configured.
