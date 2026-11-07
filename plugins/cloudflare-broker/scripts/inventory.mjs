@@ -16,6 +16,8 @@ const descriptors = new Map([
   ["GET /accounts/{account_id}/workers/scripts/{script_name}/secrets", "cloudflare.workers.secret_names"],
   ["GET /accounts/{account_id}/workers/scripts/{script_name}/deployments", "cloudflare.workers.deployments.list"],
   ["GET /accounts/{account_id}/workers/scripts/{script_name}/deployments/{deployment_id}", "cloudflare.workers.deployments.get"],
+  ["GET /accounts/{account_id}/workers/scripts/{script_name}/versions", "cloudflare.workers.versions.list"],
+  ["GET /accounts/{account_id}/workers/scripts/{script_name}/versions/{version_id}", "cloudflare.workers.versions.get"],
   ["GET /accounts/{account_id}/hyperdrive/configs", "cloudflare.hyperdrive.list"],
   ["GET /accounts/{account_id}/hyperdrive/configs/{hyperdrive_id}", "cloudflare.hyperdrive.get"],
   ["GET /accounts/{account_id}/d1/database", "cloudflare.d1.list"],

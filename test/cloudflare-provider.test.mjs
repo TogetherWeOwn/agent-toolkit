@@ -5,6 +5,7 @@ import test from "node:test";
 import { metadataDescriptors, zoneMetadataDescriptors } from "../dist/plugins/cloudflare-broker/src/metadata.js";
 import { deletionPlanDescriptors } from "../dist/plugins/cloudflare-broker/src/deletion-plans.js";
 import { inventory, source } from "../plugins/cloudflare-broker/scripts/inventory.mjs";
+import { familySummary } from "../plugins/cloudflare-broker/scripts/families.mjs";
 import { supplementalInventory, supplementalSource } from "../plugins/cloudflare-broker/scripts/supplemental.mjs";
 
 const account = "a".repeat(32);
@@ -12,7 +13,7 @@ const own = "b".repeat(32);
 const other = "c".repeat(32);
 const db = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
 const otherDb = "cccccccc-cccc-cccc-cccc-cccccccccccc";
-const scope = { accountId: account, revision: "policy-1", scriptNames: ["safe-worker"], hyperdriveIds: [own], databaseIds: [db], defaultBucketNames: ["safe-bucket"], workerDeployments: [{ scriptName: "safe-worker", deploymentIds: [db] }] };
+const scope = { accountId: account, revision: "policy-1", scriptNames: ["safe-worker"], hyperdriveIds: [own], databaseIds: [db], defaultBucketNames: ["safe-bucket"], workerDeployments: [{ scriptName: "safe-worker", deploymentIds: [db] }], workerVersions: [{ scriptName: "safe-worker", versionIds: [db] }] };
 const descriptors = metadataDescriptors(scope);
 const zone = "d".repeat(32);
 const zoneScope = { accountId: account, zoneId: zone, revision: "policy-1", dnsRecordIds: [own] };
@@ -338,6 +339,75 @@ test("Cloudflare deployment metadata enforces pagination, bytes and fixed error 
   for (const result of [{}, { deployments: null }]) refuses(() => descriptors.deploymentsList.project(success(result), list), "cap");
 });
 
+test("Cloudflare version metadata binds script and version while pinning bounded pagination", () => {
+  const list = descriptors.versionsList.prepare({ scriptName: "safe-worker", page: 2, perPage: 10 });
+  assert.equal(list.request.path, `/accounts/${account}/workers/scripts/safe-worker/versions?deployable=false&page=2&per_page=10`);
+  assert.equal(list.resource.id, `cloudflare:account:${account}:worker:safe-worker:versions`);
+  const get = descriptors.versionGet.prepare({ scriptName: "safe-worker", versionId: db });
+  assert.equal(get.request.path, `/accounts/${account}/workers/scripts/safe-worker/versions/${db}`);
+  assert.equal(get.resource.id, `cloudflare:account:${account}:worker:safe-worker:version:${db}`);
+  assert.equal(get.resource.revision, "policy-1");
+  for (const [descriptor, args] of [[descriptors.versionsList, { scriptName: "safe-worker", page: 1, perPage: 10 }], [descriptors.versionGet, { scriptName: "safe-worker", versionId: db }]]) {
+    for (const key of ["accountId", "agentId", "deployable", "approval", "headers", "url", "credential", "resources", "source"]) refuses(() => descriptor.prepare({ ...args, [key]: "forged" }), "schema");
+    const input = descriptor.prepare(args);
+    for (const value of [descriptor, input, input.arguments, input.resource, input.request]) assert.ok(Object.isFrozen(value));
+    assert.equal(input.request.method, "GET");
+    assert.equal(input.request.maxRequests, 1);
+    assert.equal(input.request.redirects, "deny");
+  }
+  refuses(() => descriptors.versionsList.prepare({ scriptName: "other-worker", page: 1, perPage: 10 }), "scope");
+  refuses(() => descriptors.versionGet.prepare({ scriptName: "safe-worker", versionId: otherDb }), "scope");
+  for (const versionId of [db.toUpperCase(), own, "../version", `${db}?deployable=true`]) refuses(() => descriptors.versionGet.prepare({ scriptName: "safe-worker", versionId }), "schema");
+});
+
+test("Cloudflare version projections omit bindings, runtime, source and author identity", () => {
+  const canary = "never-return-private-version-data";
+  const row = { id: db, metadata: { author_email: canary, author_id: canary, source: canary }, resources: { bindings: [{ type: "plain_text", text: canary }], script: { etag: canary }, script_runtime: { exports: canary } }, source: canary };
+  const getInput = descriptors.versionGet.prepare({ scriptName: "safe-worker", versionId: db });
+  const get = descriptors.versionGet.project(success(row), getInput);
+  assert.deepEqual(get, { id: db });
+  const listInput = descriptors.versionsList.prepare({ scriptName: "safe-worker", page: 1, perPage: 10 });
+  const list = descriptors.versionsList.project(success({ items: [row, { ...row, id: otherDb }] }), listInput);
+  assert.deepEqual(list, { items: [get], complete: false });
+  assert.ok(!JSON.stringify([get, list]).includes(canary));
+  refuses(() => descriptors.versionGet.project(success({ ...row, id: otherDb }), getInput), "scope");
+});
+
+test("Cloudflare version allowlists are copied, script-specific and separate from deployments", () => {
+  const input = { ...scope, scriptNames: ["safe-worker", "second-worker"], workerVersions: [{ scriptName: "safe-worker", versionIds: [db] }, { scriptName: "second-worker", versionIds: [otherDb] }] };
+  const snapshot = metadataDescriptors(input);
+  input.workerVersions[0].versionIds.push(otherDb);
+  input.workerVersions[1].versionIds.push(db);
+  input.workerVersions[0].scriptName = "second-worker";
+  input.accountId = other;
+  refuses(() => snapshot.versionGet.prepare({ scriptName: "second-worker", versionId: db }), "scope");
+  refuses(() => snapshot.versionGet.prepare({ scriptName: "safe-worker", versionId: otherDb }), "scope");
+  assert.equal(snapshot.versionGet.prepare({ scriptName: "safe-worker", versionId: db }).request.path, `/accounts/${account}/workers/scripts/safe-worker/versions/${db}`);
+  assert.deepEqual(snapshot.versionsList.project(success({ items: [{ id: db }, { id: otherDb }] }), snapshot.versionsList.prepare({ scriptName: "second-worker", page: 1, perPage: 10 })), { items: [{ id: otherDb }], complete: false });
+  const empty = metadataDescriptors({ ...scope, workerVersions: undefined });
+  refuses(() => empty.versionGet.prepare({ scriptName: "safe-worker", versionId: db }), "scope");
+  assert.deepEqual(empty.versionsList.project(success({ items: [{ id: db }] }), empty.versionsList.prepare({ scriptName: "safe-worker", page: 1, perPage: 10 })), { items: [], complete: false });
+  refuses(() => metadataDescriptors({ ...scope, workerVersions: [{ scriptName: "other-worker", versionIds: [db] }] }), "scope");
+  refuses(() => metadataDescriptors({ ...scope, workerVersions: [scope.workerVersions[0], scope.workerVersions[0]] }), "schema");
+  refuses(() => metadataDescriptors({ ...scope, workerVersions: [{ scriptName: "safe-worker", versionIds: Array(101).fill(db) }] }), "cap");
+  refuses(() => metadataDescriptors({ ...scope, workerVersions: [{ scriptName: "safe-worker", versionIds: ["invalid"] }] }), "schema");
+});
+
+test("Cloudflare version metadata refuses unbounded pagination and malformed provider responses", () => {
+  for (const page of [0, 1001, 1.5, "1"]) refuses(() => descriptors.versionsList.prepare({ scriptName: "safe-worker", page, perPage: 10 }), "schema");
+  for (const perPage of [0, 101, 1.5, "10"]) refuses(() => descriptors.versionsList.prepare({ scriptName: "safe-worker", page: 1, perPage }), "schema");
+  const list = descriptors.versionsList.prepare({ scriptName: "safe-worker", page: 1, perPage: 1 });
+  refuses(() => descriptors.versionsList.project(success({ items: [{ id: db }, { id: otherDb }] }), list), "cap");
+  refuses(() => descriptors.versionsList.project(success({ items: Array(101).fill({ id: db }) }), list), "cap");
+  for (const result of [[], { items: [null] }]) refuses(() => descriptors.versionsList.project(success(result), list), "upstream");
+  for (const result of [{}, { items: null }]) refuses(() => descriptors.versionsList.project(success(result), list), "cap");
+  for (const [descriptor, args] of [[descriptors.versionsList, { scriptName: "safe-worker", page: 1, perPage: 10 }], [descriptors.versionGet, { scriptName: "safe-worker", versionId: db }]]) {
+    const input = descriptor.prepare(args);
+    refuses(() => descriptor.project("x".repeat(131073), input), "cap");
+    for (const raw of ["null", "not-json", JSON.stringify({ success: false, errors: [{ message: "private-value" }], result: {} })]) refuses(() => descriptor.project(raw, input), "upstream");
+  }
+});
+
 test("Cloudflare deletion plans are exact, bounded, reserved and never claim provider dry-run", () => {
   for (const [name, args, path, resource] of deletionCases) {
     const descriptor = deletionDescriptors[name];
@@ -446,14 +516,54 @@ test("Cloudflare full schema inventory is pinned, explicit about holes, and cons
       }
     }
   }
-  assert.equal(operations.filter(row => row.typedTool !== null).length, 18);
+  assert.equal(operations.filter(row => row.typedTool !== null).length, 20);
   assert.equal(operations.filter(row => row.tier === "reserved").length, 5);
-  assert.equal(operations.filter(row => row.tier === "read").length, 13);
+  assert.equal(operations.filter(row => row.tier === "read").length, 15);
   assert.equal(manifest.counts.descriptors, Object.keys(allDescriptors).length);
   assert.equal(manifest.credentialScope.status, "operation-entitlements-unresolved");
   assert.equal(manifest.complete, false);
   assert.deepEqual(manifest.supplementalSurfaces.map(surface => surface.status), ["documentary-inventory-only", "not-inventoried"]);
   assert.throws(() => inventory(Buffer.from("{}")), /schema source digest mismatch/);
+});
+
+test("Cloudflare family workload summary assigns every operation once without upgrading coverage", async () => {
+  const bytes = await readFile(new URL("../plugins/cloudflare-broker/coverage/operations.jsonl", import.meta.url));
+  const saved = JSON.parse(await readFile(new URL("../plugins/cloudflare-broker/coverage/families.json", import.meta.url)));
+  const manifest = JSON.parse(await readFile(new URL("../plugins/cloudflare-broker/coverage/source.json", import.meta.url)));
+  assert.deepEqual(saved, familySummary(bytes));
+  assert.equal(saved.inventorySha256, manifest.inventorySha256);
+  assert.equal(saved.grouping, "first-provider-tag-exclusive");
+  assert.deepEqual(saved.counts, { operations: 3777, apiTags: 599, primaryFamilies: 596, multiTaggedOperations: 6 });
+  const rows = bytes.toString("utf8").trimEnd().split("\n").map(line => JSON.parse(line));
+  assert.equal(new Set(saved.families.map(family => family.area)).size, 596);
+  assert.equal(saved.families.reduce((sum, family) => sum + family.operations, 0), 3777);
+  for (const family of saved.families) {
+    const members = rows.filter(row => row.areas[0] === family.area);
+    assert.equal(family.operations, members.length);
+    assert.equal(Object.values(family.methods).reduce((sum, count) => sum + count, 0), members.length);
+    assert.equal(family.coverage.metadataDescriptors, members.filter(row => row.implementation === "descriptor-only").length);
+    assert.equal(family.coverage.planDescriptors, members.filter(row => row.implementation === "plan-descriptor-only").length);
+    assert.equal(family.coverage.missing, members.filter(row => row.implementation === "missing").length);
+    assert.equal(family.coverage.unclassified, members.filter(row => row.tier === "unclassified").length);
+    assert.equal(family.coverage.unknownEntitlement, members.length);
+    for (const key of ["integrated", "reviewed", "enabled"]) assert.equal(family.coverage[key], 0);
+    assert.equal(family.coverage.metadataDescriptors + family.coverage.planDescriptors + family.coverage.missing, members.length);
+  }
+  for (const limitation of ["method-is-not-policy-tier", "not-effort-or-delivery-estimate", "not-credential-intersection", "supplemental-protocols-excluded"]) assert.ok(saved.limitations.includes(limitation));
+});
+
+test("Cloudflare family workload summary refuses duplicate identities, missing areas and unsupported states", () => {
+  const base = { key: "GET /example", areas: ["first", "second"], resourceParameters: [], implementation: "missing", tier: "unclassified", credentialScope: "unknown", review: "not-reviewed", enablement: "disabled", requestShapeSha256: "a".repeat(64), responseShapeSha256: "b".repeat(64) };
+  const encode = rows => Buffer.from(rows.map(row => JSON.stringify(row)).join("\n") + "\n");
+  const summary = familySummary(encode([base, { ...base, key: "POST /example", areas: ["second"] }]));
+  assert.equal(summary.counts.operations, 2);
+  assert.equal(summary.counts.multiTaggedOperations, 1);
+  assert.deepEqual(summary.families[0].secondaryAreas, ["second"]);
+  assert.equal(summary.families.reduce((sum, family) => sum + family.operations, 0), 2);
+  assert.throws(() => familySummary(encode([base, base])), /invalid operation identity/);
+  for (const areas of [[], null, [""], [1]]) assert.throws(() => familySummary(encode([{ ...base, areas }])), /missing API area/);
+  for (const change of [{ implementation: "implemented" }, { tier: "write" }, { review: "reviewed" }, { enablement: "enabled" }, { credentialScope: "allowed" }]) assert.throws(() => familySummary(encode([{ ...base, ...change }])), /unsupported coverage state/);
+  assert.throws(() => familySummary(encode([{ ...base, requestShapeSha256: "invalid" }])), /invalid shape fingerprint/);
 });
 
 test("Cloudflare supplemental S3 inventory retains every documented operation without claiming delivery", async () => {

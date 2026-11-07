@@ -38,6 +38,8 @@ jobs:
             -o "$schema_dir/openapi.json"
           node plugins/cloudflare-broker/scripts/inventory.mjs "$schema_dir/openapi.json" "$schema_dir/operations.jsonl"
           cmp plugins/cloudflare-broker/coverage/operations.jsonl "$schema_dir/operations.jsonl"
+          node plugins/cloudflare-broker/scripts/families.mjs "$schema_dir/operations.jsonl" "$schema_dir/families.json"
+          cmp plugins/cloudflare-broker/coverage/families.json "$schema_dir/families.json"
       - name: Reproduce pinned supplemental R2 S3 compatibility inventory
         run: |
           set -euo pipefail

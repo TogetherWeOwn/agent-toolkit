@@ -17,6 +17,9 @@ const bucketPage = closed({ perPage: integer(1, 100) });
 const deploymentId = databaseId;
 const deployment = closed({ scriptName, deploymentId });
 const deploymentPage = closed({ scriptName, page: integer(1, 1000), perPage: integer(1, 100) });
+const versionId = databaseId;
+const workerVersion = closed({ scriptName, versionId });
+const versionPage = closed({ scriptName, page: integer(1, 1000), perPage: integer(1, 100) });
 const maxResponseBytes = 131072;
 const maxOutputBytes = 32768;
 const maxRows = 100;
@@ -29,6 +32,7 @@ export interface MetadataScope {
   databaseIds?: readonly string[];
   defaultBucketNames?: readonly string[];
   workerDeployments?: readonly { scriptName: string; deploymentIds: readonly string[] }[];
+  workerVersions?: readonly { scriptName: string; versionIds: readonly string[] }[];
 }
 export interface MetadataRequest {
   readonly method: "GET";
@@ -102,6 +106,16 @@ export function metadataDescriptors(scope: MetadataScope) {
     requireThat(!deployments.has(name), "schema");
     requireThat(Array.isArray(entry.deploymentIds) && entry.deploymentIds.length <= maxRows, "cap");
     deployments.set(name, new Set<string>(entry.deploymentIds.map((value: unknown) => deploymentId.parse(value))));
+  }
+  const workerVersions = scope.workerVersions ?? [];
+  requireThat(Array.isArray(workerVersions) && workerVersions.length <= maxRows, "cap");
+  const versions = new Map<string, Set<string>>();
+  for (const entry of workerVersions) {
+    const name = scriptName.parse(entry.scriptName);
+    requireThat(scripts.has(name), "scope");
+    requireThat(!versions.has(name), "schema");
+    requireThat(Array.isArray(entry.versionIds) && entry.versionIds.length <= maxRows, "cap");
+    versions.set(name, new Set<string>(entry.versionIds.map((value: unknown) => versionId.parse(value))));
   }
   const root = `/accounts/${account}`;
   function prepared<A>(args: A, resource: string, path: string): PreparedMetadata<A> {
@@ -277,7 +291,42 @@ export function metadataDescriptors(scope: MetadataScope) {
       return bounded({ id: providerText(row.id, deploymentId) });
     },
   });
-  return Object.freeze({ workersList, secretNames, hyperdriveList, hyperdriveGet, d1List, d1Get, r2List, r2Get, deploymentsList, deploymentGet });
+  function versionScope(name: string, id: string) {
+    scriptScope(name);
+    requireThat(versions.get(name)?.has(id) === true, "scope");
+  }
+  const versionsList: MetadataDescriptor<ReturnType<typeof versionPage.parse>, PartialList<{ id: string }>> = Object.freeze({
+    name: "cloudflare.workers.versions.list", version: "1", tier: "read", providerOperationId: "worker-versions-list-versions",
+    prepare(raw: unknown) {
+      const args = versionPage.parse(raw);
+      scriptScope(args.scriptName);
+      return prepared(args, `worker:${args.scriptName}:versions`, `${root}/workers/scripts/${encodeURIComponent(args.scriptName)}/versions?deployable=false&page=${args.page}&per_page=${args.perPage}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof versionPage.parse>>) {
+      const args = versionPage.parse(input.arguments);
+      scriptScope(args.scriptName);
+      const result = rows(object(envelope(raw).result).items);
+      requireThat(result.length <= args.perPage, "cap");
+      const items = result.filter(row => typeof row.id === "string" && versions.get(args.scriptName)?.has(row.id)).map(row => ({ id: providerText(row.id, versionId) }));
+      return bounded({ items, complete: false as const });
+    },
+  });
+  const versionGet: MetadataDescriptor<ReturnType<typeof workerVersion.parse>, { id: string }> = Object.freeze({
+    name: "cloudflare.workers.versions.get", version: "1", tier: "read", providerOperationId: "worker-versions-get-version-detail",
+    prepare(raw: unknown) {
+      const args = workerVersion.parse(raw);
+      versionScope(args.scriptName, args.versionId);
+      return prepared(args, `worker:${args.scriptName}:version:${args.versionId}`, `${root}/workers/scripts/${encodeURIComponent(args.scriptName)}/versions/${args.versionId}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof workerVersion.parse>>) {
+      const args = workerVersion.parse(input.arguments);
+      versionScope(args.scriptName, args.versionId);
+      const row = object(envelope(raw).result);
+      requireThat(row.id === args.versionId, "scope");
+      return bounded({ id: providerText(row.id, versionId) });
+    },
+  });
+  return Object.freeze({ workersList, secretNames, hyperdriveList, hyperdriveGet, d1List, d1Get, r2List, r2Get, deploymentsList, deploymentGet, versionsList, versionGet });
 }
 
 export interface ZoneMetadataScope {
