@@ -1,0 +1,40 @@
+name: Cloudflare provider contracts
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-contracts-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  cloudflare-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: node --test --test-timeout=30000 test/cloudflare-provider.test.mjs
+      - name: Reproduce complete pinned API operation inventory
+        run: |
+          set -euo pipefail
+          schema_dir=$(mktemp -d "$RUNNER_TEMP/cloudflare-schema.XXXXXX")
+          curl -fsS --max-time 120 --max-filesize 60000000 \
+            https://raw.githubusercontent.com/cloudflare/api-schemas/650bd71c22db3b938a4611bf4cc5afd896b400b7/openapi.json \
+            -o "$schema_dir/openapi.json"
+          node plugins/cloudflare-broker/scripts/inventory.mjs "$schema_dir/openapi.json" "$schema_dir/operations.jsonl"
+          cmp plugins/cloudflare-broker/coverage/operations.jsonl "$schema_dir/operations.jsonl"
