@@ -25,6 +25,20 @@ for (const [name, args, raw, expected] of cases) {
     assert(!JSON.stringify(expected).includes(canary));
   });
 
+  test(`${name}: detached descriptors preserve preparation, execution and resource refusals`, async () => {
+    const f = fixture(raw);
+    const { prepare, execute, project } = f.operation(name);
+    const prepared = prepare(args);
+    const signal = new AbortController().signal;
+    for (const resource of [
+      { ...prepared.resource, id: 'neon/projects/project-other' },
+      { ...prepared.resource, revision: 'scope-v2' },
+    ]) await assert.rejects(execute({ ...prepared, resource }, canary, signal), { message: 'OUTPUT_REFUSED' });
+    assert.equal(f.requests.length, 0);
+    assert.deepEqual(project(await execute(prepared, canary, signal)), expected);
+    assert.equal(f.requests.length, 1);
+  });
+
   test(`${name}: malformed, extra, caller identity and scope arguments refuse before transport`, () => {
     const f = fixture(raw);
     const operation = f.operation(name);
@@ -180,8 +194,20 @@ test('pre-aborted calls do not touch transport; ignored cancellation still has a
   const hung = fixture(() => new Promise(() => {}));
   const start = Date.now();
   await assert.rejects(hung.run('getProject', cases[0][1]), { message: 'UPSTREAM_UNAVAILABLE' });
-  assert(Date.now() - start < REQUEST_TIMEOUT_MS + 2000);
+  assert(Date.now() - start < REQUEST_TIMEOUT_MS + 500);
   assert.equal(hung.requests.length, 1);
+});
+
+test('transport refuses CR/LF credentials before invoking injected fetch', async () => {
+  for (const [name, args, raw] of cases) {
+    const f = fixture(raw);
+    const operation = f.operation(name);
+    for (const credential of [`${canary}\r`, `${canary}\n`, `${canary}\r\nX-Test: injected`]) {
+      await assert.rejects(operation.execute(operation.prepare(args), credential, new AbortController().signal),
+        { message: 'UPSTREAM_UNAVAILABLE' });
+    }
+    assert.equal(f.requests.length, 0);
+  }
 });
 
 test('fixed transport exposes only five methods and rejects path injection even at the transport seam', () => {

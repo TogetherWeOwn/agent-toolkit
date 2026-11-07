@@ -29,16 +29,38 @@ function safeEnvelope(f, result) {
   }
 }
 
-test('type-only declarations match the pinned common contract rather than inventing an interface', () => {
-  const source = readFileSync(resolve(root, 'packages/core/src/provider/contracts.ts'), 'utf8');
-  const local = readFileSync(new URL('../compat/provider-contracts.d.ts', import.meta.url), 'utf8');
+function compareDeclarations(source, local) {
   for (const name of ['Json', 'Tier']) {
     const pattern = new RegExp(`export type ${name} = [^\\n]+`);
-    assert.equal(local.match(pattern)?.[0], source.match(pattern)?.[0]);
+    const expected = source.match(pattern)?.[0];
+    assert.ok(expected, `${name} not found in pinned contracts.ts`);
+    assert.equal(local.match(pattern)?.[0], expected);
   }
   for (const name of ['Resource', 'Prepared', 'ProviderOperation']) {
     const pattern = new RegExp(`export interface ${name} \\{[\\s\\S]*?\\n\\}`);
-    assert.equal(local.match(pattern)?.[0], source.match(pattern)?.[0]);
+    const expected = source.match(pattern)?.[0];
+    assert.ok(expected, `${name} not found in pinned contracts.ts`);
+    assert.equal(local.match(pattern)?.[0], expected);
+  }
+}
+
+test('type-only declarations match the pinned common contract rather than inventing an interface', () => {
+  const source = readFileSync(resolve(root, 'packages/core/src/provider/contracts.ts'), 'utf8');
+  const local = readFileSync(new URL('../compat/provider-contracts.d.ts', import.meta.url), 'utf8');
+  compareDeclarations(source, local);
+});
+
+test('declaration comparison refuses absent or unmatched declarations instead of comparing undefined', () => {
+  const declarations = [
+    'export type Json = string;', 'export type Tier = "read";',
+    'export interface Resource {\n}', 'export interface Prepared {\n}', 'export interface ProviderOperation {\n}',
+  ];
+  const complete = declarations.join('\n');
+  compareDeclarations(complete, complete);
+  for (const declaration of declarations) {
+    const missing = complete.replace(declaration, '');
+    assert.throws(() => compareDeclarations(missing, missing), /not found in pinned contracts.ts/);
+    assert.throws(() => compareDeclarations(complete, missing));
   }
 });
 

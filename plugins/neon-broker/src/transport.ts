@@ -25,6 +25,7 @@ function id(value: string): string {
 // Construction is a source/test seam, not an installed or enabled runtime tool.
 export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadataTransport {
   async function get(path: string, query: URLSearchParams, options: MetadataRequestOptions): Promise<unknown> {
+    if (/[\r\n]/.test(options.credential)) throw Error("UPSTREAM_UNAVAILABLE");
     const controller = new AbortController();
     let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
     let timer: ReturnType<typeof setTimeout> | undefined;

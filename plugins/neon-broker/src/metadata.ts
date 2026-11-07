@@ -118,20 +118,21 @@ export function createNeonMetadataOperations(scope: NeonMetadataScope, transport
       return endpoints.has(id) ? [endpoint(item)] : [];
     });
   }
+  function prepareFor(name: MetadataOperation, raw: unknown): Prepared {
+    const args = parse(name, raw);
+    const resourceId = name === "getProject" ? root : name === "listProjectBranches" ? `${root}/branches` :
+      name === "getProjectBranch" ? `${root}/branches/${args.branch_id}` :
+      name === "listProjectBranchEndpoints" ? `${root}/branches/${args.branch_id}/endpoints` :
+      `${root}/branches/${endpoints.get(args.endpoint_id!)}/endpoints/${args.endpoint_id}`;
+    return { resource: { id: resourceId, revision: config.revision }, arguments: args as Json,
+      plan: { operation: name, ...args }, artifactDigest: null };
+  }
   return Object.freeze(METADATA_OPERATIONS.map(name => Object.freeze({
     name: `neon.${name}`, version: "1.0.0", tier: "read" as const, lifecycle: "none" as const, timeoutMs: 3500,
-    prepare(raw: unknown): Prepared {
-      const args = parse(name, raw);
-      const resourceId = name === "getProject" ? root : name === "listProjectBranches" ? `${root}/branches` :
-        name === "getProjectBranch" ? `${root}/branches/${args.branch_id}` :
-        name === "listProjectBranchEndpoints" ? `${root}/branches/${args.branch_id}/endpoints` :
-        `${root}/branches/${endpoints.get(args.endpoint_id!)}/endpoints/${args.endpoint_id}`;
-      return { resource: { id: resourceId, revision: config.revision }, arguments: args as Json,
-        plan: { operation: name, ...args }, artifactDigest: null };
-    },
+    prepare(raw: unknown): Prepared { return prepareFor(name, raw); },
     async execute(prepared: Prepared, credential: string, signal: AbortSignal): Promise<unknown> {
       const args = parse(name, prepared.arguments);
-      const expected = this.prepare(args);
+      const expected = prepareFor(name, args);
       check(prepared.resource.id === expected.resource.id && prepared.resource.revision === expected.resource.revision);
       if (signal.aborted) throw Error("UPSTREAM_UNAVAILABLE");
       const options = { credential, signal };

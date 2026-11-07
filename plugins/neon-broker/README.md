@@ -79,8 +79,7 @@ surface is implied by management-schema coverage.
 
 GitHub Actions is CI of record. No local full suite, build/typecheck or CI mirror
 was run. Exact-head run/job results belong in the PR verification packet; missing
-or failed checks remain gates. Source model binding was observed as
-`ANTHROPIC_MODEL=gpt-6.1-sol`; no substitution or model/pool change was made.
+or failed checks remain gates.
 
 REA angle: reuse the official Neon API schema, existing closed-schema validators,
 and the common ProviderOperation/fixture contract instead of inventing authority.
