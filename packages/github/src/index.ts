@@ -8,7 +8,8 @@ export const API_VERSION = "2022-11-28";
 export type Permissions = Partial<Record<"contents" | "pull_requests" | "checks" | "statuses" | "actions" | "metadata" | "issues", "read">>;
 export interface Request { url: string; method: "GET" | "POST" | "DELETE"; headers: Record<string, string>; body?: string }
 export interface Response { status: number; headers: Record<string, string>; body: string }
-export type Transport = (request: Request) => Promise<Response>;
+// Deadline and dispatch marker are worker-local, never serialized to the SDK.
+export type Transport = (request: Request, deadline?: number, onDispatch?: () => void) => Promise<Response>;
 export class GitHubFailure extends Error {
   constructor(readonly rule: string, readonly retryAfterSeconds?: number) { super(rule); }
 }
@@ -18,13 +19,18 @@ export class GitHubFailure extends Error {
 export class SdkNullBodyRevokeFailure extends Error {
   constructor() { super("http.sdk_null_body_revoke"); }
 }
+export type ProbeResult = "unavailable" | "unexpected_status" | "invalid_json" | "unexpected_body" | "bad_credentials";
+export interface ProbeAttempt { readonly attempt: 1 | 2; readonly status: number | null; readonly requestId: string | null; readonly result: ProbeResult }
 export interface RevocationEvidence {
   outcome: "revoked" | "revoked_verified_by_probe" | "unverified";
   deleteRequestId: string | null;
   probeRequestId?: string | null;
   probeStatus?: number | null;
-  probeResult?: "unavailable" | "unexpected_status" | "invalid_json" | "unexpected_body" | "bad_credentials";
+  probeResult?: ProbeResult;
   unavailableReason?: "sdk_null_body";
+  probes?: readonly ProbeAttempt[];
+  secondDispatched?: boolean;
+  terminalReason?: "verified" | "ineligible" | "deadline" | "capacity" | "transport" | "observer" | "evidence";
 }
 function check(value: unknown, rule: string): asserts value { if (!value) throw new GitHubFailure(rule); }
 const id = integer(1, Number.MAX_SAFE_INTEGER);
@@ -66,7 +72,7 @@ export function retryAfter(response: Response, now: number): number {
   if (reset && /^\d{1,12}$/.test(reset)) return Math.min(86400, Math.max(1, Math.ceil((Number(reset) * 1000 - now) / 1000)));
   return 60;
 }
-export async function request(transport: Transport, method: Request["method"], path: string, credential: string, options: { body?: string } = {}): Promise<Response> {
+export async function request(transport: Transport, method: Request["method"], path: string, credential: string, options: { body?: string; deadline?: number; onDispatch?: () => void; onResponse?: () => void } = {}): Promise<Response> {
   check(path.startsWith("/") && !path.startsWith("//") && !/[\r\n\\#]/.test(path), "http.path");
   const url = new URL(path, API_ORIGIN);
   check(url.origin === API_ORIGIN && !url.username && !url.password, "http.origin");
@@ -74,11 +80,15 @@ export async function request(transport: Transport, method: Request["method"], p
   const headers: Record<string, string> = { Accept: "application/vnd.github+json", "User-Agent": "agent-toolkit-github-broker/0.1.0", "X-GitHub-Api-Version": API_VERSION, Authorization: `Bearer ${credential}` };
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
   let response: Response;
-  try { response = await transport({ method, url: url.href, headers, ...(options.body === undefined ? {} : { body: options.body }) }); }
+  check(options.deadline === undefined || performance.now() < options.deadline, "http.deadline");
+  try { response = await transport({ method, url: url.href, headers, ...(options.body === undefined ? {} : { body: options.body }) }, options.deadline, options.onDispatch); }
   catch (error) {
     if (error instanceof SdkNullBodyRevokeFailure && method === "DELETE" && url.href === `${API_ORIGIN}/installation/token`) throw error;
-    throw new GitHubFailure("http.unavailable");
+    const rule = error && typeof error === "object" && "rule" in error ? error.rule : null;
+    throw new GitHubFailure(rule === "host.capacity" ? "http.capacity" : rule === "host.timeout" || (error instanceof GitHubFailure && rule === "http.deadline") ? "http.deadline" : "http.unavailable");
   }
+  options.onResponse?.();
+  check(options.deadline === undefined || performance.now() < options.deadline, "http.deadline");
   check(response && typeof response.body === "string" && Buffer.byteLength(response.body) <= 1048576, "http.response_limit");
   check(Number.isInteger(response.status) && response.status >= 100 && response.status <= 599, "http.status");
   check(response.status < 300 || response.status >= 400 || response.status === 304, "http.redirect");
@@ -86,6 +96,80 @@ export async function request(transport: Transport, method: Request["method"], p
 }
 export function parse(response: Response): unknown {
   try { return JSON.parse(response.body); } catch { throw new GitHubFailure("http.invalid_json"); }
+}
+
+// A 200 is contradictory-time evidence, never proof of a failed DELETE or lag.
+// Retire both probes with verified compatible SDK adoption, not upstream merge.
+async function verifyRejection(transport: Transport, token: string, sensitive: readonly string[], observe: (response: Response, sensitive: readonly string[]) => string | undefined, report?: (evidence: RevocationEvidence) => void): Promise<void> {
+  const probes: ProbeAttempt[] = [];
+  let terminal = false, secondDispatched = false, deadline: number | undefined;
+  let reason: RevocationEvidence["terminalReason"] = "transport";
+  const snapshot = (outcome: RevocationEvidence["outcome"] = "unverified", terminalReason?: RevocationEvidence["terminalReason"]) => {
+    const last = probes.at(-1);
+    report?.(Object.freeze({ outcome, deleteRequestId: null, unavailableReason: "sdk_null_body",
+      probeRequestId: last?.requestId ?? null, probeStatus: last?.status ?? null, probeResult: last?.result ?? "unavailable",
+      probes: Object.freeze(probes.map(p => Object.freeze({ ...p }))), secondDispatched, ...(terminalReason ? { terminalReason } : {}) }));
+  };
+  const withinWindow = () => check(deadline === undefined || performance.now() < deadline, "http.deadline");
+  const classify = (res: Response): ProbeResult => {
+    if (res.status !== 401) return "unexpected_status";
+    try {
+      const body = parse(res);
+      return body && typeof body === "object" && !Array.isArray(body) && (body as Record<string, unknown>).message === "Bad credentials" ? "bad_credentials" : "unexpected_body";
+    } catch { return "invalid_json"; }
+  };
+  const examine = (res: Response, attempt: 1 | 2) => {
+    withinWindow();
+    const result = classify(res);
+    withinWindow();
+    probes[attempt - 1] = { attempt, status: res.status, requestId: null, result };
+    snapshot(); // Bounded status/classification survive a throwing observer.
+    reason = "observer";
+    const requestId = observe(res, sensitive) ?? null;
+    withinWindow();
+    probes[attempt - 1] = { attempt, status: res.status, requestId, result };
+    snapshot();
+    reason = "evidence";
+    return res.status === 401 && requestId !== null && result === "bad_credentials";
+  };
+  const finish = () => {
+    withinWindow();
+    terminal = true;
+    snapshot("revoked_verified_by_probe", "verified");
+  };
+  try {
+    snapshot();
+    probes.push({ attempt: 1, status: null, requestId: null, result: "unavailable" });
+    let t0 = 0;
+    const first = await request(transport, "GET", "/installation/repositories?per_page=1", token, { onResponse: () => { t0 = performance.now(); } });
+    // Capture before ID validation, classification or observer work; never renew.
+    if (first.status === 200) deadline = t0 + 2000;
+    if (examine(first, 1)) { finish(); return; }
+    reason = "ineligible";
+    check(first.status === 200 && probes[0]!.requestId !== null, "mint.revoke_failed");
+    withinWindow();
+    reason = "deadline";
+    const delayUntil = t0 + 250;
+    if (performance.now() < delayUntil) await new Promise<void>(resolve => setTimeout(resolve, Math.ceil(delayUntil - performance.now())));
+    withinWindow();
+    check(performance.now() >= delayUntil, "http.deadline");
+    probes.push({ attempt: 2, status: null, requestId: null, result: "unavailable" });
+    snapshot();
+    reason = "transport";
+    const second = await request(transport, "GET", "/installation/repositories?per_page=1", token, { deadline, onDispatch: () => {
+      withinWindow();
+      if (!terminal) secondDispatched = true;
+    } });
+    if (examine(second, 2)) { finish(); return; }
+    throw new GitHubFailure("mint.revoke_failed");
+  } catch (error) {
+    if (error instanceof GitHubFailure) {
+      if (error.rule === "http.deadline") reason = "deadline";
+      if (error.rule === "http.capacity") reason = "capacity";
+    }
+    if (!terminal) { terminal = true; snapshot("unverified", reason); }
+    throw new GitHubFailure("mint.revoke_failed");
+  }
 }
 
 /** One token per call, no credential cache. The callback must project/scrub its
@@ -125,25 +209,7 @@ export async function withInstallationToken<T>(options: {
       try { revoked = await request(options.transport, "DELETE", "/installation/token", token); }
       catch (error) {
         if (!(error instanceof SdkNullBodyRevokeFailure)) throw error;
-        let evidence: RevocationEvidence = { outcome: "unverified", deleteRequestId: null, unavailableReason: "sdk_null_body", probeRequestId: null, probeStatus: null, probeResult: "unavailable" };
-        options.onRevocation?.(evidence);
-        // Exactly one independent rejection check, never a retry or assumed 204.
-        const probe = await request(options.transport, "GET", "/installation/repositories?per_page=1", token);
-        let probeResult: RevocationEvidence["probeResult"] = "unexpected_status";
-        if (probe.status === 401) {
-          try {
-            const body = parse(probe);
-            probeResult = body && typeof body === "object" && !Array.isArray(body) && (body as Record<string, unknown>).message === "Bad credentials" ? "bad_credentials" : "unexpected_body";
-          } catch { probeResult = "invalid_json"; }
-        }
-        // Retain only bounded diagnostics, even if the rate-limit observer throws.
-        evidence = { ...evidence, probeStatus: probe.status, probeResult };
-        options.onRevocation?.(evidence);
-        const probeRequestId = options.observe(probe, sensitive);
-        evidence = { ...evidence, probeRequestId: probeRequestId ?? null };
-        options.onRevocation?.(evidence);
-        check(probe.status === 401 && probeRequestId && probeResult === "bad_credentials", "mint.revoke_failed");
-        options.onRevocation?.({ ...evidence, outcome: "revoked_verified_by_probe" });
+        await verifyRejection(options.transport, token, sensitive, options.observe, options.onRevocation);
       }
       if (revoked) {
         const deleteRequestId = options.observe(revoked, sensitive) ?? null;

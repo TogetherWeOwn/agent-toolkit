@@ -43,7 +43,7 @@ export interface Host {
   issue(id: string): Promise<{ companyId: string; projectId: string | null; assigneeAgentId: string | null; projectWorkspaceId: string | null; checkoutRunId: string | null; executionRunId: string | null; status: string } | null>;
   workspace(projectId: string, workspaceId: string): Promise<{ repoUrl: string | null } | null>;
   secret(ref: SecretRef, companyId: string): Promise<string>;
-  http(request: HttpRequest): Promise<HttpResponse>;
+  http: import("../../../packages/github/src/index.js").Transport;
   audit(record: Audit): Promise<void>;
   clock(): number;
 }
