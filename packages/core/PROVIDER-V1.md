@@ -92,6 +92,9 @@ and idempotent `close` that revokes/verifies attenuation where supported. Every
 broad/derived value must contain at least five UTF-8 bytes so the common base64
 refusal has a stable core at every alignment; shorter values refuse the lease
 before execution with `CREDENTIAL_UNAVAILABLE`. This is not an entropy guarantee.
+Core reads the lease value and redactions once and privately snapshots the validated
+strings before further awaits; execution and output refusal use that same snapshot,
+even if the lease getter rotates or its original redactions array later changes.
 Without attenuation, document the broad credential's residual process boundary. Core
 never returns the credential or raw upstream exceptions and never logs raw args,
 provider responses, headers or errors. No managed-runtime zeroization claim.

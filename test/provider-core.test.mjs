@@ -122,6 +122,78 @@ for (const malformed of [() => new Array(1), () => Object.assign(new Array(1), {
   });
 }
 
+for (const reflected of [true, false]) {
+  test(`rotating credential getter is read once with ${reflected ? 'reflected' : 'safe'} output`, async () => {
+    let reads = 0;
+    let current = credentialCanary;
+    let executedCredential;
+    const f = providerFixture({ operation: {
+      async execute(plan, credential) {
+        f.calls.upstream++;
+        executedCredential = credential;
+        current = derivedCanary;
+        await Promise.resolve();
+        return { status: reflected ? credential : 'ready' };
+      },
+    } });
+    f.dependencies.credentials.resolve = async () => {
+      f.calls.secret++;
+      return {
+        get value() { reads++; return current; },
+        redactions: [],
+        async close() { f.calls.close++; },
+      };
+    };
+    const result = await call(f);
+    if (reflected) assert.equal(result.code, 'OUTPUT_REFUSED');
+    else assert.deepEqual(result.value, { status: 'ready' });
+    assert.equal(reads, 1);
+    assert.equal(executedCredential, credentialCanary);
+    assert.equal(f.calls.secret, 1);
+    assert.equal(f.calls.upstream, 1);
+    assert.equal(f.calls.close, 1);
+    assert.equal(f.audit.at(-1).decision, reflected ? 'OUTPUT_REFUSED' : 'ALLOW');
+    assert.equal([...f.journal.values()][0].outcome, reflected ? 'uncertain' : 'complete');
+    safe(f, result);
+  });
+}
+
+for (const phase of ['revalidation', 'execute', 'project']) {
+  for (const reflected of [true, false]) {
+    test(`shared redactions mutated during ${phase} retain ${reflected ? 'refusal' : 'safe output'}`, async () => {
+      const redactions = [derivedCanary];
+      const mutate = current => { if (phase === current) redactions.splice(0); };
+      const f = providerFixture({ operation: {
+        async execute() {
+          f.calls.upstream++;
+          mutate('execute');
+          return { status: reflected ? derivedCanary : 'ready' };
+        },
+        project(raw) { mutate('project'); return { status: raw.status }; },
+      } });
+      const authenticate = f.dependencies.host.authenticate;
+      f.dependencies.host.authenticate = async (...args) => {
+        if (f.calls.secret) mutate('revalidation');
+        return authenticate(...args);
+      };
+      f.dependencies.credentials.resolve = async () => {
+        f.calls.secret++;
+        return { value: credentialCanary, redactions, async close() { f.calls.close++; } };
+      };
+      const result = await call(f);
+      if (reflected) assert.equal(result.code, 'OUTPUT_REFUSED');
+      else assert.deepEqual(result.value, { status: 'ready' });
+      assert.deepEqual(redactions, []);
+      assert.equal(f.calls.secret, 1);
+      assert.equal(f.calls.upstream, 1);
+      assert.equal(f.calls.close, 1);
+      assert.equal(f.audit.at(-1).decision, reflected ? 'OUTPUT_REFUSED' : 'ALLOW');
+      assert.equal([...f.journal.values()][0].outcome, reflected ? 'uncertain' : 'complete');
+      safe(f, result);
+    });
+  }
+}
+
 for (const secret of ['a', 'ab', 'abc', 'abcd', '😀']) {
   for (const derived of [false, true]) {
     test(`short ${derived ? 'derived' : 'broad'} credential is refused before effects: ${Buffer.byteLength(secret)} bytes`, async () => {

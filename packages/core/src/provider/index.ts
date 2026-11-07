@@ -185,14 +185,20 @@ export function createProviderBroker(dependencies: ProviderDependencies) {
         insist(claimed, "REPLAY_CONFLICT");
         failure = "CREDENTIAL_UNAVAILABLE";
         credential = await d.credentials.resolve(target);
-        insist(typeof credential.value === "string" && Buffer.byteLength(credential.value) >= 5 && credential.value.length <= 16384 &&
-          Array.isArray(credential.redactions) && credential.redactions.length <= 64 &&
-          Reflect.ownKeys(credential.redactions).length === credential.redactions.length + 1, "CREDENTIAL_UNAVAILABLE");
-        for (let i = 0; i < credential.redactions.length; ++i) {
-          const item = Object.getOwnPropertyDescriptor(credential.redactions, String(i));
+        // Lease fields may rotate or share mutable storage; capture once before any awaits.
+        const credentialValue = credential.value;
+        const redactions = credential.redactions;
+        insist(typeof credentialValue === "string" && Buffer.byteLength(credentialValue) >= 5 && credentialValue.length <= 16384 &&
+          Array.isArray(redactions) && redactions.length <= 64 &&
+          Reflect.ownKeys(redactions).length === redactions.length + 1, "CREDENTIAL_UNAVAILABLE");
+        const credentialSnapshot = [credentialValue];
+        for (let i = 0; i < redactions.length; ++i) {
+          const item = Object.getOwnPropertyDescriptor(redactions, String(i));
           insist(item?.enumerable && Object.hasOwn(item, "value") && typeof item.value === "string" &&
             Buffer.byteLength(item.value) >= 5 && item.value.length <= 16384, "CREDENTIAL_UNAVAILABLE");
+          credentialSnapshot.push(item.value);
         }
+        Object.freeze(credentialSnapshot);
         await revalidate();
         if (evidence !== null) {
           failure = "AUTHORIZATION_UNAVAILABLE";
@@ -208,7 +214,7 @@ export function createProviderBroker(dependencies: ProviderDependencies) {
         let timer: ReturnType<typeof setTimeout> | undefined;
         const deadline = performance.now() + operation.timeoutMs;
         started = true;
-        const pending = Promise.resolve().then(() => operation!.execute(plan, credential!.value, controller.signal, journalKey!));
+        const pending = Promise.resolve().then(() => operation!.execute(plan, credentialValue, controller.signal, journalKey!));
         let output: unknown;
         try {
           output = await Promise.race([pending, new Promise<never>((_, reject) => {
@@ -221,7 +227,7 @@ export function createProviderBroker(dependencies: ProviderDependencies) {
         } finally { clearTimeout(timer); }
         failure = "OUTPUT_REFUSED";
         const value = immutable(operation.project(output));
-        noCredentialOutput(value, [credential.value, ...credential.redactions]);
+        noCredentialOutput(value, credentialSnapshot);
         failure = "CREDENTIAL_UNAVAILABLE";
         await credential.close();
         credential = null;
