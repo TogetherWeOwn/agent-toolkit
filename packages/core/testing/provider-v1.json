@@ -1,0 +1,21 @@
+{
+  "contract": "toolkit.provider-broker/v1",
+  "fixtureOnly": true,
+  "principal": {"company": "company-a", "agent": "agent-a", "project": "project-a", "task": "task-a", "run": "run-a"},
+  "resource": {"id": "account-a/resource-a", "revision": "revision-a"},
+  "arguments": {"name": "resource-a"},
+  "plan": {"action": "inspect", "name": "resource-a"},
+  "artifactDigest": null,
+  "policy": {"revision": "policy-a", "agents": ["agent-a"], "resources": ["account-a/resource-a"]},
+  "refusals": [
+    {"case": "unknown-tool", "expected": "UNKNOWN_TOOL"},
+    {"case": "extra-argument", "expected": "INVALID_ARGUMENTS"},
+    {"case": "missing-identity", "expected": "IDENTITY_UNAVAILABLE"},
+    {"case": "cross-agent", "expected": "POLICY_DENIED"},
+    {"case": "cross-resource", "expected": "POLICY_DENIED"},
+    {"case": "missing-native-authority", "expected": "AUTHORIZATION_UNAVAILABLE"},
+    {"case": "request-replay", "expected": "REPLAY_CONFLICT"},
+    {"case": "reflected-credential", "expected": "OUTPUT_REFUSED"},
+    {"case": "post-effect-audit-failure", "expected": "OUTCOME_UNCERTAIN"}
+  ]
+}
