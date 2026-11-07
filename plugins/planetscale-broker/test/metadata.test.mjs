@@ -120,7 +120,8 @@ test('complete official map distinguishes mapped, source-adapted, reviewed and e
   assert.equal(map.credentialScopeReceipt, null);
   assert.equal(map.commonCoreContract, null);
   const implemented = map.operations.filter(row => row.implementation === 'offline-adapter-only');
-  assert.deepEqual(implemented.map(row => row.operationId).sort(), fixtures.map(([adapter]) => adapter.operationId).sort());
+  const discovery = ['list_databases', 'list_branches', 'list_database_regions', 'list_regions_for_organization', 'list_public_regions', 'get_default_role'];
+  assert.deepEqual(implemented.map(row => row.operationId).sort(), [...fixtures.map(([adapter]) => adapter.operationId), ...discovery].sort());
   for (const row of map.operations) {
     assert.equal(row.credentialEntitlement, 'unknown-awaiting-operator-metadata');
     assert.equal(row.review, 'not-reviewed');
@@ -133,8 +134,10 @@ test('complete official map distinguishes mapped, source-adapted, reviewed and e
     if (row.adapter) {
       assert.equal(row.tier, 'read');
       assert.equal(row.method, 'GET');
-      assert.equal(row.test, 'test/metadata.test.mjs');
-      const adapter = fixtures.find(([adapter]) => adapter.operationId === row.operationId)[0];
+      assert.equal(row.test, discovery.includes(row.operationId) ? 'test/discovery.test.mjs' : 'test/metadata.test.mjs');
+      assert.equal(row.projectionCoverage, 'bounded-metadata-subset-not-full-operation');
+      const adapter = await import('../../../dist/plugins/planetscale-broker/' + row.adapter.replace(/\.ts$/, '.js'));
+      assert.equal(row.operationId, adapter.operationId);
       assert.equal(row.tool, adapter.tool);
       await readFile(new URL('../' + row.adapter, import.meta.url));
     } else {

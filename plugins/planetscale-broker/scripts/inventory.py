@@ -20,6 +20,16 @@ ADAPTERS = {
     "list_passwords": "list-passwords",
     "get_password": "get-password",
     "get_branch_schema": "relation-exists",
+    "list_databases": "list-databases",
+    "list_branches": "list-branches",
+    "list_database_regions": "list-database-regions",
+    "list_regions_for_organization": "list-regions-for-organization",
+    "list_public_regions": "list-public-regions",
+    "get_default_role": "get-default-role",
+}
+DISCOVERY = {
+    "list_databases", "list_branches", "list_database_regions",
+    "list_regions_for_organization", "list_public_regions", "get_default_role",
 }
 METHODS = {"get", "post", "put", "patch", "delete", "head", "options"}
 
@@ -75,8 +85,9 @@ def inventory(raw):
                 "approvalRoute": "per-agent-and-resource-policy; production read classification pending" if adapter else "unresolved: classify RM, owner, Operator and any conjunctive routes before implementation",
                 "credentialEntitlement": "unknown-awaiting-operator-metadata",
                 "adapter": "src/tools/" + adapter + ".ts" if adapter else None,
-                "test": "test/metadata.test.mjs" if adapter else None,
-                "testExecution": "not-yet-observed",
+                "test": ("test/discovery.test.mjs" if operation_id in DISCOVERY else "test/metadata.test.mjs") if adapter else None,
+                "projectionCoverage": "bounded-metadata-subset-not-full-operation" if adapter else "missing",
+                "testExecution": "see-exact-head-actions-evidence" if adapter else "no-test-implemented",
                 "implementation": "offline-adapter-only" if adapter else "missing",
                 "review": "not-reviewed",
                 "enablement": "disabled",
@@ -107,7 +118,7 @@ def inventory(raw):
 if __name__ == "__main__":
     root = Path(__file__).resolve().parents[1]
     check = sys.argv[1:] == ["--check"]
-    if check:
+    if check or sys.argv[1:] == ["--write"]:
         with gzip.open(root / "api" / "upstream" / "openapi-v1.json.gz", "rb") as source_file:
             raw = source_file.read(1_000_001)
         if len(raw) > 1_000_000:

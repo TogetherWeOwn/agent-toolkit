@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 283 adapters and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 277 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -66,10 +66,17 @@ PostgreSQL 17 compatibility, builtin/operator/cast dependency closure, engine
 selection and additional catalog paths remain pre-enable prerequisites. Cap
 refusal is explicit; large catalogs are not falsely marked complete.
 
-The initial eight API adapters passed their exact-head Actions run. The newer
-catalog fixtures have not yet run; record fresh exact-head Actions evidence on the
-source task/PR, never a mock, skipped job or local full-suite substitute. Native
-Security/Crypto/QA and fresh-context review of the final diff remain required.
+The initial eight API adapters and nine catalog artifacts passed 60 mocked tests
+in exact-head Actions at `14e0a22043c675b2113c7d6f393c989f73e2809a`. Six newer
+adapters add `test/discovery.test.mjs`: exact fixed endpoints, parent/child scope
+shape, child identity rebinding, whole-page refusal, scope snapshot immutability,
+closed arguments, pagination/byte caps and default-role metadata redaction. These
+new fixtures require fresh exact-head Actions; no local suite is substituted.
+They do not demonstrate upstream collection authorization, non-waking semantics,
+credential entitlement or an accepted default-role reuse principal. All fourteen
+adapters expose only bounded metadata subsets; remaining optional filters and
+full capability coverage remain incomplete. Native Security/Crypto/QA and
+fresh-context review of the final diff remain required.
 
 ## Metrics preregistration — required before enablement
 

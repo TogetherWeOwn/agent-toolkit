@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The eight adapters are pure request builders and bounded output projections,
+The fourteen adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,13 +36,13 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 8 | Narrow projections; not full operation coverage |
-| Missing source adapters | 283 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 14 | Narrow projections; not full operation coverage |
+| Missing source adapters | 277 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-Only the eight adapter rows have a provisional read tier. All others say
+Only the fourteen adapter rows have a provisional read tier. All others say
 `unresolved`; the intended tools are not registered and their policy routes are
 not approved. GET alone is not proof of harmless, non-waking or non-billable
 behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
@@ -59,6 +59,22 @@ area remain in the map even when access or implementation is missing.
 | `planetscale.list_roles` / `planetscale.get_role` | Role ID/name, ready/expired, documented inherited-role enums |
 | `planetscale.list_passwords` / `planetscale.get_password` | Password-record ID/name, role enum, expired flag; never password value |
 | `planetscale.relation_exists` | Exact requested relation and existence boolean; never DDL/HTML |
+| `planetscale.list_databases` | Bound child ID/name, engine, ready/deletion-protected flags |
+| `planetscale.list_branches` | Bound child ID/name, ready/production/protection/safe-migrations flags |
+| `planetscale.list_database_regions` / `planetscale.list_regions_for_organization` / `planetscale.list_public_regions` | Bound region ID/slug and enabled flag; no addresses/provider URLs |
+| `planetscale.get_default_role` | Default-role marker required; same bounded role metadata, never connection/password fields |
+
+The five discovery lists require a broker-owned closed scope containing 1–32
+unique child ID/name pairs (region names are slugs). Any unknown or rebound child
+refuses the **entire page**, not a partial result. The scope is snapshotted during
+preparation and cannot be widened by later mutation. This is output confinement,
+not authorization: upstream parent-collection access must be independently allowed
+before a list executes. An agent allowed one database cannot acquire organization-
+wide listing permission through this adapter. `complete` means no next provider
+page, not a scope/entitlement/completeness attestation. Optional provider filters
+are not yet exposed; metadata projections are not full provider-operation coverage.
+`get_default_role` discovers metadata; it does not establish an accepted catalog
+principal, effective rights, immutable branch binding or safe credential reuse.
 
 Arguments are closed, scalar and bounded. Configured resource scope is separate
 from arguments and must eventually be resolved by the shared core from an
