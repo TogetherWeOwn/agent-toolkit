@@ -247,6 +247,8 @@ test('REST client CLI resolves symlink entry points without running on import', 
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const script = fileURLToPath(new URL('../dist/plugins/github-broker/src/client.js', import.meta.url));
   const link = join(dir, 'client.mjs'); symlinkSync(script, link);
+  const linkedDir = join(dir, 'compiled');
+  symlinkSync(fileURLToPath(new URL('../dist/plugins/github-broker/src/', import.meta.url)), linkedDir, 'dir');
   let requests = 0;
   const env = environment();
   const server = createServer((req, res) => {
@@ -259,17 +261,20 @@ test('REST client CLI resolves symlink entry points without running on import', 
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   t.after(() => { server.closeAllConnections(); server.close(); });
   env.PAPERCLIP_API_URL = `http://127.0.0.1:${server.address().port}`;
-  const child = spawn(process.execPath, [link, projectId, 'github.pr_get'], { env: { PATH: process.env.PATH, ...env }, stdio: ['pipe', 'pipe', 'pipe'], timeout: 10000 });
-  let stdout = '', stderr = '';
-  child.stdout.on('data', chunk => { stdout += chunk; }); child.stderr.on('data', chunk => { stderr += chunk; });
-  child.stdin.end(JSON.stringify(args));
-  const [status] = await once(child, 'close');
-  assert.equal(status, 1, stderr); assert.equal(stderr, '');
-  assert.equal(JSON.parse(stdout).error, 'policy.agent'); assert.equal(requests, 1);
-  assert.ok(!stdout.includes(env.PAPERCLIP_API_KEY));
-  const imported = spawnSync(process.execPath, ['--input-type=module', '-e', 'await import(process.argv[1]); process.stdout.write("imported\\n");', pathToFileURL(script).href], { env: { PATH: process.env.PATH }, encoding: 'utf8', timeout: 10000 });
-  assert.equal(imported.status, 0, imported.stderr);
-  assert.equal(imported.stdout, 'imported\n'); assert.equal(imported.stderr, '');
+  for (const [flags, entry] of [[[], link], [['--preserve-symlinks-main'], join(linkedDir, 'client.js')]]) {
+    const child = spawn(process.execPath, [...flags, entry, projectId, 'github.pr_get'], { env: { PATH: process.env.PATH, ...env }, stdio: ['pipe', 'pipe', 'pipe'], timeout: 10000 });
+    let stdout = '', stderr = '';
+    child.stdout.on('data', chunk => { stdout += chunk; }); child.stderr.on('data', chunk => { stderr += chunk; });
+    child.stdin.end(JSON.stringify(args));
+    const [status] = await once(child, 'close');
+    assert.equal(status, 1, stderr); assert.equal(stderr, '');
+    assert.equal(JSON.parse(stdout).error, 'policy.agent');
+    assert.ok(!stdout.includes(env.PAPERCLIP_API_KEY));
+    const imported = spawnSync(process.execPath, [...flags, '--input-type=module', '-e', 'await import(process.argv[1]); process.stdout.write("imported\\n");', pathToFileURL(entry).href], { env: { PATH: process.env.PATH }, encoding: 'utf8', timeout: 10000 });
+    assert.equal(imported.status, 0, imported.stderr);
+    assert.equal(imported.stdout, 'imported\n'); assert.equal(imported.stderr, '');
+  }
+  assert.equal(requests, 2);
 });
 
 test('REST client CLI bounds stalled stdin with a nonzero input failure', async t => {
