@@ -141,11 +141,20 @@ for (const secret of ['a', 'ab', 'abc', 'abcd', '😀']) {
 for (const prefix of ['', 'x', 'xx']) {
   test(`minimum five-byte credential embedded reflection is refused: ${prefix.length}`, async () => {
     const secret = 'abcde';
-    const f = providerFixture({ operation: { project() {
-      return { encoded: Buffer.from(prefix + secret + ':suffix').toString('base64') };
-    } } });
-    f.dependencies.credentials.resolve = async () => ({ value: secret, redactions: [], async close() {} });
+    const f = providerFixture({ operation: {
+      async execute(plan, credential) {
+        f.calls.upstream++;
+        assert.equal(credential, secret);
+        return { status: 'ready' };
+      },
+      project() { return { encoded: Buffer.from(prefix + secret + ':suffix').toString('base64') }; },
+    } });
+    f.dependencies.credentials.resolve = async () => ({ value: secret, redactions: [], async close() { f.calls.close++; } });
     assert.equal((await call(f)).code, 'OUTPUT_REFUSED');
+    assert.equal(f.calls.upstream, 1);
+    assert.equal(f.calls.close, 1);
+    assert.equal(f.audit.at(-1).decision, 'OUTPUT_REFUSED');
+    assert.equal([...f.journal.values()][0].outcome, 'uncertain');
   });
 }
 test('minimum five-byte credential permits safe projected output', async () => {
