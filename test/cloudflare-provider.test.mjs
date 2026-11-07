@@ -8,7 +8,9 @@ import { inventory, source } from "../plugins/cloudflare-broker/scripts/inventor
 const account = "a".repeat(32);
 const own = "b".repeat(32);
 const other = "c".repeat(32);
-const scope = { accountId: account, revision: "policy-1", scriptNames: ["safe-worker"], hyperdriveIds: [own] };
+const db = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+const otherDb = "cccccccc-cccc-cccc-cccc-cccccccccccc";
+const scope = { accountId: account, revision: "policy-1", scriptNames: ["safe-worker"], hyperdriveIds: [own], databaseIds: [db], defaultBucketNames: ["safe-bucket"] };
 const descriptors = metadataDescriptors(scope);
 const success = result => JSON.stringify({ success: true, errors: [], messages: [], result });
 const refuses = (callback, code) => assert.throws(callback, error => error.message === code && error.code === code);
@@ -107,6 +109,79 @@ test("Cloudflare descriptors supply no credential, execution, approval or generi
   assert.equal(descriptors.dnsUpdate, undefined);
 });
 
+test("Cloudflare storage descriptors bind IDs and default jurisdiction without query or object access", () => {
+  const list = descriptors.d1List.prepare({ page: 2, perPage: 10 });
+  assert.equal(list.request.path, `/accounts/${account}/d1/database?page=2&per_page=10`);
+  const get = descriptors.d1Get.prepare({ databaseId: db });
+  assert.equal(get.request.path, `/accounts/${account}/d1/database/${db}?fields=uuid`);
+  assert.equal(get.resource.id, `cloudflare:account:${account}:d1:${db}`);
+  assert.equal(descriptors.r2List.prepare({ perPage: 10 }).request.path, `/accounts/${account}/r2/buckets?per_page=10`);
+  const bucket = descriptors.r2Get.prepare({ bucketName: "safe-bucket" });
+  assert.equal(bucket.request.path, `/accounts/${account}/r2/buckets/safe-bucket`);
+  assert.equal(bucket.resource.id, `cloudflare:account:${account}:r2:jurisdiction:default:bucket:safe-bucket`);
+  for (const [descriptor, args] of [[descriptors.d1List, { page: 1, perPage: 10 }], [descriptors.d1Get, { databaseId: db }], [descriptors.r2List, { perPage: 10 }], [descriptors.r2Get, { bucketName: "safe-bucket" }]]) {
+    for (const key of ["accountId", "agentId", "jurisdiction", "headers", "url", "sql", "objectKey", "cursor", "approval", "credential"]) {
+      refuses(() => descriptor.prepare({ ...args, [key]: "forged" }), "schema");
+    }
+    const prepared = descriptor.prepare(args);
+    assert.ok(Object.isFrozen(prepared) && Object.isFrozen(prepared.arguments) && Object.isFrozen(prepared.request));
+    assert.equal(prepared.request.method, "GET");
+    assert.equal(prepared.request.maxRequests, 1);
+    assert.equal(prepared.request.redirects, "deny");
+  }
+  refuses(() => descriptors.d1Get.prepare({ databaseId: otherDb }), "scope");
+  refuses(() => descriptors.r2Get.prepare({ bucketName: "other-bucket" }), "scope");
+  for (const databaseId of [db.toUpperCase(), "../database", own]) refuses(() => descriptors.d1Get.prepare({ databaseId }), "schema");
+  for (const bucketName of ["ab", "a".repeat(65), "safe-bucket/objects", "safe-bucket?x=1", "sаfe-bucket", "safe-bucket\n"]) refuses(() => descriptors.r2Get.prepare({ bucketName }), "schema");
+});
+
+test("Cloudflare storage projections filter each item and omit rows, objects and descriptive payloads", () => {
+  const canary = "never-return-private-content";
+  const database = { uuid: db, name: canary, rows: [{ secret: canary }], file_size: canary };
+  const bucket = { name: "safe-bucket", jurisdiction: "default", objects: [{ body: canary }], location: canary };
+  const d1 = descriptors.d1Get.project(success(database), descriptors.d1Get.prepare({ databaseId: db }));
+  assert.deepEqual(d1, { id: db });
+  const d1List = descriptors.d1List.project(success([database, { uuid: otherDb, name: canary }]), descriptors.d1List.prepare({ page: 1, perPage: 10 }));
+  assert.deepEqual(d1List, { items: [d1], complete: false });
+  const r2 = descriptors.r2Get.project(success(bucket), descriptors.r2Get.prepare({ bucketName: "safe-bucket" }));
+  assert.deepEqual(r2, { name: "safe-bucket" });
+  const r2List = descriptors.r2List.project(success({ buckets: [bucket, { name: "other-bucket", objects: canary }], cursor: canary }), descriptors.r2List.prepare({ perPage: 10 }));
+  assert.deepEqual(r2List, { items: [r2], complete: false });
+  assert.ok(!JSON.stringify([d1, d1List, r2, r2List]).includes(canary));
+  refuses(() => descriptors.d1Get.project(success({ uuid: otherDb }), descriptors.d1Get.prepare({ databaseId: db })), "scope");
+  refuses(() => descriptors.r2Get.project(success({ name: "other-bucket" }), descriptors.r2Get.prepare({ bucketName: "safe-bucket" })), "scope");
+  refuses(() => descriptors.r2Get.project(success({ ...bucket, jurisdiction: "eu" }), descriptors.r2Get.prepare({ bucketName: "safe-bucket" })), "scope");
+  refuses(() => descriptors.r2List.project(success({ buckets: [{ ...bucket, jurisdiction: "eu" }] }), descriptors.r2List.prepare({ perPage: 10 })), "scope");
+});
+
+test("Cloudflare storage snapshots default empty and cannot be widened after construction", () => {
+  const input = { ...scope, databaseIds: [db], defaultBucketNames: ["safe-bucket"] };
+  const snapshot = metadataDescriptors(input);
+  input.databaseIds.push(otherDb);
+  input.defaultBucketNames.push("other-bucket");
+  refuses(() => snapshot.d1Get.prepare({ databaseId: otherDb }), "scope");
+  refuses(() => snapshot.r2Get.prepare({ bucketName: "other-bucket" }), "scope");
+  const empty = metadataDescriptors({ accountId: account, revision: "policy-1", scriptNames: [], hyperdriveIds: [] });
+  refuses(() => empty.d1Get.prepare({ databaseId: db }), "scope");
+  refuses(() => empty.r2Get.prepare({ bucketName: "safe-bucket" }), "scope");
+  assert.deepEqual(empty.d1List.project(success([{ uuid: db }]), empty.d1List.prepare({ page: 1, perPage: 10 })), { items: [], complete: false });
+  assert.deepEqual(empty.r2List.project(success({ buckets: [{ name: "safe-bucket" }] }), empty.r2List.prepare({ perPage: 10 })), { items: [], complete: false });
+});
+
+test("Cloudflare storage descriptors enforce provider pagination shapes and fail closed on oversize or errors", () => {
+  for (const perPage of [0, 9, 101, "10"]) refuses(() => descriptors.d1List.prepare({ page: 1, perPage }), "schema");
+  for (const perPage of [0, 101, 1.5, "10"]) refuses(() => descriptors.r2List.prepare({ perPage }), "schema");
+  const d1 = descriptors.d1List.prepare({ page: 1, perPage: 10 });
+  const r2 = descriptors.r2List.prepare({ perPage: 1 });
+  refuses(() => descriptors.d1List.project(success(Array.from({ length: 11 }, () => ({ uuid: db }))), d1), "cap");
+  refuses(() => descriptors.r2List.project(success({ buckets: [{ name: "safe-bucket" }, { name: "other-bucket" }] }), r2), "cap");
+  refuses(() => descriptors.r2List.project(success([]), r2), "upstream");
+  for (const [descriptor, input] of [[descriptors.d1List, d1], [descriptors.r2List, r2]]) {
+    refuses(() => descriptor.project("x".repeat(131073), input), "cap");
+    refuses(() => descriptor.project(JSON.stringify({ success: false, errors: [{ message: "secret-value" }], result: [] }), input), "upstream");
+  }
+});
+
 test("Cloudflare full schema inventory is pinned, explicit about holes, and consistent with descriptors", async () => {
   const bytes = await readFile(new URL("../plugins/cloudflare-broker/coverage/operations.jsonl", import.meta.url));
   const manifest = JSON.parse(await readFile(new URL("../plugins/cloudflare-broker/coverage/source.json", import.meta.url)));
@@ -137,7 +212,8 @@ test("Cloudflare full schema inventory is pinned, explicit about holes, and cons
       assert.equal(row.implementation, "descriptor-only");
     }
   }
-  assert.equal(operations.filter(row => row.typedTool !== null).length, 4);
+  assert.equal(operations.filter(row => row.typedTool !== null).length, 8);
+  assert.equal(manifest.counts.descriptors, Object.keys(descriptors).length);
   assert.equal(manifest.credentialScope.status, "awaiting-operator-attestation");
   assert.equal(manifest.complete, false);
   assert.equal(manifest.supplementalSurfaces.every(surface => surface.status === "not-inventoried"), true);

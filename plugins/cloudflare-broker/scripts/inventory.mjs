@@ -16,6 +16,10 @@ const descriptors = new Map([
   ["GET /accounts/{account_id}/workers/scripts/{script_name}/secrets", "cloudflare.workers.secret_names"],
   ["GET /accounts/{account_id}/hyperdrive/configs", "cloudflare.hyperdrive.list"],
   ["GET /accounts/{account_id}/hyperdrive/configs/{hyperdrive_id}", "cloudflare.hyperdrive.get"],
+  ["GET /accounts/{account_id}/d1/database", "cloudflare.d1.list"],
+  ["GET /accounts/{account_id}/d1/database/{database_id}", "cloudflare.d1.get"],
+  ["GET /accounts/{account_id}/r2/buckets", "cloudflare.r2.list"],
+  ["GET /accounts/{account_id}/r2/buckets/{bucket_name}", "cloudflare.r2.get"],
 ]);
 const digest = value => createHash("sha256").update(value).digest("hex");
 

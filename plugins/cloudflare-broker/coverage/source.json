@@ -10,8 +10,8 @@
     "openapi": "3.0.3",
     "version": "4.0.0"
   },
-  "inventorySha256": "73e8d9668f9101fad368940dfd113675f08778da3b14cf2bdd68178752337e30",
-  "counts": { "paths": 2352, "operations": 3777, "apiTags": 599, "descriptors": 4, "implementedTools": 0, "reviewedTools": 0, "enabledTools": 0 },
+  "inventorySha256": "1f0134d6192f82b49b74d635dc3bbb9157f98d72896420ab2e4343d1ad32c7be",
+  "counts": { "paths": 2352, "operations": 3777, "apiTags": 599, "descriptors": 8, "implementedTools": 0, "reviewedTools": 0, "enabledTools": 0 },
   "credentialScope": {
     "status": "awaiting-operator-attestation",
     "credentialReference": null,

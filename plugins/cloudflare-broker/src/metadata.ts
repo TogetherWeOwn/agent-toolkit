@@ -8,6 +8,12 @@ const empty = closed({});
 const page = closed({ page: integer(1, 1000), perPage: integer(1, 100) });
 const script = closed({ scriptName });
 const hyperdrive = closed({ hyperdriveId: resourceId });
+const databaseId = text(36, /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/);
+const bucketName = text(64, /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/);
+const database = closed({ databaseId });
+const databasePage = closed({ page: integer(1, 1000), perPage: integer(10, 100) });
+const bucket = closed({ bucketName });
+const bucketPage = closed({ perPage: integer(1, 100) });
 const maxResponseBytes = 131072;
 const maxOutputBytes = 32768;
 const maxRows = 100;
@@ -17,6 +23,8 @@ export interface MetadataScope {
   revision: string;
   scriptNames: readonly string[];
   hyperdriveIds: readonly string[];
+  databaseIds?: readonly string[];
+  defaultBucketNames?: readonly string[];
 }
 export interface MetadataRequest {
   readonly method: "GET";
@@ -76,6 +84,11 @@ export function metadataDescriptors(scope: MetadataScope) {
   requireThat(Array.isArray(scope.scriptNames) && scope.scriptNames.length <= 100 && Array.isArray(scope.hyperdriveIds) && scope.hyperdriveIds.length <= 100, "cap");
   const scripts = new Set(scope.scriptNames.map(value => scriptName.parse(value)));
   const hyperdrives = new Set(scope.hyperdriveIds.map(value => resourceId.parse(value)));
+  const databaseIds = scope.databaseIds ?? [];
+  const defaultBucketNames = scope.defaultBucketNames ?? [];
+  requireThat(Array.isArray(databaseIds) && databaseIds.length <= 100 && Array.isArray(defaultBucketNames) && defaultBucketNames.length <= 100, "cap");
+  const databases = new Set(databaseIds.map(value => databaseId.parse(value)));
+  const buckets = new Set(defaultBucketNames.map(value => bucketName.parse(value)));
   const root = `/accounts/${account}`;
   function prepared<A>(args: A, resource: string, path: string): PreparedMetadata<A> {
     return Object.freeze({
@@ -149,5 +162,71 @@ export function metadataDescriptors(scope: MetadataScope) {
       return bounded(hyperdriveMetadata(row));
     },
   });
-  return Object.freeze({ workersList, secretNames, hyperdriveList, hyperdriveGet });
+  function databaseScope(id: string) { requireThat(databases.has(id), "scope"); }
+  function bucketScope(name: string) { requireThat(buckets.has(name), "scope"); }
+  function bucketMetadata(row: Row): { name: string } {
+    const name = providerText(row.name, bucketName);
+    bucketScope(name);
+    requireThat(row.jurisdiction === undefined || row.jurisdiction === "default", "scope");
+    return { name };
+  }
+  const d1List: MetadataDescriptor<ReturnType<typeof databasePage.parse>, PartialList<{ id: string }>> = Object.freeze({
+    name: "cloudflare.d1.list", version: "1", tier: "read", providerOperationId: "d1-list-databases",
+    prepare(raw: unknown) {
+      const args = databasePage.parse(raw);
+      return prepared(args, "d1", `${root}/d1/database?page=${args.page}&per_page=${args.perPage}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof databasePage.parse>>) {
+      const args = databasePage.parse(input.arguments);
+      const result = rows(envelope(raw).result);
+      requireThat(result.length <= args.perPage, "cap");
+      const items = result.filter(row => typeof row.uuid === "string" && databases.has(row.uuid)).map(row => ({ id: providerText(row.uuid, databaseId) }));
+      return bounded({ items, complete: false as const });
+    },
+  });
+  const d1Get: MetadataDescriptor<ReturnType<typeof database.parse>, { id: string }> = Object.freeze({
+    name: "cloudflare.d1.get", version: "1", tier: "read", providerOperationId: "d1-get-database",
+    prepare(raw: unknown) {
+      const args = database.parse(raw);
+      databaseScope(args.databaseId);
+      return prepared(args, `d1:${args.databaseId}`, `${root}/d1/database/${args.databaseId}?fields=uuid`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof database.parse>>) {
+      const args = database.parse(input.arguments);
+      databaseScope(args.databaseId);
+      const row = object(envelope(raw).result);
+      requireThat(row.uuid === args.databaseId, "scope");
+      return bounded({ id: providerText(row.uuid, databaseId) });
+    },
+  });
+  const r2List: MetadataDescriptor<ReturnType<typeof bucketPage.parse>, PartialList<{ name: string }>> = Object.freeze({
+    name: "cloudflare.r2.list", version: "1", tier: "read", providerOperationId: "r2-list-buckets",
+    prepare(raw: unknown) {
+      const args = bucketPage.parse(raw);
+      return prepared(args, "r2:jurisdiction:default", `${root}/r2/buckets?per_page=${args.perPage}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof bucketPage.parse>>) {
+      const args = bucketPage.parse(input.arguments);
+      const result = rows(object(envelope(raw).result).buckets);
+      requireThat(result.length <= args.perPage, "cap");
+      const items = result.filter(row => typeof row.name === "string" && buckets.has(row.name)).map(bucketMetadata);
+      return bounded({ items, complete: false as const });
+    },
+  });
+  const r2Get: MetadataDescriptor<ReturnType<typeof bucket.parse>, { name: string }> = Object.freeze({
+    name: "cloudflare.r2.get", version: "1", tier: "read", providerOperationId: "r2-get-bucket",
+    prepare(raw: unknown) {
+      const args = bucket.parse(raw);
+      bucketScope(args.bucketName);
+      return prepared(args, `r2:jurisdiction:default:bucket:${args.bucketName}`, `${root}/r2/buckets/${args.bucketName}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof bucket.parse>>) {
+      const args = bucket.parse(input.arguments);
+      bucketScope(args.bucketName);
+      const row = object(envelope(raw).result);
+      requireThat(row.name === args.bucketName, "scope");
+      return bounded(bucketMetadata(row));
+    },
+  });
+  return Object.freeze({ workersList, secretNames, hyperdriveList, hyperdriveGet, d1List, d1Get, r2List, r2Get });
 }
