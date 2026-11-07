@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The twenty adapters are pure request builders and bounded output projections,
+The twenty-six adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,14 +36,14 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 20 | Narrow projections; not full operation coverage |
-| Missing source adapters | 271 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 26 | Narrow projections; not full operation coverage |
+| Missing source adapters | 265 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-Twenty adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 255
+Twenty-six adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 249
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
@@ -67,6 +67,10 @@ area remain in the map even when access or implementation is missing.
 | `planetscale.list_backups` / `planetscale.get_backup` | Bound backup ID, state and protection/required/emergency flags; no contents, names, download URLs or cost estimates |
 | `planetscale.list_backup_policies` / `planetscale.get_backup_policy` | Bound policy ID, production/development target enum and required flag; no schedules or arbitrary strings |
 | `planetscale.list_deploy_requests` / `planetscale.get_deploy_request` | Bound request ID/number/source branch ID/name and target name, state/deployment-state enums and source-deleted flag; no DDL, notes, actor or approval authority |
+| `planetscale.get_deployment` / `planetscale.get_deploy_queue` | Bound deployment ID/request number/target name, state and auto-cutover/auto-delete/queue-paused flags; no errors, actors, nested operations or permission claim |
+| `planetscale.list_deploy_operations` | Bound operation ID, state and can-drop-data/table-locked flags; no table/keyspace names, DDL, errors or progress estimates |
+| `planetscale.list_deploy_request_reviews` | Bound review ID and informational provider state; native approval explicitly not established, no review body or actor |
+| `planetscale.list_schema_recommendations` / `planetscale.get_schema_recommendation` | Bound recommendation ID/number and state/type enums; no title, table/keyspace names, DDL or actor |
 
 The five discovery lists require a broker-owned closed scope containing 1–32
 unique child ID/name pairs (region names are slugs). Any unknown or rebound child
@@ -89,6 +93,17 @@ schema does not supply an immutable target-branch ID in this projection, so its
 name is not an immutable destination or a safe execution precondition. No backup
 restore/export or deployment mutation is implemented. Optional filters, schedule/
 retention policy details, contents and full-operation coverage remain missing.
+
+Deployment-detail and recommendation collections also snapshot 1–32 unique
+broker-owned child bindings. Deployment responses match ID, request number and
+target name; recommendations match ID/number. Child operation/review responses
+supply no parent identity, so their bound ID membership and fixed request path
+are not proof of parent ownership. Trusted parent-child binding and current
+immutable destination revalidation remain integration prerequisites. No returned
+state or `canDropData` flag grants permission; provider review `approved` is
+explicitly paired with `nativeApproval: not-established`. DDL, arbitrary table/
+keyspace names, review bodies and actor data are never projected. Recommendation
+branch/state filters and full deployment details remain incomplete.
 
 Arguments are closed, scalar and bounded. Configured resource scope is separate
 from arguments and must eventually be resolved by the shared core from an
@@ -137,7 +152,7 @@ No connector or replacement broker is introduced.
 ## Local mutation-plan artifacts — not executors
 
 `src/mutation-plans.ts` supplies three pure, bounded previews. They are **not API
-adapters**, do not consume authority and do not increase the 20-adapter count.
+adapters**, do not consume authority and do not increase the 26-adapter count.
 Each artifact labels itself `validated-local-plan-not-provider-dry-run`, with
 execution not implemented, remote preconditions not verified and provider dry-run
 not performed. No network executor, output projector or secret placement exists.
@@ -171,7 +186,7 @@ The candidates only document requirements; native routing, expiry, exact-target
 binding, atomic consumption, replay/concurrent-use refusal and approved placement
 are **not implemented or tested as authority enforcement here**. Credential routes
 remain incomplete until a broker-only sink and reconciliation are accepted. The
-other 255 tier classifications are unresolved, not automatically harmless reads or
+other 249 tier classifications are unresolved, not automatically harmless reads or
 ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.

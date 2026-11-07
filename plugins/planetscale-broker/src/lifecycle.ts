@@ -7,8 +7,14 @@ const ids: Schema<readonly string[]> = { parse(value) {
   requireThat(new Set(parsed).size === parsed.length, "schema");
   return Object.freeze(parsed);
 } };
-const deployNumber = integer(1, 2147483647);
-const deployBinding = closed({ id: identifier, number: deployNumber, branch: slug, branchId: identifier, intoBranch: slug });
+export const deployNumber = integer(1, 2147483647);
+export const deploymentState = oneOf([
+  "pending", "ready", "no_changes", "queued", "submitting", "in_progress", "pending_cutover",
+  "in_progress_vschema", "in_progress_cancel", "in_progress_cutover", "complete", "complete_cancel",
+  "complete_error", "complete_pending_revert", "in_progress_revert", "in_progress_revert_vschema",
+  "complete_revert", "complete_revert_error", "cancelled", "error",
+] as const);
+export const deployBinding = closed({ id: identifier, number: deployNumber, branch: slug, branchId: identifier, intoBranch: slug });
 export type DeployBinding = ReturnType<typeof deployBinding.parse>;
 const deployBindings: Schema<readonly DeployBinding[]> = { parse(value) {
   requireThat(Array.isArray(value) && value.length > 0 && value.length <= 32, "schema");
@@ -74,11 +80,6 @@ export function deployRequestSummary(body: Record<string, unknown>, allowed: rea
   requireThat(binding && body.branch === binding.branch && body.branch_id === binding.branchId && body.into_branch === binding.intoBranch, "scope");
   return Object.freeze({
     ...binding, state: oneOf(["open", "closed"] as const).parse(body.state),
-    deploymentState: oneOf([
-      "pending", "ready", "no_changes", "queued", "submitting", "in_progress", "pending_cutover",
-      "in_progress_vschema", "in_progress_cancel", "in_progress_cutover", "complete", "complete_cancel",
-      "complete_error", "complete_pending_revert", "in_progress_revert", "in_progress_revert_vschema",
-      "complete_revert", "complete_revert_error", "cancelled", "error",
-    ] as const).parse(body.deployment_state), branchDeleted: flag(body.branch_deleted),
+    deploymentState: deploymentState.parse(body.deployment_state), branchDeleted: flag(body.branch_deleted),
   });
 }

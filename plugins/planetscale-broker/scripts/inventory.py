@@ -32,6 +32,16 @@ ADAPTERS = {
     "get_backup_policy": "get-backup-policy",
     "list_deploy_requests": "list-deploy-requests",
     "get_deploy_request": "get-deploy-request",
+    "get_deployment": "get-deployment",
+    "get_deploy_queue": "get-deploy-queue",
+    "list_deploy_operations": "list-deploy-operations",
+    "list_deploy_request_reviews": "list-deploy-request-reviews",
+    "list_schema_recommendations": "list-schema-recommendations",
+    "get_schema_recommendation": "get-schema-recommendation",
+}
+DEPLOYMENT_DETAILS = {
+    "get_deployment", "get_deploy_queue", "list_deploy_operations",
+    "list_deploy_request_reviews", "list_schema_recommendations", "get_schema_recommendation",
 }
 LIFECYCLE = {
     "list_backups", "get_backup", "list_backup_policies", "get_backup_policy",
@@ -146,7 +156,7 @@ def inventory(raw):
                 } if operation_id in LOCAL_PLANS else None,
                 "credentialEntitlement": "unknown-awaiting-operator-metadata",
                 "adapter": "src/tools/" + adapter + ".ts" if adapter else None,
-                "test": ("test/lifecycle.test.mjs" if operation_id in LIFECYCLE else ("test/discovery.test.mjs" if operation_id in DISCOVERY else "test/metadata.test.mjs")) if adapter else None,
+                "test": ("test/deployment-details.test.mjs" if operation_id in DEPLOYMENT_DETAILS else ("test/lifecycle.test.mjs" if operation_id in LIFECYCLE else ("test/discovery.test.mjs" if operation_id in DISCOVERY else "test/metadata.test.mjs"))) if adapter else None,
                 "projectionCoverage": "bounded-metadata-subset-not-full-operation" if adapter else "missing",
                 "testExecution": "see-exact-head-actions-evidence" if adapter else "no-test-implemented",
                 "implementation": "offline-adapter-only" if adapter else "missing",

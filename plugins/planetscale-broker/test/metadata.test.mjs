@@ -122,7 +122,8 @@ test('complete official map distinguishes mapped, source-adapted, reviewed and e
   const implemented = map.operations.filter(row => row.implementation === 'offline-adapter-only');
   const discovery = ['list_databases', 'list_branches', 'list_database_regions', 'list_regions_for_organization', 'list_public_regions', 'get_default_role'];
   const lifecycle = ['list_backups', 'get_backup', 'list_backup_policies', 'get_backup_policy', 'list_deploy_requests', 'get_deploy_request'];
-  assert.deepEqual(implemented.map(row => row.operationId).sort(), [...fixtures.map(([adapter]) => adapter.operationId), ...discovery, ...lifecycle].sort());
+  const deploymentDetails = ['get_deployment', 'get_deploy_queue', 'list_deploy_operations', 'list_deploy_request_reviews', 'list_schema_recommendations', 'get_schema_recommendation'];
+  assert.deepEqual(implemented.map(row => row.operationId).sort(), [...fixtures.map(([adapter]) => adapter.operationId), ...discovery, ...lifecycle, ...deploymentDetails].sort());
   for (const row of map.operations) {
     assert.equal(row.credentialEntitlement, 'unknown-awaiting-operator-metadata');
     assert.equal(row.review, 'not-reviewed');
@@ -135,7 +136,7 @@ test('complete official map distinguishes mapped, source-adapted, reviewed and e
     if (row.adapter) {
       assert.equal(row.tier, 'read');
       assert.equal(row.method, 'GET');
-      assert.equal(row.test, lifecycle.includes(row.operationId) ? 'test/lifecycle.test.mjs' : (discovery.includes(row.operationId) ? 'test/discovery.test.mjs' : 'test/metadata.test.mjs'));
+      assert.equal(row.test, deploymentDetails.includes(row.operationId) ? 'test/deployment-details.test.mjs' : (lifecycle.includes(row.operationId) ? 'test/lifecycle.test.mjs' : (discovery.includes(row.operationId) ? 'test/discovery.test.mjs' : 'test/metadata.test.mjs')));
       assert.equal(row.projectionCoverage, 'bounded-metadata-subset-not-full-operation');
       const adapter = await import('../../../dist/plugins/planetscale-broker/' + row.adapter.replace(/\.ts$/, '.js'));
       assert.equal(row.operationId, adapter.operationId);
