@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { metadataDescriptors, zoneMetadataDescriptors } from "../dist/plugins/cloudflare-broker/src/metadata.js";
+import { deletionPlanDescriptors } from "../dist/plugins/cloudflare-broker/src/deletion-plans.js";
 import { inventory, source } from "../plugins/cloudflare-broker/scripts/inventory.mjs";
 import { supplementalInventory, supplementalSource } from "../plugins/cloudflare-broker/scripts/supplemental.mjs";
 
@@ -16,7 +17,22 @@ const descriptors = metadataDescriptors(scope);
 const zone = "d".repeat(32);
 const zoneScope = { accountId: account, zoneId: zone, revision: "policy-1", dnsRecordIds: [own] };
 const zoneDescriptors = zoneMetadataDescriptors(zoneScope);
-const allDescriptors = { ...descriptors, ...zoneDescriptors };
+const target = id => ({ id, revision: "resource-1", securityImpact: "does-not-weaken-security" });
+const deletionScope = {
+  accountId: account, zoneId: zone,
+  workerScripts: [target("safe-worker")], hyperdrives: [target(own)],
+  databases: [target(db)], defaultBuckets: [target("safe-bucket")], dnsRecords: [target(own)],
+};
+const deletionDescriptors = deletionPlanDescriptors(deletionScope);
+const metadataOnly = { ...descriptors, ...zoneDescriptors };
+const allDescriptors = { ...metadataOnly, ...deletionDescriptors };
+const deletionCases = [
+  ["workerDelete", { scriptName: "safe-worker" }, `/accounts/${account}/workers/scripts/safe-worker?force=false`, `cloudflare:account:${account}:worker:safe-worker`],
+  ["hyperdriveDelete", { hyperdriveId: own }, `/accounts/${account}/hyperdrive/configs/${own}`, `cloudflare:account:${account}:hyperdrive:${own}`],
+  ["d1Delete", { databaseId: db }, `/accounts/${account}/d1/database/${db}`, `cloudflare:account:${account}:d1:${db}`],
+  ["r2Delete", { bucketName: "safe-bucket" }, `/accounts/${account}/r2/buckets/safe-bucket`, `cloudflare:account:${account}:r2:jurisdiction:default:bucket:safe-bucket`],
+  ["dnsDelete", { dnsRecordId: own }, `/zones/${zone}/dns_records/${own}`, `cloudflare:account:${account}:zone:${zone}:dns:${own}`],
+];
 const success = result => JSON.stringify({ success: true, errors: [], messages: [], result });
 const refuses = (callback, code) => assert.throws(callback, error => error.message === code && error.code === code);
 
@@ -105,7 +121,7 @@ test("Cloudflare descriptor limits refuse oversized results and never imply comp
 });
 
 test("Cloudflare descriptors supply no credential, execution, approval or generic transport entry point", () => {
-  for (const descriptor of Object.values(allDescriptors)) {
+  for (const descriptor of Object.values(metadataOnly)) {
     assert.equal(descriptor.tier, "read");
     assert.deepEqual(Object.keys(descriptor).sort(), ["name", "prepare", "project", "providerOperationId", "tier", "version"]);
     assert.equal(descriptor.execute, undefined);
@@ -322,6 +338,78 @@ test("Cloudflare deployment metadata enforces pagination, bytes and fixed error 
   for (const result of [{}, { deployments: null }]) refuses(() => descriptors.deploymentsList.project(success(result), list), "cap");
 });
 
+test("Cloudflare deletion plans are exact, bounded, reserved and never claim provider dry-run", () => {
+  for (const [name, args, path, resource] of deletionCases) {
+    const descriptor = deletionDescriptors[name];
+    const prepared = descriptor.prepare(args);
+    assert.equal(descriptor.tier, "reserved");
+    assert.deepEqual(Object.keys(descriptor).sort(), ["name", "prepare", "providerOperationId", "tier", "version"]);
+    assert.deepEqual(prepared.arguments, args);
+    assert.deepEqual(prepared.resource, { id: resource, revision: "resource-1" });
+    assert.deepEqual(prepared.request, { method: "DELETE", path, maxResponseBytes: 131072, timeoutMs: 10000, maxRequests: 1, redirects: "deny", retries: "never" });
+    assert.equal(prepared.plan.kind, "validated-local-plan");
+    assert.equal(prepared.plan.providerDryRun, false);
+    assert.equal(prepared.plan.action, "delete");
+    assert.deepEqual(prepared.plan.resource, prepared.resource);
+    assert.deepEqual(prepared.plan.requiredAuthorities, ["release-manager"]);
+    assert.equal(prepared.plan.remoteConditionalWrite, "not-established");
+    assert.equal(prepared.plan.executionPrerequisite, "reviewed-native-authority-and-provider-preconditions");
+    for (const value of [descriptor, prepared, prepared.arguments, prepared.request, prepared.resource, prepared.plan, prepared.plan.effects, prepared.plan.requiredAuthorities]) assert.ok(Object.isFrozen(value));
+    assert.equal(descriptor.execute, undefined);
+    assert.equal(descriptor.project, undefined);
+  }
+  assert.ok(deletionDescriptors.workerDelete.prepare({ scriptName: "safe-worker" }).plan.effects.includes("durable-object-namespaces-may-be-deleted"));
+});
+
+test("Cloudflare destructive arguments cannot assert authority, identity, security impact or force", () => {
+  for (const [name, args] of deletionCases) {
+    for (const key of ["accountId", "zoneId", "agentId", "approval", "approved", "securityImpact", "requiredAuthorities", "revision", "url", "headers", "credential", "force", "jurisdiction", "dryRun"]) {
+      refuses(() => deletionDescriptors[name].prepare({ ...args, [key]: "forged" }), "schema");
+    }
+    const key = Object.keys(args)[0];
+    const foreign = key === "databaseId" ? otherDb : key === "scriptName" ? "other-worker" : key === "bucketName" ? "other-bucket" : other;
+    refuses(() => deletionDescriptors[name].prepare({ [key]: foreign }), "scope");
+    for (const value of ["../target", "target?force=true", "target%2f", "tаrget", "target\n", "target\u0000"]) refuses(() => deletionDescriptors[name].prepare({ [key]: value }), "schema");
+  }
+});
+
+test("Cloudflare security weakening requires owner in addition to production/data authority", () => {
+  const captured = deletionPlanDescriptors({ ...deletionScope, dnsRecords: [{ ...target(own), securityImpact: "weakens-security" }] });
+  const prepared = captured.dnsDelete.prepare({ dnsRecordId: own });
+  assert.deepEqual(prepared.plan.requiredAuthorities, ["release-manager", "owner-security"]);
+  assert.equal(prepared.plan.securityImpact, "weakens-security");
+  for (const securityImpact of [undefined, null, false, "unknown", "safe"]) {
+    refuses(() => deletionPlanDescriptors({ ...deletionScope, dnsRecords: [{ ...target(own), securityImpact }] }), "schema");
+  }
+});
+
+test("Cloudflare destructive snapshots bind revisions and cannot be widened by later source mutation", () => {
+  const input = { ...deletionScope, dnsRecords: [{ ...target(own), securityImpact: "weakens-security" }] };
+  const captured = deletionPlanDescriptors(input);
+  input.dnsRecords[0].revision = "changed";
+  input.dnsRecords[0].securityImpact = "does-not-weaken-security";
+  input.dnsRecords.push(target(other));
+  input.accountId = other;
+  input.zoneId = other;
+  const prepared = captured.dnsDelete.prepare({ dnsRecordId: own });
+  assert.equal(prepared.resource.revision, "resource-1");
+  assert.deepEqual(prepared.plan.requiredAuthorities, ["release-manager", "owner-security"]);
+  assert.equal(prepared.request.path, `/zones/${zone}/dns_records/${own}`);
+  refuses(() => captured.dnsDelete.prepare({ dnsRecordId: other }), "scope");
+  const revised = deletionPlanDescriptors({ ...deletionScope, dnsRecords: [{ ...target(own), revision: "resource-2" }] });
+  assert.notDeepEqual(revised.dnsDelete.prepare({ dnsRecordId: own }).plan, prepared.plan);
+});
+
+test("Cloudflare destructive allowlists are separate from reads, default empty and validate eagerly", () => {
+  const empty = deletionPlanDescriptors({ accountId: account, zoneId: zone });
+  for (const [name, args] of deletionCases) refuses(() => empty[name].prepare(args), "scope");
+  refuses(() => deletionPlanDescriptors({ ...deletionScope, dnsRecords: [target(own), target(own)] }), "schema");
+  refuses(() => deletionPlanDescriptors({ ...deletionScope, databases: [target(own)] }), "schema");
+  refuses(() => deletionPlanDescriptors({ ...deletionScope, workerScripts: Array(101).fill(target("safe-worker")) }), "cap");
+  refuses(() => deletionPlanDescriptors({ ...deletionScope, dnsRecords: [{ ...target(own), revision: "invalid/revision" }] }), "schema");
+  refuses(() => deletionPlanDescriptors({ ...deletionScope, zoneId: undefined }), "schema");
+});
+
 test("Cloudflare full schema inventory is pinned, explicit about holes, and consistent with descriptors", async () => {
   const bytes = await readFile(new URL("../plugins/cloudflare-broker/coverage/operations.jsonl", import.meta.url));
   const manifest = JSON.parse(await readFile(new URL("../plugins/cloudflare-broker/coverage/source.json", import.meta.url)));
@@ -349,10 +437,17 @@ test("Cloudflare full schema inventory is pinned, explicit about holes, and cons
       assert.ok(descriptor);
       assert.equal(row.operationId, descriptor.providerOperationId);
       assert.equal(row.tier, descriptor.tier);
-      assert.equal(row.implementation, "descriptor-only");
+      assert.equal(row.implementation, descriptor.tier === "reserved" ? "plan-descriptor-only" : "descriptor-only");
+      if (descriptor.tier === "reserved") {
+        assert.equal(row.approvalRoute, "release-manager-and-conditional-owner-security");
+        assert.equal(row.sideEffects, "destructive-production");
+        for (const prerequisite of ["native-conjunctive-authority-and-security-impact", "provider-precondition-and-recovery-adapter", "execution-and-projection-adapter"]) assert.ok(row.prerequisites.includes(prerequisite));
+      }
     }
   }
-  assert.equal(operations.filter(row => row.typedTool !== null).length, 13);
+  assert.equal(operations.filter(row => row.typedTool !== null).length, 18);
+  assert.equal(operations.filter(row => row.tier === "reserved").length, 5);
+  assert.equal(operations.filter(row => row.tier === "read").length, 13);
   assert.equal(manifest.counts.descriptors, Object.keys(allDescriptors).length);
   assert.equal(manifest.credentialScope.status, "operation-entitlements-unresolved");
   assert.equal(manifest.complete, false);

@@ -26,6 +26,13 @@ const descriptors = new Map([
   ["GET /zones/{zone_id}/dns_records", "cloudflare.dns.list"],
   ["GET /zones/{zone_id}/dns_records/{dns_record_id}", "cloudflare.dns.get"],
 ]);
+const deletionPlans = new Map([
+  ["DELETE /accounts/{account_id}/workers/scripts/{script_name}", "cloudflare.workers.delete"],
+  ["DELETE /accounts/{account_id}/hyperdrive/configs/{hyperdrive_id}", "cloudflare.hyperdrive.delete"],
+  ["DELETE /accounts/{account_id}/d1/database/{database_id}", "cloudflare.d1.delete"],
+  ["DELETE /accounts/{account_id}/r2/buckets/{bucket_name}", "cloudflare.r2.delete"],
+  ["DELETE /zones/{zone_id}/dns_records/{dns_record_id}", "cloudflare.dns.delete"],
+]);
 const digest = value => createHash("sha256").update(value).digest("hex");
 
 export function inventory(bytes) {
@@ -38,7 +45,8 @@ export function inventory(bytes) {
       if (!methods.has(method)) continue;
       if (typeof operation.operationId !== "string" || !Array.isArray(operation.tags)) throw new Error("unmapped schema operation");
       const key = `${method.toUpperCase()} ${path}`;
-      const typedTool = descriptors.get(key) ?? null;
+      const deletionPlan = deletionPlans.has(key);
+      const typedTool = descriptors.get(key) ?? deletionPlans.get(key) ?? null;
       operations.push({
         key, operationId: operation.operationId, areas: operation.tags,
         typedTool,
@@ -52,19 +60,19 @@ export function inventory(bytes) {
         requestShapeSha256: digest(JSON.stringify({ parameters: [...(item.parameters ?? []), ...(operation.parameters ?? [])], body: operation.requestBody ?? null })),
         responseShapeSha256: digest(JSON.stringify(operation.responses)),
         credentialScope: "unknown",
-        tier: typedTool ? "read" : "unclassified",
-        sideEffects: typedTool ? "metadata-read-only" : "unclassified",
-        approvalRoute: typedTool ? "agent-and-resource-policy" : "unresolved",
-        implementation: typedTool ? "descriptor-only" : "missing",
+        tier: deletionPlan ? "reserved" : typedTool ? "read" : "unclassified",
+        sideEffects: deletionPlan ? "destructive-production" : typedTool ? "metadata-read-only" : "unclassified",
+        approvalRoute: deletionPlan ? "release-manager-and-conditional-owner-security" : typedTool ? "agent-and-resource-policy" : "unresolved",
+        implementation: deletionPlan ? "plan-descriptor-only" : typedTool ? "descriptor-only" : "missing",
         review: "not-reviewed", enablement: "disabled",
         tests: typedTool ? ["test/cloudflare-provider.test.mjs"] : [],
-        prerequisites: typedTool ? ["credential-scope-attestation", "compatible-reviewed-core", "native-integration-and-tier-review"] : ["credential-scope-attestation", "typed-adapter-and-tier-classification", "native-integration-and-tier-review"],
+        prerequisites: deletionPlan ? ["credential-scope-attestation", "compatible-reviewed-core", "native-conjunctive-authority-and-security-impact", "provider-precondition-and-recovery-adapter", "execution-and-projection-adapter", "native-integration-and-tier-review"] : typedTool ? ["credential-scope-attestation", "compatible-reviewed-core", "native-integration-and-tier-review"] : ["credential-scope-attestation", "typed-adapter-and-tier-classification", "native-integration-and-tier-review"],
       });
     }
   }
   operations.sort((a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0);
   const keys = new Set(operations.map(operation => operation.key));
-  if (keys.size !== operations.length || [...descriptors.keys()].some(key => !keys.has(key))) throw new Error("inventory identity mismatch");
+  if (keys.size !== operations.length || [...descriptors.keys(), ...deletionPlans.keys()].some(key => !keys.has(key))) throw new Error("inventory identity mismatch");
   return operations;
 }
 
