@@ -107,6 +107,56 @@ test("broker package evidence bounds archive work and package bytes", () => {
 `);
 });
 
+test("broker package evidence binds recipe, source, lockfile and SDK with verifiable checksums", () => {
+  python(`
+    import json, os, shutil
+    source, output = root / "source", root / "output"
+    (source / "plugins").mkdir(parents=True)
+    shutil.move(package, source / "plugins/github-broker")
+    package = source / "plugins/github-broker"
+    sdk = {"version": "2026.1023.0", "integrity": "sha512-synthetic", "resolved": "https://registry.npmjs.org/synthetic"}
+    lock = json.dumps({"packages": {"node_modules/@paperclipai/plugin-sdk": sdk}})
+    (source / "package-lock.json").write_text(lock)
+    installed = source / "node_modules/@paperclipai/plugin-sdk"
+    installed.mkdir(parents=True)
+    (installed / "package.json").write_text(json.dumps({"version": sdk["version"]}))
+    (package / "package.json").write_text(json.dumps({"dependencies": {"@paperclipai/plugin-sdk": sdk["version"]}}))
+    files = api["package_files"](package)
+    entries = [("package/" + name, data, tarfile.REGTYPE) for name, data in files.items()]
+    output.mkdir()
+    archive(entries).rename(output / "candidate.tgz")
+    os.environ.update(SOURCE_SHA="a" * 40, RECIPE_SHA="b" * 40, GITHUB_RUN_ID="123", GITHUB_RUN_ATTEMPT="2", GITHUB_STEP_SUMMARY=str(root / "summary"))
+    def command(args, text):
+        if args[0] == "git":
+            if args[-1] == "HEAD^{tree}":
+                return "c" * 40
+            return ("a" if args[2] == str(source) else "b") * 40
+        return "v24.21.0" if args[0] == "node" else "11.0.0"
+    api["main"].__globals__["subprocess"].check_output = command
+    sys.argv = [sys.argv[1], str(source), str(output)]
+    api["main"]()
+    evidence = json.loads((output / "build-evidence.json").read_text())
+    assert evidence["sourceSha"] == "a" * 40 and evidence["recipeSha"] == "b" * 40
+    assert evidence["sourceTree"] == "c" * 40 and evidence["sdk"] == sdk
+    assert evidence["lockfileSha256"] == api["digest"](lock.encode())
+    manifest = json.loads((output / "dist-manifest.json").read_text())
+    assert manifest == {name: api["digest"](data) for name, data in files.items() if name.startswith("dist/")}
+    sums = (output / "SHA256SUMS").read_text().splitlines()
+    assert len(sums) == 4
+    for line in sums:
+        checksum, name = line.split("  ")
+        assert checksum == api["digest"]((output / name).read_bytes())
+    assert evidence["packageSha256"] in (root / "summary").read_text()
+    (installed / "package.json").write_text('{"version":"wrong"}')
+    try:
+        api["main"]()
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("SDK mismatch accepted")
+`);
+});
+
 test("broker packaging is dispatch-only, read-only and fails closed before publishing evidence", () => {
   assert.match(workflow, /on:\n  workflow_dispatch:/);
   assert.doesNotMatch(workflow, /pull_request_target:|secrets:|npm publish|id-token:|contents: write/);
