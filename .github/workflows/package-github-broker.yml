@@ -6,10 +6,10 @@ on:
       source_sha:
         description: Confirm the reviewed source pin (independent of the workflow revision)
         required: true
-        default: 5e32d7ae9f7d057318229db6fcd5894d4b6bf3e4
+        default: 9d99117038d4a2d90f9453e0d04e97d6070c652d
         type: choice
         options:
-          - 5e32d7ae9f7d057318229db6fcd5894d4b6bf3e4
+          - 9d99117038d4a2d90f9453e0d04e97d6070c652d
 
 permissions:
   contents: read
@@ -29,7 +29,7 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
-          test "$SOURCE_SHA" = 5e32d7ae9f7d057318229db6fcd5894d4b6bf3e4
+          test "$SOURCE_SHA" = 9d99117038d4a2d90f9453e0d04e97d6070c652d
       - name: Check out packaging recipe
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -40,7 +40,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           # A different source requires a reviewed recipe change, not a dispatch argument.
-          ref: 5e32d7ae9f7d057318229db6fcd5894d4b6bf3e4
+          ref: 9d99117038d4a2d90f9453e0d04e97d6070c652d
           path: source
           fetch-depth: 0
           persist-credentials: false

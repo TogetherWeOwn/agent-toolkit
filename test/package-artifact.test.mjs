@@ -195,15 +195,17 @@ test("broker packaging is dispatch-only, read-only and fails closed before publi
   for (const action of workflow.matchAll(/uses: (actions\/[^\s]+)/g)) {
     assert.match(action[1], /@[0-9a-f]{40}$/);
   }
-  const approved = "5e32d7ae9f7d057318229db6fcd5894d4b6bf3e4";
+  const approved = "9d99117038d4a2d90f9453e0d04e97d6070c652d";
+  const diagnostics = "5e32d7ae9f7d057318229db6fcd5894d4b6bf3e4";
   const historical = "2b0c7cc97c6c515af7ed14e7c347a167b6bf0337";
   assert.match(workflow, new RegExp(`default: ${approved}`));
   assert.match(workflow, new RegExp(`options:\\n          - ${approved}\\n`));
   assert.match(workflow, new RegExp(`ref: ${approved}`));
   assert.ok(!workflow.includes(historical));
+  assert.ok(!workflow.includes(diagnostics));
   assert.doesNotMatch(workflow, /ref: \$\{\{ inputs\.source_sha \}\}/);
   const guard = workflow.match(/run: \|\n([\s\S]*?)      - name: Check out packaging recipe/)[1];
-  for (const value of [approved, historical, "a".repeat(40), "main", "a".repeat(39), "A".repeat(40), "$(exit 0)", approved + "\n"]) {
+  for (const value of [approved, diagnostics, historical, "a".repeat(40), "main", "a".repeat(39), "A".repeat(40), "$(exit 0)", approved + "\n"]) {
     const result = spawnSync("bash", ["-c", guard], {
       env: { PATH: process.env.PATH, SOURCE_SHA: value }, timeout: 5000,
     });
