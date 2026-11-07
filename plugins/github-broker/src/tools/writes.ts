@@ -10,10 +10,13 @@ interface File { path: string; contentBase64: string }
 const files: Schema<File[]> = { parse(v) {
   guard(Array.isArray(v) && v.length > 0 && v.length <= 16, "write.files_limit");
   const parsed = v.map(x => file.parse(x)); // The enclosing closed schema checks JSON descriptors first.
-  guard(new Set(parsed.map(f => f.path)).size === parsed.length, "write.duplicate_path");
+  const paths = new Set(parsed.map(f => f.path));
+  guard(paths.size === parsed.length, "write.duplicate_path");
   let bytes = 0;
   for (const f of parsed) {
     filePath(f.path); safePath(f.path);
+    const parts = f.path.split("/");
+    for (let i = 1; i < parts.length; i++) guard(!paths.has(parts.slice(0, i).join("/")), "write.conflicting_path");
     const content = Buffer.from(f.contentBase64, "base64");
     guard(content.toString("base64") === f.contentBase64, "write.encoding");
     bytes += content.length;
@@ -119,7 +122,7 @@ export const commitFiles = defineWrite("github.commit_files", "Commit capped bas
       const tree = [];
       for (const f of args.files as File[]) {
         const blob = object(await api("POST", "/git/blobs", 201, { content: f.contentBase64, encoding: "base64" }));
-        tree.push({ path: f.path, mode: "100644", type: "blob", sha: sha.parse(blob.sha) });
+        tree.push({ path: f.path, mode: entries.get(f.path)?.mode ?? "100644", type: "blob", sha: sha.parse(blob.sha) });
       }
       const createdTree = object(await api("POST", "/git/trees", 201, { base_tree: baseTree, tree }));
       const commit = object(await api("POST", "/git/commits", 201, { message: args.message, tree: sha.parse(createdTree.sha), parents: [args.expectedParent] }));

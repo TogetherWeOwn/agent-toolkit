@@ -35,11 +35,11 @@ function prSteps(f) {
   diffSteps(f); f.branch(); f.branch(baseSha, {}, 'main');
   f.write('POST', '/pulls', { id: 7, number: 1, draft: true, state: 'open' }, body => assert.deepEqual(body, { head: branch, base: 'main', title: createArgs.title, body: createArgs.body, draft: true }));
 }
-function commitSteps(f, recheck = parent) {
+function commitSteps(f, recheck = parent, mode = '100644') {
   f.branch(); f.read(`/git/commits/${parent}`, { sha: parent, tree: { sha: tree } });
-  f.read(`/git/trees/${tree}?recursive=1`, { sha: tree, truncated: false, tree: [{ path: 'src', type: 'tree', mode: '040000' }, { path: 'src/example.ts', type: 'blob', mode: '100644' }] });
+  f.read(`/git/trees/${tree}?recursive=1`, { sha: tree, truncated: false, tree: [{ path: 'src', type: 'tree', mode: '040000' }, ...(mode ? [{ path: 'src/example.ts', type: 'blob', mode }] : [])] });
   f.write('POST', '/git/blobs', { sha: blob }, body => assert.deepEqual(body, { content: commitArgs.files[0].contentBase64, encoding: 'base64' }));
-  f.write('POST', '/git/trees', { sha: tree }, body => assert.deepEqual(body, { base_tree: tree, tree: [{ path: 'src/example.ts', mode: '100644', type: 'blob', sha: blob }] }));
+  f.write('POST', '/git/trees', { sha: tree }, body => assert.deepEqual(body, { base_tree: tree, tree: [{ path: 'src/example.ts', mode: mode ?? '100644', type: 'blob', sha: blob }] }));
   f.write('POST', '/git/commits', { sha: commit }, body => {
     assert.deepEqual(body, { message: commitArgs.message, tree, parents: [parent] });
     for (const key of ['author', 'committer', 'signature']) assert.equal(Object.hasOwn(body, key), false);
@@ -135,6 +135,34 @@ test('commit_files refuses workflow, review-instruction, traversal and malformed
   for (const expectedParent of [undefined, '', 'main', 'a'.repeat(39), 'A'.repeat(40)]) {
     const f = writer(); refused(f, await f.call('github.commit_files', { ...commitArgs, expectedParent }), 'validation.schema');
   }
+});
+
+test('commit_files rejects submitted ancestor/descendant paths in either order before secrets or network', async () => {
+  for (const paths of [['src/tool', 'src/tool/config'], ['src/tool/config', 'src/tool'], ['src/tool/config/deep', 'src/tool']]) {
+    const f = writer();
+    refused(f, await f.call('github.commit_files', { ...commitArgs, files: paths.map(path => ({ ...commitArgs.files[0], path })) }), 'write.conflicting_path');
+  }
+});
+
+test('commit_files preserves existing regular-file modes and defaults new files to non-executable', async () => {
+  for (const mode of ['100644', '100755', null]) {
+    const f = writer(); f.mint({ contents: 'write' }); f.repository(); commitSteps(f, parent, mode); f.revoke();
+    const result = await f.call('github.commit_files', commitArgs);
+    assert.equal(result.error, undefined); f.hygiene(result); f.done();
+  }
+});
+
+test('commit_files allows sibling and common-prefix paths without treating them as ancestors', async () => {
+  const f = writer(); f.mint({ contents: 'write' }); f.repository(); f.branch();
+  f.read(`/git/commits/${parent}`, { sha: parent, tree: { sha: tree } });
+  f.read(`/git/trees/${tree}?recursive=1`, { sha: tree, truncated: false, tree: [] });
+  const files = ['src/tool', 'src/toolbox', 'src/tool-config', 'src/other/config'].map(path => ({ ...commitArgs.files[0], path }));
+  for (const file of files) f.write('POST', '/git/blobs', { sha: blob }, body => assert.deepEqual(body, { content: file.contentBase64, encoding: 'base64' }));
+  f.write('POST', '/git/trees', { sha: tree }, body => assert.deepEqual(body, { base_tree: tree, tree: files.map(file => ({ path: file.path, mode: '100644', type: 'blob', sha: blob })) }));
+  f.write('POST', '/git/commits', { sha: commit }, body => assert.deepEqual(body, { message: commitArgs.message, tree, parents: [parent] }));
+  f.branch(); f.write('PATCH', `/git/refs/heads/${encoded}`, { ref: `refs/heads/${branch}`, object: { sha: commit } }); f.revoke();
+  const result = await f.call('github.commit_files', { ...commitArgs, files });
+  assert.equal(result.error, undefined); f.hygiene(result); f.done();
 });
 
 test('pr_create denies workflow and review-instruction changes, including previous names and ambiguous truncated diffs', async () => {

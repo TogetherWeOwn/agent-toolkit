@@ -66,6 +66,9 @@ export function parseConfig(value: unknown): Config {
   return config;
 }
 export function policyHash(config: Config): string { return hash(config); }
+function authorizeBranch(branchSlug: string | undefined, branch: unknown): void {
+  guard(branchSlug && typeof branch === "string" && branch.startsWith(`agent/${branchSlug}/`) && branch.length > `agent/${branchSlug}/`.length, "policy.branch");
+}
 export async function authorize(host: Host, policy: Policy, caller: Caller, tool: Tool, args: Arguments): Promise<Repository> {
   guard(caller.companyId === policy.companyId, "policy.company");
   const agent = policy.agents.find(a => a.agentId === caller.agentId);
@@ -74,8 +77,7 @@ export async function authorize(host: Host, policy: Policy, caller: Caller, tool
   guard(profiles[agent.profile].identityLanes.includes(agent.identityLane) && tool.identityLane === agent.identityLane, "policy.identity_lane");
   guard(agent.repositoryIds.includes(args.repoId), "policy.repository");
   if (tool.write && (tool.name === "github.pr_create" || tool.name === "github.commit_files")) {
-    const branch = tool.name === "github.pr_create" ? args.head : args.branch;
-    guard(agent.branchSlug && typeof branch === "string" && branch.startsWith(`agent/${agent.branchSlug}/`) && branch.length > `agent/${agent.branchSlug}/`.length, "policy.branch");
+    authorizeBranch(agent.branchSlug, tool.name === "github.pr_create" ? args.head : args.branch);
   }
   const repo = policy.repositories.find(r => r.id === args.repoId);
   guard(repo && repo.projectId === caller.projectId && repo.workspaceId === args.workspaceId, "policy.workspace");
