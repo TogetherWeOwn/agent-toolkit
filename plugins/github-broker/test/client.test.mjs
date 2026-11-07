@@ -5,7 +5,7 @@ import { once } from 'node:events';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { mkdtempSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { test } from 'node:test';
 import { executeBrokerRead } from '../dist/plugins/github-broker/src/client.js';
 import { fixture as brokerFixture, base as brokerBase } from './helpers.mjs';
@@ -273,6 +273,17 @@ test('REST client CLI resolves symlink entry points without running on import', 
     const imported = spawnSync(process.execPath, [...flags, '--input-type=module', '-e', 'await import(process.argv[1]); process.stdout.write("imported\\n");', pathToFileURL(entry).href], { env: { PATH: process.env.PATH }, encoding: 'utf8', timeout: 10000 });
     assert.equal(imported.status, 0, imported.stderr);
     assert.equal(imported.stdout, 'imported\n'); assert.equal(imported.stderr, '');
+  }
+  // Keep relative dependencies valid when Node preserves imported symlinks.
+  const entry = `${script}.${basename(dir)}.mjs`;
+  symlinkSync(script, entry); t.after(() => rmSync(entry));
+  for (const flags of [[], ['--preserve-symlinks'], ['--preserve-symlinks-main'], ['--preserve-symlinks', '--preserve-symlinks-main']]) {
+    const imported = spawnSync(process.execPath, [...flags, '--input-type=module', '-e', 'const { pathToFileURL } = await import("node:url"); await import(pathToFileURL(process.argv[1])); process.stdout.write("imported\\n");', entry], { env: { PATH: process.env.PATH }, encoding: 'utf8', timeout: 10000 });
+    assert.equal(imported.status, 0, imported.stderr);
+    assert.equal(imported.stdout, 'imported\n'); assert.equal(imported.stderr, '');
+    const preloaded = spawnSync(process.execPath, [...flags, '--import', pathToFileURL(entry).href, '--input-type=module', '-e', 'process.stdout.write("preloaded\\n");', entry], { env: { PATH: process.env.PATH }, encoding: 'utf8', timeout: 10000 });
+    assert.equal(preloaded.status, 0, preloaded.stderr);
+    assert.equal(preloaded.stdout, 'preloaded\n'); assert.equal(preloaded.stderr, '');
   }
   assert.equal(requests, 2);
 });

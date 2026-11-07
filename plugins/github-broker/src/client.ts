@@ -1,5 +1,3 @@
-import { fileURLToPath } from "node:url";
-import { realpathSync } from "node:fs";
 import { tools } from "./broker.js";
 import { scrub } from "./output.js";
 
@@ -131,7 +129,4 @@ export async function main(argv = process.argv.slice(2), env: Environment = proc
   process.stdout.write(`${JSON.stringify(result)}\n`);
   if (!result.ok) process.exitCode = 1;
 }
-let entrypoint = false;
-try { if (process.argv[1]) entrypoint = realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url)); }
-catch { /* Imports may have no filesystem entry point. */ }
-if (entrypoint) await main();
+if (import.meta.main) await main();
