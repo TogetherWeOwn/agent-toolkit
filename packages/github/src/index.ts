@@ -156,6 +156,7 @@ async function verifyRejection(transport: Transport, token: string, sensitive: r
     probes.push({ attempt: 2, status: null, requestId: null, result: "unavailable" });
     snapshot();
     reason = "transport";
+    check(deadline !== undefined, "http.deadline");
     const second = await request(transport, "GET", "/installation/repositories?per_page=1", token, { deadline, onDispatch: () => {
       withinWindow();
       if (!terminal) secondDispatched = true;
