@@ -82,6 +82,60 @@ test('synchronous provider completion beyond its monotonic deadline is uncertain
   assert.equal(f.calls.upstream, 1);
 });
 
+for (const rejectsOnAbort of [false, true]) {
+  test(`async read timeout remains uncertain when abort rejection is ${rejectsOnAbort}`, async () => {
+    let signal;
+    const f = providerFixture({ operation: { timeoutMs: 1, async execute(plan, credential, abort) {
+      f.calls.upstream++;
+      signal = abort;
+      return new Promise((resolve, reject) => {
+        if (rejectsOnAbort) abort.addEventListener('abort', () => reject(Error('aborted')), { once: true });
+      });
+    } } });
+    const result = await call(f);
+    assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal(signal.aborted, true);
+    assert.equal([...f.journal.values()][0].outcome, 'uncertain');
+    assert.equal(f.calls.close, 1);
+    assert.equal(f.audit.at(-1).decision, 'OUTCOME_UNCERTAIN');
+    assert.equal((await call(f)).code, 'REPLAY_CONFLICT');
+    assert.equal(f.calls.upstream, 1);
+    safe(f, result);
+  });
+}
+
+for (const malformed of [() => new Array(1), () => Object.assign(new Array(1), { extra: derivedCanary }),
+  () => Object.defineProperty([], '0', { enumerable: true, get() { throw Error('getter must not run'); } })]) {
+  test(`malformed credential redactions refuse before writes: ${malformed.toString()}`, async () => {
+    const f = providerFixture({ operation: { tier: 'write' } });
+    f.dependencies.credentials.resolve = async () => {
+      f.calls.secret++;
+      return { value: credentialCanary, redactions: malformed(), async close() { f.calls.close++; } };
+    };
+    const result = await call(f);
+    assert.equal(result.code, 'CREDENTIAL_UNAVAILABLE');
+    assert.equal(f.calls.upstream, 0);
+    assert.equal(f.calls.close, 1);
+    assert.equal([...f.journal.values()][0].outcome, 'refused');
+    assert.equal((await call(f)).code, 'REPLAY_CONFLICT');
+    safe(f, result);
+  });
+}
+
+for (const encoding of ['base64', 'base64url']) {
+  for (const prefix of ['', 'x', 'xx', 'prefix:', 'x-access-token:']) {
+    for (const suffix of ['', ':suffix']) {
+      test(`embedded credential reflection is refused: ${encoding}/${prefix.length}/${suffix.length}`, async () => {
+        const raw = Buffer.from(prefix + credentialCanary + suffix).toString(encoding).replace(/=+$/, '');
+        const f = providerFixture({ operation: { project() { return { encoded: raw }; } } });
+        const result = await call(f);
+        assert.equal(result.code, 'OUTPUT_REFUSED');
+        safe(f, result);
+      });
+    }
+  }
+}
+
 test('canonical targets sort object keys but bind arrays, Unicode, plans and artifacts', () => {
   assert.equal(canonicalHash({ b: 2, a: 1 }), canonicalHash({ a: 1, b: 2 }));
   assert.notEqual(canonicalHash([1, 2]), canonicalHash([2, 1]));

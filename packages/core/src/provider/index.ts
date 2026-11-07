@@ -72,12 +72,25 @@ function validEvidence(value: NativeEvidence | null, target: AuthorizationTarget
     now < evidence.expiresAt && evidence.expiresAt - evidence.issuedAt <= 300_000, "AUTHORIZATION_DENIED");
   return evidence;
 }
+function base64Cores(value: string, encoding: "base64" | "base64url"): string[] {
+  const bytes = Buffer.from(value);
+  const cores: string[] = [];
+  for (let offset = 0; offset < 3; ++offset) {
+    const encoded = Buffer.concat([Buffer.alloc(offset), bytes]).toString(encoding);
+    // Only full groups made entirely of credential bytes are prefix/suffix independent.
+    const start = offset === 0 ? 0 : 4;
+    const end = Math.floor((offset + bytes.length) / 3) * 4;
+    if (end > start) cores.push(encoded.slice(start, end));
+  }
+  return cores;
+}
 function noCredentialOutput(value: unknown, credentials: readonly string[]): void {
   jsonData(value);
   const serialized = JSON.stringify(value);
   for (const credential of credentials) {
     const variants = [credential, encodeURIComponent(credential), Buffer.from(credential).toString("base64"),
-      Buffer.from(credential).toString("base64url")];
+      Buffer.from(credential).toString("base64url"), ...base64Cores(credential, "base64"),
+      ...base64Cores(credential, "base64url")];
     insist(!variants.some(v => serialized.includes(JSON.stringify(v).slice(1, -1))), "OUTPUT_REFUSED");
   }
 }
@@ -174,7 +187,12 @@ export function createProviderBroker(dependencies: ProviderDependencies) {
         credential = await d.credentials.resolve(target);
         insist(typeof credential.value === "string" && credential.value.length > 0 && credential.value.length <= 16384 &&
           Array.isArray(credential.redactions) && credential.redactions.length <= 64 &&
-          credential.redactions.every(s => typeof s === "string" && s.length > 0 && s.length <= 16384), "CREDENTIAL_UNAVAILABLE");
+          Reflect.ownKeys(credential.redactions).length === credential.redactions.length + 1, "CREDENTIAL_UNAVAILABLE");
+        for (let i = 0; i < credential.redactions.length; ++i) {
+          const item = Object.getOwnPropertyDescriptor(credential.redactions, String(i));
+          insist(item?.enumerable && Object.hasOwn(item, "value") && typeof item.value === "string" &&
+            item.value.length > 0 && item.value.length <= 16384, "CREDENTIAL_UNAVAILABLE");
+        }
         await revalidate();
         if (evidence !== null) {
           failure = "AUTHORIZATION_UNAVAILABLE";
@@ -194,7 +212,7 @@ export function createProviderBroker(dependencies: ProviderDependencies) {
         let output: unknown;
         try {
           output = await Promise.race([pending, new Promise<never>((_, reject) => {
-            timer = setTimeout(() => { controller.abort(); reject(new Error("timeout")); }, operation!.timeoutMs);
+            timer = setTimeout(() => { reject(new Denied("OUTCOME_UNCERTAIN")); controller.abort(); }, operation!.timeoutMs);
           })]);
           if (performance.now() >= deadline) {
             controller.abort();

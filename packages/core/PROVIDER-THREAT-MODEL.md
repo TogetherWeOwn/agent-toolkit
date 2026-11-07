@@ -39,10 +39,11 @@ references, endpoints, spend or approval. Prompt instructions are not controls.
 
 ## Replay, limits and failure
 
-All calls require durable key/target claims. Claim identity excludes run/version/
-policy/args so a changed execution cannot repeat the same request. Tombstones
-survive completion/refusal/uncertainty and restart. No time-only takeover or
-mutation retry. A timeout signals abort but retains uncertainty because the
+Execution requires durable key/target claims. Claim identity excludes run/version/
+policy/args so a changed execution cannot repeat the same claimed request.
+Tombstones survive completion, post-claim refusal, uncertainty and restart.
+Pre-claim refusals (including policy denials) leave no tombstone; the same key
+may execute later if policy permits. No time-only takeover or mutation retry. A timeout signals abort but retains uncertainty because the
 provider may still finish. Audit intent and outcome are linked; sink/state/close
 failure never silently succeeds. Durable audit outage reconciliation/outbox,
 HA/fencing and operator recovery remain concrete production adapter obligations.
@@ -80,8 +81,13 @@ and immutable audit coverage must be demonstrated on the exact target version.
 ## Acceptance/install status
 
 - Versioned source/fixtures and operation-map consistency checks: candidate.
-- GitHub Actions exact-head type/suite/policy results: pending, not run locally.
-- Fresh-context implementation review: pending.
+- GitHub Actions: head `a444f9468c1ff5267a8d3c6296f9a84a6058520c` passed
+  [type/suite/policy CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42419913729),
+  with 608/608 tests in the [test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42419913729/job/128545931558).
+  Subsequent repair heads require their own exact-head Actions evidence in the PR;
+  this historical result does not qualify a changed head. No local suite run.
+- Fresh-context author implementation review: completed; four findings repaired
+  in `a444f9468c1ff5267a8d3c6296f9a84a6058520c`. Not specialist acceptance.
 - Security, Crypto, then final QA: pending; no waiver.
 - Production host/native approval/journal/audit/lifecycle adapters: not supplied.
 - Install/enablement: not authorized; operator only after package acceptance.

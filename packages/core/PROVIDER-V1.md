@@ -125,8 +125,11 @@ entitlement, implementation/review/enabled status, tests and prerequisite. See
 `OperationMap`/`OperationMapEntry` for field names and `test/provider-coverage.test.mjs`
 for examples. Full snapshot completeness, entitlement and actual review evidence
 must be independently verified: consistent metadata is not proof of execution,
-review or API completeness. Unknown/incomplete and entitled-but-unimplemented
-operations never earn `complete`. Prohibited entries have no executor.
+review or API completeness. Unknown entitlement, incomplete status and entitled
+but unimplemented non-prohibited operations prevent `complete`. An explicitly
+prohibited operation has no executor and does not prevent `complete` solely
+because it is entitled but unimplemented. Thus `complete` is not proof that every
+entitled operation is implemented, reviewed or enabled; prohibitions stay denied.
 
 GitHub owner-token execution, APPROVE execution, workflow-file writes and
 Actions/Checks/Statuses writes remain expressly prohibited. Generic completeness
