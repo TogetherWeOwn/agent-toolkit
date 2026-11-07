@@ -68,6 +68,24 @@ Repository preparation separately validates directory containment, Git identity 
 
 Project mode and strategy are distinct. An isolated mode alone does not establish `git_worktree`; enabled defaults and explicit strategy resolution must be checked. The parsed `allowIssueOverride` setting is not by itself proof of an enforced mode lock in the inspected resolver.
 
+### Intended repository and retained-work decision table
+
+Native access is a ceiling, not an intended-repository allowlist. In the inspected release, configured-source selection can accept another accessible company source after project authorization. Explicit authorized reuse is also supported. Neither behavior proves that the source is appropriate for this task. This workflow must compare the exact assigned source/repository before submitting intent and again after realization; stop if another accessible source is selected. Do not claim that native authorization will reject every business-wrong repository.
+
+| Observed state | Safe workflow action | What this does not prove |
+| --- | --- | --- |
+| New task, no retained root, explicit intended source | Use supported isolated defaults; inspect and validate the later native realization | Selection-write or preservation acceptance |
+| Matching retained source/root/origin/branch | Continue in place after preflight; do not reselect merely to obtain another isolated root | Permission to reset or discard existing state |
+| Conflicting retained source, repository, ref or branch | Stop repository work; preserve the binding and files; route the exact supported repair | That selecting the correct source migrates old work |
+| Inherited or explicitly shared root | Verify intended repository and authorized linked-task access; retain continuity only when compatible | That parent/project membership authorizes all retained data or supplies isolation |
+| Dirty, untracked or ignored files; live process or runtime service | Preserve in place; do not use selection as a repair or experiment; require separately authorized preservation/recovery handling before rebinding | That next-admission deferral copies files or permanently retains the old root |
+| Stale/foreign/inaccessible workspace, source or intent | Refuse this workflow; inspect the supported failure without broadening the principal or clearing the binding | That refreshing a revision makes a different intent safe |
+| Unsettled recovery or previous run still owns persistence | Let the owning native recovery finish; do not cancel the holder or bypass the fence | That submitting pending intent transfers runtime ownership |
+
+These are caller workflow decisions, not a claim that the native service automatically implements every row as a refusal. At admission, the inspected service checks the current persisted intent, run/task/responsible-user identity, source/project access and trust before applying it. It does not classify disk contents there. A binding revision is not a version of repository configuration or a disk-integrity receipt. Changed assignment/configuration, concurrency, response loss and revocation still need acceptance evidence for the actual path used.
+
+For the demonstrated configured-source case, no acquisition/preparation operation is necessary. Keep preparation out of any proposed adapter unless a concrete requirement justifies it and its separate security review. No adapter or plugin invocation is selected by this runbook, so plugin-specific principal propagation, shared rate/audit enforcement and output projection remain conditional requirements—not controls established by native source inspection.
+
 ### When inspection fails
 
 A server error is not a permission denial, absence of a repository or proof that a broad broker is required. Preserve the exact status, endpoint class, runtime version and safe correlation evidence. Diagnose the supported route/service and deployment compatibility before attempting a selection write. Never use raw database access, installed-core edits, retained-binding clearing, a session reset or a stronger principal as a diagnostic workaround.
@@ -82,7 +100,7 @@ Collect evidence for the exact runtime/procedure or reviewed adapter artifact. R
 | --- | --- |
 | Authorized new task, explicit correct repository, isolated settings | Later normal admission realizes the correct native root, origin and managed branch |
 | Project primary differs from explicitly selected repository | The explicit authorized repository wins; no silent primary substitution |
-| Wrong repository/source or incompatible inherited workspace | Refusal before realization or mutation; existing work remains intact |
+| Accessible but unintended repository/source or incompatible inherited workspace | Workflow preflight stops before submitting intent or starting repository work; do not expect native access checks alone to enforce task intent |
 | Foreign task/company/project or stale assignment | Native authorization refuses; no credential expansion or cross-task effect |
 | Stale binding revision or conflicting request-key reuse | Native conflict/refusal, not overwrite or automatic revision guessing |
 | Dirty/untracked existing work | No reset, clean, move, overwrite or silent ref replacement |
