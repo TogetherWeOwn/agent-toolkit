@@ -403,7 +403,9 @@ test('t0 precedes first-response validation, not merely the first observer', asy
   const r = recovery(clock, { onFirstBodyAccess: () => { accessed = true; clock.now = 3000; } });
   await assert.rejects(r.promise, { rule: 'mint.revoke_failed' });
   assert.equal(accessed, true);
-  assert.deepEqual(r.snapshots.at(-1), evidence([attempt(1, null, 'unavailable', null)], 'deadline'));
+  // The validated 200 remains available evidence even though no ID observation
+  // or second dispatch is eligible after processing exhausts the window.
+  assert.deepEqual(r.snapshots.at(-1), evidence([attempt(1, 200, 'unexpected_status', null)], 'deadline'));
   assert.equal(r.calls.length, 3); assert.deepEqual(r.dispatches, []); assert.deepEqual(clock.timers, []);
 });
 
