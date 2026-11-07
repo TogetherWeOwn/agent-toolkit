@@ -91,12 +91,31 @@ export const issueComment = comment("github.issue_comment");
 export const commitFiles = defineWrite("github.commit_files", "Commit capped base64 files to an existing permitted agent branch using an expected parent and non-force Git Data update. No custom authorship.",
   { branch: ref, expectedParent: sha, message: text(200, /^[\x20-\x7e]+$/), files },
   { branch: refJson, expectedParent: shaJson, message: { ...proseJson, maxLength: 200 }, files: { type: "array", minItems: 1, maxItems: 16, items: { type: "object", additionalProperties: false, required: ["path", "contentBase64"], properties: { path: pathJson, contentBase64: { type: "string", minLength: 1, maxLength: 4096, pattern: "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$" } } } } }, {
-    permissions: { contents: "write" }, maxRequests: args => (args.files as File[]).length + 6,
+    permissions: { contents: "write" }, maxRequests: args => (args.files as File[]).length + 7,
     async execute(api, args, repository) {
       guard(await branch(api, args.branch, repository) === args.expectedParent, "write.parent_changed");
       const parent = object(await api("GET", `/git/commits/${args.expectedParent}`, 200));
       guard(parent.sha === args.expectedParent, "write.parent_identity");
       const baseTree = sha.parse(object(parent.tree).sha);
+      const existing = object(await api("GET", `/git/trees/${baseTree}?recursive=1`, 200));
+      guard(existing.sha === baseTree && existing.truncated === false && Array.isArray(existing.tree) && existing.tree.length <= 10000, "write.tree_incomplete");
+      const entries = new Map<string, Record<string, unknown>>();
+      for (const raw of existing.tree) {
+        const entry = object(raw);
+        guard(typeof entry.path === "string" && !entries.has(entry.path), "write.tree_shape");
+        entries.set(entry.path, entry);
+      }
+      for (const f of args.files as File[]) {
+        const parts = f.path.split("/");
+        for (let i = 1; i < parts.length; i++) {
+          const ancestor = entries.get(parts.slice(0, i).join("/"));
+          guard(!ancestor || ancestor.type === "tree", "write.tree_type");
+        }
+        const target = entries.get(f.path);
+        // Never replace a directory/submodule/symlink with a blob: that can
+        // implicitly delete protected descendants absent from input paths.
+        guard(!target || (target.type === "blob" && ["100644", "100755"].includes(String(target.mode))), "write.tree_type");
+      }
       const tree = [];
       for (const f of args.files as File[]) {
         const blob = object(await api("POST", "/git/blobs", 201, { content: f.contentBase64, encoding: "base64" }));

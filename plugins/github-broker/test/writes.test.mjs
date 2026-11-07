@@ -37,6 +37,7 @@ function prSteps(f) {
 }
 function commitSteps(f, recheck = parent) {
   f.branch(); f.read(`/git/commits/${parent}`, { sha: parent, tree: { sha: tree } });
+  f.read(`/git/trees/${tree}?recursive=1`, { sha: tree, truncated: false, tree: [{ path: 'src', type: 'tree', mode: '040000' }, { path: 'src/example.ts', type: 'blob', mode: '100644' }] });
   f.write('POST', '/git/blobs', { sha: blob }, body => assert.deepEqual(body, { content: commitArgs.files[0].contentBase64, encoding: 'base64' }));
   f.write('POST', '/git/trees', { sha: tree }, body => assert.deepEqual(body, { base_tree: tree, tree: [{ path: 'src/example.ts', mode: '100644', type: 'blob', sha: blob }] }));
   f.write('POST', '/git/commits', { sha: commit }, body => {
@@ -123,7 +124,7 @@ test('write mint scope still hard-denies workflows and Actions/Checks/Statuses w
 });
 
 test('commit_files refuses workflow, review-instruction, traversal and malformed/capped content pre-secret', async () => {
-  for (const path of ['.github/workflows/ci.yml', '.github/workflows/nested/ci.yml', '.GITHUB/WORKFLOWS/ci.yml', 'AGENTS.md', 'nested/CLAUDE.md', '.devin/config.json', 'nested/REVIEW.md', '../x', 'a/../x', '.git/config', 'a\\b']) {
+  for (const path of ['.github', '.github/workflows', '.github/workflows/ci.yml', '.github/workflows/nested/ci.yml', '.GITHUB/WORKFLOWS/ci.yml', 'AGENTS.md', 'nested/CLAUDE.md', '.devin/config.json', 'nested/REVIEW.md', '../x', 'a/../x', '.git/config', 'a\\b']) {
     const f = writer(), result = await f.call('github.commit_files', { ...commitArgs, files: [{ ...commitArgs.files[0], path }] });
     assert.ok(result.error); assert.equal(f.secretCalls, 0); assert.equal(f.calls.length, 0); f.hygiene(result);
   }
@@ -207,7 +208,10 @@ test('cleanup/audit/transport failure after write is failure with no safe replay
     if (kind === 'rate') Object.assign(f.steps.at(-1), { status: 429, headers: { 'retry-after': '120' } });
     f.revoke(kind === 'cleanup' ? { status: 500, body: { message: token } } : kind === 'audit' ? { effect: () => { f.failAudit = true; } } : {});
     const result = await f.call('github.issue_comment', commentArgs); assert.ok(result.error); assert.equal(result.data.writeAttempted, true); assert.equal(result.data.retrySafe, false); f.hygiene(result); f.done();
-    if (kind === 'cleanup') assert.equal((await f.call('github.issue_comment', commentArgs)).error, 'rate.retry_after');
+    if (kind === 'cleanup') {
+      assert.equal((await f.call('github.issue_comment', commentArgs)).error, 'write.quarantined');
+      assert.equal((await f.call('github.issue_comment', { ...commentArgs, number: 2 })).error, 'rate.retry_after');
+    }
   }
 });
 
@@ -219,6 +223,63 @@ test('same branch concurrent mutations fail closed without minting another token
   try { assert.equal((await f.call('github.commit_files', commitArgs)).error, 'write.concurrent'); assert.equal(f.secretCalls, 1); }
   finally { release(); }
   assert.equal((await first).error, undefined); f.done();
+});
+
+test('complete parent tree refuses directory/submodule/symlink replacement and ambiguous evidence before blob writes', async () => {
+  const variants = [
+    { tree: [{ path: 'nested', type: 'tree', mode: '040000' }, { path: 'nested/CLAUDE.md', type: 'blob', mode: '100644' }] },
+    { tree: [{ path: 'nested', type: 'tree', mode: '040000' }, { path: 'nested/.devin/config.json', type: 'blob', mode: '100644' }] },
+    { tree: [{ path: 'nested', type: 'commit', mode: '160000' }] },
+    { tree: [{ path: 'nested', type: 'blob', mode: '120000' }] },
+    { truncated: true, tree: [] }, { tree: null }, { sha: commit, tree: [] },
+  ];
+  for (const variant of variants) {
+    const f = writer(); f.mint({ contents: 'write' }); f.repository(); f.branch(); f.read(`/git/commits/${parent}`, { sha: parent, tree: { sha: tree } });
+    f.read(`/git/trees/${tree}?recursive=1`, { sha: tree, truncated: false, ...variant }); f.revoke();
+    const result = await f.call('github.commit_files', { ...commitArgs, files: [{ path: 'nested', contentBase64: 'aGk=' }] });
+    assert.ok(['write.tree_type', 'write.tree_incomplete'].includes(result.error));
+    assert.equal(result.data.writeAttempted, undefined); assert.ok(!f.calls.some(c => c.url.endsWith('/git/blobs'))); f.done();
+  }
+});
+
+test('detached native mutation retains target quarantine and disables cache before and after late settlement', async () => {
+  const { hostCall } = await import('../dist/plugins/github-broker/src/plugin.js');
+  const f = writer(), broker = new Broker(); let settle;
+  const pending = new Promise(resolve => { settle = resolve; });
+  const host = {
+    config: async () => f.config, issue: async () => f.issue, workspace: async () => f.workspace,
+    secret: async () => { f.secretCalls++; return f.secret; }, audit: async e => f.events.push(e), clock: Date.now,
+    http: req => hostCall(async () => {
+      const response = await f.ctx.http.fetch(req.url, { method: req.method, headers: req.headers, ...(req.body === undefined ? {} : { body: req.body }) });
+      return { status: response.status, headers: Object.fromEntries(response.headers), body: await response.text() };
+    }, req.url.endsWith('/comments') ? 5 : 1000),
+  };
+  const call = async (name, args) => JSON.parse((await broker.execute(host, name, args, run)).content[0].text);
+  f.mint({ issues: 'write' }); f.repository(); commentSteps(f, 'github.issue_comment');
+  f.steps.at(-1).effect = async () => { await pending; }; f.revoke();
+  try {
+    const first = await call('github.issue_comment', commentArgs);
+    assert.equal(first.ok, false); assert.equal(first.writeAttempted, true); assert.equal(first.targetQuarantined, true);
+    const count = f.calls.length;
+    assert.equal((await call('github.issue_comment', commentArgs)).rule, 'write.quarantined'); assert.equal(f.calls.length, count);
+    for (const title of ['before-settlement', 'also-before-settlement']) {
+      f.mint({ pull_requests: 'read' }); f.repository(); f.read('/pulls/1', { id: 1, number: 1, title, head: { ref: branch, sha: parent }, base: { ref: 'main', sha: baseSha } }); f.revoke();
+      assert.equal((await call('github.pr_get', { ...base, number: 1 })).pages[0].title, title);
+    }
+    settle(); await pending; await hostCall(async () => 'drain', 1000);
+    assert.equal((await call('github.issue_comment', commentArgs)).rule, 'write.quarantined');
+    f.mint({ pull_requests: 'read' }); f.repository(); f.read('/pulls/1', { id: 1, number: 1, title: 'after-settlement', head: { ref: branch, sha: commit }, base: { ref: 'main', sha: baseSha } }); f.revoke();
+    assert.equal((await call('github.pr_get', { ...base, number: 1 })).pages[0].title, 'after-settlement');
+    assert.equal(f.calls.filter(c => c.url.endsWith('/comments')).length, 1); f.done();
+  } finally { settle(); await pending; }
+});
+
+test('quarantine map is bounded and full capacity refuses new targets before secrets', async () => {
+  const f = writer(), broker = new Broker();
+  for (let i = 0; i < 128; i++) broker.writing.set(`101:github.issue_comment:${i + 10}`, 'quarantined');
+  let secrets = 0;
+  const result = await broker.execute({ config: async () => f.config, issue: async () => f.issue, workspace: async () => f.workspace, secret: async () => { secrets++; }, audit: async () => {}, clock: Date.now }, 'github.issue_comment', commentArgs, run);
+  assert.equal(JSON.parse(result.content[0].text).rule, 'write.capacity'); assert.equal(secrets, 0); assert.equal(broker.writing.size, 128);
 });
 
 test('write token returned-permission escalation is rejected and revoked before repository access', async () => {

@@ -29,7 +29,7 @@ export class Broker {
   private inFlight = 0;
   private generation = 0;
   private cacheEpoch = 0;
-  private writing = new Set<string>();
+  private writing = new Map<string, "active" | "quarantined">();
 
   private pause(key: string, seconds: number, now: number): number {
     const b = this.installations.get(key);
@@ -53,7 +53,7 @@ export class Broker {
 
   async execute(host: Host, name: unknown, input: unknown, context: unknown): Promise<Result> {
     const event = randomUUID(), generation = ++this.generation, cacheEpoch = this.cacheEpoch;
-    let writeAttempted = false, writeKey: string | null = null;
+    let writeAttempted = false, writeSucceeded = false, writeKey: string | null = null;
     let keys: string[] = [];
     const updates = new Map<string, Cache>();
     let caller: Caller | null = null, args: Arguments | null = null;
@@ -79,8 +79,10 @@ export class Broker {
       guard(!tool.write || config.appId === 5646907, "identity.write_app");
       if (tool.write) {
         const key = `${repo.id}:${args.branch ?? args.head ?? `${operation}:${args.number}`}`;
+        guard(this.writing.get(key) !== "quarantined", "write.quarantined");
         guard(!this.writing.has(key), "write.concurrent");
-        this.writing.add(key); writeKey = key;
+        guard(this.writing.size < 128, "write.capacity");
+        this.writing.set(key, "active"); writeKey = key;
       }
       const agentKey = `${caller.companyId}:${caller.agentId}`;
       const budgetKey = `${config.appId}:${config.installationId}`;
@@ -100,7 +102,7 @@ export class Broker {
       for (const [k, v] of this.cache) if (host.clock() - v.at >= 60000) this.cache.delete(k);
       const cached = keys.map(k => this.cache.get(k));
       let values: unknown[];
-      if (!tool.write && cached.every(c => c && host.clock() - c.at < 10000)) {
+      if (!tool.write && this.writing.size === 0 && cached.every(c => c && host.clock() - c.at < 10000)) {
         await revalidate();
         values = cached.map(c => c!.value);
       } else {
@@ -162,6 +164,7 @@ export class Broker {
         });
       }
       phase = "outcome"; await emit("allow", "policy.allow", "success");
+      writeSucceeded = true;
       for (const [key, update] of updates) {
         if (this.cacheEpoch !== cacheEpoch || this.writing.size > 0 || (this.cache.get(key)?.generation ?? 0) > generation) continue;
         if (this.cache.size >= 128 && !this.cache.has(key)) this.cache.delete(this.cache.keys().next().value!);
@@ -178,12 +181,17 @@ export class Broker {
         try { this.pause(installationKey, 3660, host.clock()); } catch { /* Capacity remains fail-closed. */ }
       }
       if (phase === "intent") phase = "outcome";
-      const uncertain = writeAttempted ? { writeAttempted: true, retrySafe: false } : {};
+      const uncertain = writeAttempted ? { writeAttempted: true, retrySafe: false, targetQuarantined: true } : {};
       try { await emit("deny", rule, "error"); } catch { return response({ ok: false, rule: "audit.unavailable", ...uncertain }, true); }
       return response({ ok: false, rule, ...uncertain, ...(seconds === undefined ? {} : { retryAfterSeconds: seconds }) }, true);
     } finally {
       if (writeAttempted) { this.cacheEpoch++; this.cache.clear(); }
-      if (writeKey) this.writing.delete(writeKey);
+      // Native timeouts abandon awaits, not effects. Never readmit an uncertain
+      // target or publish read caches while any such target remains quarantined.
+      if (writeKey) {
+        if (writeAttempted && !writeSucceeded) this.writing.set(writeKey, "quarantined");
+        else this.writing.delete(writeKey);
+      }
       if (reserved) this.inFlight--;
     }
   }
