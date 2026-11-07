@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 277 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 271 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -77,6 +77,16 @@ credential entitlement or an accepted default-role reuse principal. All fourteen
 adapters expose only bounded metadata subsets; remaining optional filters and
 full capability coverage remain incomplete. Native Security/Crypto/QA and
 fresh-context review of the final diff remain required.
+
+`test/lifecycle.test.mjs` adds synthetic contracts for six backup, backup-policy
+and deploy-request list/get adapters. Exact IDs are broker-bound; deploy requests
+also match number, source branch ID/name and target name. Fixtures cover mismatched
+and duplicate bindings, whole-page refusal, schema/byte/page caps, immutable scope
+snapshots, ignored free-text/secret fields and every pinned status enum. Provider
+`approved` is not returned or treated as authority. These twenty adapters still
+have no executor or native authorization; immutable target-branch identity, optional
+filters, full policy schedules/retention and full-operation coverage are missing.
+Fresh exact-head Actions execution is required; no local suite is substituted.
 
 ## Metrics preregistration — required before enablement
 

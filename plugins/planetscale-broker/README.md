@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The fourteen adapters are pure request builders and bounded output projections,
+The twenty adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,14 +36,14 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 14 | Narrow projections; not full operation coverage |
-| Missing source adapters | 277 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 20 | Narrow projections; not full operation coverage |
+| Missing source adapters | 271 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-Fourteen adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 261
+Twenty adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 255
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
@@ -64,6 +64,9 @@ area remain in the map even when access or implementation is missing.
 | `planetscale.list_branches` | Bound child ID/name, ready/production/protection/safe-migrations flags |
 | `planetscale.list_database_regions` / `planetscale.list_regions_for_organization` / `planetscale.list_public_regions` | Bound region ID/slug and enabled flag; no addresses/provider URLs |
 | `planetscale.get_default_role` | Default-role marker required; same bounded role metadata, never connection/password fields |
+| `planetscale.list_backups` / `planetscale.get_backup` | Bound backup ID, state and protection/required/emergency flags; no contents, names, download URLs or cost estimates |
+| `planetscale.list_backup_policies` / `planetscale.get_backup_policy` | Bound policy ID, production/development target enum and required flag; no schedules or arbitrary strings |
+| `planetscale.list_deploy_requests` / `planetscale.get_deploy_request` | Bound request ID/number/source branch ID/name and target name, state/deployment-state enums and source-deleted flag; no DDL, notes, actor or approval authority |
 
 The five discovery lists require a broker-owned closed scope containing 1–32
 unique child ID/name pairs (region names are slugs). Any unknown or rebound child
@@ -76,6 +79,16 @@ page, not a scope/entitlement/completeness attestation. Optional provider filter
 are not yet exposed; metadata projections are not full provider-operation coverage.
 `get_default_role` discovers metadata; it does not establish an accepted catalog
 principal, effective rights, immutable branch binding or safe credential reuse.
+
+Backup/policy collections additionally require 1–32 unique broker-bound IDs.
+Deploy-request reads require exact ID/number/source branch ID/name/target-name
+bindings, unique by ID and number for lists. Unknown or rebound entries refuse the
+whole page. Parent collection authorization is still independent; neither a
+matching response nor provider deployment state grants deployment approval. The
+schema does not supply an immutable target-branch ID in this projection, so its
+name is not an immutable destination or a safe execution precondition. No backup
+restore/export or deployment mutation is implemented. Optional filters, schedule/
+retention policy details, contents and full-operation coverage remain missing.
 
 Arguments are closed, scalar and bounded. Configured resource scope is separate
 from arguments and must eventually be resolved by the shared core from an
@@ -124,7 +137,7 @@ No connector or replacement broker is introduced.
 ## Local mutation-plan artifacts — not executors
 
 `src/mutation-plans.ts` supplies three pure, bounded previews. They are **not API
-adapters**, do not consume authority and do not increase the 14-adapter count.
+adapters**, do not consume authority and do not increase the 20-adapter count.
 Each artifact labels itself `validated-local-plan-not-provider-dry-run`, with
 execution not implemented, remote preconditions not verified and provider dry-run
 not performed. No network executor, output projector or secret placement exists.
@@ -158,7 +171,7 @@ The candidates only document requirements; native routing, expiry, exact-target
 binding, atomic consumption, replay/concurrent-use refusal and approved placement
 are **not implemented or tested as authority enforcement here**. Credential routes
 remain incomplete until a broker-only sink and reconciliation are accepted. The
-other 261 tier classifications are unresolved, not automatically harmless reads or
+other 255 tier classifications are unresolved, not automatically harmless reads or
 ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.

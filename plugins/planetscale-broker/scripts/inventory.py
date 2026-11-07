@@ -26,6 +26,16 @@ ADAPTERS = {
     "list_regions_for_organization": "list-regions-for-organization",
     "list_public_regions": "list-public-regions",
     "get_default_role": "get-default-role",
+    "list_backups": "list-backups",
+    "get_backup": "get-backup",
+    "list_backup_policies": "list-backup-policies",
+    "get_backup_policy": "get-backup-policy",
+    "list_deploy_requests": "list-deploy-requests",
+    "get_deploy_request": "get-deploy-request",
+}
+LIFECYCLE = {
+    "list_backups", "get_backup", "list_backup_policies", "get_backup_policy",
+    "list_deploy_requests", "get_deploy_request",
 }
 DISCOVERY = {
     "list_databases", "list_branches", "list_database_regions",
@@ -136,7 +146,7 @@ def inventory(raw):
                 } if operation_id in LOCAL_PLANS else None,
                 "credentialEntitlement": "unknown-awaiting-operator-metadata",
                 "adapter": "src/tools/" + adapter + ".ts" if adapter else None,
-                "test": ("test/discovery.test.mjs" if operation_id in DISCOVERY else "test/metadata.test.mjs") if adapter else None,
+                "test": ("test/lifecycle.test.mjs" if operation_id in LIFECYCLE else ("test/discovery.test.mjs" if operation_id in DISCOVERY else "test/metadata.test.mjs")) if adapter else None,
                 "projectionCoverage": "bounded-metadata-subset-not-full-operation" if adapter else "missing",
                 "testExecution": "see-exact-head-actions-evidence" if adapter else "no-test-implemented",
                 "implementation": "offline-adapter-only" if adapter else "missing",
