@@ -13,7 +13,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | 283 adapters and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
-| Fixed catalog/ACL metadata | Package builder + Operator | Native supported read-only connector plus exact staging allowlist/window, caps and closure evidence; no arbitrary SQL |
+| Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
 | Exact-head full-suite and required checks | Package builder | GitHub Actions run/job links, Devin and rulesets satisfied; no local substitute |
 | Independent complete-package/tier reviews | Security, Crypto, final QA | Exact source/core/API pin and configuration envelope accepted, findings dispositioned |
 | Runtime install/enablement and production actions | Operator + Release Manager as applicable | Exact-artifact native authorizations and qualification receipts; no implied authority from source merge |
@@ -28,10 +28,10 @@ keys, creating a replacement connector or making an unauthenticated assumption.
 | Required capability | Current state | Required implementation/evidence |
 | --- | --- | --- |
 | Relation existence | Offline control-plane projection only | API semantics/non-waking validation; namespace/keyspace disambiguation and reviewed core policy |
-| Schema/namespace existence | Missing | Fixed engine-aware metadata operation, actual supported connector and reviewed bounded staging policy |
-| Role metadata | Offline API ID/name/flag/inheritance projection | Actual entitlement and reviewed authorization; no passwords, hashes, DSNs or addresses |
-| Effective direct/transitive ACL | Missing | Fixed PostgreSQL/Vitess metadata templates where supported, role closure/cycle handling and direct/effective distinctions; portable receipts and engine-specific tests |
-| Non-secret binding identity | Configured resource target only | Operator-verified binding receipt and native current caller/resource resolution |
+| Schema/namespace existence | Offline PostgreSQL namespace rows only; completeness unverified | Actual supported connector, fixed existence/visibility semantics and reviewed bounded staging policy |
+| Role metadata | Offline API metadata and fixed PostgreSQL attribute/membership artifacts | Actual entitlement and reviewed authorization; no passwords, hashes, DSNs or addresses |
+| Effective direct/transitive ACL | Missing evaluator; offline direct/default/function/database/column ACL artifacts only | PUBLIC/type-default/ownership expansion, role closure/cycle/SET/ADMIN handling and direct/effective distinctions; portable receipts and engine-specific tests |
+| Non-secret binding identity | Configured API resource target and offline SQL current/session identity artifact only | Operator-verified immutable branch/database/principal/reference receipt and native current caller/resource resolution |
 
 A main credential's control-plane permissions do not establish SQL data-plane
 access. Metadata SQL can wake compute and is never labeled non-waking. SQL needs
@@ -57,9 +57,19 @@ provider errors, audit failure and write ambiguity remain required before delive
 A synthetic canary in an ignored secret field only proves that projection, not
 immunity to secret reflection in every selected field.
 
-Initial observation: tests have not yet run. Record exact-head Actions evidence
-on the source task/PR; do not turn this sentence into a passing claim based on a
-mock, skipped job or local full-suite output.
+`test/catalog-artifacts.test.mjs` adds offline fixtures for all nine catalog
+artifacts: fixed query hashes and source/column ceilings, closed arguments, strict
+row types, NULL/PUBLIC ACL preservation, independent membership options, byte/row
+overflow, malformed input and fixed errors. These fixtures do not execute SQL or
+prove provider support, catalog completeness, effective rights or safe sessions.
+PostgreSQL 17 compatibility, builtin/operator/cast dependency closure, engine
+selection and additional catalog paths remain pre-enable prerequisites. Cap
+refusal is explicit; large catalogs are not falsely marked complete.
+
+The initial eight API adapters passed their exact-head Actions run. The newer
+catalog fixtures have not yet run; record fresh exact-head Actions evidence on the
+source task/PR, never a mock, skipped job or local full-suite substitute. Native
+Security/Crypto/QA and fresh-context review of the final diff remain required.
 
 ## Metrics preregistration — required before enablement
 

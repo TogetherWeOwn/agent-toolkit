@@ -72,6 +72,38 @@ Role inheritance is **not an effective direct/transitive ACL receipt**. Branch
 schema projection is not proof of SQL catalog namespace existence or non-waking
 semantics. See [acceptance prerequisites](ACCEPTANCE.md) for those missing pieces.
 
+## Offline PostgreSQL catalog artifacts
+
+`src/catalog-artifacts.ts` adds nine fixed, hash-identified SELECT artifacts for
+identity, role attributes, independent ADMIN/INHERIT/SET membership edges, database
+ACLs, namespaces, relations, column ACLs, default ACLs and function metadata. These
+are a separate data-plane surface, **not nine additional official API adapters**.
+They target PostgreSQL 17 catalog shapes; no MySQL/Vitess or older-version
+compatibility is claimed. No statement is executed or registered as a live tool.
+
+Each builder accepts only an empty argument object. There is no supplied SQL,
+target, database, secret, approval, window or pagination argument. Every query
+has a 1,001-row overflow sentinel; projection refuses over 1,000 rows or 256 KiB.
+Large catalogs therefore remain unsupported pending reviewed bounded pagination
+or a narrower fixed scope. This is not full catalog collection. Strict row schemas
+reject extra fields and preserve NULL ACLs rather than treating them as no rights.
+No customer rows, secret columns, function bodies/configuration or statistics are
+selected. Unsupported names, malformed results and overflow fail with fixed codes.
+
+Every receipt says completeness is unverified and effective rights are not
+computed, including empty results. Direct ACL rows are not a transitive evaluator;
+PUBLIC/default/ownership/column/function paths and visibility limits still require
+an accepted analysis. Additional catalog dependencies, type/function signatures,
+parameter/initial ACLs and trigger paths remain missing. Selected-field secret
+reflection still requires the final core guard before results reach an agent.
+
+These artifacts do not establish credential-hidden custody, immutable target or
+reference versions, PostgreSQL catalog visibility, effective rights, native expiry,
+revocation, session termination, or timeout/cancellation closure. A query hash is
+provenance, not permission. SQL can wake compute; the lifecycle declaration
+requires an explicitly authorized bounded window and forbids silent API fallback.
+No connector or replacement broker is introduced.
+
 ## Required common interface
 
 Reuse one reviewed, versioned common provider core for:
