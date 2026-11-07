@@ -83,6 +83,37 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm test
 
+  neon-compat:
+    name: Neon candidate contract (not live qualification)
+    needs: [changes, full_run]
+    if: needs.full_run.outputs.force == 'true' || needs.changes.outputs.full_run == 'true' || (fromJSON(needs.changes.outputs.areas).code && (github.event_name != 'pull_request' || github.event.pull_request.draft == false))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: TogetherWeOwn/agent-toolkit
+          ref: 3ce5639db8ebd7d1d2d77e69b28761bd044b6ca3
+          path: .provider-core-candidate
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build --workspace @agent-toolkit/neon-broker
+      - run: npm ci --ignore-scripts
+        working-directory: .provider-core-candidate
+      - run: npm run build
+        working-directory: .provider-core-candidate
+      - name: Exercise pinned common broker fixture with mocked Neon transport
+        env:
+          PROVIDER_CORE_ROOT: ${{ github.workspace }}/.provider-core-candidate
+        run: npm run test:compat --workspace @agent-toolkit/neon-broker
+
   native-policy:
     needs: [changes, full_run]
     if: needs.full_run.outputs.force == 'true' || needs.changes.outputs.full_run == 'true' || (fromJSON(needs.changes.outputs.areas).code && (github.event_name != 'pull_request' || github.event.pull_request.draft == false))
@@ -90,7 +121,7 @@ jobs:
 
   ci-ok:
     name: ci-ok
-    needs: [changes, full_run, lint, test, native-policy]
+    needs: [changes, full_run, lint, test, neon-compat, native-policy]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
