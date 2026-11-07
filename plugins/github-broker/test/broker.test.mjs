@@ -6,6 +6,8 @@ import { mintScope, withInstallationToken, request } from '../dist/packages/gith
 import manifest from '../dist/plugins/github-broker/src/manifest.js';
 
 globalThis.fetch = () => { throw Error('Live network is forbidden in fixtures'); };
+let hostModuleId = 0;
+function isolatedHost() { return import(`../dist/plugins/github-broker/src/plugin.js?host-capacity=${++hostModuleId}`); }
 const paged = { page: 1, perPage: 10 };
 const cases = [
   ['github.repo_read', { mode: 'file', ref: 'main', path: 'README.md' }, { contents: 'read' }, [['/contents/README.md?ref=main', { type: 'file', encoding: 'base64', name: 'README.md', path: 'README.md', sha: 'a'.repeat(40), size: 5, content: Buffer.from('hello').toString('base64') }]]],
@@ -415,9 +417,11 @@ test('native IPC waiters are bounded and expired waiters never start an operatio
 });
 
 test('healthy parallel registered calls preserve successful reads and audits', async () => {
+  const { createHostCaller } = await isolatedHost();
+  const hostCall = createHostCaller();
   const release = []; let entered;
   const ready = new Promise(resolve => { entered = resolve; });
-  const fixtures = Array.from({ length: 5 }, () => fixture());
+  const fixtures = Array.from({ length: 5 }, () => fixture({ hostCall }));
   for (const [i, f] of fixtures.entries()) {
     f.mint({ pull_requests: 'read' }); f.identity(); f.read('/pulls/1', pull); f.revoke();
     const get = f.ctx.config.get; let first = true;
@@ -437,11 +441,12 @@ test('healthy parallel registered calls preserve successful reads and audits', a
 });
 
 test('mint, read, revoke and response bodies share the worker-wide native IPC budget', async () => {
-  const { hostCall } = await import('../dist/plugins/github-broker/src/plugin.js');
+  const { createHostCaller } = await isolatedHost();
+  const hostCall = createHostCaller();
   for (const phase of ['mint', 'read', 'revoke', 'probe', 'body']) {
     let entered, release, blocked = 0, probeStarts = 0;
     const ready = new Promise(resolve => { entered = resolve; }), pending = new Promise(resolve => { release = resolve; });
-    const fixtures = Array.from({ length: 4 }, () => fixture());
+    const fixtures = Array.from({ length: 4 }, () => fixture({ hostCall }));
     for (const f of fixtures) {
       f.mint({ pull_requests: 'read' }); f.identity(); f.read('/pulls/1', pull);
       f.revoke(phase === 'probe' ? { error: new TypeError('Response constructor: Invalid response status code 204') } : {});
@@ -472,8 +477,9 @@ test('mint, read, revoke and response bodies share the worker-wide native IPC bu
 });
 
 test('IPC-refused revocation pauses minting even when saturation also prevents outcome audit', async () => {
-  const { hostCall } = await import('../dist/plugins/github-broker/src/plugin.js');
-  const f = fixture(), retained = []; let release, queuedStarts = 0;
+  const { createHostCaller } = await isolatedHost();
+  const hostCall = createHostCaller();
+  const f = fixture({ hostCall }), retained = []; let release, queuedStarts = 0;
   const pending = new Promise(resolve => { release = resolve; });
   f.mint({ pull_requests: 'read' }); f.identity();
   f.read('/pulls/1', pull, { effect: async () => {
@@ -492,24 +498,79 @@ test('IPC-refused revocation pauses minting even when saturation also prevents o
   assert.equal(f.secretCalls, 1); assert.equal(f.calls.length, 3); f.hygiene(result); f.hygiene(next); f.done();
 });
 
-test('timed-out native IPC retains its worker budget until the underlying operations settle', async () => {
-  const { hostCall } = await import('../dist/plugins/github-broker/src/plugin.js');
+test('timed-out native IPC retains all four slots until known successful fulfillment', async () => {
+  const { hostCall } = await isolatedHost();
   const settle = [], native = []; let starts = 0;
   try {
-    const calls = Array.from({ length: 4 }, (_, i) => {
-      const pending = new Promise((resolve, reject) => { settle.push(() => i % 2 ? reject(Error('late failure')) : resolve('late secret')); });
+    const calls = Array.from({ length: 4 }, () => {
+      const pending = new Promise(resolve => { settle.push(resolve); });
       native.push(pending); return hostCall(() => { starts++; return pending; }, 10);
     });
     const results = await Promise.allSettled(calls);
     assert.ok(results.every(r => r.status === 'rejected' && r.reason.rule === 'host.timeout'));
     for (let i = 0; i < 8; i++) await assert.rejects(hostCall(async () => { starts++; }, 1), /host.capacity/);
     assert.equal(starts, 4);
-    const f = fixture(), result = await f.call('github.pr_get', { ...base, number: 1 });
-    assert.equal(result.error, 'audit.unavailable'); assert.equal(f.secretCalls, 0); assert.equal(f.calls.length, 0); f.hygiene(result);
   } finally {
-    for (const release of settle) release();
+    for (const release of settle) release('late secret');
     await Promise.allSettled(native);
   }
+  assert.equal(await hostCall(async () => 'recovered', 100), 'recovered');
+});
+
+for (const late of [false, true]) test(`${late ? 'late' : 'immediate'} unknown native rejection quarantines the same four slots permanently`, async () => {
+  const { hostCall } = await isolatedHost();
+  const rejectNative = []; let starts = 0, entered;
+  const ready = new Promise(resolve => { entered = resolve; });
+  const calls = Array.from({ length: 4 }, () => hostCall(() => {
+    starts++;
+    return new Promise((resolve, reject) => { rejectNative.push(reject); if (rejectNative.length === 4) entered(); });
+  }, late ? 10 : 1000));
+  const results = Promise.allSettled(calls);
+  await ready;
+  if (late) assert.ok((await results).every(r => r.status === 'rejected' && r.reason.rule === 'host.timeout'));
+  for (const reject of rejectNative) reject(Error('native completion is unknown'));
+  if (!late) assert.ok((await results).every(r => r.status === 'rejected' && /native completion is unknown/.test(r.reason.message)));
+  // Let the late rejection handlers run; rejection is not proof of host completion.
+  await new Promise(resolve => setImmediate(resolve));
+  for (let i = 0; i < 8; i++) await assert.rejects(hostCall(async () => { starts++; }, 5), /host.capacity/);
+  assert.equal(starts, 4);
+});
+
+test('explicitly known-settled native rejection releases capacity without manufacturing success', async () => {
+  const { hostCall } = await isolatedHost();
+  for (let round = 0; round < 3; round++) {
+    const results = await Promise.allSettled(Array.from({ length: 4 }, () => hostCall(async markSettled => {
+      markSettled(); throw new TypeError('known completed host response');
+    }, 100)));
+    assert.ok(results.every(r => r.status === 'rejected' && r.reason.message === 'known completed host response'));
+  }
+  assert.equal(await hostCall(async () => 'recovered', 100), 'recovered');
+});
+
+test('absolute monotonic deadlines stop dispatch and wall-clock jumps do not expire native calls', async t => {
+  const { hostCall } = await isolatedHost();
+  let starts = 0;
+  await assert.rejects(hostCall(async () => { starts++; }, 1000, performance.now() - 1), /host.timeout/);
+  assert.equal(starts, 0);
+  let wall = Date.now(); t.mock.method(Date, 'now', () => wall);
+  const deadline = performance.now() + 1000;
+  assert.equal(await hostCall(async () => { wall += 86400000; return 'forward'; }, 1000, deadline), 'forward');
+  assert.equal(await hostCall(async () => { wall -= 172800000; return 'backward'; }, 1000, deadline), 'backward');
+});
+
+test('absolute deadline includes time spent waiting for native capacity and never starts expired work', async () => {
+  const { hostCall } = await isolatedHost();
+  const release = []; let entered, starts = 0;
+  const ready = new Promise(resolve => { entered = resolve; });
+  const active = Array.from({ length: 4 }, () => hostCall(() => new Promise(resolve => {
+    release.push(resolve); if (release.length === 4) entered();
+  }), 1000));
+  const activeResults = Promise.allSettled(active);
+  await ready;
+  try {
+    await assert.rejects(hostCall(async () => { starts++; }, 1000, performance.now() + 10), /host.timeout/);
+  } finally { for (const resolve of release) resolve('ok'); await activeResults; }
+  assert.equal(starts, 0);
   assert.equal(await hostCall(async () => 'recovered', 100), 'recovered');
 });
 
