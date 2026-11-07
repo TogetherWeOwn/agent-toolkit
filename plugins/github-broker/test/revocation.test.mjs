@@ -39,7 +39,7 @@ function monotonic(t, timerAdvance, manual = false) {
   let timerId = 0;
   t.mock.method(globalThis.performance, 'now', () => clock.now);
   t.mock.method(globalThis, 'setTimeout', (callback, delay) => {
-    assert.ok(manual || (delay > 0 && delay <= 250), `Unexpected recovery timer ${delay}`);
+    assert.ok(manual || (delay > 0 && delay <= 251), `Unexpected recovery timer ${delay}`);
     clock.timers.push(delay);
     const id = ++timerId;
     if (manual) clock.pending.set(id, { callback, delay });
@@ -270,7 +270,7 @@ test('valid first 200 permits exactly one identical-token GET at t0+250 and publ
   const clock = monotonic(t), f = fixture({ hostCall: immediateHostCall });
   read(f); fallback(f);
   probe(f, { status: 200, raw: key + token });
-  probe(f, { headers: { 'x-github-request-id': secondId }, inspect: () => assert.equal(clock.now, 1250) });
+  probe(f, { headers: { 'x-github-request-id': secondId }, inspect: () => assert.equal(clock.now, 1251) });
   const result = await f.call('github.pr_get', args);
   assert.equal(result.error, undefined); assert.equal(result.data.pages[0].title, pull.title);
   assert.deepEqual(f.events.at(-1).revocation, evidence([
@@ -278,7 +278,7 @@ test('valid first 200 permits exactly one identical-token GET at t0+250 and publ
   ], 'verified', true));
   assert.equal(f.events.at(-1).requestIds.length, 5);
   assert.deepEqual(f.calls[4], f.calls[5]);
-  assert.deepEqual(clock.timers, [250]);
+  assert.deepEqual(clock.timers, [251]);
   assert.equal((await f.call('github.pr_get', args)).error, undefined);
   assert.equal(f.calls.length, 6); assert.equal(f.secretCalls, 1);
   f.hygiene(result); f.done();
@@ -326,7 +326,7 @@ test('recovery evidence snapshots and nested attempts stay immutable as the seco
   assert.equal(r.uses, 1);
   assert.equal(r.calls.filter(c => c.req.method === 'POST').length, 1);
   assert.deepEqual(r.calls[2].req, r.calls[3].req);
-  assert.deepEqual(r.dispatches, [1250]); assert.deepEqual(clock.timers, [250]);
+  assert.deepEqual(r.dispatches, [1251]); assert.deepEqual(clock.timers, [251]);
   assert.deepEqual(r.snapshots[0].probes, []);
   const pending = r.snapshots.find(s => s.probes.length === 2 && s.probes[1].status === null);
   assert.ok(pending); assert.equal(pending.secondDispatched, false);
@@ -373,7 +373,7 @@ for (const [label, responseTime, success] of [['D-1', 2999, true], ['D', 3000, f
         attempt(1, 200, 'unexpected_status'), attempt(2, null, 'unavailable', null),
       ], 'deadline', true));
     }
-    assert.deepEqual(r.dispatches, [1250]); assert.equal(r.calls.length, 4);
+    assert.deepEqual(r.dispatches, [1251]); assert.equal(r.calls.length, 4);
   });
 }
 
@@ -393,7 +393,7 @@ for (const finishedAt of [3000, 3001]) {
     assert.deepEqual(r.snapshots.at(-1), evidence([
       attempt(1, 200, 'unexpected_status'), attempt(2, 401, 'bad_credentials', null),
     ], 'deadline', true));
-    assert.deepEqual(r.dispatches, [1250]); assert.equal(r.calls.length, 4);
+    assert.deepEqual(r.dispatches, [1251]); assert.equal(r.calls.length, 4);
   });
 }
 
@@ -522,10 +522,27 @@ for (const priorFailure of ['upstream.read', 'policy.changed']) {
   });
 }
 
+test('sub-millisecond timer delivery skew does not discard eligible recovery or dispatch before the minimum', async t => {
+  const clock = monotonic(t);
+  // Node timers use a millisecond clock; their callback can precede the same
+  // requested interval measured by performance.now by less than one millisecond.
+  t.mock.method(globalThis, 'setTimeout', (callback, delay) => {
+    clock.timers.push(delay);
+    queueMicrotask(() => { clock.now += delay - 0.75; callback(); });
+    return 1;
+  });
+  const r = recovery(clock);
+  assert.equal(await r.promise, pull.title);
+  assert.deepEqual(clock.timers, [251], 'One timer includes a millisecond of rounding headroom, not another probe or wait loop');
+  assert.deepEqual(r.dispatches, [1250.25]);
+  assert.equal(r.snapshots.at(-1).terminalReason, 'verified');
+  assert.equal(r.calls.length, 4);
+});
+
 test('fractional first-processing time rounds the remaining minimum wait up, never dispatching early', async t => {
   const clock = monotonic(t), r = recovery(clock, { observe: number => { if (number === 1) clock.now += 249.5; } });
   assert.equal(await r.promise, pull.title);
-  assert.deepEqual(clock.timers, [1]); assert.deepEqual(r.dispatches, [1250.5]);
+  assert.deepEqual(clock.timers, [2]); assert.deepEqual(r.dispatches, [1251.5]);
   assert.equal(r.snapshots.at(-1).terminalReason, 'verified');
 });
 

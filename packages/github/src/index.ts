@@ -155,7 +155,9 @@ async function verifyRejection(transport: Transport, token: string, sensitive: r
     withinWindow();
     reason = "deadline";
     const delayUntil = t0 + 250;
-    if (performance.now() < delayUntil) await new Promise<void>(resolve => setTimeout(resolve, Math.ceil(delayUntil - performance.now())));
+    // Node timers use a millisecond clock and can wake fractionally early
+    // against performance.now. Add rounding headroom, but still verify both bounds.
+    if (performance.now() < delayUntil) await new Promise<void>(resolve => setTimeout(resolve, Math.ceil(delayUntil - performance.now()) + 1));
     withinWindow();
     check(performance.now() >= delayUntil, "http.deadline");
     probes.push({ attempt: 2, status: null, requestId: null, result: "unavailable" });
