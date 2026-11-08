@@ -135,7 +135,9 @@ test('complete official map distinguishes mapped, source-adapted, reviewed and e
   const billingRecords = ['get_invoice', 'list_invoices', 'get_invoice_line_items', 'get_organization_billing_payment_method', 'get_payment_method_setup'];
   const configurationProfiles = ['get_shard_configuration_profile', 'list_shard_configuration_profiles', 'get_shard_configuration_profile_shard', 'list_shard_configuration_profile_shards'];
   const accountAvailability = ['get_current_user', 'list_organizations', 'list_read_only_regions', 'list_postgres_versions'];
+  const configurationDefinitions = ['list_extensions', 'list_shard_configuration_profile_extensions', 'list_parameters', 'list_admin_parameters', 'list_router_parameters', 'list_shard_configuration_profile_parameters'];
   const groups = [
+    [configurationDefinitions, 'configuration-definitions'],
     [accountAvailability, 'account-availability'],
     [configurationProfiles, 'configuration-profiles'],
     [billingRecords, 'billing-records'],

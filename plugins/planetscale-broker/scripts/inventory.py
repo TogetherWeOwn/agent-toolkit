@@ -12,6 +12,12 @@ import sys
 
 SOURCE_SHA256 = "ae45866599cb5d248fadb9d7f0ed30fd6aed440a17ec0950c4e9e0d58da4cb73"
 ADAPTERS = {
+    "list_extensions": "list-extensions",
+    "list_shard_configuration_profile_extensions": "list-shard-configuration-profile-extensions",
+    "list_parameters": "list-parameters",
+    "list_admin_parameters": "list-admin-parameters",
+    "list_router_parameters": "list-router-parameters",
+    "list_shard_configuration_profile_parameters": "list-shard-configuration-profile-parameters",
     "get_current_user": "get-current-user",
     "list_organizations": "list-organizations",
     "list_read_only_regions": "list-read-only-regions",
@@ -102,6 +108,10 @@ ADAPTERS = {
     "list_shard_configuration_profiles": "list-shard-configuration-profiles",
     "get_shard_configuration_profile_shard": "get-shard-configuration-profile-shard",
     "list_shard_configuration_profile_shards": "list-shard-configuration-profile-shards",
+}
+CONFIGURATION_DEFINITIONS = {
+    "list_extensions", "list_shard_configuration_profile_extensions", "list_parameters",
+    "list_admin_parameters", "list_router_parameters", "list_shard_configuration_profile_parameters",
 }
 ACCOUNT_AVAILABILITY = {
     "get_current_user", "list_organizations", "list_read_only_regions", "list_postgres_versions",
@@ -217,6 +227,7 @@ def policy_candidate(operation_id):
 
 def adapter_test(operation_id):
     for operations, name in [
+        (CONFIGURATION_DEFINITIONS, "configuration-definitions"),
         (ACCOUNT_AVAILABILITY, "account-availability"),
         (CONFIGURATION_PROFILES, "configuration-profiles"),
         (BILLING_RECORDS, "billing-records"),

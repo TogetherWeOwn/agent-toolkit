@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 201 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 195 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -231,6 +231,24 @@ collection authorization, final secret guarding and non-waking semantics need
 reviewed integration. Fresh exact-head Actions is required; no local suite or
 native authorization is claimed. Coverage is 90/291 bounded subsets, 201 missing;
 zero integrated/reviewed/enabled/adopted operations.
+
+At `40951193a6c2ed78796a03a8c1faeb5a802cb8d3`, [Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42444948874)
+passed [tests](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42444948874/job/128621841491),
+lint/typecheck, native-policy and ci-ok. This supersedes the earlier pending
+account/availability observation; it is not execution evidence for new source.
+
+`test/configuration-definitions.test.mjs` adds 34 synthetic contracts for six
+extension/parameter metadata reads. Fixed official array paths, bounded wire/row
+caps, closed arguments/scopes, immutable snapshots, name/namespace confinement,
+whole-array refusal, engine-specific namespace/type enums and nullable/optional
+enabled state are covered in source. Values/defaults/options/URLs/actors/free text
+are omitted. Definition names are not immutable provider IDs; trusted current
+engine/parent ownership and upstream collection permission remain prerequisites.
+Flags never authorize configuration, extension enablement, restart, spend or wake.
+Coverage is **96/291 bounded subsets, 195 missing**; tiers 96 provisional read /
+16 unreviewed reserved / 179 unresolved. Zero integrated/reviewed/enabled/adopted.
+Fresh exact-head Actions remains required; no local suite or native authority
+execution is claimed.
 
 ## Metrics preregistration — required before enablement
 

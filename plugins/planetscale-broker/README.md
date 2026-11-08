@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The ninety adapters are pure request builders and bounded output projections,
+The ninety-six adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,14 +36,14 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 90 | Narrow projections; not full operation coverage |
-| Missing source adapters | 201 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 96 | Narrow projections; not full operation coverage |
+| Missing source adapters | 195 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-Ninety adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 185
+Ninety-six adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 179
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
@@ -298,6 +298,24 @@ is officially **302 only**, without a success response schema; it remains missin
 pending a reviewed fixed-alias contract. No redirect following or fabricated
 successful adapter is implemented or counted.
 
+Extension lists (`list_extensions`, `list_shard_configuration_profile_extensions`)
+return bound definition names, can-enable/internal flags and nullable enabled state.
+Missing/null enabled remains unknown, never disabled. Parameter lists
+(`list_parameters`, `list_admin_parameters`, `list_router_parameters`,
+`list_shard_configuration_profile_parameters`) return bound namespace/name pairs,
+parameter-type enums and internal/disabled/required/restart flags. Engine-specific
+namespace enums are validated before request preparation and during projection.
+Values/defaults/options/limits/units, descriptions/display names, nullable IDs,
+nested extension parameters, URLs, actors and times are omitted. Definition names
+and namespace/name pairs are not immutable resource IDs. Profile/router parents
+have broker-bound ID/name inputs, but the response does not prove parent identity;
+trusted current engine/parent ownership and independent upstream collection
+permission remain prerequisites. These are plain arrays capped at 32 rows/64 KiB,
+with 1–32 unique snapshotted definition bindings and whole-array refusal on unknown
+names/pairs. Optional internal filtering is not exposed; no pagination is invented.
+Flags never authorize enablement, configuration changes, restarts, spend or wake.
+Full configuration details/mutations and non-waking semantics remain incomplete.
+
 Arguments are closed, scalar and bounded. Configured resource scope is separate
 from arguments and must eventually be resolved by the shared core from an
 authorized resource handle, not accepted from a model. Each request fixes HTTPS
@@ -345,7 +363,7 @@ No connector or replacement broker is introduced.
 ## Local mutation-plan artifacts — not executors
 
 `src/mutation-plans.ts` supplies three pure, bounded previews. They are **not API
-adapters**, do not consume authority and do not increase the 86-adapter count.
+adapters**, do not consume authority and do not increase the 96-adapter count.
 Each artifact labels itself `validated-local-plan-not-provider-dry-run`, with
 execution not implemented, remote preconditions not verified and provider dry-run
 not performed. No network executor, output projector or secret placement exists.
@@ -379,7 +397,7 @@ The candidates only document requirements; native routing, expiry, exact-target
 binding, atomic consumption, replay/concurrent-use refusal and approved placement
 are **not implemented or tested as authority enforcement here**. Credential routes
 remain incomplete until a broker-only sink and reconciliation are accepted. The
-other 189 tier classifications are unresolved, not automatically harmless reads or
+other 179 tier classifications are unresolved, not automatically harmless reads or
 ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.
