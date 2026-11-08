@@ -57,6 +57,7 @@ export interface CloudflareReadScope extends MetadataScope {
   durableNamespaces?: DurableObjectMetadataScope["namespaces"];
   pagesProjects?: PagesMetadataScope["projects"];
   workerAssetVersions?: VersionAssetScope["workers"];
+  workerPackageVersions?: VersionAssetScope["packageVersions"];
   accessApplications?: AccessApplicationMetadataScope["applications"];
   accessPolicies?: AccessPolicyMetadataScope["applications"];
   zone?: Pick<ZoneMetadataScope, "zoneId" | "dnsRecordIds"> & { workerRoutes?: WorkerRouteMetadataScope["routes"] };
@@ -96,7 +97,8 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(descriptors.kvNamespacesList), metadata(descriptors.kvNamespaceGet),
     metadata(descriptors.queuesList), metadata(descriptors.queueGet),
     metadata(descriptors.workerSubdomainGet), metadata(descriptors.workerSettingsGet),
-    metadata(versionAssetDescriptor({ accountId, revision, workers: scope.workerAssetVersions ?? [] })),
+    metadata(versionAssetDescriptor({ accountId, revision, workers: scope.workerAssetVersions ?? [],
+      packageVersions: scope.workerPackageVersions ?? [] })),
     metadata(stores.storesList), metadata(stores.storeGet), metadata(stores.secretsList), metadata(stores.secretGet),
     metadata(durable.durableNamespacesList), metadata(durable.durableObjectsList),
     metadata(pages.pagesProjectsList), metadata(pages.pagesProjectGet),

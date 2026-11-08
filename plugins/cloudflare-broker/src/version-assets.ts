@@ -8,10 +8,19 @@ const input = closed({ scriptName, versionId });
 type Arguments = ReturnType<typeof input.parse>;
 type Row = Record<string, unknown>;
 type WorkerFirst = { status: "configured"; value: boolean | readonly string[] } | { status: "unavailable"; reason: "not-returned" };
+interface PackageDependencies {
+  subject: "provider-reported-installed-packages";
+  status: "provider-reported" | "unavailable";
+  reason?: "not-returned";
+  items: readonly { name: string; installedVersion: string }[];
+  complete: false;
+  embeddedBytes: "not-established";
+}
 interface VersionAssets {
   id: string;
   subject: "version-configured-worker-first";
   workerFirst: WorkerFirst;
+  packageDependencies?: PackageDependencies;
   activeDeployment: "not-established";
   effectiveRouting: "not-established";
   effectiveProtection: "not-established";
@@ -20,6 +29,28 @@ export interface VersionAssetScope {
   accountId: string;
   revision: string;
   workers?: readonly { scriptName: string; versionIds: readonly string[] }[];
+  packageVersions?: readonly { scriptName: string; versionId: string; packageNames: readonly string[] }[];
+}
+const packageName = text(214, /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/);
+const installedVersion = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
+
+function packages(value: unknown, names: ReadonlySet<string>): PackageDependencies {
+  const base = { subject: "provider-reported-installed-packages" as const, complete: false as const,
+    embeddedBytes: "not-established" as const };
+  if (value === undefined) return Object.freeze({ ...base, status: "unavailable", reason: "not-returned", items: Object.freeze([]) });
+  requireThat(Array.isArray(value) && value.length <= 1000, "upstream");
+  const selected = new Map<string, string>();
+  for (const entry of value) {
+    const row = object(entry);
+    requireThat(typeof row.name === "string", "upstream");
+    if (!names.has(row.name)) continue;
+    requireThat(!selected.has(row.name) && typeof row.installedVersion === "string" &&
+      row.installedVersion.length <= 128 && !/[^0-9A-Za-z.+-]/.test(row.installedVersion) && installedVersion.test(row.installedVersion), "upstream");
+    selected.set(row.name, row.installedVersion);
+  }
+  requireThat(selected.size === names.size, "upstream");
+  const items = [...names].sort().map(name => Object.freeze({ name, installedVersion: selected.get(name)! }));
+  return Object.freeze({ ...base, status: "provider-reported", items: Object.freeze(items) });
 }
 
 function object(value: unknown): Row {
@@ -62,6 +93,20 @@ export function versionAssetDescriptor(scope: VersionAssetScope): MetadataDescri
     requireThat(ids.size === worker.versionIds.length, "schema");
     allowed.set(name, ids);
   }
+  const packageVersions = scope.packageVersions ?? [];
+  requireThat(Array.isArray(packageVersions) && packageVersions.length <= 100, "cap");
+  const packageScopes = new Map<string, ReadonlySet<string>>();
+  for (const entry of packageVersions) {
+    requireThat(entry !== null && typeof entry === "object", "schema");
+    const name = scriptName.parse(entry.scriptName);
+    const id = versionId.parse(entry.versionId);
+    const key = `${name}:${id}`;
+    requireThat(allowed.get(name)?.has(id) === true && !packageScopes.has(key), "scope");
+    requireThat(Array.isArray(entry.packageNames) && entry.packageNames.length > 0 && entry.packageNames.length <= 100, "cap");
+    const names = new Set<string>(entry.packageNames.map((value: unknown) => packageName.parse(value)));
+    requireThat(names.size === entry.packageNames.length, "schema");
+    packageScopes.set(key, names);
+  }
   const preparations = new WeakSet<object>();
   return Object.freeze({
     name: "cloudflare.workers.version_assets.get", version: "1", tier: "read",
@@ -89,8 +134,11 @@ export function versionAssetDescriptor(scope: VersionAssetScope): MetadataDescri
       requireThat(result.id === prepared.arguments.versionId, "scope");
       requireThat(result.account_id === undefined || result.account_id === account, "scope");
       requireThat(result.script_name === undefined || result.script_name === prepared.arguments.scriptName, "scope");
+      const names = packageScopes.get(`${prepared.arguments.scriptName}:${prepared.arguments.versionId}`);
       return Object.freeze({ id: prepared.arguments.versionId, subject: "version-configured-worker-first",
-        workerFirst: workerFirst(result.assets), activeDeployment: "not-established",
+        workerFirst: workerFirst(result.assets),
+        ...(names === undefined ? {} : { packageDependencies: packages(result.package_dependencies, names) }),
+        activeDeployment: "not-established",
         effectiveRouting: "not-established", effectiveProtection: "not-established" });
     },
   });

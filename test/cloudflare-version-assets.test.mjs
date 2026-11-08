@@ -89,12 +89,71 @@ test("Cloudflare version assets refuse foreign identity, malformed envelopes, ne
   assert.throws(() => d.project(success({ ...row(), modules: "s".repeat(131072) }), prepared), /cap/);
 });
 
+const packageVersions = () => [{ scriptName, versionId, packageNames: ["example", "@example/library"] }];
+const packageRow = () => ({ ...row(), package_dependencies: [
+  { name: "example", installedVersion: "4.17.22", packageJsonVersion: "never-return-private" },
+  { name: "never-return-private", installedVersion: "never-return-private" },
+  { name: "@example/library", installedVersion: "1.2.3-beta.1+build", packageJsonVersion: "^1.0.0" },
+] });
+const expectedPackages = () => ({ subject: "provider-reported-installed-packages", status: "provider-reported",
+  items: [{ name: "@example/library", installedVersion: "1.2.3-beta.1+build" }, { name: "example", installedVersion: "4.17.22" }],
+  complete: false, embeddedBytes: "not-established" });
+const packageScope = () => ({ ...scope(), packageVersions: packageVersions() });
+
+test("Cloudflare package dependency projection selects exact allowed names and provider installedVersion only", () => {
+  const output = project(packageRow(), packageScope());
+  assert.deepEqual(output, { ...expected(), packageDependencies: expectedPackages() });
+  assert.ok(!JSON.stringify(output).includes("never-return-private"));
+  for (const value of [output.packageDependencies, output.packageDependencies.items, ...output.packageDependencies.items]) assert.ok(Object.isFrozen(value));
+  assert.deepEqual(project(packageRow()), expected());
+  assert.deepEqual(project({ ...row(), package_dependencies: undefined }, packageScope()).packageDependencies,
+    { subject: "provider-reported-installed-packages", status: "unavailable", reason: "not-returned", items: [], complete: false, embeddedBytes: "not-established" });
+});
+
+test("Cloudflare package scopes are copied, version-bound, default empty and never model-controlled", () => {
+  const selected = packageScope();
+  const d = versionAssetDescriptor(selected);
+  selected.packageVersions[0].packageNames.length = 0;
+  assert.deepEqual(d.project(success(packageRow()), d.prepare(args)).packageDependencies, expectedPackages());
+  const otherVersion = "bbbbbbbb-cccc-4ddd-8eee-ffffffffffff";
+  assert.equal(project(packageRow(), { ...scope(), workers: [{ scriptName, versionIds: [versionId, otherVersion] }],
+    packageVersions: [{ scriptName, versionId: otherVersion, packageNames: ["example"] }] }).packageDependencies, undefined);
+  for (const packageVersions of [null, {}, [null], [...packageScope().packageVersions, ...packageScope().packageVersions],
+    [{ scriptName: "foreign-worker", versionId, packageNames: ["example"] }],
+    [{ scriptName, versionId: otherVersion, packageNames: ["example"] }],
+    [{ scriptName, versionId, packageNames: [] }], [{ scriptName, versionId, packageNames: ["example", "example"] }],
+    [{ scriptName, versionId, packageNames: ["https://example.test/pkg"] }],
+    [{ scriptName, versionId, packageNames: Array(101).fill("example") }]]) {
+    if (packageVersions === null) continue; // nullish configuration is default-empty, not a grant.
+    assert.throws(() => versionAssetDescriptor({ ...scope(), packageVersions }));
+  }
+  assert.equal(project(packageRow(), { ...scope(), packageVersions: null }).packageDependencies, undefined);
+  assert.throws(() => d.prepare({ ...args, packageNames: ["never-return-private"] }), /schema/);
+});
+
+test("Cloudflare selected package metadata refuses malformed, ambiguous, missing and oversized installed versions", () => {
+  for (const package_dependencies of [null, {}, [], [{ name: "example", installedVersion: "4.17.22" }],
+    [...packageRow().package_dependencies, packageRow().package_dependencies[0]],
+    Array(1001).fill({ name: "example", installedVersion: "1.2.3" })]) {
+    assert.throws(() => project({ ...row(), package_dependencies }, packageScope()), /upstream/);
+  }
+  for (const installedVersion of [null, "", "^1.2.3", "latest", "git+https://secret.test", "1.2.3\n", "1.2.3/secret", "1." + "2".repeat(128) + ".3"]) {
+    const result = packageRow();
+    result.package_dependencies[0].installedVersion = installedVersion;
+    assert.throws(() => project(result, packageScope()), /upstream/);
+  }
+  for (const foreign of [{ id: "bbbbbbbb-cccc-4ddd-8eee-ffffffffffff" }, { account_id: "b".repeat(32) }, { script_name: "foreign-worker" }]) {
+    assert.throws(() => project({ ...packageRow(), ...foreign }, packageScope()), /scope/);
+  }
+});
+
 // Actual reviewed core, synthetic process-local authority/host/audit/journal only.
-function fixture(change = () => {}, result = row()) {
+function fixture(change = () => {}, result = row(), packageVersions = []) {
   const f = providerFixture();
   const requests = [];
   const operations = cloudflareReadOperations({ accountId: account, revision: "resource-1", scriptNames: [scriptName],
-    hyperdriveIds: [], workerVersions: workers(), workerControlScriptNames: [scriptName], workerAssetVersions: workers() },
+    hyperdriveIds: [], workerVersions: workers(), workerControlScriptNames: [scriptName], workerAssetVersions: workers(),
+    workerPackageVersions: packageVersions },
   { accountId: account, revision: "resource-1", sourceDigestScriptNames: [] }, async (url, init) => {
     requests.push({ url, init });
     return new Response(success(result), { headers: { "content-type": "application/json" } });
@@ -107,6 +166,40 @@ function fixture(change = () => {}, result = row()) {
   const broker = createProviderBroker(f.dependencies);
   return { ...f, requests, invoke: (raw = args, key = "version-assets-call") => broker.call(name, raw, "verified-runtime", key) };
 }
+test("Cloudflare installed-package projection traverses core without source fetch and retains replay and redaction", async () => {
+  const f = fixture(() => {}, packageRow(), packageVersions());
+  const result = await f.invoke();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value.packageDependencies, expectedPackages());
+  assert.equal(f.requests.length, 1);
+  assert.ok(!f.requests[0].url.includes("include="));
+  assert.equal(f.calls.close, 1);
+  assert.deepEqual(f.audit.map(item => item.phase), ["intent", "outcome"]);
+  assert.equal((await f.invoke()).code, "REPLAY_CONFLICT");
+  safe(f, result);
+});
+
+test("Cloudflare installed-package projection preserves current-policy, audit, journal and malformed-output refusals", async () => {
+  for (const failure of ["agent", "resource", "binding", "revoked", "audit", "journal", "projection", "model"]) {
+    const f = fixture(f => {
+      if (failure === "agent") f.vector.policy.agents = ["other-agent"];
+      if (failure === "resource") f.vector.policy.resources = [];
+      if (failure === "binding") f.dependencies.host.revalidate = async () => false;
+      if (failure === "audit") f.dependencies.audit.append = async () => { throw new Error("never-return-private"); };
+      if (failure === "journal") f.dependencies.journal.claim = async () => { throw new Error("never-return-private"); };
+      if (failure === "revoked") {
+        const resolve = f.dependencies.credentials.resolve;
+        f.dependencies.credentials.resolve = async target => { const lease = await resolve(target); f.vector.policy.revision = "policy-2"; return lease; };
+      }
+    }, failure === "projection" ? { ...row(), package_dependencies: [] } : packageRow(), packageVersions());
+    const result = await f.invoke(failure === "model" ? { ...args, workerPackageVersions: packageVersions() } : args);
+    assert.equal(result.ok, false);
+    assert.equal(f.requests.length, failure === "projection" ? 1 : 0);
+    if (["projection", "revoked"].includes(failure)) assert.equal(f.calls.close, 1);
+    safe(f, result);
+  }
+});
+
 function safe(f, result) {
   for (const canary of [credentialCanary, derivedCanary, "never-return-private"]) {
     assert.ok(!JSON.stringify({ result, audit: f.audit, journal: [...f.journal] }).includes(canary));
