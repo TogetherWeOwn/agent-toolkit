@@ -12,6 +12,7 @@ import { createNeonBranchResourceOperations } from '../dist/plugins/neon-broker/
 import { createNeonProjectSecurityOperations } from '../dist/plugins/neon-broker/src/project-security.js';
 import { createNeonProjectAccessOperations } from '../dist/plugins/neon-broker/src/project-access.js';
 import { createNeonOrganizationVPCOperations } from '../dist/plugins/neon-broker/src/organization-vpc.js';
+import { createNeonOrganizationOperations } from '../dist/plugins/neon-broker/src/organization.js';
 import { createNeonMetadataTransport } from '../dist/plugins/neon-broker/src/transport.js';
 
 export const scope = {
@@ -163,7 +164,16 @@ export const organizationVPCCases = [
 export function organizationVPCFixture(value, config = organizationVPCScope) {
   return fixture(value, config, createNeonOrganizationVPCOperations);
 }
-export const allCases = [...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
+export const organizationScope = { organizationId: 'org-a', revision: scope.revision };
+export const organization = { id: 'org-a', require_mfa: false, allow_hipaa_projects: true };
+export const organizationCases = [
+  ['getOrganization', { org_id: 'org-a' }, organization, organization],
+  ['getOrganizationSpendingLimit', { org_id: 'org-a' }, { spending_limit_cents: 10000 }, { spending_limit_cents: 10000 }],
+];
+export function organizationFixture(value, config = organizationScope) {
+  return fixture(value, config, createNeonOrganizationOperations);
+}
+export const allCases = [...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });

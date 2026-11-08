@@ -150,6 +150,24 @@ ancestry, encoded pagination and transport failures. Common contracts enforce
 principal/exact-resource separation, replay/TOCTOU, credential reflection and
 maximum configuration/output budgets. Native effects/entitlement remain unknown.
 
+## Organization configuration metadata delta
+
+`getOrganization` and `getOrganizationSpendingLimit` bind one copied organization
+ID/revision, using separate exact detail and spending-limit resources. No parent,
+child, billing, VPC or project grant implies another. Detail output is the exact ID
+and optional boolean MFA/HIPAA flags only; absence stays unknown, never fabricated
+false or a compliance/qualification verdict. Names, handles, plan/manager strings
+and timestamps are not read. Spending output preserves null, zero and nonnegative
+safe-integer cents distinctly; unsafe int64, negative, fractional and negative-zero
+values refuse without rounding or a fabricated absent cap. Reported configuration
+is not runtime spend enforcement or authority to spend/change a limit. Fixed request
+paths establish organization context for the ID-less spending response; optional
+org_id must agree, project/branch ancestry and pagination refuse. Non-200 never
+becomes default/empty success or a cross-endpoint fallback. Tests cover canonical
+arguments, output poisoning, copied bindings, nullable/numeric boundaries, transport
+failure and common principal/resource/replay/TOCTOU/reflection/budget contracts.
+Provider entitlement/effects and independent runtime qualification remain unknown.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.

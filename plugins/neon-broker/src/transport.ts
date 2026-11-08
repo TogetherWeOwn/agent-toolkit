@@ -8,6 +8,8 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  getOrganization(organization: string, options: MetadataRequestOptions): Promise<unknown>;
+  getOrganizationSpendingLimit(organization: string, options: MetadataRequestOptions): Promise<unknown>;
   listOrganizationVPCEndpointsAllRegions(organization: string, options: MetadataRequestOptions): Promise<unknown>;
   listOrganizationVPCEndpoints(organization: string, region: string, options: MetadataRequestOptions): Promise<unknown>;
   getOrganizationVPCEndpointDetails(organization: string, region: string, endpoint: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -153,6 +155,10 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    getOrganization: (organization: string, options: MetadataRequestOptions) =>
+      get(`/organizations/${authPathId(organization)}`, new URLSearchParams(), options),
+    getOrganizationSpendingLimit: (organization: string, options: MetadataRequestOptions) =>
+      get(`/organizations/${authPathId(organization)}/billing/spending_limit`, new URLSearchParams(), options),
     listOrganizationVPCEndpointsAllRegions: (organization: string, options: MetadataRequestOptions) =>
       get(`/organizations/${authPathId(organization)}/vpc/vpc_endpoints`, new URLSearchParams(), options),
     listOrganizationVPCEndpoints: (organization: string, region: string, options: MetadataRequestOptions) =>

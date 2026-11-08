@@ -2811,12 +2811,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "test/organization.test.mjs",
+        "test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed organization metadata source and mock refusal contracts only; provider effects, entitlement, credential placement and independent native review/integration remain unverified. No runtime registration or enablement."
     },
     {
       "id": "listOrgApiKeys",
@@ -2887,12 +2890,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "test/organization.test.mjs",
+        "test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed nullable spending-configuration read source and mock refusal contracts only; Launch/Scale entitlement, provider effects, credential placement and independent native review/integration remain unverified. No spend enforcement, mutation or enablement."
     },
     {
       "id": "setOrganizationSpendingLimit",

@@ -378,6 +378,34 @@ success or another endpoint fallback. No endpoint assignment, network-restrictio
 mutation, external URL follow or live grant is supplied. Entitlement, availability,
 provider effects and native integration remain unknown.
 
+`createNeonOrganizationOperations(trustedScope, transport)` adds two organization configuration reads:
+
+| Tool | Closed arguments | Exact authorization resource |
+|---|---|---|
+| `neon.getOrganization` | `org_id` | `neon/organizations/<org>` |
+| `neon.getOrganizationSpendingLimit` | `org_id` | `neon/organizations/<org>/billing/spending_limit` |
+
+Scope validates and copies one organization ID and revision. Organization paths use
+pinned lowercase alphanumeric/hyphen IDs, 1–60 characters, without normalization.
+Detail, spending-limit, billing-parent, VPC and project grants never imply one another.
+Detail returns only the exact bound ID and optional require_mfa/allow_hipaa_projects
+booleans; absent flags stay absent, not false or qualified. Names, handles, plan,
+manager and timestamps are not read or exposed. This is not an effective-MFA,
+HIPAA-compliance, credential-entitlement or security-qualification receipt.
+
+Spending output is only spending_limit_cents: null means no configured limit, zero
+is preserved, and nonnegative safe integers remain exact cents without conversion.
+Negative, fractional, negative-zero and unsafe int64 values refuse rather than round.
+No configured cap is claimed to enforce a budget, authorize spend or establish current
+usage. This beta read is documented only for Launch/Scale members with read access;
+entitlement is unverified. The response has no required organization ID, so binding
+comes from the fixed authenticated organization path, not invented provider ancestry.
+Optional org_id must agree; project/branch identities and pagination refuse on both
+reads. Non-200 stays unavailable, never an absent limit, disabled security or another
+endpoint fallback. No account enumeration, limit update, organization mutation,
+credential retrieval or runtime enforcement is introduced. Maximum scope/output fit
+common budgets; provider effects and native qualification remain unknown.
+
 Trusted metadata scope contains one project, a revision, explicit branch IDs and endpoint
 parent bindings. Construction validates and copies it. Caller IDs only select
 already-configured resources; no caller identity, authority, origin, credential,
@@ -396,7 +424,7 @@ passwords, credentials and connection strings are excluded. Unknown lifecycle
 states fail closed until explicitly supported. No error body/headers are surfaced.
 Common lease-reflection checks remain necessary even in these selected fields.
 
-`createNeonMetadataTransport(injectedFetch)` has forty-two typed methods only. Its
+`createNeonMetadataTransport(injectedFetch)` has forty-four typed methods only. Its
 internal request builder fixes origin `https://console.neon.tech`, `/api/v2`
 paths, GET, JSON content, no redirects and no retries. No global fetch fallback
 exists. Each response is bounded to 64 KiB and 1 s, including streamed body time;
@@ -436,8 +464,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: forty-two implemented
-source adapters, 152 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: forty-four implemented
+source adapters, 150 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

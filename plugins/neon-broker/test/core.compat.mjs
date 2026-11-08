@@ -14,6 +14,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   projectSecurityCases, projectSecurityFixture, projectSecurityScope, jwks, vpcEndpoint,
   projectAccessCases, projectAccessFixture, projectAccessScope, projectPermission, projectMember,
   organizationVPCCases, organizationVPCFixture, organizationVPCScope, organizationVPCEndpoint,
+  organizationCases, organizationFixture, organizationScope, organization,
   fixture, scope, branch, operation, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
@@ -24,7 +25,8 @@ const { providerFixture, credentialCanary, derivedCanary } = await import(pathTo
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
 function brokerFixture(name, args, raw, overrides = {}, config) {
-  const factory = organizationVPCCases.some(([operation]) => operation === name) ? organizationVPCFixture :
+  const factory = organizationCases.some(([operation]) => operation === name) ? organizationFixture :
+    organizationVPCCases.some(([operation]) => operation === name) ? organizationVPCFixture :
     projectAccessCases.some(([operation]) => operation === name) ? projectAccessFixture :
     projectSecurityCases.some(([operation]) => operation === name) ? projectSecurityFixture :
     branchResourceCases.some(([operation]) => operation === name) ? branchResourceFixture :
@@ -211,7 +213,7 @@ test('reflected lease material in selected safe-looking fields is refused by the
   assert.equal((await f.call()).code, 'OUTPUT_REFUSED');
 });
 
-for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases]) {
+for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases]) {
   test(`${name}: replay and TOCTOU policy/resource changes refuse without a second request`, async () => {
     const replay = brokerFixture(name, args, raw);
     assert.equal((await replay.call()).ok, true);
@@ -789,11 +791,60 @@ test('maximum organization VPC selection and ID/region output fit real common-co
   safeEnvelope(f, result);
 });
 
+test('organization detail and spending metadata require separate exact grants and omit personal/billing diagnostics', async () => {
+  for (const [name, args, raw, expected] of organizationCases) {
+    const poison = { name: credentialCanary, handle: derivedCanary, plan: credentialCanary, managed_by: derivedCanary,
+      created_at: credentialCanary, updated_at: derivedCanary, password: 'password-canary', message: derivedCanary };
+    const f = brokerFixture(name, args, { ...raw, ...poison });
+    const result = await f.call();
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.value, expected);
+    safeEnvelope(f, result);
+    const own = f.provider.operation(name).prepare(args).resource.id;
+    for (const resource of ['neon/organizations/org-a', 'neon/organizations/org-a/billing',
+      'neon/organizations/org-a/billing/spending_limit', 'neon/organizations/org-a/vpc/vpc_endpoints',
+      'neon/organizations/org-b', 'neon/projects/project-a'].filter(id => id !== own)) {
+      const other = brokerFixture(name, args, raw);
+      other.common.vector.policy.resources = [resource];
+      assert.equal((await other.call()).code, 'POLICY_DENIED');
+      assert.equal(other.common.calls.secret, 0);
+      assert.equal(other.provider.requests.length, 0);
+    }
+    const wrong = brokerFixture(name, args, raw);
+    wrong.args = { org_id: 'org-b' };
+    assert.equal((await wrong.call()).code, 'INVALID_ARGUMENTS');
+    assert.equal(wrong.common.calls.secret, 0);
+    assert.equal(wrong.provider.requests.length, 0);
+  }
+  const [name, args, raw] = organizationCases[0];
+  const reflected = brokerFixture(name, args, raw,
+    { credentials: { async resolve() { return { value: organization.id, redactions: [], async close() {} }; } } });
+  assert.equal((await reflected.call()).code, 'OUTPUT_REFUSED');
+});
+
+test('organization nullable spending limit and maximum scope/output fit real common-core budgets', async () => {
+  const config = { ...organizationScope, organizationId: 'a'.repeat(60) };
+  const args = { org_id: config.organizationId };
+  for (const [name, raw] of [['getOrganization', { id: config.organizationId, require_mfa: true, allow_hipaa_projects: false }],
+    ...[null, 0, Number.MAX_SAFE_INTEGER].map(spending_limit_cents => ['getOrganizationSpendingLimit', { spending_limit_cents }])]) {
+    const f = brokerFixture(name, args, raw, {}, config);
+    const result = await f.call();
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.value, raw);
+    safeEnvelope(f, result);
+  }
+  for (const spending_limit_cents of [-1, Number.MAX_SAFE_INTEGER + 1, '100']) {
+    const f = brokerFixture('getOrganizationSpendingLimit', args, { spending_limit_cents }, {}, config);
+    assert.equal((await f.call()).code, 'UPSTREAM_UNAVAILABLE');
+    assert.equal(f.provider.requests.length, 1);
+  }
+});
+
 test('common operation-map validator confirms incomplete status for all unknown entitlements', () => {
   const map = JSON.parse(readFileSync(new URL('../operation-map.json', import.meta.url)));
   const result = validateOperationMap(map);
   assert.equal(result.complete, false);
   assert.equal(result.incomplete.length, 194);
-  assert.equal(map.operations.filter(operation => operation.implemented).length, 42);
+  assert.equal(map.operations.filter(operation => operation.implemented).length, 44);
   assert.equal(map.operations.filter(operation => operation.enabled).length, 0);
 });
