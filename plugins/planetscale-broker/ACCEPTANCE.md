@@ -41,6 +41,24 @@ evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
 
+## CI download resilience repair
+
+Exact source `69e169665ad5ef98e4ccdd1457dd4b801860a847`
+[Actions attempt 2](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42466252743/attempts/2)
+failed again before actionlint execution: its pinned release download returned
+HTTP 504. The test job passed 852/852 package tests, root 180/180, helpers
+122/122 and GitHub broker 219/219; CodeQL passed. Aggregate CI was not green.
+
+The workflow now permits three curl retries for transient download errors, with
+90-second retry budget, 10-second connection and 30-second per-transfer limits.
+The exact release and SHA256 verification before extraction/execution remain
+unchanged, as do fail-closed shell behavior, lint execution and aggregate gates.
+A root workflow regression contract checks those bounds and the preserved pin,
+checksum order and lint execution. No dependency version or authority changed.
+The repair and new contract require fresh exact-head Actions evidence; no local
+suite/build/typecheck/CI mirror ran. Coverage remains 127/291 bounded metadata
+subsets, 164 missing, zero integrated/reviewed/enabled/adopted.
+
 ## Instant-metric availability metadata source increment
 
 `test/instant-metrics.test.mjs` adds 18 synthetic contracts for two fixed
