@@ -4,6 +4,7 @@ import { currentContentDescriptor, type CurrentContentScope } from "./current-co
 import { subscriptionDescriptors, type SubscriptionScope } from "./subscriptions.js";
 import { workerScheduleDescriptor, type WorkerScheduleScope } from "./worker-schedules.js";
 import { queueConsumerDescriptors, type QueueConsumerScope } from "./queue-consumers.js";
+import { pagesDomainDescriptors, type PagesDomainScope } from "./pages-domains.js";
 import { eventSubscriptionDescriptors, type EventSubscriptionScope } from "./event-subscriptions.js";
 import { versionAssetDescriptor, type VersionAssetScope } from "./version-assets.js";
 import { workerDomainMetadataDescriptors, type WorkerDomainScope } from "./worker-domains.js";
@@ -71,6 +72,7 @@ export interface CloudflareReadScope extends MetadataScope {
   secretStores?: SecretsStoreMetadataScope["stores"];
   durableNamespaces?: DurableObjectMetadataScope["namespaces"];
   pagesProjects?: PagesMetadataScope["projects"];
+  pagesDomains?: PagesDomainScope["projects"];
   workerDomains?: WorkerDomainScope["domains"];
   r2CorsBuckets?: R2CorsScope["buckets"];
   r2NotificationBuckets?: R2NotificationScope["buckets"];
@@ -101,6 +103,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
   const stores = secretsStoreMetadataDescriptors({ accountId, revision, stores: scope.secretStores ?? [] });
   const durable = durableObjectMetadataDescriptors({ accountId, revision, namespaces: scope.durableNamespaces ?? [] });
   const pages = pagesMetadataDescriptors({ accountId, revision, projects: scope.pagesProjects ?? [] });
+  const pagesDomains = pagesDomainDescriptors({ accountId, revision, projects: scope.pagesDomains ?? [] });
   const access = accessApplicationMetadataDescriptors({ accountId, revision, applications: scope.accessApplications ?? [] });
   const accessPolicies = accessPolicyMetadataDescriptors({ accountId, revision, applications: scope.accessPolicies ?? [] });
   const domains = workerDomainMetadataDescriptors({ accountId, revision, domains: scope.workerDomains ?? [] });
@@ -139,6 +142,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(durable.durableNamespacesList), metadata(durable.durableObjectsList),
     metadata(pages.pagesProjectsList), metadata(pages.pagesProjectGet),
     metadata(pages.pagesDeploymentsList), metadata(pages.pagesDeploymentGet),
+    metadata(pagesDomains.domainsList), metadata(pagesDomains.domainGet),
     metadata(access.accessApplicationsList), metadata(access.accessApplicationGet),
     metadata(accessPolicies.accessPoliciesList), metadata(accessPolicies.accessPolicyGet),
     metadata(domains.workerDomainsList), metadata(domains.workerDomainGet),
