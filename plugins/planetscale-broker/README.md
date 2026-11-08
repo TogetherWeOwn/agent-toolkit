@@ -64,8 +64,8 @@ incomplete. Negative contracts reject missing/duplicate inventory, unknown field
 claim inflation and destructive-tier downgrades. Execution evidence comes only
 from exact-head Actions; this source declaration is not a passing result.
 
-`src/core-preparation.ts` supplies three pure `Prepared` seams for branch,
-backup and backup-policy deletion. Trusted host-owned closed snapshots bind
+`src/core-preparation.ts` supplies five pure `Prepared` seams for branch,
+backup and backup-policy deletion plus deploy-request close/cancel previews. Trusted host-owned closed snapshots bind
 `planetscale/branch/<immutable-id>`, `planetscale/backup/<immutable-id>` or
 `planetscale/backup-policy/<immutable-id>` and revision. Parent IDs/names,
 production/protection classifications, the fixed request and all obligations
@@ -81,6 +81,17 @@ resource namespaces prevent a backup/policy ID collision, but do not establish
 provider-global ID uniqueness or parent ownership. Core backup contracts live in
 `test/core-backup-preparation.test.mjs`; previews remain separately tested and
 counted as missing adapters.
+
+The deploy-request bindings use `planetscale/deploy-request/<immutable-id>` for
+both operations. The complete preview hash also binds the operation, request
+number/path, method/body, source/destination IDs/names, state and production
+classification. Close permits pending/ready/no_changes only; cancel permits
+queued only. Both retain RM obligations and refuse deleted/ambiguous branches
+or closed/started/terminal requests. The fixed close body is deeply frozen;
+cancel has no body. `test/core-deployment-stop-preparation.test.mjs` covers these
+bindings. A hash is not proof of current ID/number mapping, independently bound
+destination identity, freshness, remote preconditions, rollback or closure.
+Neither operation executes, consumes approval or increases adapter coverage.
 
 All 291 entries remain `incomplete`, `implemented=false`, `reviewed=false`,
 `enabled=false`, and entitlement `unknown`. Existing offline read/preview test

@@ -86,6 +86,21 @@ registration, credential, approval consumption or adapter coverage. Additional
 per-operation preparation and accepted host/provider revalidation remain
 incomplete. Complete-package and live gates remain above.
 
+Two more pure bindings retain existing deploy-request close/cancel previews in
+`Prepared`. Both use the same immutable deploy-request ID resource namespace;
+full-preview hashes distinguish operations, number-addressed paths, verbs/bodies,
+source/destination IDs/names, revision, production classification and permitted
+state snapshots. Close binds only pending/ready/no_changes; cancel binds only
+queued. Deleted/ambiguous branches and closed/started/terminal requests refuse.
+`test/core-deployment-stop-preparation.test.mjs` adds sixteen synthetic contracts
+for complete preview/RM obligations, deep snapshots (including the close body),
+closed arguments/host identity, non-invoked accessors, hash sensitivity,
+determinism, cross-state refusal and operation distinction on the same resource.
+There is no executor, approval consumption, provider dry-run, registry or adapter
+coverage increase. Hashes do not authenticate current ownership, request
+ID/number mapping, independent destination binding, freshness, remote
+preconditions, rollback or closure. Exact-head Actions evidence remains required.
+
 The actual PR merge conflict required consuming current main, including the
 already-merged provider core and Neon package. The lock resolution retains both
 Neon and PlanetScale workspace records; no external version, integrity, install

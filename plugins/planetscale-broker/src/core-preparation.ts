@@ -2,8 +2,9 @@ import type { Prepared } from "../../../packages/core/src/provider/contracts.js"
 import { jsonData } from "../../../packages/core/src/schema.js";
 import { prepareDeleteBackup, prepareDeleteBackupPolicy, type BackupDeletionPlan } from "./backup-deletion-plans.js";
 import { prepareDeleteBranch, type MutationPlan } from "./mutation-plans.js";
+import { prepareCloseDeployRequest, prepareCancelDeployRequest, type DeploymentStopPlan } from "./deployment-stop-plans.js";
 
-function preparedPreview(id: string, preview: MutationPlan | BackupDeletionPlan): Prepared {
+function preparedPreview(id: string, preview: MutationPlan | BackupDeletionPlan | DeploymentStopPlan): Prepared {
   const prepared = Object.freeze({
     resource: Object.freeze({ id, revision: preview.target.revision }),
     arguments: preview.arguments,
@@ -34,5 +35,19 @@ export function bindDeleteBackupPolicyPreparation(rawTarget: unknown): (raw: unk
   const target = prepareDeleteBackupPolicy(rawTarget, {}).target;
   return (raw: unknown): Prepared => preparedPreview(
     `planetscale/backup-policy/${target.policyId}`, prepareDeleteBackupPolicy(target, raw),
+  );
+}
+
+export function bindCloseDeployRequestPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = prepareCloseDeployRequest(rawTarget, {}).target;
+  return (raw: unknown): Prepared => preparedPreview(
+    `planetscale/deploy-request/${target.requestId}`, prepareCloseDeployRequest(target, raw),
+  );
+}
+
+export function bindCancelDeployRequestPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = prepareCancelDeployRequest(rawTarget, {}).target;
+  return (raw: unknown): Prepared => preparedPreview(
+    `planetscale/deploy-request/${target.requestId}`, prepareCancelDeployRequest(target, raw),
   );
 }
