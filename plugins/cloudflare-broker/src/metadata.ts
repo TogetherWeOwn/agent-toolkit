@@ -39,6 +39,7 @@ export interface MetadataScope {
   workerVersions?: readonly { scriptName: string; versionIds: readonly string[] }[];
   workerControlScriptNames?: readonly string[];
   workerAttributionScriptNames?: readonly string[];
+  workerVersionDetailScriptNames?: readonly string[];
 }
 export interface MetadataRequest {
   readonly method: "GET";
@@ -83,6 +84,23 @@ interface VersionMetadata {
   id: string;
   attribution?: { createdOn: { status: "provider-reported"; value: string } | { status: "unavailable"; reason: "not-returned" } };
 }
+type ConfiguredCpu = { status: "configured"; value: number } | { status: "unavailable"; reason: "not-returned" };
+interface VersionDetailMetadata extends VersionMetadata {
+  detail?: {
+    subject: "provider-version-detail";
+    scriptContentTag: { status: "provider-reported"; value: string; algorithm: "not-established" } | { status: "unavailable"; reason: "not-returned" };
+    cpuMs: ConfiguredCpu;
+    activeDeployment: "not-established";
+    historicalSourceBinding: "not-established";
+  };
+}
+
+function configuredCpu(value: unknown): ConfiguredCpu {
+  const limits = value === undefined ? undefined : object(value);
+  const cpu = limits?.cpu_ms;
+  requireThat(cpu === undefined || (typeof cpu === "number" && Number.isSafeInteger(cpu) && cpu >= 0), "upstream");
+  return cpu === undefined ? { status: "unavailable", reason: "not-returned" } : { status: "configured", value: cpu as number };
+}
 
 function providerTimestamp(value: unknown): string {
   const stamp = providerText(value, text(30, /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,9})?Z$/));
@@ -92,7 +110,7 @@ function providerTimestamp(value: unknown): string {
   return stamp;
 }
 interface WorkerBudgetMetadata {
-  cpuMs: { status: "configured"; value: number } | { status: "unavailable"; reason: "not-returned" };
+  cpuMs: ConfiguredCpu;
   bodyBytes: UnavailableControl;
   memoryBytes: UnavailableControl;
   workerFirst: UnavailableControl;
@@ -138,6 +156,10 @@ export function metadataDescriptors(scope: MetadataScope) {
   requireThat(Array.isArray(workerAttributionScriptNames) && workerAttributionScriptNames.length <= maxRows, "cap");
   const attributionScripts = new Set(workerAttributionScriptNames.map(value => scriptName.parse(value)));
   for (const name of attributionScripts) requireThat(scripts.has(name), "scope");
+  const workerVersionDetailScriptNames = scope.workerVersionDetailScriptNames ?? [];
+  requireThat(Array.isArray(workerVersionDetailScriptNames) && workerVersionDetailScriptNames.length <= maxRows, "cap");
+  const versionDetailScripts = new Set(workerVersionDetailScriptNames.map(value => scriptName.parse(value)));
+  for (const name of versionDetailScripts) requireThat(scripts.has(name), "scope");
   const databaseIds = scope.databaseIds ?? [];
   const defaultBucketNames = scope.defaultBucketNames ?? [];
   requireThat(Array.isArray(databaseIds) && databaseIds.length <= 100 && Array.isArray(defaultBucketNames) && defaultBucketNames.length <= 100, "cap");
@@ -399,7 +421,7 @@ export function metadataDescriptors(scope: MetadataScope) {
       return bounded({ items, complete: false as const });
     },
   });
-  const versionGet: MetadataDescriptor<ReturnType<typeof workerVersion.parse>, VersionMetadata> = Object.freeze({
+  const versionGet: MetadataDescriptor<ReturnType<typeof workerVersion.parse>, VersionDetailMetadata> = Object.freeze({
     name: "cloudflare.workers.versions.get", version: "1", tier: "read", providerOperationId: "worker-versions-get-version-detail",
     prepare(raw: unknown) {
       const args = workerVersion.parse(raw);
@@ -411,7 +433,19 @@ export function metadataDescriptors(scope: MetadataScope) {
       versionScope(args.scriptName, args.versionId);
       const row = object(envelope(raw).result);
       requireThat(row.id === args.versionId, "scope");
-      return bounded(versionMetadata(row, args.scriptName));
+      const output = versionMetadata(row, args.scriptName);
+      if (!versionDetailScripts.has(args.scriptName)) return bounded(output);
+      attributionIdentity(row, args.scriptName);
+      const resources = row.resources === undefined ? {} : object(row.resources);
+      const script = resources.script === undefined ? {} : object(resources.script);
+      const runtime = resources.script_runtime === undefined ? {} : object(resources.script_runtime);
+      const scriptContentTag = script.etag === undefined
+        ? { status: "unavailable" as const, reason: "not-returned" as const }
+        : { status: "provider-reported" as const, value: providerText(script.etag, text(128, /^[a-fA-F0-9]{32,128}$/)), algorithm: "not-established" as const };
+      return bounded<VersionDetailMetadata>({ ...output, detail: {
+        subject: "provider-version-detail", scriptContentTag, cpuMs: configuredCpu(runtime.limits),
+        activeDeployment: "not-established", historicalSourceBinding: "not-established",
+      } });
     },
   });
   function namespaceScope(id: string) { requireThat(namespaces.has(id), "scope"); }
@@ -514,11 +548,8 @@ export function metadataDescriptors(scope: MetadataScope) {
     },
     project(raw: string, input: PreparedMetadata<ReturnType<typeof script.parse>>) {
       const row = controlResponse(raw, input);
-      const limits = row.limits === undefined ? undefined : object(row.limits);
-      const cpu = limits?.cpu_ms;
-      requireThat(cpu === undefined || (typeof cpu === "number" && Number.isSafeInteger(cpu) && cpu >= 0), "upstream");
       return bounded<WorkerBudgetMetadata>({
-        cpuMs: cpu === undefined ? { status: "unavailable", reason: "not-returned" } : { status: "configured", value: cpu as number },
+        cpuMs: configuredCpu(row.limits),
         bodyBytes: { status: "unavailable", reason: "not-in-response-schema" },
         memoryBytes: { status: "unavailable", reason: "not-in-response-schema" },
         workerFirst: { status: "unavailable", reason: "not-in-response-schema" },
