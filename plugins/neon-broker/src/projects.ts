@@ -36,8 +36,19 @@ export function createNeonProjectOperations(scope: NeonProjectScope, transport: 
     check(org === undefined || org === config.organizationId);
     check(optional(raw, "project_id") === undefined && optional(raw, "branch_id") === undefined);
   }
+  function availability(raw: unknown): void {
+    const unavailable = optional(raw, "unavailable_project_ids");
+    if (unavailable === undefined) return;
+    const seen = new Set<string>();
+    for (const value of rows(unavailable, MAX_ITEMS)) {
+      const id = pathId.parse(value);
+      check(!seen.has(id) && !selected.has(id));
+      seen.add(id);
+    }
+  }
   function project(raw: unknown): Json {
     identity(raw);
+    availability(raw);
     check(optional(raw, "pagination") === undefined);
     const seen = new Set<string>();
     const projects = rows(field(raw, "projects"), MAX_ITEMS).map(value => {
@@ -66,6 +77,7 @@ export function createNeonProjectOperations(scope: NeonProjectScope, transport: 
         if (signal.aborted) throw Error("UPSTREAM_UNAVAILABLE");
         const raw = await transport.listProjects(config.organizationId, cursor, { credential, signal });
         identity(raw);
+        availability(raw);
         projects.push(...rows(field(raw, "projects"), PAGE_SIZE));
         const combined = { projects };
         project(combined);

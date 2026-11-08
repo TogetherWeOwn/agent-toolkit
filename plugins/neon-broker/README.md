@@ -610,6 +610,9 @@ validated before filtering, and duplicate IDs across pages refuse. The pinned
 `Pagination.cursor` is forwarded unchanged, distinct from the newer `next` schema;
 absent pagination terminates, malformed pagination or repeated cursors refuse.
 Three 10-row pages are the maximum, with no partial success at the ceiling.
+Every page validates the bounded unique `unavailable_project_ids` list; a selected
+project reported unavailable refuses instead of becoming empty or partial success.
+Unselected unavailable IDs never become output.
 
 Catalog membership is not provisioning authority, entitlement, current capacity or
 provider-effect evidence. No creation, recovery, deletion, URL follow, live call

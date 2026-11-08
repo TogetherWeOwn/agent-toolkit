@@ -131,6 +131,25 @@ test('projects: page, total and cursor bounds refuse without partial success', a
   assert.equal(cancelled.requests.length, 1);
 });
 
+test('projects: known-unavailable selected projects refuse on every page instead of becoming empty success', async () => {
+  for (const unavailable_project_ids of [['project-a'], ['project-b'], null, 'project-a', ['Upper'], ['other', 'other'],
+    Array.from({ length: 31 }, (_, n) => `other-${n}`)]) {
+    const value = { projects: [], unavailable_project_ids };
+    await assert.rejects(fixture(value).run(name, args));
+    assert.throws(() => fixture(raw).operation(name).project(value));
+  }
+  const later = fixture((url, init, count) => response(count === 1 ? page([project], 'next') :
+    { projects: [], unavailable_project_ids: ['project-b'] }));
+  await assert.rejects(later.run(name, args));
+  assert.equal(later.requests.length, 2);
+  for (const unavailable_project_ids of [[], ['unselected']]) {
+    assert.deepEqual(await fixture({ ...raw, unavailable_project_ids }).run(name, args), expected);
+  }
+  assert.throws(() => fixture(raw).operation(name).project(Object.defineProperty({ ...raw }, 'unavailable_project_ids', {
+    get() { throw Error('getter'); }, enumerable: true,
+  })));
+});
+
 test('projects: failed transport never fabricates empty success or drops the organization filter', async () => {
   for (const status of [403, 404, 410, 500, 302]) {
     const f = fixture(() => response(poison, { status }));

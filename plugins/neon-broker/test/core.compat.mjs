@@ -1162,7 +1162,7 @@ test('project catalog needs an exact organization collection grant and never emi
   assert.deepEqual(result.value, expected);
   safeEnvelope(f, result);
   for (const invalid of [{ projects: [{ ...value, org_id: 'other' }] }, { ...raw, pagination: { next: 'wrong' } },
-    { projects: [value, value] }]) {
+    { projects: [], unavailable_project_ids: ['project-a'] }, { projects: [value, value] }]) {
     const refused = brokerFixture(name, args, invalid);
     const refusal = await refused.call();
     assert.equal(refusal.code, 'UPSTREAM_UNAVAILABLE');

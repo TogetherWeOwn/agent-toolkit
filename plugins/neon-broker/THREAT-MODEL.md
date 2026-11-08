@@ -313,7 +313,10 @@ names, URLs, usage/billing or application/integration maps.
 
 The pinned Pagination.cursor contract is used, not PaginationNext.next. Malformed
 or cyclic cursors, overlarge pages and continuation beyond three pages refuse
-without partial success. No retry, recovery, creation, deletion, live integration
+without partial success. Every page validates unavailable_project_ids and refuses
+when a selected project is reported unavailable, preventing incomplete reads from
+becoming an apparently complete empty result. Malformed/duplicate unavailable IDs
+also refuse; unselected unavailable IDs are not exposed. No retry, recovery, creation, deletion, live integration
 or provisioning authority is introduced. Tests cover immutable scope, strict
 arguments, cancellation, cross-organization ancestry, duplicate/unselected rows,
 closed metadata, fixed transport and common identity/policy/replay/TOCTOU/reflection
