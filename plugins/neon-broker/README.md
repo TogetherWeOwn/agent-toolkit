@@ -7,6 +7,24 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonBranchConsumptionOperations(trustedScope, transport)` adds
+`getConsumptionHistoryPerBranchV2` for one copied organization/project/branch,
+revision and explicit UTC hour-aligned window of at most 24 hours. Its exact
+`neon/organizations/<org>/projects/<project>/branches/<branch>/consumption/v2`
+grant is distinct from project history and all parent/sibling grants. Every GET
+sends org_id, project_ids and branch_ids filters, hourly granularity and only
+compute_unit_seconds. No missing-filter or project-history fallback exists.
+Closed output includes only exact project/branch IDs and observed hourly frames
+with nonnegative safe-integer quantities. Billing metadata is omitted; absent
+history is not fabricated zero or entitlement evidence. Cursor pages cap at ten
+branches with a three-page ceiling; duplicate/foreign branches, conflicting
+ancestry, nested pagination, unsafe metrics, duplicate periods and unordered,
+overlapping or out-of-window frames refuse without partial success. The same
+conservative canonical-hour period/frame subset as project history applies.
+Pinned provider documentation describes this Beta endpoint as non-waking;
+native effects/entitlement qualification is still unresolved. No spend control,
+mutation or lifecycle enforcement is introduced.
+
 `createNeonConsumptionOperations(trustedScope, transport)` adds
 `getConsumptionHistoryPerProjectV2` for a copied organization/project/revision and
 an explicit UTC hourly-aligned window of at most 24 hours. Only those exact

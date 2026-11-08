@@ -28,6 +28,7 @@ import { createNeonSharedProjectOperations } from '../dist/plugins/neon-broker/s
 import { createNeonLogFieldOperations } from '../dist/plugins/neon-broker/src/log-fields.js';
 import { createNeonBucketObjectOperations } from '../dist/plugins/neon-broker/src/bucket-objects.js';
 import { createNeonConsumptionOperations } from '../dist/plugins/neon-broker/src/consumption.js';
+import { createNeonBranchConsumptionOperations } from '../dist/plugins/neon-broker/src/branch-consumption.js';
 
 export const scope = {
   projectId: 'project-a', revision: 'scope-v1', branchIds: ['br-a', 'br-b'],
@@ -310,7 +311,17 @@ export const consumptionCases = [
 export function consumptionFixture(value, config = consumptionScope) {
   return fixture(value, config, createNeonConsumptionOperations);
 }
-export const allCases = [...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
+export const branchConsumptionScope = { ...consumptionScope, branchId: 'br-a' };
+export const branchConsumptionCases = [
+  ['getConsumptionHistoryPerBranchV2', { org_id: 'org-a', project_id: 'project-a', branch_id: 'br-a', from: consumptionScope.from, to: consumptionScope.to },
+    { branches: [{ project_id: 'project-a', branch_id: 'br-a', periods: [consumptionPeriod] }] },
+    { branches: [{ project_id: 'project-a', branch_id: 'br-a', consumption: [{ timeframe_start: consumptionFrame.timeframe_start,
+      timeframe_end: consumptionFrame.timeframe_end, compute_unit_seconds: 123 }] }] }],
+];
+export function branchConsumptionFixture(value, config = branchConsumptionScope) {
+  return fixture(value, config, createNeonBranchConsumptionOperations);
+}
+export const allCases = [...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });

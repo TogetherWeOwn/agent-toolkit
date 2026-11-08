@@ -8,6 +8,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  getConsumptionHistoryPerBranchV2(organization: string, project: string, branch: string, from: string, to: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
   getConsumptionHistoryPerProjectV2(organization: string, project: string, from: string, to: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
   listProjectBranchBucketObjects(project: string, branch: string, bucket: string, prefix: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
   listProjectBranchLogFields(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -170,6 +171,22 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    getConsumptionHistoryPerBranchV2: (organization: string, project: string, branch: string, from: string, to: string, cursor: string | null, options: MetadataRequestOptions) => {
+      for (const value of [from, to]) {
+        if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:00:00Z$/.test(value) ||
+          !Number.isFinite(Date.parse(value)) || new Date(value).toISOString() !== value.replace("Z", ".000Z")) throw Error("INVALID_ARGUMENTS");
+      }
+      if (from < "2024-03-01T00:00:00Z" || from >= to || Date.parse(to) - Date.parse(from) > 86_400_000) throw Error("INVALID_ARGUMENTS");
+      const query = cursorQuery(cursor);
+      query.set("org_id", authPathId(organization));
+      query.set("project_ids", authPathId(project));
+      query.set("branch_ids", authPathId(branch));
+      query.set("from", from);
+      query.set("to", to);
+      query.set("granularity", "hourly");
+      query.set("metrics", "compute_unit_seconds");
+      return get("/consumption_history/v2/branches", query, options);
+    },
     getConsumptionHistoryPerProjectV2: (organization: string, project: string, from: string, to: string, cursor: string | null, options: MetadataRequestOptions) => {
       for (const value of [from, to]) {
         if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:00:00Z$/.test(value) ||
