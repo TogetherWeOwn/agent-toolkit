@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 205 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 201 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -216,6 +216,21 @@ waking semantics remain prerequisites. Coverage is **86/291 bounded metadata
 subsets, 205 missing**; tiers 86 provisional read / 16 unreviewed reserved / 189
 unresolved. Zero integrated/reviewed/enabled/adopted. Fresh exact-head Actions is
 required; no local suite or native authority enforcement is claimed.
+
+`test/account-availability.test.mjs` adds 25 synthetic contracts for current-user,
+organization-list, read-only-region and Postgres-version discovery. Fixed paths and
+official query/response shapes, bound identity, whole-response refusal, nested
+region ID/slug matching, duplicate bindings, immutable snapshots, closed inputs,
+wire/row/page caps and sensitive canaries are covered in source. Output excludes
+contact/profile/billing/address/actor/version text. MFA-configured, SSO, ready,
+enabled and default flags do not prove effective enforcement, entitlement or
+upgrade/wake/spend authority. User/organization OAuth scopes remain separate from
+service-token documentation; absent Postgres-version scope tables remain unknown.
+The default-branch identity behind read-only regions, trusted current ownership,
+collection authorization, final secret guarding and non-waking semantics need
+reviewed integration. Fresh exact-head Actions is required; no local suite or
+native authorization is claimed. Coverage is 90/291 bounded subsets, 201 missing;
+zero integrated/reviewed/enabled/adopted operations.
 
 ## Metrics preregistration — required before enablement
 

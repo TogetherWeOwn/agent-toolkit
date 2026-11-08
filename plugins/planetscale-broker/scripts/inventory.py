@@ -12,6 +12,10 @@ import sys
 
 SOURCE_SHA256 = "ae45866599cb5d248fadb9d7f0ed30fd6aed440a17ec0950c4e9e0d58da4cb73"
 ADAPTERS = {
+    "get_current_user": "get-current-user",
+    "list_organizations": "list-organizations",
+    "list_read_only_regions": "list-read-only-regions",
+    "list_postgres_versions": "list-postgres-versions",
     "get_organization": "get-organization",
     "get_database": "get-database",
     "get_branch": "get-branch",
@@ -98,6 +102,9 @@ ADAPTERS = {
     "list_shard_configuration_profiles": "list-shard-configuration-profiles",
     "get_shard_configuration_profile_shard": "get-shard-configuration-profile-shard",
     "list_shard_configuration_profile_shards": "list-shard-configuration-profile-shards",
+}
+ACCOUNT_AVAILABILITY = {
+    "get_current_user", "list_organizations", "list_read_only_regions", "list_postgres_versions",
 }
 CONFIGURATION_PROFILES = {
     "get_shard_configuration_profile", "list_shard_configuration_profiles",
@@ -210,6 +217,7 @@ def policy_candidate(operation_id):
 
 def adapter_test(operation_id):
     for operations, name in [
+        (ACCOUNT_AVAILABILITY, "account-availability"),
         (CONFIGURATION_PROFILES, "configuration-profiles"),
         (BILLING_RECORDS, "billing-records"),
         (ORGANIZATION_SECURITY, "organization-security"),

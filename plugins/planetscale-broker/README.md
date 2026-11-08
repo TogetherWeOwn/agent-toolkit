@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The eighty-six adapters are pure request builders and bounded output projections,
+The ninety adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,14 +36,14 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 86 | Narrow projections; not full operation coverage |
-| Missing source adapters | 205 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 90 | Narrow projections; not full operation coverage |
+| Missing source adapters | 201 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-Eighty-six adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 189
+Ninety adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 185
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
@@ -64,6 +64,10 @@ area remain in the map even when access or implementation is missing.
 | `planetscale.list_branches` | Bound child ID/name, ready/production/protection/safe-migrations flags |
 | `planetscale.list_database_regions` / `planetscale.list_regions_for_organization` / `planetscale.list_public_regions` | Bound region ID/slug and enabled flag; no addresses/provider URLs |
 | `planetscale.get_default_role` | Default-role marker required; same bounded role metadata, never connection/password fields |
+| `planetscale.get_current_user` | Bound user ID and MFA-configured flag; no contact/profile/default-organization data or enforcement claim |
+| `planetscale.list_organizations` | Bound organization ID/name and informational SSO flag; no billing, features, budget or MCP-access values |
+| `planetscale.list_read_only_regions` | Bound read-only-region ID/ready flag and independently bound region ID/slug/enabled; no addresses, actor or timestamps |
+| `planetscale.list_postgres_versions` | Bound version ID/default flag for fixed documented `neki` engine; no free-text version strings or upgrade authority |
 | `planetscale.list_backups` / `planetscale.get_backup` | Bound backup ID, state and protection/required/emergency flags; no contents, names, download URLs or cost estimates |
 | `planetscale.list_backup_policies` / `planetscale.get_backup_policy` | Bound policy ID, production/development target enum and required flag; no schedules or arbitrary strings |
 | `planetscale.list_deploy_requests` / `planetscale.get_deploy_request` | Bound request ID/number/source branch ID/name and target name, state/deployment-state enums and source-deleted flag; no DDL, notes, actor or approval authority |
