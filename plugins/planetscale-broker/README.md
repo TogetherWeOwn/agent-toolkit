@@ -139,6 +139,26 @@ snapshots, refusal, argument/target hash sensitivity and shared-resource separat
 These bindings prove neither current settings, remote preconditions, backup success
 nor rollback/closure, and do not add an executor or increase adapter coverage.
 
+`src/core-read-preparation.ts` supplies three additional pure `Prepared` seams for
+organization, database and branch detail reads. Closed trusted host snapshots bind
+immutable organization/database/branch IDs, parent names and a revision digest;
+empty caller arguments cannot replace scope, requests, approval or artifacts.
+Resources use `planetscale/organization/<id>`, `planetscale/database/<id>` and
+`planetscale/branch/<id>`. Full plan hashes retain every parent ID/name, operation
+and the existing fixed GET request. The branch resource is shared with branch
+mutation previews, but their operation/plan hashes remain distinct.
+
+These initial response projections validate names only, not immutable response
+IDs: `responseIdentity=name-only-not-immutable` explicitly retains that gap.
+`nonWaking=not-verified` is not a permission or compute-cost guarantee. Host current
+ownership, immutable ID/name/parent/revision revalidation, policy and broker-side
+transport/custody remain prerequisites. No execute/project hook, registration,
+credential resolution or runtime tier authority is supplied by the preparation
+functions. `test/core-read-preparation.test.mjs` covers the closed snapshots,
+hash sensitivity, refusal, resource-kind separation and existing projection limits.
+Adapter coverage stays 134/291, with 157 missing; these are not three new adapters
+or runtime-integrated operations.
+
 All 291 entries remain `incomplete`, `implemented=false`, `reviewed=false`,
 `enabled=false`, and entitlement `unknown`. Existing offline read/preview test
 paths are linked as source evidence, never as full `ProviderOperation` tests.
