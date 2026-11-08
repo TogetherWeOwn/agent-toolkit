@@ -490,6 +490,23 @@ contracts cover strict scope/arguments, cancellation, availability, pagination,
 closed output and common-core identity/grant/replay/TOCTOU/reflection/budget
 boundaries; native provider-effect/entitlement/custody gates remain unresolved.
 
+## Selected organization API-key identity delta
+
+`listOrgApiKeys` copies one organization/revision and bounded explicit numeric ID
+selection, requiring its exact organization/api_keys collection resource. The
+pinned GET returns a bare metadata array without tokens; numeric IDs are distinct
+from key values. Closed output is only selected IDs. Names, creator/profile data,
+usage addresses, timestamps, project scope and unexpected key fields are neither
+read nor emitted. Optional org_id must match; pagination and non-array wrappers
+refuse. All rows are validated before selection: duplicate/unsafe/fractional/
+negative/negative-zero identities and more than 30 rows refuse without partial
+success. The ID-less outer response binds to the fixed authenticated org path,
+not caller-provided metadata. Empty selection does not assert inventory emptiness.
+There is no account-wide fallback, credential-value retrieval or mutation. This
+one schema-backed inventory row moves reserved to read, not to enabled. Native
+provider effects, entitlement, placement and independent acceptance remain gates;
+mocked source success proves no effective access, custody, expiry or completeness.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.
