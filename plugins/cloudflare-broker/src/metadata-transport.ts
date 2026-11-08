@@ -12,8 +12,9 @@ function endpoint(request: MetadataRequest): string {
   requireThat(Number.isSafeInteger(request.timeoutMs) && request.timeoutMs > 0 && request.timeoutMs <= 10000, "cap");
   requireThat(typeof request.path === "string" && request.path.length <= 2048 &&
     /^\/(?:accounts\/[a-f0-9]{32}\/[A-Za-z0-9_/?=&.-]+|zones\/[a-f0-9]{32}(?:\/[A-Za-z0-9_/?=&.-]+)?)$/.test(request.path), "schema");
-  requireThat(request.r2Jurisdiction === undefined || (request.r2Jurisdiction === "eu" &&
-    /^\/accounts\/[a-f0-9]{32}\/r2\/buckets\/[a-z0-9][a-z0-9-]{1,62}[a-z0-9](?:\/(?:lock|lifecycle|cors|domains\/(?:managed|custom(?:\/(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?)?)))?$/.test(request.path)), "schema");
+  requireThat(request.r2Jurisdiction === undefined || (request.r2Jurisdiction === "eu" && (
+    /^\/accounts\/[a-f0-9]{32}\/r2\/buckets\/[a-z0-9][a-z0-9-]{1,62}[a-z0-9](?:\/(?:lock|lifecycle|cors|domains\/(?:managed|custom(?:\/(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?)?)))?$/.test(request.path) ||
+    /^\/accounts\/[a-f0-9]{32}\/event_notifications\/r2\/[a-z0-9][a-z0-9-]{1,62}[a-z0-9]\/configuration(?:\/queues\/[a-f0-9]{32})?$/.test(request.path))), "schema");
   const url = new URL(`/client/v4${request.path}`, origin);
   requireThat(url.origin === origin && url.pathname + url.search === `/client/v4${request.path}`, "schema");
   return url.href;

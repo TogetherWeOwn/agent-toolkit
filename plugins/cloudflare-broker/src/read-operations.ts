@@ -4,6 +4,7 @@ import { currentContentDescriptor, type CurrentContentScope } from "./current-co
 import { versionAssetDescriptor, type VersionAssetScope } from "./version-assets.js";
 import { workerDomainMetadataDescriptors, type WorkerDomainScope } from "./worker-domains.js";
 import { r2CorsDescriptor, type R2CorsScope } from "./r2-cors.js";
+import { r2NotificationDescriptors, type R2NotificationScope } from "./r2-notifications.js";
 import { r2LifecycleDescriptor, type R2LifecycleScope } from "./r2-lifecycle.js";
 import { r2ManagedDomainDescriptor, type R2ManagedDomainScope } from "./r2-managed-domain.js";
 import { r2CustomDomainDescriptors, type R2CustomDomainScope } from "./r2-custom-domains.js";
@@ -64,6 +65,7 @@ export interface CloudflareReadScope extends MetadataScope {
   pagesProjects?: PagesMetadataScope["projects"];
   workerDomains?: WorkerDomainScope["domains"];
   r2CorsBuckets?: R2CorsScope["buckets"];
+  r2NotificationBuckets?: R2NotificationScope["buckets"];
   r2LifecycleBuckets?: R2LifecycleScope["buckets"];
   r2ManagedDomainBuckets?: R2ManagedDomainScope["buckets"];
   r2CustomDomainBuckets?: R2CustomDomainScope["buckets"];
@@ -92,6 +94,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
   const accessPolicies = accessPolicyMetadataDescriptors({ accountId, revision, applications: scope.accessPolicies ?? [] });
   const domains = workerDomainMetadataDescriptors({ accountId, revision, domains: scope.workerDomains ?? [] });
   const r2CustomDomains = r2CustomDomainDescriptors({ accountId, revision, buckets: scope.r2CustomDomainBuckets ?? [] });
+  const notifications = r2NotificationDescriptors({ accountId, revision, buckets: scope.r2NotificationBuckets ?? [] });
   // Account/revision always come from the common snapshot, never nested scope.
   // With no trusted zone relationship, omit DNS/zone operations altogether.
   const zone = scope.zone === undefined ? undefined : zoneMetadataDescriptors({ accountId, revision,
@@ -109,6 +112,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(r2LifecycleDescriptor({ accountId, revision, buckets: scope.r2LifecycleBuckets ?? [] })),
     metadata(r2ManagedDomainDescriptor({ accountId, revision, buckets: scope.r2ManagedDomainBuckets ?? [] })),
     metadata(r2CustomDomains.customDomainsList), metadata(r2CustomDomains.customDomainGet),
+    metadata(notifications.notificationsList), metadata(notifications.notificationGet),
     metadata(descriptors.deploymentsList), metadata(descriptors.deploymentGet),
     metadata(descriptors.versionsList), metadata(descriptors.versionGet),
     metadata(descriptors.kvNamespacesList), metadata(descriptors.kvNamespaceGet),
