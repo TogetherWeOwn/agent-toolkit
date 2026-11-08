@@ -22,6 +22,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   projectCountCases, projectCountFixture, projectCountScope,
   authWebhookCases, authWebhookFixture, authWebhookScope,
   userProfileCases, userProfileFixture, userProfileScope,
+  authEmailCases, authEmailFixture, authEmailScope,
   fixture, scope, branch, operation, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
@@ -32,7 +33,8 @@ const { providerFixture, credentialCanary, derivedCanary } = await import(pathTo
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
 function brokerFixture(name, args, raw, overrides = {}, config) {
-  const factory = userProfileCases.some(([operation]) => operation === name) ? userProfileFixture :
+  const factory = authEmailCases.some(([operation]) => operation === name) ? authEmailFixture :
+    userProfileCases.some(([operation]) => operation === name) ? userProfileFixture :
     authWebhookCases.some(([operation]) => operation === name) ? authWebhookFixture :
     projectCountCases.some(([operation]) => operation === name) ? projectCountFixture :
     regionCases.some(([operation]) => operation === name) ? regionFixture :
@@ -227,7 +229,7 @@ test('reflected lease material in selected safe-looking fields is refused by the
   assert.equal((await f.call()).code, 'OUTPUT_REFUSED');
 });
 
-for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases, ...regionCases, ...projectCountCases, ...authWebhookCases, ...userProfileCases]) {
+for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases, ...regionCases, ...projectCountCases, ...authWebhookCases, ...userProfileCases, ...authEmailCases]) {
   test(`${name}: replay and TOCTOU policy/resource changes refuse without a second request`, async () => {
     const replay = brokerFixture(name, args, raw);
     assert.equal((await replay.call()).ok, true);
@@ -1098,6 +1100,43 @@ test('current-user profile requires its exact user grant and omits personal/acco
   safeEnvelope(maximum, maxResult);
   const reflected = brokerFixture(name, args, raw, {
     credentials: { async resolve() { return { value: 'user-a', redactions: [], async close() {} }; } },
+  });
+  assert.equal((await reflected.call()).code, 'OUTPUT_REFUSED');
+});
+
+test('email-auth configuration uses its exact grant without changing auth or session state', async () => {
+  const [name, args, raw, expected] = authEmailCases[0];
+  const f = brokerFixture(name, args, { ...raw, password: credentialCanary, smtp_password: derivedCanary, message: credentialCanary });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, expected);
+  safeEnvelope(f, result);
+  for (const resource of ['neon/projects/project-a/branches/br-a/auth',
+    'neon/projects/project-a/branches/br-b/auth/email_and_password',
+    'neon/projects/project-a/branches/br-a/auth/email_provider',
+    'neon/projects/project-a/branches/br-a/auth/webhooks']) {
+    const denied = brokerFixture(name, args, raw);
+    denied.common.vector.policy.resources = [resource];
+    assert.equal((await denied.call()).code, 'POLICY_DENIED');
+    assert.equal(denied.common.calls.secret, 0);
+    assert.equal(denied.provider.requests.length, 0);
+  }
+  for (const invalid of [{ ...raw, branch_id: 'br-b' }, { ...raw, email_verification_method: credentialCanary },
+    { ...raw, revoke_sessions_on_password_reset: null }, { ...raw, pagination: {} }]) {
+    const refused = brokerFixture(name, args, invalid);
+    const refusal = await refused.call();
+    assert.equal(refusal.code, 'UPSTREAM_UNAVAILABLE');
+    safeEnvelope(refused, refusal);
+  }
+  const config = { ...authEmailScope, projectId: 'p'.repeat(60), revision: 'r'.repeat(80),
+    branchIds: Array.from({ length: 30 }, (_, n) => `b${String(n).padStart(59, '0')}`) };
+  const maximum = brokerFixture(name, { project_id: config.projectId, branch_id: config.branchIds[0] }, raw, {}, config);
+  const maxResult = await maximum.call();
+  assert.equal(maxResult.ok, true);
+  assert.deepEqual(maxResult.value, expected);
+  safeEnvelope(maximum, maxResult);
+  const reflected = brokerFixture(name, args, raw, {
+    credentials: { async resolve() { return { value: 'link', redactions: [], async close() {} }; } },
   });
   assert.equal((await reflected.call()).code, 'OUTPUT_REFUSED');
 });

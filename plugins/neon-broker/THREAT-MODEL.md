@@ -279,6 +279,27 @@ No profile mutation, opaque authentication-details/credential read or live runti
 integration is supplied. Entitlement and effects remain unknown; GET/mocks are
 not evidence of non-waking behavior.
 
+## Email-auth configuration delta
+
+`getNeonAuthEmailAndPasswordConfig` copies project/revision/branch selection and
+requires the exact branch/auth/email_and_password grant. The pinned response has
+seven required booleans and a required link/otp verification enum, not passwords
+or email-provider credentials. The closed projection preserves all required
+values, including false; missing fields, unknown enum values, accessors,
+contradictory ancestry and pagination refuse. Execution additionally matches the
+exact requested branch. Fixed bounded GET transport never changes configuration,
+sends mail, follows URLs, resets passwords or revokes sessions. Optional unexpected
+password/provider/diagnostic fields are not read or emitted. Non-200 never becomes
+disabled/default policy or an alternate endpoint. Reading a configured revocation
+flag does not establish actual session-closure or lifecycle enforcement.
+
+Source/common contracts cover canonical arguments, copied scope, exact/sibling
+grants, malformed/poisoned output, cancellation, response bounds, reflected values,
+replay/TOCTOU and maximum JSON budgets. This nonsecret schema-backed read moves
+one inventory row from reserved to read without enabling it; sensitive aggregate
+and email-provider reads stay incomplete. Provider effects and entitlement remain
+unknown; mocks do not qualify authentication behavior or non-waking safety.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.

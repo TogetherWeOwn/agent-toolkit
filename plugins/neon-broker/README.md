@@ -7,6 +7,27 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonAuthEmailOperations(trustedScope, transport)` adds
+`getNeonAuthEmailAndPasswordConfig` with copied project/revision/branch selection
+and its dedicated `neon/projects/<project>/branches/<branch>/auth/email_and_password`
+grant. Parent/auth, email-provider and webhook grants cannot substitute. The fixed
+GET has no query, delivery or mutation path. Project/branch IDs follow the pinned
+60-character lowercase ASCII constraint; at most 30 unique branches are selected.
+
+Closed output preserves the seven required booleans (`enabled`,
+`require_email_verification`, `auto_sign_in_after_verification`,
+`send_verification_email_on_sign_up`, `send_verification_email_on_sign_in`,
+`disable_sign_up`, `revoke_sessions_on_password_reset`) and required
+`email_verification_method` enum (`link` or `otp`). Missing fields never become
+false/default status. Passwords, email-provider settings and arbitrary diagnostics
+are not read or emitted. Optional project/branch identity must agree with the
+selection and exact requested branch; pagination refuses. Non-200/invalid output
+never triggers a fallback endpoint. This only reads configuration: it sends no
+mail, changes no authentication policy and revokes no sessions. Effective auth
+behavior, native entitlement and provider effects remain unqualified. The pinned
+nonsecret response justifies moving this inventory row from reserved to read;
+credential-bearing aggregate/email-provider reads remain incomplete.
+
 `createNeonAuthWebhookOperations(trustedScope, transport)` adds
 `getNeonAuthWebhookConfig` with strict project/branch arguments and the separate
 `neon/projects/<project>/branches/<branch>/auth/webhooks` grant. Construction copies
@@ -596,8 +617,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: fifty-two implemented
-source adapters, 142 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: fifty-three implemented
+source adapters, 141 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable
