@@ -28,10 +28,49 @@ function time(value: unknown): string {
   return parsed;
 }
 
-// Pure consistency check of supplied source observations, NOT native evidence
-// acceptance. The caller still needs qualified durable ALLOW/journal joins.
+export interface PagesInventoryCoverageScope extends PagesCoverageScope {
+  /** Required for deployment inventory; independently selected, not inferred. */
+  readonly deploymentProjectName?: string;
+}
+
+// Pure consistency checks, NOT authenticated native evidence acceptance.
 export function summarizePagesCoverage(scope: PagesCoverageScope, observations: readonly PagesCoverageObservation[]) {
-  const id = text(200, /^cloudflare:account:[a-f0-9]{32}:pages:(?:projects|project:[a-z0-9][a-z0-9-]{0,63}:deployments)$/).parse(scope.resource.id);
+  return summarizeCoverage(scope, observations, false);
+}
+export function summarizePagesInventoryCoverage(scope: PagesInventoryCoverageScope, observations: readonly PagesCoverageObservation[]) {
+  const summary = summarizeCoverage(scope, observations, true);
+  const projects = summary.resource.id.endsWith(":pages:projects:inventory");
+  const projectName = projects ? undefined : text(63, /^[a-z0-9][a-z0-9-]*$/).parse(scope.deploymentProjectName);
+  requireThat(!projects || scope.deploymentProjectName === undefined, "scope");
+  const selection = projects ? "all-returned-projects" : "all-returned-deployments";
+  const ids = new Set<string>(), names = new Set<string>();
+  for (const observation of observations) {
+    const value = object(object(observation.result).value);
+    requireThat(value.selection === selection, "scope");
+    for (const raw of value.items as unknown[]) {
+      const item = object(raw), inventory = object(item.inventory);
+      const id = (projects ? text(64, /^[a-z0-9][a-z0-9-]*$/) : text(36, /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/)).parse(item.id);
+      const name = text(63, /^[a-z0-9][a-z0-9-]*$/).parse(inventory.projectName);
+      requireThat(!ids.has(id), "scope"); ids.add(id);
+      if (projects) {
+        requireThat(inventory.subject === "configured-pages-project-inventory" && inventory.effectiveProduction === "not-established" && !names.has(name), "scope");
+        names.add(name);
+      } else {
+        const projectId = text(64, /^[a-z0-9][a-z0-9-]*$/).parse(inventory.projectId);
+        requireThat(inventory.subject === "provider-pages-deployment-inventory" && name === projectName &&
+          summary.resource.id.endsWith(`:project:${projectId}:deployments:inventory`) &&
+          inventory.servingDeployment === "not-established" && inventory.historicalSourceBinding === "not-established", "scope");
+      }
+    }
+  }
+  return Object.freeze({ ...summary, subject: "inventory-pages-source-coverage" as const, selection });
+}
+
+function summarizeCoverage(scope: PagesCoverageScope, observations: readonly PagesCoverageObservation[], inventory: boolean) {
+  const pattern = inventory
+    ? /^cloudflare:account:[a-f0-9]{32}:pages:(?:projects|project:[a-z0-9][a-z0-9-]{0,63}:deployments):inventory$/
+    : /^cloudflare:account:[a-f0-9]{32}:pages:(?:projects|project:[a-z0-9][a-z0-9-]{0,63}:deployments)$/;
+  const id = text(200, pattern).parse(scope.resource.id);
   const revision = text(80, /^[A-Za-z0-9][A-Za-z0-9_.-]*$/).parse(scope.resource.revision);
   const perPage = integer(scope.perPage, 1, 100);
   requireThat(Array.isArray(observations) && observations.length > 0 && observations.length <= 100, "cap");

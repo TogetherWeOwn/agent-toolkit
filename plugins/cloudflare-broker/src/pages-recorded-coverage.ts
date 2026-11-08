@@ -1,6 +1,6 @@
 import { requireThat, text } from "../../../packages/core/src/index.js";
 import { canonicalHash, PROVIDER_CONTRACT, type AuthorizationTarget, type Json, type ProviderAuditRecord } from "../../../packages/core/src/provider/index.js";
-import { summarizePagesCoverage, type PagesCoverageObservation, type PagesCoverageScope } from "./pages-coverage.js";
+import { summarizePagesCoverage, summarizePagesInventoryCoverage, type PagesCoverageObservation, type PagesCoverageScope } from "./pages-coverage.js";
 
 export interface PagesRecordedCoverageScope extends PagesCoverageScope {
   readonly principalHash: string;
@@ -25,10 +25,18 @@ function object(value: unknown): Record<string, unknown> {
 // Join supplied records only. Authentication, durable storage, complete record
 // retrieval and current policy/provider qualification remain caller obligations.
 export function summarizePagesRecordedCoverage(scope: PagesRecordedCoverageScope, observations: readonly PagesRecordedObservation[]) {
-  const summary = summarizePagesCoverage(scope, observations);
+  return joinRecordedCoverage(scope, observations, summarizePagesCoverage(scope, observations));
+}
+export function summarizePagesInventoryRecordedCoverage(scope: PagesRecordedCoverageScope, observations: readonly PagesRecordedObservation[]) {
+  return joinRecordedCoverage(scope, observations, summarizePagesInventoryCoverage(scope, observations));
+}
+
+function joinRecordedCoverage<T extends ReturnType<typeof summarizePagesCoverage> | ReturnType<typeof summarizePagesInventoryCoverage>>(
+  scope: PagesRecordedCoverageScope, observations: readonly PagesRecordedObservation[], summary: T,
+) {
   const principalHash = digest.parse(scope.principalHash);
   const policyRevision = text(80, /^[A-Za-z0-9][A-Za-z0-9_.-]*$/).parse(scope.policyRevision);
-  const projects = summary.resource.id.endsWith(":pages:projects");
+  const projects = /:pages:projects(?::inventory)?$/.test(summary.resource.id);
   const deploymentProjectName = projects ? undefined : text(63, /^[a-z0-9][a-z0-9-]*$/).parse(scope.deploymentProjectName);
   requireThat(!projects || scope.deploymentProjectName === undefined, "scope");
   const tool = projects ? "cloudflare.pages.projects.list" : "cloudflare.pages.deployments.list";
