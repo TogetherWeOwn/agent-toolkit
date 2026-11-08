@@ -27,6 +27,7 @@ import { createNeonUserOrganizationOperations } from '../dist/plugins/neon-broke
 import { createNeonSharedProjectOperations } from '../dist/plugins/neon-broker/src/shared-projects.js';
 import { createNeonLogFieldOperations } from '../dist/plugins/neon-broker/src/log-fields.js';
 import { createNeonBucketObjectOperations } from '../dist/plugins/neon-broker/src/bucket-objects.js';
+import { createNeonConsumptionOperations } from '../dist/plugins/neon-broker/src/consumption.js';
 
 export const scope = {
   projectId: 'project-a', revision: 'scope-v1', branchIds: ['br-a', 'br-b'],
@@ -294,7 +295,22 @@ export const bucketObjectCases = [
 export function bucketObjectFixture(value, config = bucketObjectScope) {
   return fixture(value, config, createNeonBucketObjectOperations);
 }
-export const allCases = [...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
+export const consumptionScope = { organizationId: 'org-a', projectId: 'project-a', revision: 'scope-v1',
+  from: '2026-11-07T00:00:00Z', to: '2026-11-08T00:00:00Z' };
+export const consumptionFrame = { timeframe_start: '2026-11-07T00:00:00Z', timeframe_end: '2026-11-07T01:00:00Z',
+  metrics: [{ metric_name: 'compute_unit_seconds', value: 123 }] };
+export const consumptionPeriod = { period_id: '00000000-0000-0000-0000-000000000001', period_plan: 'launch',
+  period_start: '2026-11-01T00:00:00Z', consumption: [consumptionFrame] };
+export const consumptionCases = [
+  ['getConsumptionHistoryPerProjectV2', { org_id: 'org-a', project_id: 'project-a', from: consumptionScope.from, to: consumptionScope.to },
+    { projects: [{ project_id: 'project-a', periods: [consumptionPeriod] }] },
+    { projects: [{ project_id: 'project-a', consumption: [{ timeframe_start: consumptionFrame.timeframe_start,
+      timeframe_end: consumptionFrame.timeframe_end, compute_unit_seconds: 123 }] }] }],
+];
+export function consumptionFixture(value, config = consumptionScope) {
+  return fixture(value, config, createNeonConsumptionOperations);
+}
+export const allCases = [...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });

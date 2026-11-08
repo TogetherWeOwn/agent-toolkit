@@ -7,6 +7,29 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonConsumptionOperations(trustedScope, transport)` adds
+`getConsumptionHistoryPerProjectV2` for a copied organization/project/revision and
+an explicit UTC hourly-aligned window of at most 24 hours. Only those exact
+org_id/project_id/from/to arguments are accepted. The distinct
+`neon/organizations/<org>/projects/<project>/consumption/v2` grant cannot be
+replaced by organization, project, catalog or sibling authority. Every request
+sends org_id, one project_ids filter, the pinned window, hourly granularity and
+compute_unit_seconds; it never falls back to account-wide or legacy consumption.
+
+Closed output contains project_id and observed hourly timeframe boundaries with
+nonnegative safe-integer compute_unit_seconds only. Billing period IDs, plans,
+period boundaries and arbitrary diagnostics are omitted. Missing history remains
+missing, never fabricated zero consumption or budget/entitlement evidence. This
+conservative subset requires canonical UTC hour boundaries in returned periods
+and frames, one requested metric per frame, at most 30 unique periods and 24 total
+hourly frames. Foreign/duplicate projects, duplicate periods, contradictory
+ancestry, out-of-window/overlapping/unordered frames, unsafe quantities and
+unexpected nested pagination refuse. Cursor pages are fixed at 10 projects with
+a three-page ceiling and cycle refusal; no partial success on failure. The pinned
+schema explicitly describes this endpoint as non-waking, but this documentary
+statement is not native provider-effect/entitlement qualification. No live call,
+spend enforcement, mutation or runtime enablement is supplied.
+
 `createNeonBucketObjectOperations(trustedScope, transport)` adds
 `listProjectBranchBucketObjects` for one copied project/branch/bucket/revision,
 a required prefix and up to 30 unique explicitly selected object keys. Its exact
@@ -737,8 +760,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: fifty-eight implemented
-source adapters, 136 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: fifty-nine implemented
+source adapters, 135 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable
