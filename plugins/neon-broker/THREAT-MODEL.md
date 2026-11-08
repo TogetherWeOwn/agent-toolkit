@@ -19,6 +19,31 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
 
+## Selected bucket-object metadata delta
+
+`listProjectBranchBucketObjects` copies one project/branch/bucket/revision, required
+prefix and explicit object-key selection. Its exact bucket/objects collection grant
+cannot be replaced by bucket-list, parent, sibling or download authority. Provider
+listing includes inherited objects in the requested effective branch; contradictory
+optional project/branch/bucket ancestry refuses. No origin-branch inference is made.
+
+The fixed GET supplies prefix and limit=10 without delimiter. Each page must echo
+the prefix, have no folders and pair is_truncated with a valid next_cursor, or an
+absent/empty cursor on completion. Three pages and 30 rows are the total ceiling;
+duplicate keys, cycles, malformed rows, out-of-prefix keys and unsafe sizes refuse
+before selection. Detached projection revalidates the entire completed aggregate.
+Only explicitly selected printable-ASCII keys (80 characters) and safe integer byte
+sizes are emitted. Content, entity tags, modification times and download URLs are
+not read or exposed; arbitrary unused fields are ignored without accessor evaluation.
+
+Source/common-core contracts cover strict copied scope, detached execution,
+exact/sibling grants, authenticated identity, replay/TOCTOU, reflected lease data,
+maximum configuration/output and failed or unavailable Beta/session responses.
+No download/presign, content read, mutation, lifecycle or runtime registration is
+introduced. Beta entitlement, session availability and provider effects remain
+unqualified; GET/mocks are not non-waking evidence. Missing selected keys are only
+unobserved in this bounded catalog, not deletion or authorization evidence.
+
 ## Selected branch log-field catalog delta
 
 `listProjectBranchLogFields` copies one project/branch/revision and explicit field

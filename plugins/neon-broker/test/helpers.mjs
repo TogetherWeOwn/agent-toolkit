@@ -26,6 +26,7 @@ import { createNeonProjectOperations } from '../dist/plugins/neon-broker/src/pro
 import { createNeonUserOrganizationOperations } from '../dist/plugins/neon-broker/src/user-organizations.js';
 import { createNeonSharedProjectOperations } from '../dist/plugins/neon-broker/src/shared-projects.js';
 import { createNeonLogFieldOperations } from '../dist/plugins/neon-broker/src/log-fields.js';
+import { createNeonBucketObjectOperations } from '../dist/plugins/neon-broker/src/bucket-objects.js';
 
 export const scope = {
   projectId: 'project-a', revision: 'scope-v1', branchIds: ['br-a', 'br-b'],
@@ -283,7 +284,17 @@ export const logFieldCases = [
 export function logFieldFixture(value, config = logFieldScope) {
   return fixture(value, config, createNeonLogFieldOperations);
 }
-export const allCases = [...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
+export const bucketObjectScope = { projectId: scope.projectId, branchId: 'br-a', bucketName: 'assets', revision: scope.revision,
+  prefix: 'images/', objectKeys: ['images/a.png', 'images/b.png'] };
+export const bucketObject = { key: 'images/a.png', size: 123 };
+export const bucketObjectCases = [
+  ['listProjectBranchBucketObjects', { project_id: 'project-a', branch_id: 'br-a', bucket_name: 'assets' },
+    { objects: [bucketObject], folders: [], prefix: 'images/', is_truncated: false }, { objects: [bucketObject] }],
+];
+export function bucketObjectFixture(value, config = bucketObjectScope) {
+  return fixture(value, config, createNeonBucketObjectOperations);
+}
+export const allCases = [...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });

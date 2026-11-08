@@ -7,6 +7,29 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonBucketObjectOperations(trustedScope, transport)` adds
+`listProjectBranchBucketObjects` for one copied project/branch/bucket/revision,
+a required prefix and up to 30 unique explicitly selected object keys. Its exact
+`neon/projects/<project>/branches/<branch>/buckets/<bucket>/objects` grant is
+separate from bucket enumeration, sibling branches and object download authority.
+Arguments contain only project_id, branch_id and bucket_name. The transport always
+sends the trusted prefix, limit=10 and an encoded continuation cursor when needed;
+no delimiter is sent. Inherited objects belong to this selected effective branch.
+
+Closed output contains selected key and nonnegative safe-integer byte size only.
+Content, entity tags, modification times and download URLs are omitted. Keys and
+prefixes use a conservative nonempty printable-ASCII subset capped at 80 characters;
+project/branch IDs and lowercase ASCII bucket names are capped at 60 characters.
+Each page requires the exact echoed prefix and an empty folders list. The distinct
+`next_cursor`/`is_truncated` contract is validated before filtering; duplicates,
+contradictory ancestry, keys outside the prefix, unsafe sizes, unexpected pagination,
+cycles and a continuation beyond three pages refuse without partial success. The
+30-row aggregate is validated again on detached projection. A missing selected key
+is simply not observed, not proof of deletion or access. Unavailable Beta/session
+responses never become empty success. No download, presign, content or mutation
+fallback is supplied. Availability, native entitlement and provider effects remain
+unknown; this source does not claim non-waking reads or runtime qualification.
+
 `createNeonLogFieldOperations(trustedScope, transport)` adds
 `listProjectBranchLogFields` for one copied project/branch/revision and an explicit
 selection of up to 30 unique field names. Its dedicated
@@ -714,8 +737,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: fifty-seven implemented
-source adapters, 137 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: fifty-eight implemented
+source adapters, 136 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

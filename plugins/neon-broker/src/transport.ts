@@ -8,6 +8,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  listProjectBranchBucketObjects(project: string, branch: string, bucket: string, prefix: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
   listProjectBranchLogFields(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   listSharedProjects(cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
   listProjects(organization: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
@@ -168,6 +169,13 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    listProjectBranchBucketObjects: (project: string, branch: string, bucket: string, prefix: string, cursor: string | null, options: MetadataRequestOptions) => {
+      if (typeof bucket !== "string" || bucket.length > 60 || !/^[a-z0-9_-]+$/.test(bucket) || /[^a-z0-9_-]/.test(bucket) ||
+        typeof prefix !== "string" || prefix.length > 80 || !/^[\x20-\x7e]+$/.test(prefix) || /[^\x20-\x7e]/.test(prefix)) throw Error("INVALID_ARGUMENTS");
+      const query = cursorQuery(cursor);
+      query.set("prefix", prefix);
+      return get(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/buckets/${bucket}/objects`, query, options);
+    },
     listProjectBranchLogFields: (project: string, branch: string, options: MetadataRequestOptions) =>
       get(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/logs/fields`, new URLSearchParams(), options),
     listSharedProjects: (cursor: string | null, options: MetadataRequestOptions) =>
