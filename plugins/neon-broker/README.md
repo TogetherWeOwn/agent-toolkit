@@ -7,6 +7,23 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonSchemaComparisonOperations(trustedScope, transport)` adds
+`getProjectBranchSchemaComparison` for one copied project, target branch, distinct
+base branch, database and revision. Its directional exact
+`neon/projects/<project>/branches/<branch>/databases/<database>/schema-comparison/<base>`
+grant does not follow from either branch's schema or parent authority. Construction
+refuses a composed resource over 256 characters, even when each identifier alone
+fits. Every fixed `/compare_schema` GET sends explicit base_branch_id and db_name;
+no same-branch, default-base, historical LSN/timestamp or SQL-format override exists.
+Closed output is only `has_diff`: whether the provider returned a nonempty diff,
+not whether schemas are semantically different/equivalent or safe to migrate.
+Whitespace is not normalized. The diff is required, scalar and at most 16,384 UTF-8
+bytes; multiline Unicode SQL may be observed, but control-bearing/lone-surrogate,
+malformed/oversized output, contradictory optional ancestry and pagination refuse.
+SQL/diff text, diagnostics and unexpected fields are never emitted or executed.
+The endpoint compares database schemas; GET/mocks do not prove non-waking safety.
+No live provider/SQL call, migration, mutation or runtime enablement is supplied.
+
 `createNeonLogValueOperations(trustedScope, transport)` adds
 `listProjectBranchLogFieldValues`. One copied project/branch/field/source/revision,
 explicit UTC-second start/end window of at most one hour and at most 30 selected
@@ -962,8 +979,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: sixty-nine implemented
-source adapters, 125 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: seventy implemented
+source adapters, 124 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

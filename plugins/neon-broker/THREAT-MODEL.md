@@ -586,6 +586,33 @@ An empty selection/output is not completeness, and the two GETs do not prove an
 atomic permission snapshot or non-waking safety. Provider effects, entitlement,
 credential placement and independent native acceptance remain unresolved.
 
+## Current-head directional schema-comparison observation delta
+
+`getProjectBranchSchemaComparison` requires a copied exact project, target branch,
+distinct base branch, database and revision. A single directional pair/database
+comparison resource grants this request: either branch's schema grant, a parent,
+sibling database, different base or reversed pair is insufficient. Composed resources
+are checked against the common 256-character limit at construction. The fixed GET
+always sends explicit base_branch_id and db_name; it refuses caller historical,
+format, default-base and same-branch alternatives. No schema extraction or SQL
+fallback, mutation, migration or live call is introduced.
+
+The provider returns a unified SQL diff, which can contain sensitive schema/literal
+data. It is never executed or emitted. Only bounded nonemptiness becomes the closed
+boolean has_diff observation; empty is not a semantic equivalence or completeness
+verdict, and arbitrary nonempty text is not parsed as trustworthy SQL. The required
+diff string caps at 16,384 UTF-8 bytes, permits multiline Unicode scalar data and
+refuses other controls/lone surrogates. Missing/malformed/oversized content,
+contradictory optional project/target/base/database ancestry and pagination refuse,
+not false/no-diff success. Unused SQL/diagnostic/credential fields are not evaluated.
+Source/common-core contracts cover exact pair authority, copied scope, canonical
+arguments, detached execution, accessor/output bounds, abort/unavailable transport,
+principal binding, replay, TOCTOU and maximum request/resource/output budgets.
+The authenticated fixed request supplies ancestry absent from the pinned response;
+this does not establish atomicity across live branch heads. Database comparison
+may wake compute; native effects, entitlement and independent acceptance remain
+unresolved. No runtime tool is enabled.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.

@@ -39,6 +39,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   userKeyCases, userKeyFixture, userKeyScope,
   advisorCases, advisorFixture, advisorScope, advisorIssue,
   branchSchemaCases, branchSchemaFixture, branchSchemaScope, schemaColumn, schemaTable,
+  schemaComparisonCases, schemaComparisonFixture, schemaComparisonScope,
   fixture, scope, branch, operation, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
@@ -49,7 +50,8 @@ const { providerFixture, credentialCanary, derivedCanary } = await import(pathTo
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
 function brokerFixture(name, args, raw, overrides = {}, config) {
-  const factory = logValueCases.some(([operation]) => operation === name) ? logValueFixture :
+  const factory = schemaComparisonCases.some(([operation]) => operation === name) ? schemaComparisonFixture :
+    logValueCases.some(([operation]) => operation === name) ? logValueFixture :
     branchSchemaCases.some(([operation]) => operation === name) ? branchSchemaFixture :
     advisorCases.some(([operation]) => operation === name) ? advisorFixture :
     userKeyCases.some(([operation]) => operation === name) ? userKeyFixture :
@@ -102,6 +104,47 @@ function safeEnvelope(f, result) {
     assert(!serialized.includes(secret), `secret in output/audit/journal: ${secret}`);
   }
 }
+
+test('schema comparison: directional pair/database grant is separate from either branch schema grant', async () => {
+  const [name, args, raw, expected] = schemaComparisonCases[0];
+  const f = brokerFixture(name, args, { ...raw, diff: `${credentialCanary}\n${derivedCanary}`, sql: credentialCanary });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, expected);
+  safeEnvelope(f, result);
+  for (const resource of ['neon/projects/project-a', 'neon/projects/project-a/branches/br-a/databases/main/schema',
+    'neon/projects/project-a/branches/br-b/databases/main/schema',
+    'neon/projects/project-a/branches/br-a/databases/main/schema-comparison/br-c',
+    'neon/projects/project-a/branches/br-b/databases/main/schema-comparison/br-a',
+    'neon/projects/project-a/branches/br-a/databases/other/schema-comparison/br-b']) {
+    const denied = brokerFixture(name, args, raw);
+    denied.common.vector.policy.resources = [resource];
+    assert.equal((await denied.call()).code, 'POLICY_DENIED');
+    assert.equal(denied.common.calls.secret, 0);
+    assert.equal(denied.provider.requests.length, 0);
+  }
+  for (const invalid of [{}, { diff: null }, { diff: 'x'.repeat(16385) }, { ...raw, base_branch_id: 'br-c' }, { ...raw, pagination: {} }]) {
+    const f = brokerFixture(name, args, invalid);
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    safeEnvelope(f, result);
+  }
+  const empty = brokerFixture(name, args, { diff: '' });
+  assert.deepEqual((await empty.call()).value, { has_diff: false });
+});
+
+test('schema comparison: exact maximum resource fits common budgets and diff content never leaves projection', async () => {
+  const config = { ...schemaComparisonScope, projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), databaseName: 'd'.repeat(60), revision: 'r'.repeat(80) };
+  const prefix = `neon/projects/${config.projectId}/branches/${config.branchId}/databases/${config.databaseName}/schema-comparison/`;
+  config.baseBranchId = 'a'.repeat(256 - prefix.length);
+  const args = { project_id: config.projectId, branch_id: config.branchId, base_branch_id: config.baseBranchId, db_name: config.databaseName };
+  const f = brokerFixture('getProjectBranchSchemaComparison', args, { diff: 'x'.repeat(16384) }, {}, config);
+  assert.equal(f.provider.operation('getProjectBranchSchemaComparison').prepare(args).resource.id.length, 256);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { has_diff: true });
+  safeEnvelope(f, result);
+});
 
 test('log values: exact field grant is distinct from catalog, log query and sibling authority', async () => {
   const [name, args, raw, expected] = logValueCases[0];

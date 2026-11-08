@@ -10,6 +10,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  getProjectBranchSchemaComparison(project: string, branch: string, baseBranch: string, database: string, options: MetadataRequestOptions): Promise<unknown>;
   getProjectBranchSchema(project: string, branch: string, database: string, options: MetadataRequestOptions): Promise<unknown>;
   getProjectAdvisorSecurityIssues(project: string, branch: string, database: string, options: MetadataRequestOptions): Promise<unknown>;
   listApiKeys(options: MetadataRequestOptions): Promise<unknown>;
@@ -182,6 +183,11 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    getProjectBranchSchemaComparison: (project: string, branch: string, baseBranch: string, database: string, options: MetadataRequestOptions) => {
+      if (authPathId(branch) === authPathId(baseBranch)) throw Error("INVALID_ARGUMENTS");
+      return get(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/compare_schema`,
+        new URLSearchParams({ base_branch_id: authPathId(baseBranch), db_name: catalogName(database) }), options);
+    },
     getProjectBranchSchema: (project: string, branch: string, database: string, options: MetadataRequestOptions) =>
       get(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/schema`, new URLSearchParams({ db_name: catalogName(database), format: "json" }), options),
     getProjectAdvisorSecurityIssues: (project: string, branch: string, database: string, options: MetadataRequestOptions) =>

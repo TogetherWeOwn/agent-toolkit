@@ -38,6 +38,7 @@ import { createNeonOrganizationKeyOperations } from '../dist/plugins/neon-broker
 import { createNeonUserKeyOperations } from '../dist/plugins/neon-broker/src/user-keys.js';
 import { createNeonAdvisorOperations } from '../dist/plugins/neon-broker/src/advisor.js';
 import { createNeonBranchSchemaOperations } from '../dist/plugins/neon-broker/src/branch-schema.js';
+import { createNeonSchemaComparisonOperations } from '../dist/plugins/neon-broker/src/schema-comparison.js';
 
 export const scope = {
   projectId: 'project-a', revision: 'scope-v1', branchIds: ['br-a', 'br-b'],
@@ -412,7 +413,15 @@ export const logValueCases = [
 export function logValueFixture(value, config = logValueScope) {
   return fixture(value, config, createNeonLogValueOperations);
 }
-export const allCases = [...logValueCases, ...branchSchemaCases, ...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
+export const schemaComparisonScope = { ...advisorScope, baseBranchId: 'br-b' };
+export const schemaComparisonCases = [
+  ['getProjectBranchSchemaComparison', { project_id: 'project-a', branch_id: 'br-a', base_branch_id: 'br-b', db_name: 'main' },
+    { diff: '--- base\n+++ target\n+CREATE TABLE items (id integer);\n' }, { has_diff: true }],
+];
+export function schemaComparisonFixture(value, config = schemaComparisonScope) {
+  return fixture(value, config, createNeonSchemaComparisonOperations);
+}
+export const allCases = [...schemaComparisonCases, ...logValueCases, ...branchSchemaCases, ...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });

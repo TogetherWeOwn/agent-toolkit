@@ -2080,7 +2080,7 @@
       "id": "getProjectBranchSchemaComparison",
       "apiArea": "branch",
       "tool": "neon.getProjectBranchSchemaComparison",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/base_branch_id/db_name/schema-comparison",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -2088,12 +2088,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/schema-comparison.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source and refusal contracts only; exact directional branch-pair/database current-head comparison with closed has_diff observation, not schema equivalence. Native entitlement/effects, independent reviews and runtime integration remain unresolved; no live schema/SQL call or enablement."
     },
     {
       "id": "getMaskingRules",
