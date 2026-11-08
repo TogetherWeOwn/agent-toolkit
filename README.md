@@ -14,20 +14,16 @@ A real tool keeps broad and internal-derived credentials in its trusted broker p
 - [STANDARD.md](STANDARD.md): full proposed per-tool security and acceptance standard, including OWASP/MCP rationale.
 - [CATALOG.md](CATALOG.md): existing brokers, exposure models and evidence-based candidate demand.
 - [ADAPTER-CONTRACTS.md](ADAPTER-CONTRACTS.md): what production state, approval, audit, secrets and cleanup adapters must actually guarantee.
+- [Provider broker v1](packages/core/PROVIDER-V1.md): additive `providerV1` execution contract, exact native targets, replay/audit obligations, operation maps and shared synthetic fixtures. [Threat model and acceptance status](packages/core/PROVIDER-THREAT-MODEL.md); not an installed/accepted provider.
 - [Reference threat model](packages/core/testing/THREAT-MODEL.md) and [refusal/evidence matrix](packages/core/testing/ACCEPTANCE.md).
 
 Share core code, not credentials or runtime authority: each provider worker loads its own pinned core version. Split sharply different production/test trust levels and expose many small single-purpose tools with their own read/write/destructive classifications, threat-model sections and refusal tests—not a provider action multiplexer. Verify actual worker, secret and native tool governance isolation; process separation is not an OS sandbox. Existing external plugins stay in their own repositories. Packages are private and no npm publishing workflow is configured.
 
-## Local verification
+## Verification
 
-Requires Node 24 (the test-only SQLite API is experimental), npm and Python 3 (stdlib-only workflow-guard tests). Bootstrap from the pinned lockfile:
+GitHub Actions is the CI of record. Push the PR branch and record the exact-head run/job links for full suites, typecheck and policy gates. Keep incomplete work draft; never substitute a local full suite or CI mirror. Local execution is limited to focused reproduction of one failing test or crate under the applicable guarded build controls.
 
-```sh
-npm ci --ignore-scripts
-npm run check
-```
-
-After dependencies are installed, `npm run check`, `npm test`, `npm run typecheck` and `npm run build` require no network or provider credential. Tests use strict injected synthetic messages—there is no fetch/network fallback. Independent subprocesses contend on the same temporary SQLite database for reservation/approval tests; reopen tests exercise persisted intent and recovery transitions. Runtime-generated canaries are checked against results, audit/call records and database bytes, then temporary databases are removed.
+Actions uses Node 24 (the test-only SQLite API is experimental), npm and Python 3 (stdlib-only workflow-guard tests), installing the pinned lockfile with `npm ci --ignore-scripts`. The workflow runs `npm run typecheck` and `npm test`; these require no provider credentials. Tests use strict injected synthetic messages—there is no provider-network fallback. Independent subprocesses contend on the same temporary SQLite database for reservation/approval tests; reopen tests exercise persisted intent and recovery transitions. Runtime-generated canaries are checked against results, audit/call records and database bytes, then temporary databases are removed.
 
 These tests **do not** prove a provider integration, a production store, native plugin governance or autonomous restart-safe teardown. The reference's manually driven recovery function is not a scheduler. See the explicit gaps in the evidence matrix. Never install a destructive tool until the exact artifact/configuration/permission set has Security acceptance and a verified approval/governance path, followed by operator installation and trusted secret binding.
 
