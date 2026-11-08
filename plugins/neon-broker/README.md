@@ -310,6 +310,40 @@ budgets. Non-200 refuses without empty success, another provider endpoint or mut
 fallback. These reads change no authentication or network restrictions; availability,
 entitlement, side effects and native qualification remain unverified.
 
+`createNeonProjectAccessOperations(trustedScope, transport)` adds two project access-metadata lists:
+
+| Tool | Closed arguments | Authorization resource suffix (under project) |
+|---|---|---|
+| `neon.listProjectPermissions` | `project_id` | `permissions` |
+| `neon.listProjectMembers` | `project_id` | `members` |
+
+Scope copies up to 16 permission IDs and 16 unique member-ID/user-ID pairs. Selected
+permission IDs use the common conservative ASCII identifier subset; member/user IDs
+are canonical lowercase UUIDs. Unsupported selected identities refuse, not normalize.
+Each collection requires its own exact grant; project/child/sibling grants do not
+imply it. Fixed authenticated project paths bind responses; contradictory optional
+project identity or any branch identity refuses. Selection minimizes authorized
+collection output and does not replace request authorization.
+
+Permission output is ID only, never email or grant/revocation timestamps; an ID is
+not a claim of active access. Member output is the bound member/user IDs, known org
+role and optional known effective_project_permission/grant_source. Missing status
+stays absent, not defaulted to denied, viewer or active. Names, email, project_role,
+other permission levels, timestamps and diagnostics are not read or exposed. This
+selected result is not a complete effective-ACL, credential-entitlement or custody
+receipt. Member/user reassociation and duplicate member/user identities refuse,
+including unselected rows that collide with a configured identity.
+
+Permissions are nonpaginated and capped at 30 before filtering. Members use fixed
+10-row pages, encoded response pagination.next as the next request cursor, and a
+three-page ceiling. Empty pagination terminates; unexpected sort/request-cursor
+fields, cursor cycles, malformed rows, over-limit pages and an unfinished third
+page refuse without partial results. Maximum scope and output fit common budgets.
+A 404 may mean no access, disabled per-project role management or non-org ownership;
+it remains unavailable, never empty success or another endpoint fallback. No access
+mutation, grant/revoke, member-role update, credential inspection, runtime permission
+or lifecycle enforcement is supplied. Provider effects/availability remain unknown.
+
 Trusted metadata scope contains one project, a revision, explicit branch IDs and endpoint
 parent bindings. Construction validates and copies it. Caller IDs only select
 already-configured resources; no caller identity, authority, origin, credential,
@@ -328,7 +362,7 @@ passwords, credentials and connection strings are excluded. Unknown lifecycle
 states fail closed until explicitly supported. No error body/headers are surfaced.
 Common lease-reflection checks remain necessary even in these selected fields.
 
-`createNeonMetadataTransport(injectedFetch)` has thirty-seven typed methods only. Its
+`createNeonMetadataTransport(injectedFetch)` has thirty-nine typed methods only. Its
 internal request builder fixes origin `https://console.neon.tech`, `/api/v2`
 paths, GET, JSON content, no redirects and no retries. No global fetch fallback
 exists. Each response is bounded to 64 KiB and 1 s, including streamed body time;
@@ -368,8 +402,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: thirty-seven implemented
-source adapters, 157 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: thirty-nine implemented
+source adapters, 155 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

@@ -10,6 +10,7 @@ import { createNeonTriggerOperations } from '../dist/plugins/neon-broker/src/tri
 import { createNeonAuthClientOperations } from '../dist/plugins/neon-broker/src/auth-clients.js';
 import { createNeonBranchResourceOperations } from '../dist/plugins/neon-broker/src/branch-resources.js';
 import { createNeonProjectSecurityOperations } from '../dist/plugins/neon-broker/src/project-security.js';
+import { createNeonProjectAccessOperations } from '../dist/plugins/neon-broker/src/project-access.js';
 import { createNeonMetadataTransport } from '../dist/plugins/neon-broker/src/transport.js';
 
 export const scope = {
@@ -136,7 +137,19 @@ export const projectSecurityCases = [
   ['getProjectJWKS', { project_id: 'project-a' }, { jwks: [jwks] }, { jwks: [jwks] }],
   ['listProjectVPCEndpoints', { project_id: 'project-a' }, { endpoints: [vpcEndpoint] }, { endpoints: [vpcEndpoint] }],
 ];
-export const allCases = [...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases];
+export const projectAccessScope = { projectId: scope.projectId, revision: scope.revision, permissionIds: ['permission-a'],
+  members: [{ memberId: '00000000-0000-0000-0000-000000000001', userId: '00000000-0000-0000-0000-000000000002' }] };
+export const projectPermission = { id: 'permission-a' };
+export const projectMember = { member_id: projectAccessScope.members[0].memberId, user_id: projectAccessScope.members[0].userId,
+  org_role: 'viewer', effective_project_permission: 'VIEWER', grant_source: 'explicit' };
+export const projectAccessCases = [
+  ['listProjectPermissions', { project_id: 'project-a' }, { project_permissions: [projectPermission] }, { project_permissions: [projectPermission] }],
+  ['listProjectMembers', { project_id: 'project-a' }, { project_members: [projectMember] }, { project_members: [projectMember] }],
+];
+export function projectAccessFixture(value, config = projectAccessScope) {
+  return fixture(value, config, createNeonProjectAccessOperations);
+}
+export const allCases = [...projectAccessCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });

@@ -131,6 +131,25 @@ transport failures and copied scope; common contracts cover identity, exact-reso
 policy, replay/TOCTOU, credential reflection and maximum configuration/output.
 Provider effects, entitlement and native qualification remain unverified.
 
+## Project access-metadata delta
+
+`listProjectPermissions` and `listProjectMembers` use separate exact project
+collection resources. Trusted scope copies bounded permission IDs and member/user
+pairs. Output is selected permission ID or paired member/user IDs with known org
+role and optional effective permission/grant source. Email, names, timestamps and
+other permission levels are omitted without access. Neither ID presence nor an
+omitted permission is evidence of active/denied access or complete effective ACLs.
+Member/user reassociation, identity collisions, contradictory project/branch
+ancestry and malformed selected status refuse. Lists cap before filtering;
+permissions reject pagination, members use fixed 10-row pages and response next
+cursors for at most three pages. Every accumulated page validates before another
+request. No partial result escapes after duplicate/cycle/limit/failure refusal.
+There is no role/access mutation or runtime authority extension. Dedicated tests
+cover selection, copied bindings, sparse/accessor inputs, output poisoning,
+ancestry, encoded pagination and transport failures. Common contracts enforce
+principal/exact-resource separation, replay/TOCTOU, credential reflection and
+maximum configuration/output budgets. Native effects/entitlement remain unknown.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.

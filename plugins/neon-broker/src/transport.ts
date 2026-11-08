@@ -8,6 +8,8 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  listProjectPermissions(project: string, options: MetadataRequestOptions): Promise<unknown>;
+  listProjectMembers(project: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
   getProjectJWKS(project: string, options: MetadataRequestOptions): Promise<unknown>;
   listProjectVPCEndpoints(project: string, options: MetadataRequestOptions): Promise<unknown>;
   getProject(project: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -143,6 +145,10 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    listProjectPermissions: (project: string, options: MetadataRequestOptions) =>
+      get(`/projects/${authPathId(project)}/permissions`, new URLSearchParams(), options),
+    listProjectMembers: (project: string, cursor: string | null, options: MetadataRequestOptions) =>
+      get(`/projects/${authPathId(project)}/members`, cursorQuery(cursor), options),
     getProjectJWKS: (project: string, options: MetadataRequestOptions) =>
       get(`/projects/${authPathId(project)}/jwks`, new URLSearchParams(), options),
     listProjectVPCEndpoints: (project: string, options: MetadataRequestOptions) =>
