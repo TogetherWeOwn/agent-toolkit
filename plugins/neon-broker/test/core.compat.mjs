@@ -23,6 +23,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   authWebhookCases, authWebhookFixture, authWebhookScope,
   userProfileCases, userProfileFixture, userProfileScope,
   authEmailCases, authEmailFixture, authEmailScope,
+  projectCases, projectFixture, projectScope,
   fixture, scope, branch, operation, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
@@ -33,7 +34,8 @@ const { providerFixture, credentialCanary, derivedCanary } = await import(pathTo
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
 function brokerFixture(name, args, raw, overrides = {}, config) {
-  const factory = authEmailCases.some(([operation]) => operation === name) ? authEmailFixture :
+  const factory = projectCases.some(([operation]) => operation === name) ? projectFixture :
+    authEmailCases.some(([operation]) => operation === name) ? authEmailFixture :
     userProfileCases.some(([operation]) => operation === name) ? userProfileFixture :
     authWebhookCases.some(([operation]) => operation === name) ? authWebhookFixture :
     projectCountCases.some(([operation]) => operation === name) ? projectCountFixture :
@@ -229,7 +231,7 @@ test('reflected lease material in selected safe-looking fields is refused by the
   assert.equal((await f.call()).code, 'OUTPUT_REFUSED');
 });
 
-for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases, ...regionCases, ...projectCountCases, ...authWebhookCases, ...userProfileCases, ...authEmailCases]) {
+for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases, ...regionCases, ...projectCountCases, ...authWebhookCases, ...userProfileCases, ...authEmailCases, ...projectCases]) {
   test(`${name}: replay and TOCTOU policy/resource changes refuse without a second request`, async () => {
     const replay = brokerFixture(name, args, raw);
     assert.equal((await replay.call()).ok, true);
@@ -1137,6 +1139,45 @@ test('email-auth configuration uses its exact grant without changing auth or ses
   safeEnvelope(maximum, maxResult);
   const reflected = brokerFixture(name, args, raw, {
     credentials: { async resolve() { return { value: 'false', redactions: [], async close() {} }; } },
+  });
+  assert.equal((await reflected.call()).code, 'OUTPUT_REFUSED');
+  assert.equal(reflected.provider.requests.length, 1);
+});
+
+test('project catalog needs an exact organization collection grant and never emits unselected metadata', async () => {
+  const [name, args, raw, expected] = projectCases[0];
+  for (const resource of ['neon/organizations/org-a', 'neon/organizations/other/projects',
+    'neon/organizations/org-a/projects/count', 'neon/projects/project-a']) {
+    const f = brokerFixture(name, args, raw);
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const value = raw.projects[0];
+  const f = brokerFixture(name, args, { projects: [{ ...value, name: credentialCanary, proxy_host: derivedCanary },
+    { ...value, id: 'unselected' }], applications: { secret: credentialCanary } });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, expected);
+  safeEnvelope(f, result);
+  for (const invalid of [{ projects: [{ ...value, org_id: 'other' }] }, { ...raw, pagination: { next: 'wrong' } },
+    { projects: [value, value] }]) {
+    const refused = brokerFixture(name, args, invalid);
+    const refusal = await refused.call();
+    assert.equal(refusal.code, 'UPSTREAM_UNAVAILABLE');
+    safeEnvelope(refused, refusal);
+  }
+  const id = 'p'.repeat(60);
+  const config = { ...projectScope, organizationId: 'o'.repeat(60), revision: 'r'.repeat(80), projectIds: [id] };
+  const maxRaw = { projects: [{ ...value, id, org_id: config.organizationId, region_id: 'r'.repeat(80), pg_version: 19 }] };
+  const maximum = brokerFixture(name, { org_id: config.organizationId }, maxRaw, {}, config);
+  const maxResult = await maximum.call();
+  assert.equal(maxResult.ok, true);
+  assert.deepEqual(maxResult.value, { projects: [{ id, region_id: 'r'.repeat(80), pg_version: 19 }] });
+  safeEnvelope(maximum, maxResult);
+  const reflected = brokerFixture(name, args, raw, {
+    credentials: { async resolve() { return { value: 'project-a', redactions: [], async close() {} }; } },
   });
   assert.equal((await reflected.call()).code, 'OUTPUT_REFUSED');
   assert.equal(reflected.provider.requests.length, 1);

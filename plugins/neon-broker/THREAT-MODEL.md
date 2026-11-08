@@ -300,6 +300,26 @@ one inventory row from reserved to read without enabling it; sensitive aggregate
 and email-provider reads stay incomplete. Provider effects and entitlement remain
 unknown; mocks do not qualify authentication behavior or non-waking safety.
 
+## Organization-filtered project catalog delta
+
+`listProjects` requires an exact organization collection grant and copied trusted
+project-ID selection. The fixed request always carries org_id, limit=10 and
+recoverable=false; no caller-controlled search/filter/cursor or account-wide
+fallback is available. Organization/project/count grants are not interchangeable.
+Optional response ancestry is checked on every page and row; selected IDs are
+validated and deduplicated across all pages before filtering. Closed output is
+only ID, region and PostgreSQL version, never provider settings, owner metadata,
+names, URLs, usage/billing or application/integration maps.
+
+The pinned Pagination.cursor contract is used, not PaginationNext.next. Malformed
+or cyclic cursors, overlarge pages and continuation beyond three pages refuse
+without partial success. No retry, recovery, creation, deletion, live integration
+or provisioning authority is introduced. Tests cover immutable scope, strict
+arguments, cancellation, cross-organization ancestry, duplicate/unselected rows,
+closed metadata, fixed transport and common identity/policy/replay/TOCTOU/reflection
+boundaries. Catalog presence does not prove entitlement, capacity or non-waking
+provider effects; all qualification and credential-custody holds remain.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.

@@ -592,6 +592,30 @@ or permission to provision. Pagination is unsupported and refuses. No profile
 mutation, authentication-details lookup, key retrieval or live qualification is
 introduced. Runtime entitlement and provider effects remain unknown.
 
+## Organization-filtered project catalog
+
+`createNeonProjectOperations` adds `listProjects`. Trusted construction copies an
+exact organization/revision and up to 30 unique project IDs. Canonical arguments
+require that `org_id`; the dedicated `neon/organizations/<org>/projects` collection
+grant is distinct from organization detail, project detail and project-count grants.
+Transport always sends `org_id`, `limit=10` and `recoverable=false` to fixed
+`GET /projects`. Search, caller pagination, recovery and unfiltered fallback are
+not exposed.
+
+Only selected project ID, region ID and PostgreSQL version are emitted. Names,
+owners, URLs, settings, billing/usage data and application/integration maps are
+omitted. The fixed organization filter and trusted project selection bind rows;
+optional organization ancestry must not contradict the selection. Every row is
+validated before filtering, and duplicate IDs across pages refuse. The pinned
+`Pagination.cursor` is forwarded unchanged, distinct from the newer `next` schema;
+absent pagination terminates, malformed pagination or repeated cursors refuse.
+Three 10-row pages are the maximum, with no partial success at the ceiling.
+
+Catalog membership is not provisioning authority, entitlement, current capacity or
+provider-effect evidence. No creation, recovery, deletion, URL follow, live call
+or runtime enablement is introduced. Empty selections emit no project metadata;
+failed upstream requests never become empty success or drop the organization filter.
+
 ## Shared contract and candidate compatibility
 
 Contract: `toolkit.provider-broker/v1`. Merged core: [PR #17](https://github.com/TogetherWeOwn/agent-toolkit/pull/17),
@@ -617,8 +641,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: fifty-three implemented
-source adapters, 141 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: fifty-four implemented
+source adapters, 140 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

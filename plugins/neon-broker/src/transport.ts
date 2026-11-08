@@ -8,6 +8,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  listProjects(organization: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
   getNeonAuthEmailAndPasswordConfig(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   getCurrentUserInfo(options: MetadataRequestOptions): Promise<unknown>;
   getNeonAuthWebhookConfig(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -164,6 +165,12 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    listProjects: (organization: string, cursor: string | null, options: MetadataRequestOptions) => {
+      const query = cursorQuery(cursor);
+      query.set("org_id", authPathId(organization));
+      query.set("recoverable", "false");
+      return get("/projects", query, options);
+    },
     getNeonAuthEmailAndPasswordConfig: (project: string, branch: string, options: MetadataRequestOptions) =>
       get(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/email_and_password`, new URLSearchParams(), options),
     getCurrentUserInfo: (options: MetadataRequestOptions) =>
