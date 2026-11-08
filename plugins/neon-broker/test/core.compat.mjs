@@ -13,6 +13,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   branchResourceCases, branchResourceFixture, branchResourceScope, bucket, customDomain,
   projectSecurityCases, projectSecurityFixture, projectSecurityScope, jwks, vpcEndpoint,
   projectAccessCases, projectAccessFixture, projectAccessScope, projectPermission, projectMember,
+  organizationVPCCases, organizationVPCFixture, organizationVPCScope, organizationVPCEndpoint,
   fixture, scope, branch, operation, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
@@ -23,7 +24,8 @@ const { providerFixture, credentialCanary, derivedCanary } = await import(pathTo
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
 function brokerFixture(name, args, raw, overrides = {}, config) {
-  const factory = projectAccessCases.some(([operation]) => operation === name) ? projectAccessFixture :
+  const factory = organizationVPCCases.some(([operation]) => operation === name) ? organizationVPCFixture :
+    projectAccessCases.some(([operation]) => operation === name) ? projectAccessFixture :
     projectSecurityCases.some(([operation]) => operation === name) ? projectSecurityFixture :
     branchResourceCases.some(([operation]) => operation === name) ? branchResourceFixture :
     authClientCases.some(([operation]) => operation === name) ? authClientFixture :
@@ -209,7 +211,7 @@ test('reflected lease material in selected safe-looking fields is refused by the
   assert.equal((await f.call()).code, 'OUTPUT_REFUSED');
 });
 
-for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases]) {
+for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases]) {
   test(`${name}: replay and TOCTOU policy/resource changes refuse without a second request`, async () => {
     const replay = brokerFixture(name, args, raw);
     assert.equal((await replay.call()).ok, true);
@@ -729,11 +731,56 @@ test('maximum access scope and member output fit real common-core budgets with n
   }
 });
 
+test('organization VPC policy separates organization, region, detail and project grants and redacts restricted-project metadata', async () => {
+  const root = 'neon/organizations/org-a/vpc';
+  for (const [name, args, raw, expected] of organizationVPCCases) {
+    const poison = { label: credentialCanary, state: derivedCanary, num_restricted_projects: 100,
+      example_restricted_projects: [credentialCanary], password: 'password-canary', message: derivedCanary };
+    const poisoned = name === 'getOrganizationVPCEndpointDetails' ? { ...raw, ...poison } :
+      { endpoints: raw.endpoints.map(value => ({ ...value, ...poison })) };
+    const f = brokerFixture(name, args, poisoned);
+    const result = await f.call();
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.value, expected);
+    safeEnvelope(f, result);
+    const own = f.provider.operation(name).prepare(args).resource.id;
+    for (const resource of ['neon/organizations/org-a', root, `${root}/vpc_endpoints`,
+      `${root}/region/aws-us-east-2/vpc_endpoints`, `${root}/region/aws-us-east-2/vpc_endpoints/vpce-a`,
+      `${root}/region/aws-us-west-2/vpc_endpoints`, own.replace('org-a', 'org-b'), 'neon/projects/project-a/vpc_endpoints'].filter(id => id !== own)) {
+      const other = brokerFixture(name, args, raw);
+      other.common.vector.policy.resources = [resource];
+      assert.equal((await other.call()).code, 'POLICY_DENIED');
+      assert.equal(other.common.calls.secret, 0);
+      assert.equal(other.provider.requests.length, 0);
+    }
+    const wrong = brokerFixture(name, args, raw);
+    wrong.args = { ...args, org_id: 'org-b' };
+    assert.equal((await wrong.call()).code, 'INVALID_ARGUMENTS');
+    assert.equal(wrong.common.calls.secret, 0);
+    assert.equal(wrong.provider.requests.length, 0);
+    const reflected = brokerFixture(name, args, raw,
+      { credentials: { async resolve() { return { value: organizationVPCEndpoint.vpc_endpoint_id, redactions: [], async close() {} }; } } });
+    assert.equal((await reflected.call()).code, 'OUTPUT_REFUSED');
+  }
+});
+
+test('maximum organization VPC selection and ID/region output fit real common-core budgets', async () => {
+  const indices = Array.from({ length: 16 }, (_, n) => n);
+  const config = { ...organizationVPCScope, regionIds: indices.map(n => `aws-region-${n}`),
+    endpoints: indices.map(n => ({ id: `vpce-${n}-${'a'.repeat(64)}`, regionId: `aws-region-${n}` })) };
+  const endpoints = config.endpoints.map(value => ({ vpc_endpoint_id: value.id, region_id: value.regionId }));
+  const f = brokerFixture('listOrganizationVPCEndpointsAllRegions', { org_id: 'org-a' }, { endpoints }, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { endpoints });
+  safeEnvelope(f, result);
+});
+
 test('common operation-map validator confirms incomplete status for all unknown entitlements', () => {
   const map = JSON.parse(readFileSync(new URL('../operation-map.json', import.meta.url)));
   const result = validateOperationMap(map);
   assert.equal(result.complete, false);
   assert.equal(result.incomplete.length, 194);
-  assert.equal(map.operations.filter(operation => operation.implemented).length, 39);
+  assert.equal(map.operations.filter(operation => operation.implemented).length, 42);
   assert.equal(map.operations.filter(operation => operation.enabled).length, 0);
 });

@@ -344,6 +344,39 @@ it remains unavailable, never empty success or another endpoint fallback. No acc
 mutation, grant/revoke, member-role update, credential inspection, runtime permission
 or lifecycle enforcement is supplied. Provider effects/availability remain unknown.
 
+`createNeonOrganizationVPCOperations(trustedScope, transport)` adds three organization network-metadata reads:
+
+| Tool | Closed arguments | Authorization resource suffix (under `neon/organizations/<org>/vpc`) |
+|---|---|---|
+| `neon.listOrganizationVPCEndpointsAllRegions` | `org_id` | `vpc_endpoints` |
+| `neon.listOrganizationVPCEndpoints` | `org_id`, `region_id` | `region/<region>/vpc_endpoints` |
+| `neon.getOrganizationVPCEndpointDetails` | `org_id`, `region_id`, `vpc_endpoint_id` | `region/<region>/vpc_endpoints/<endpoint>` |
+
+Scope copies one organization/revision, up to 16 unique region IDs and 16 unique
+endpoint-ID/region bindings; every endpoint must bind to a configured region. The
+organization path follows the pinned lowercase alphanumeric/hyphen 1–60 pattern;
+selected endpoint IDs use the common 1–80 ASCII identifier subset, and regions use
+bounded canonical aws/azure identifiers. Other provider-valid selected identifiers
+are unavailable rather than rewritten. An organization parent, regional collection,
+all-regions collection, endpoint detail or project VPC grant never implies another.
+
+Closed output contains only selected endpoint IDs and their bound region IDs. Labels,
+sensitive state, restricted-project counts/examples and arbitrary diagnostics are
+not read or emitted. This is not a complete network-restriction or connectivity
+receipt. Detail must match the exact requested endpoint, not another allowlisted
+endpoint in the same region. Region-list/detail schemas lack required ancestry:
+execute carries the authenticated request region into projection, not invented
+provider evidence. All-regions rows must return region_id; selected IDs relocated
+to a different region refuse. Contradictory optional organization/region identity,
+project/branch identity, duplicate pairs and any pagination refuse. Both lists are
+nonpaginated with a 30-row ceiling before filtering, without partial success or
+truncation. Maximum configuration/output fits common budgets. Azure detail is
+explicitly unsupported in the pinned schema and refuses before transport; Azure
+lists remain source-supported, not provider-qualified. Non-200 never becomes empty
+success or another endpoint fallback. No endpoint assignment, network-restriction
+mutation, external URL follow or live grant is supplied. Entitlement, availability,
+provider effects and native integration remain unknown.
+
 Trusted metadata scope contains one project, a revision, explicit branch IDs and endpoint
 parent bindings. Construction validates and copies it. Caller IDs only select
 already-configured resources; no caller identity, authority, origin, credential,
@@ -362,7 +395,7 @@ passwords, credentials and connection strings are excluded. Unknown lifecycle
 states fail closed until explicitly supported. No error body/headers are surfaced.
 Common lease-reflection checks remain necessary even in these selected fields.
 
-`createNeonMetadataTransport(injectedFetch)` has thirty-nine typed methods only. Its
+`createNeonMetadataTransport(injectedFetch)` has forty-two typed methods only. Its
 internal request builder fixes origin `https://console.neon.tech`, `/api/v2`
 paths, GET, JSON content, no redirects and no retries. No global fetch fallback
 exists. Each response is bounded to 64 KiB and 1 s, including streamed body time;
@@ -402,8 +435,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: thirty-nine implemented
-source adapters, 155 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: forty-two implemented
+source adapters, 152 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

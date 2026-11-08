@@ -11,6 +11,7 @@ import { createNeonAuthClientOperations } from '../dist/plugins/neon-broker/src/
 import { createNeonBranchResourceOperations } from '../dist/plugins/neon-broker/src/branch-resources.js';
 import { createNeonProjectSecurityOperations } from '../dist/plugins/neon-broker/src/project-security.js';
 import { createNeonProjectAccessOperations } from '../dist/plugins/neon-broker/src/project-access.js';
+import { createNeonOrganizationVPCOperations } from '../dist/plugins/neon-broker/src/organization-vpc.js';
 import { createNeonMetadataTransport } from '../dist/plugins/neon-broker/src/transport.js';
 
 export const scope = {
@@ -149,7 +150,20 @@ export const projectAccessCases = [
 export function projectAccessFixture(value, config = projectAccessScope) {
   return fixture(value, config, createNeonProjectAccessOperations);
 }
-export const allCases = [...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
+export const organizationVPCScope = { organizationId: 'org-a', revision: scope.revision,
+  regionIds: ['aws-us-east-2', 'aws-us-west-2', 'azure-eastus2'],
+  endpoints: [{ id: 'vpce-a', regionId: 'aws-us-east-2' }, { id: 'vpce-b', regionId: 'aws-us-west-2' },
+    { id: 'vpce-azure', regionId: 'azure-eastus2' }] };
+export const organizationVPCEndpoint = { vpc_endpoint_id: 'vpce-a', region_id: 'aws-us-east-2' };
+export const organizationVPCCases = [
+  ['listOrganizationVPCEndpointsAllRegions', { org_id: 'org-a' }, { endpoints: [organizationVPCEndpoint] }, { endpoints: [organizationVPCEndpoint] }],
+  ['listOrganizationVPCEndpoints', { org_id: 'org-a', region_id: 'aws-us-east-2' }, { endpoints: [vpcEndpoint] }, { endpoints: [organizationVPCEndpoint] }],
+  ['getOrganizationVPCEndpointDetails', { org_id: 'org-a', region_id: 'aws-us-east-2', vpc_endpoint_id: 'vpce-a' }, vpcEndpoint, organizationVPCEndpoint],
+];
+export function organizationVPCFixture(value, config = organizationVPCScope) {
+  return fixture(value, config, createNeonOrganizationVPCOperations);
+}
+export const allCases = [...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });

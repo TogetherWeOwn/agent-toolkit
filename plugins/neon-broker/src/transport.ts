@@ -8,6 +8,9 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  listOrganizationVPCEndpointsAllRegions(organization: string, options: MetadataRequestOptions): Promise<unknown>;
+  listOrganizationVPCEndpoints(organization: string, region: string, options: MetadataRequestOptions): Promise<unknown>;
+  getOrganizationVPCEndpointDetails(organization: string, region: string, endpoint: string, options: MetadataRequestOptions): Promise<unknown>;
   listProjectPermissions(project: string, options: MetadataRequestOptions): Promise<unknown>;
   listProjectMembers(project: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
   getProjectJWKS(project: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -68,6 +71,11 @@ function authPathId(value: string): string {
 }
 function authClientId(value: string): string {
   if (typeof value !== "string" || value.length > 64 || !/^[A-Za-z0-9]+$/.test(value) || /[^A-Za-z0-9]/.test(value)) throw Error("INVALID_ARGUMENTS");
+  return value;
+}
+function regionId(value: string, detail = false): string {
+  if (typeof value !== "string" || value.length > 80 || !/^(aws|azure)-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value) ||
+    /[^a-z0-9-]/.test(value) || (detail && !value.startsWith("aws-"))) throw Error("INVALID_ARGUMENTS");
   return value;
 }
 function cursorQuery(cursor: string | null): URLSearchParams {
@@ -145,6 +153,12 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    listOrganizationVPCEndpointsAllRegions: (organization: string, options: MetadataRequestOptions) =>
+      get(`/organizations/${authPathId(organization)}/vpc/vpc_endpoints`, new URLSearchParams(), options),
+    listOrganizationVPCEndpoints: (organization: string, region: string, options: MetadataRequestOptions) =>
+      get(`/organizations/${authPathId(organization)}/vpc/region/${regionId(region)}/vpc_endpoints`, new URLSearchParams(), options),
+    getOrganizationVPCEndpointDetails: (organization: string, region: string, endpoint: string, options: MetadataRequestOptions) =>
+      get(`/organizations/${authPathId(organization)}/vpc/region/${regionId(region, true)}/vpc_endpoints/${id(endpoint)}`, new URLSearchParams(), options),
     listProjectPermissions: (project: string, options: MetadataRequestOptions) =>
       get(`/projects/${authPathId(project)}/permissions`, new URLSearchParams(), options),
     listProjectMembers: (project: string, cursor: string | null, options: MetadataRequestOptions) =>

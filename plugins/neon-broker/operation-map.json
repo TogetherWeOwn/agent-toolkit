@@ -3077,12 +3077,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/organization-vpc.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "listOrganizationVPCEndpoints",
@@ -3096,12 +3099,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/organization-vpc.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "getOrganizationVPCEndpointDetails",
@@ -3115,12 +3121,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/organization-vpc.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Azure detail unsupported in pinned API; source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "assignOrganizationVPCEndpoint",
