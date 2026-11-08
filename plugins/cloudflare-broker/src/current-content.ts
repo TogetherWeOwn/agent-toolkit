@@ -15,7 +15,7 @@ export interface CurrentContentScope {
 }
 
 // Source access requires separate native authorization even when output is a digest.
-// No transport: the pinned schema does not specify a usable success media type.
+// The internal content transport supports a narrow multipart framing contract.
 export function currentContentDescriptor(scope: CurrentContentScope) {
   const account = accountId.parse(scope.accountId);
   const revision = text(80, /^[A-Za-z0-9][A-Za-z0-9_.-]*$/).parse(scope.revision);
