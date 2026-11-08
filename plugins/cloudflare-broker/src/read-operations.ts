@@ -11,6 +11,7 @@ import { dnssecDescriptor, type DnssecScope } from "./dnssec.js";
 import { universalSslDescriptor, type UniversalSslScope } from "./universal-ssl.js";
 import { automaticSslDescriptor, type AutomaticSslScope } from "./automatic-ssl.js";
 import { originPullsDescriptor, type OriginPullsScope } from "./origin-pulls.js";
+import { hostnameOriginPullsDescriptor, type HostnameOriginPullsScope } from "./hostname-origin-pulls.js";
 import { eventSubscriptionDescriptors, type EventSubscriptionScope } from "./event-subscriptions.js";
 import { versionAssetDescriptor, type VersionAssetScope } from "./version-assets.js";
 import { workerDomainMetadataDescriptors, type WorkerDomainScope } from "./worker-domains.js";
@@ -97,6 +98,7 @@ export interface CloudflareReadScope extends MetadataScope {
     universalSslReadAllowed?: UniversalSslScope["readAllowed"];
     automaticSslReadAllowed?: AutomaticSslScope["readAllowed"];
     originPullsReadAllowed?: OriginPullsScope["readAllowed"];
+    originPullHostnames?: HostnameOriginPullsScope["hostnames"];
   };
 }
 
@@ -175,6 +177,8 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
       zoneId: scope.zone.zoneId, readAllowed: scope.zone.automaticSslReadAllowed ?? false }))]),
     ...(scope.zone === undefined ? [] : [metadata(originPullsDescriptor({ accountId, revision,
       zoneId: scope.zone.zoneId, readAllowed: scope.zone.originPullsReadAllowed ?? false }))]),
+    ...(scope.zone === undefined ? [] : [metadata(hostnameOriginPullsDescriptor({ accountId, revision,
+      zoneId: scope.zone.zoneId, hostnames: scope.zone.originPullHostnames ?? [] }))]),
     // Source acquisition needs exact native authority, even for digest-only output.
     bind(content, (args, credential, signal) => readContent(content, args, credential, signal)),
   ]);
