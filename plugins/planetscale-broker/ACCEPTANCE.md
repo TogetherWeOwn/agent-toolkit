@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 214 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 209 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -177,6 +177,25 @@ unreviewed reserved / 198 unresolved. Zero integrated/reviewed/enabled/adopted.
 Fresh exact-head Actions is required; no local suite or native authority test is
 claimed. The missing-adapter prerequisite above is updated to this current count;
 earlier per-slice counts remain historical.
+
+At `3c4a80943b596f3d4c3640f1fd13703ba96b6aee`, [Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42440998261)
+passed [tests](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42440998261/job/128610033185),
+lint/typecheck, native-policy and ci-ok. That is historical evidence for 77
+adapters, not execution of the newer billing fixtures.
+
+`test/billing-records.test.mjs` adds 29 synthetic contracts for five invoice,
+line-item and payment-method/setup metadata reads. They cover pinned paths,
+pagination and provider permissions, exact child identity and whole-page refusal,
+immutable parent/child scope snapshots, closed inputs, wire/page limits, selected
+flags/types/enums and excluded amount/payment/checkout/free-text canaries. Payment
+replacement refuses rather than rebinding. Paid/overdue/Cloudflare-billed flags
+and completed setup state never establish spending authority. Setup-status GET
+requires documented `write_payment_method`; no entitlement or grant expansion is
+inferred. Parent ownership/collection permission, raw-body custody, full details
+and non-waking semantics remain prerequisites. Coverage is **82/291 bounded
+metadata subsets, 209 missing**; tiers 82 provisional read / 16 unreviewed reserved
+/ 193 unresolved. Zero integrated/reviewed/enabled/adopted. Fresh exact-head Actions
+is required; no local suite or native authority test is claimed.
 
 ## Metrics preregistration — required before enablement
 

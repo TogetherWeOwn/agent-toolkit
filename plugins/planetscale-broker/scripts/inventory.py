@@ -89,6 +89,15 @@ ADAPTERS = {
     "get_organization_sso_domain": "get-organization-sso-domain",
     "list_organization_sso_domains": "list-organization-sso-domains",
     "list_organization_invitations": "list-organization-invitations",
+    "get_invoice": "get-invoice",
+    "list_invoices": "list-invoices",
+    "get_invoice_line_items": "get-invoice-line-items",
+    "get_organization_billing_payment_method": "get-organization-billing-payment-method",
+    "get_payment_method_setup": "get-payment-method-setup",
+}
+BILLING_RECORDS = {
+    "get_invoice", "list_invoices", "get_invoice_line_items",
+    "get_organization_billing_payment_method", "get_payment_method_setup",
 }
 ORGANIZATION_SECURITY = {
     "get_oauth_application", "list_oauth_applications", "get_organization_sso",
@@ -192,6 +201,7 @@ def policy_candidate(operation_id):
 
 def adapter_test(operation_id):
     for operations, name in [
+        (BILLING_RECORDS, "billing-records"),
         (ORGANIZATION_SECURITY, "organization-security"),
         (UNIFIED_CHANGE_RECORDS, "unified-change-records"),
         (ROUTING_RECORDS, "routing-records"),

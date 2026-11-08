@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The seventy-seven adapters are pure request builders and bounded output projections,
+The eighty-two adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,14 +36,14 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 77 | Narrow projections; not full operation coverage |
-| Missing source adapters | 214 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 82 | Narrow projections; not full operation coverage |
+| Missing source adapters | 209 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-Seventy-seven adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 198
+Eighty-two adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 193
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
@@ -254,6 +254,29 @@ remain separate integration prerequisites. Domain verification presence is not
 current domain control, and provider SSO flags never authorize enforcement changes.
 Full details, mutations and non-waking semantics remain incomplete.
 
+Invoice list/get tools return only a bound invoice ID and paid/overdue flags;
+line-item reads return bound item IDs and the Cloudflare-billed flag. Amounts,
+billing periods, descriptions, metric names, database/resource names and nested
+resource bodies are omitted. Payment-method metadata returns only the bound ID;
+brand, card digits, expiry and cardholder data are never projected. Payment setup
+reads return bound ID/state only, not checkout URLs, client secrets, errors or
+timestamps. All billing summaries explicitly say `spendingAuthority: not-established`:
+paid/overdue/completed status and billing channel never authorize spending or
+prove payment-method validity, native expiry or session closure.
+
+Invoice and line-item lists use bounded pagination and snapshot 1–32 unique
+broker-owned IDs; unknown IDs refuse the whole page. The request's parent invoice
+ID is separately fixed. Responses do not establish parent organization/invoice
+ownership; trusted current bindings and independent upstream collection permission
+remain prerequisites. A changed current payment-method ID refuses instead of
+silently rebinding. The official setup-status GET requires **write_payment_method**,
+unlike payment-method GET (**read_payment_method**) and invoice reads
+(**read_invoices**). Read projection does not imply read-only credential entitlement
+or justify expanding a credential. Raw payment/checkout bodies must stay broker-
+side without logging/reflection; these offline projections do not authorize a
+fetch or prove custody. Full billing details/mutations and non-waking semantics
+remain incomplete.
+
 Arguments are closed, scalar and bounded. Configured resource scope is separate
 from arguments and must eventually be resolved by the shared core from an
 authorized resource handle, not accepted from a model. Each request fixes HTTPS
@@ -301,7 +324,7 @@ No connector or replacement broker is introduced.
 ## Local mutation-plan artifacts — not executors
 
 `src/mutation-plans.ts` supplies three pure, bounded previews. They are **not API
-adapters**, do not consume authority and do not increase the 77-adapter count.
+adapters**, do not consume authority and do not increase the 82-adapter count.
 Each artifact labels itself `validated-local-plan-not-provider-dry-run`, with
 execution not implemented, remote preconditions not verified and provider dry-run
 not performed. No network executor, output projector or secret placement exists.
@@ -335,7 +358,7 @@ The candidates only document requirements; native routing, expiry, exact-target
 binding, atomic consumption, replay/concurrent-use refusal and approved placement
 are **not implemented or tested as authority enforcement here**. Credential routes
 remain incomplete until a broker-only sink and reconciliation are accepted. The
-other 198 tier classifications are unresolved, not automatically harmless reads or
+other 193 tier classifications are unresolved, not automatically harmless reads or
 ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.
