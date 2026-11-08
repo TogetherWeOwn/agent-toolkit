@@ -71,12 +71,15 @@ test('organization keys: detached execution validates exact resource, revision, 
 
 test('organization keys: bare-array shape, safe IDs, ancestry and duplicates refuse before filtering', async () => {
   for (const value of [null, {}, { api_keys: raw }, [null],
-    ...[null, true, -1, -0, 0.5, Number.MAX_SAFE_INTEGER + 1, '1', {}, []].map(id => [key, { id }]),
+    ...[null, true, -1, 0.5, Number.MAX_SAFE_INTEGER + 1, '1', {}, []].map(id => [key, { id }]),
     [key, key], [{ id: 123 }, { id: 123 }], [key, { id: 123, org_id: 'other' }],
     [key, { id: 123, org_id: null }], [key, { id: 123, pagination: {} }],
     Array.from({ length: 31 }, (_, n) => ({ id: n })),
   ]) await assert.rejects(fixture(value).run(name, args));
   const op = fixture(raw).operation(name);
+  // JSON.stringify turns -0 into 0; exercise negative zero without fixture serialization.
+  assert.throws(() => op.project([{ id: -0 }]));
+  await assert.rejects(fixture(() => new Response('[{"id":-0}]', { headers: { 'content-type': 'application/json' } })).run(name, args));
   for (const k of ['id', 'org_id', 'pagination']) assert.throws(() => op.project([Object.defineProperty({ ...key }, k,
     { get() { throw Error('getter'); }, enumerable: true })]));
   assert.throws(() => op.project(new Array(1)));
