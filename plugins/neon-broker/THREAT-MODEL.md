@@ -203,6 +203,25 @@ non-200/oversized transport, exact grants, principal binding, replay, TOCTOU,
 reflected credentials and maximum JSON budgets. No send/revoke/accept or member
 mutation occurs. Availability, effects and native qualification remain unknown.
 
+## Database-bound Data API status delta
+
+`getProjectBranchDataAPI` copies at most 30 unique branch/database pairs under one
+project and revision. Its exact database configuration resource is distinct from
+parent, collection, sibling and catalog-database grants. The fixed authenticated
+path supplies ancestry absent from the pinned response; any returned project,
+branch or database identity must agree with that specific request. Contradictory
+ancestry and pagination refuse. Closed status-only output is a bounded lowercase
+ASCII token, not an inferred enabled state, provider enum or readiness verdict.
+Malformed/unsupported status strings refuse instead of returning defaults.
+
+Endpoint/JWKS URLs, settings, available schemas, observation time and provider or
+audience fields are not read or followed. Cached status is not current database or
+authentication evidence. There is no schema/content query, provisioning/mutation,
+URL fallback or live integration. Contracts cover copying, exact database grants,
+malformed/accessor/poisoned output, transport refusal, common identity/replay/TOCTOU,
+credential reflection and maximum-scope configuration/output budgets. Entitlement,
+non-waking effects and native runtime qualification remain unknown.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.

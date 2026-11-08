@@ -16,6 +16,7 @@ import { createNeonOrganizationInvitationOperations } from '../dist/plugins/neon
 import { createNeonOrganizationMemberOperations } from '../dist/plugins/neon-broker/src/organization-members.js';
 import { createNeonOrganizationOperations } from '../dist/plugins/neon-broker/src/organization.js';
 import { createNeonMetadataTransport } from '../dist/plugins/neon-broker/src/transport.js';
+import { createNeonDataAPIOperations } from '../dist/plugins/neon-broker/src/data-api.js';
 
 export const scope = {
   projectId: 'project-a', revision: 'scope-v1', branchIds: ['br-a', 'br-b'],
@@ -192,7 +193,16 @@ export const organizationInvitationCases = [
 export function organizationInvitationFixture(value, config = organizationInvitationScope) {
   return fixture(value, config, createNeonOrganizationInvitationOperations);
 }
-export const allCases = [...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
+export const dataAPIScope = { projectId: scope.projectId, revision: scope.revision,
+  databases: [{ branchId: 'br-a', name: 'main' }, { branchId: 'br-a', name: 'other' }, { branchId: 'br-b', name: 'main' }] };
+export const dataAPICases = [
+  ['getProjectBranchDataAPI', { project_id: 'project-a', branch_id: 'br-a', database_name: 'main' },
+    { status: 'running', url: 'https://example.invalid', settings: { db: 'main' } }, { status: 'running' }],
+];
+export function dataAPIFixture(value, config = dataAPIScope) {
+  return fixture(value, config, createNeonDataAPIOperations);
+}
+export const allCases = [...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });

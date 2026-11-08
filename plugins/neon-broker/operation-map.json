@@ -780,7 +780,7 @@
       "id": "getProjectBranchDataAPI",
       "apiArea": "dataapi",
       "tool": "neon.getProjectBranchDataAPI",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/database_name",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -788,12 +788,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/data-api.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed status-only source and mocked contracts authored; entitlement, provider effects, independent native review and runtime integration remain unresolved. No URL/settings/schema lookup, live qualification or enablement."
     },
     {
       "id": "createNeonAuthIntegration",
