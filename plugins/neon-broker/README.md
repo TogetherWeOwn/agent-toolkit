@@ -7,6 +7,29 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonProjectUpdateOperations(trustedScope, transport)` adds `updateProject`
+as a **name-only** write descriptor. Copy exact project/revision and expected and
+desired nonempty ASCII labels <=80 characters; labels must differ. Require the
+separate `neon/projects/<project>/rename` grant. Caller arguments match the copied
+desired name. Settings (including IP allowlist and quota), default compute and
+history retention refuse and remain unsupported, not silently covered by this row.
+
+The exact diff leaves settings/compute/retention unchanged. A fixed project-detail
+GET requires immutable project ID and expected label before exactly one PATCH
+sending `{project: {name}}` only. No conditional or provider idempotency header is
+invented. **Preflight is not atomic CAS:** concurrent writers can change the label
+after preflight or acknowledgement. HTTP200 exact ID/desired-name echo yields
+closed `{id, updated: true}` acknowledgement only, not lifecycle completion or a
+persistent-state guarantee. Labels, settings, compute, retention, operations and
+arbitrary metadata are omitted without evaluating unrelated fields.
+
+Ambiguity permits at most one bounded detail observation, then remains uncertain
+even on desired state; no causation or automatic mutation retry is claimed. Common
+permanent complete/uncertain journal entries block same-request restart/replay;
+native durable recovery must preserve them. Host/policy/custody, provider effects,
+entitlement, concurrency and independent qualification remain unresolved. No live
+project update, production authority, registration or enabled worker is supplied.
+
 `createNeonBranchUpdateOperations(trustedScope, transport)` adds `updateProjectBranch`
 as a **name-only** write descriptor. Copy exact project/branch/revision and expected
 and desired nonempty ASCII labels <=80 characters; labels must differ. Require the

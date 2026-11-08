@@ -2,7 +2,7 @@
 
 ## Implemented source, not accepted enablement
 
-- Seventy-seven typed source operations: name-only branch-label and snapshot-label writes, one reserved
+- Seventy-eight typed source operations: name-only project-label, branch-label and snapshot-label writes, one reserved
   snapshot-deletion request adapter and 74 reads, including bounded binary-object byte-count observations,
   selected OAuth-provider ID/type metadata,
   bounded log-query counts, current-head schema comparison and selected log-value observations,
@@ -13,9 +13,10 @@
   email-auth configuration, auth webhook status and organization VPC/configuration/member/invitation metadata plus organization-filtered region/project catalogs and project count,
   with strict arguments, exact trusted scope and parent-child binding, safe projections
   and fixed bounded injected transport.
-- Full 194-row management inventory; 117 operations still lack source. Snapshot update
+- Full 194-row management inventory; 116 operations still lack source. Snapshot update
   supports names only, not expiry/retention; branch update supports names only, not
-  protection/expiry. Their preflights are not atomic CAS; runtime
+  protection/expiry; project update supports names only, not settings/IP allowlist/quota,
+  default compute or history retention. Their preflights are not atomic CAS; runtime
   concurrency/effects, durable uncertainty recovery and policy qualification remain gates.
   All rows remain
   unqualified and disabled, with unknown entitlement. These adapters do not complete

@@ -19,6 +19,25 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
 
+## Project label-update source delta
+
+The project rename subset copies exact project/revision/expected-desired labels
+and requires a distinct project/rename grant; parent, branch, read and delete
+grants do not substitute. Closed args refuse settings/IP allowlist/quota, default
+compute, history retention and caller authority. The exact diff leaves all those
+fields unchanged. Fixed project-detail ID/label preflight precedes one name-only
+PATCH, not a provider dry-run or atomic CAS. External concurrent writers remain a
+native qualification limit; no serializability or persistent-state claim is made.
+
+Only HTTP200 exact project/desired-label echo yields a closed acknowledgement;
+labels, operations and unrelated sensitive metadata are omitted. Ambiguity gets
+one bounded detail observation then stays uncertain even on desired state. No
+retry, invented idempotency header or observation-to-success conversion exists.
+Common permanent complete/uncertain journal barriers prevent same-request replay
+across restart; durable recovery/custody, entitlement/effects, host/policy and
+independent native reviews remain prerequisites. No runtime registration, lifecycle
+enforcement or permission for live project updates is introduced.
+
 ## Branch label-update source delta
 
 The branch rename subset requires a copied exact project/branch/revision and
