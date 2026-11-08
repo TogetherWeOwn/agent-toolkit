@@ -98,6 +98,7 @@ export interface CloudflareReadScope extends MetadataScope {
   pagesProjects?: PagesMetadataScope["projects"];
   pagesProvenanceProjects?: PagesMetadataScope["provenanceProjects"];
   pagesPagination?: PagesMetadataScope["pagination"];
+  pagesProjectInventoryReadAllowed?: PagesMetadataScope["projectInventoryReadAllowed"];
   pagesDomains?: PagesDomainScope["projects"];
   workerDomains?: WorkerDomainScope["domains"];
   r2CorsBuckets?: R2CorsScope["buckets"];
@@ -147,7 +148,8 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
   const durable = durableObjectMetadataDescriptors({ accountId, revision, namespaces: scope.durableNamespaces ?? [] });
   const pages = pagesMetadataDescriptors({ accountId, revision, projects: scope.pagesProjects ?? [],
     provenanceProjects: scope.pagesProvenanceProjects ?? [],
-    pagination: scope.pagesPagination ?? { projects: false, deploymentProjects: [] } });
+    pagination: scope.pagesPagination ?? { projects: false, deploymentProjects: [] },
+    projectInventoryReadAllowed: scope.pagesProjectInventoryReadAllowed ?? false });
   const pagesDomains = pagesDomainDescriptors({ accountId, revision, projects: scope.pagesDomains ?? [] });
   const access = accessApplicationMetadataDescriptors({ accountId, revision, applications: scope.accessApplications ?? [] });
   const accessPolicies = accessPolicyMetadataDescriptors({ accountId, revision, applications: scope.accessPolicies ?? [] });

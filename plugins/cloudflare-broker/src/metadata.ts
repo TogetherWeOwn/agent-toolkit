@@ -1221,6 +1221,7 @@ export interface PagesMetadataScope {
   provenanceProjects?: readonly { projectName: string; sourceType: "github" | "gitlab"; repositoryOwner: string;
     repositoryName: string; productionBranch: string; deploymentBranches: readonly string[] }[];
   pagination?: { projects: boolean; deploymentProjects: readonly string[] };
+  projectInventoryReadAllowed?: boolean;
 }
 type PagesUnavailable = { status: "unavailable"; reason: "not-returned" };
 type PagesConfigured<T> = { status: "configured"; value: T } | PagesUnavailable;
@@ -1234,11 +1235,22 @@ type PagesProvenance = { subject: "configured-pages-project"; source: PagesSourc
   productionBranch: PagesConfigured<string>; effectiveProduction: "not-established" }
   | { subject: "provider-pages-deployment"; source: PagesSource; environment: PagesReported<"production" | "preview">;
     trigger: PagesTrigger; servingDeployment: "not-established"; historicalSourceBinding: "not-established" };
+interface PagesProjectInventory {
+  subject: "configured-pages-project-inventory";
+  projectName: string;
+  source: PagesUnavailable | { status: "provider-reported"; type: "github" | "gitlab";
+    repositoryOwner: PagesReported<string>; repositoryName: PagesReported<string>;
+    productionBranch: PagesConfigured<string>; productionDeploymentsEnabled: PagesConfigured<boolean> };
+  productionBranch: PagesConfigured<string>;
+  effectiveProduction: "not-established";
+}
 interface PagesMetadata {
   id: string;
   provenance?: PagesProvenance;
+  inventory?: PagesProjectInventory;
 }
 interface PagesList extends PartialList<PagesMetadata> {
+  selection?: "all-returned-projects";
   pagination?: PagesUnavailable | { status: "provider-reported"; page: number; perPage: number;
     totalPages: PagesReported<number>; enumeration: "not-established"; snapshotConsistency: "not-established" };
 }
@@ -1269,6 +1281,9 @@ export function pagesMetadataDescriptors(scope: PagesMetadataScope) {
   requireThat(pagination === undefined || (pagination !== null && typeof pagination === "object"
     && typeof pagination.projects === "boolean" && Array.isArray(pagination.deploymentProjects)), "schema");
   const projectPagination = pagination?.projects ?? false;
+  requireThat(scope.projectInventoryReadAllowed === undefined || typeof scope.projectInventoryReadAllowed === "boolean", "schema");
+  const projectInventory = scope.projectInventoryReadAllowed === true;
+  requireThat(!projectInventory || projectPagination, "scope");
   const deploymentPagination = new Set<string>();
   requireThat((pagination?.deploymentProjects.length ?? 0) <= maxRows, "cap");
   for (const value of pagination?.deploymentProjects ?? []) {
@@ -1355,6 +1370,31 @@ export function pagesMetadataDescriptors(scope: PagesMetadataScope) {
     requireThat(row.name === name && row.id === project.id, "scope");
     return { id: providerText(row.id, pagesProjectId), ...projectProvenance(row, name) };
   }
+  function inventoryMetadata(row: Row): PagesMetadata {
+    accountScope(row);
+    const name = providerText(row.name, text(63, /^[a-z0-9][a-z0-9-]*$(?![\s\S])/));
+    const id = providerText(row.id, text(64, /^[a-z0-9][a-z0-9-]*$(?![\s\S])/));
+    const branchSchema = text(200, /^[A-Za-z0-9][A-Za-z0-9_./-]*$(?![\s\S])/);
+    const repositorySchema = text(100, /^[A-Za-z0-9][A-Za-z0-9_.-]*$(?![\s\S])/);
+    function branch(value: unknown): PagesConfigured<string> {
+      return value === undefined ? unavailable() : { status: "configured", value: providerText(value, branchSchema) };
+    }
+    function repository(value: unknown): PagesReported<string> {
+      return value === undefined ? unavailable() : { status: "provider-reported", value: providerText(value, repositorySchema) };
+    }
+    let source: PagesProjectInventory["source"] = unavailable();
+    if (row.source !== undefined) {
+      const value = object(row.source), config = object(value.config);
+      requireThat(value.type === "github" || value.type === "gitlab", "upstream");
+      requireThat(config.production_deployments_enabled === undefined || typeof config.production_deployments_enabled === "boolean", "upstream");
+      source = { status: "provider-reported", type: value.type, repositoryOwner: repository(config.owner),
+        repositoryName: repository(config.repo_name), productionBranch: branch(config.production_branch),
+        productionDeploymentsEnabled: config.production_deployments_enabled === undefined ? unavailable()
+          : { status: "configured", value: config.production_deployments_enabled } };
+    }
+    return { id, inventory: { subject: "configured-pages-project-inventory", projectName: name, source,
+      productionBranch: branch(row.production_branch), effectiveProduction: "not-established" } };
+  }
   function deploymentMetadata(row: Row, name: string): PagesMetadata {
     const project = projectScope(name);
     accountScope(row);
@@ -1383,13 +1423,22 @@ export function pagesMetadataDescriptors(scope: PagesMetadataScope) {
     name: "cloudflare.pages.projects.list", version: "1", tier: "read", providerOperationId: "pages-project-get-projects",
     prepare(raw: unknown) {
       const args = page.parse(raw);
-      return prepared(args, ":projects", `${root}?page=${args.page}&per_page=${args.perPage}`);
+      return prepared(args, projectInventory ? ":projects:inventory" : ":projects", `${root}?page=${args.page}&per_page=${args.perPage}`);
     },
     project(raw: string, input: PreparedMetadata<ReturnType<typeof page.parse>>) {
       const args = page.parse(input.arguments);
       const body = envelope(raw);
       const result = rows(body.result);
       requireThat(result.length <= args.perPage, "cap");
+      if (projectInventory) {
+        requireThat(input.resource.id === `cloudflare:account:${account}:pages:projects:inventory` && input.resource.revision === revision, "scope");
+        accountScope(body);
+        const items = result.map(inventoryMetadata);
+        requireThat(new Set(items.map(item => item.id)).size === items.length &&
+          new Set(items.map(item => item.inventory!.projectName)).size === items.length, "scope");
+        return bounded({ items, complete: false as const, selection: "all-returned-projects" as const,
+          ...pageEvidence(body, args, result.length, projectPagination) });
+      }
       const items = result.filter(row => typeof row.name === "string" && projects.has(row.name)).map(row => projectMetadata(row, providerText(row.name, pagesProjectName)));
       return bounded({ items, complete: false as const, ...pageEvidence(body, args, result.length, projectPagination) });
     },
