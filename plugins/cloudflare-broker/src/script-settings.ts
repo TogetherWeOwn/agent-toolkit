@@ -74,6 +74,20 @@ function propagation(value: unknown): Observed<"authenticated" | "accept" | null
   return value;
 }
 
+// Script and environment settings reference the same pinned response schema.
+export function configuredScriptSettings(row: Row): Pick<ScriptSettings, "logpush" | "observability"> {
+  return Object.freeze({ logpush: flag(row.logpush),
+    observability: nullable(row.observability, value => Object.freeze({
+      enabled: flag(value.enabled), headSamplingRate: rate(value.head_sampling_rate), redactQueryString: flag(value.redact_query_string),
+      issues: nullable(value.issues, issues => Object.freeze({ enabled: flag(issues.enabled) })),
+      logs: nullable(value.logs, logs => Object.freeze({ enabled: flag(logs.enabled), headSamplingRate: rate(logs.head_sampling_rate),
+        invocationLogs: flag(logs.invocation_logs), persist: flag(logs.persist) })),
+      traces: nullable(value.traces, traces => Object.freeze({ enabled: flag(traces.enabled), headSamplingRate: rate(traces.head_sampling_rate),
+        persist: flag(traces.persist), propagationPolicy: propagation(traces.propagation_policy) })),
+    })),
+  });
+}
+
 export function scriptSettingsDescriptors(scope: ScriptSettingsScope): {
   scriptSettingsGet: MetadataDescriptor<ReturnType<typeof input.parse>, ScriptSettings>;
   usageModelGet: MetadataDescriptor<ReturnType<typeof input.parse>, UsageModel>;
@@ -127,15 +141,7 @@ export function scriptSettingsDescriptors(scope: ScriptSettingsScope): {
   }
   const scriptSettingsGet = descriptor<ScriptSettings>("cloudflare.workers.script_settings.get", "script-settings",
     "worker-script-settings-get-settings", observabilityScripts, (row, scriptName) => Object.freeze({
-      scriptName, logpush: flag(row.logpush),
-      observability: nullable(row.observability, value => Object.freeze({
-        enabled: flag(value.enabled), headSamplingRate: rate(value.head_sampling_rate), redactQueryString: flag(value.redact_query_string),
-        issues: nullable(value.issues, issues => Object.freeze({ enabled: flag(issues.enabled) })),
-        logs: nullable(value.logs, logs => Object.freeze({ enabled: flag(logs.enabled), headSamplingRate: rate(logs.head_sampling_rate),
-          invocationLogs: flag(logs.invocation_logs), persist: flag(logs.persist) })),
-        traces: nullable(value.traces, traces => Object.freeze({ enabled: flag(traces.enabled), headSamplingRate: rate(traces.head_sampling_rate),
-          persist: flag(traces.persist), propagationPolicy: propagation(traces.propagation_policy) })),
-      })),
+      scriptName, ...configuredScriptSettings(row),
       subject: "configured-worker-script-settings", effectiveCollection: "not-established",
     }));
   const usageModelGet = descriptor<UsageModel>("cloudflare.workers.usage_model.get", "usage-model",
