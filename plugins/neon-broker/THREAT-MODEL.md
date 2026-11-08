@@ -184,6 +184,25 @@ copying, selection, poisoned output, transport failures, exact grant separation,
 common identity/replay/TOCTOU/reflection and maximum-scope budgets. No member mutation,
 invitation flow or lifecycle authority is supplied. Native effects remain unverified.
 
+## Organization invitation metadata delta
+
+`getOrganizationInvitations` requires its own exact collection grant under one
+copied organization/revision and at most 16 unique invitation UUID bindings. Parent,
+member and individual invitation resources do not authorize the collection. Output
+contains only selected id/org_id/known-role fields; schema-sensitive email, inviter
+identity, timestamps and unexpected credential fields are not read. Conflicting
+schema prose about pending/accepted invitations is not turned into a status or
+active-access claim. The authenticated fixed request path and every row's required
+org_id must agree. This is not a complete invitation or access inventory.
+
+The pinned endpoint has no pagination; at most 30 rows are validated before
+filtering. Duplicate IDs, including unselected ones, malformed roles/identities,
+contradictory ancestry and pagination refuse without partial success. Source and
+common contracts cover copied scope, canonical arguments, poisoned/accessor output,
+non-200/oversized transport, exact grants, principal binding, replay, TOCTOU,
+reflected credentials and maximum JSON budgets. No send/revoke/accept or member
+mutation occurs. Availability, effects and native qualification remain unknown.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.

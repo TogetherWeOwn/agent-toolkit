@@ -8,6 +8,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  getOrganizationInvitations(organization: string, options: MetadataRequestOptions): Promise<unknown>;
   getOrganizationMembers(organization: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
   getOrganizationMember(organization: string, member: string, options: MetadataRequestOptions): Promise<unknown>;
   getOrganization(organization: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -157,6 +158,8 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    getOrganizationInvitations: (organization: string, options: MetadataRequestOptions) =>
+      get(`/organizations/${authPathId(organization)}/invitations`, new URLSearchParams(), options),
     getOrganizationMembers: (organization: string, cursor: string | null, options: MetadataRequestOptions) => {
       const query = cursorQuery(cursor);
       query.set("sort_by", "joined_at");

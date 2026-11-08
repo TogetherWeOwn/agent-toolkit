@@ -2,10 +2,12 @@
 
 ## Implemented source, not accepted enablement
 
-- Thirty-five typed metadata/catalog/capability/branch-feature/auth-status/auth-domain/auth-integration/function-metadata/trigger-metadata/auth-client/branch-resource operations with strict arguments, exact
-  trusted scope and parent-child binding, safe projections and fixed bounded injected transport.
-- Full 194-row management inventory; 159 operations remain explicitly incomplete.
-  The eight catalog, four capability, three branch-feature, three auth-status, two auth-domain, two auth-integration, two function-metadata, two trigger-metadata, two auth-client and two branch-resource adapters do not complete the package. Prior source merge,
+- Forty-seven typed source operations, including project security/access and organization
+  VPC/configuration/member/invitation metadata, with strict arguments, exact trusted
+  scope and parent-child binding, safe projections and fixed bounded injected transport.
+- Full 194-row management inventory; 147 operations still lack source. All rows remain
+  unqualified and disabled, with unknown entitlement. These adapters do not complete
+  the package. Prior source merge,
   current source review, native qualification and runtime enablement are separate.
 - Mocked contracts and common-candidate compatibility fixtures authored; accept
   actual results only from the exact PR head's Actions jobs.
