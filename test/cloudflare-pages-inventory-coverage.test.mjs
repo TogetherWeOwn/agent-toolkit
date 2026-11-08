@@ -94,7 +94,9 @@ test("Cloudflare Pages inventory coverage refuses filtered resources and rebadge
   for (const deployments of [false, true]) {
     const f = fixture({ deployments }), entry = f.observation(await f.invoke(1), 1);
     for (const selection of [undefined, "filtered", deployments ? "all-returned-projects" : "all-returned-deployments"]) {
-      const o = structuredClone(entry); o.result.value.selection = selection; rehash(o); refused(f.scope, [o]);
+      const o = structuredClone(entry);
+      if (selection === undefined) delete o.result.value.selection; else o.result.value.selection = selection;
+      rehash(o); refused(f.scope, [o]);
     }
     const o = structuredClone(entry); delete o.result.value.items[0].inventory; rehash(o); refused(f.scope, [o]);
     refused({ ...f.scope, resource: { ...f.scope.resource, id: f.scope.resource.id.replace(":inventory", "") } }, [entry]);
@@ -110,7 +112,7 @@ test("Cloudflare Pages inventory coverage refuses cross-page duplicate IDs and p
       ...(!deployments ? [o => { o.result.value.items[0].inventory.projectName = entries[0].result.value.items[0].inventory.projectName; }] : [])]) {
       const second = structuredClone(entries[1]); edit(second); rehash(second); refused(f.scope, [entries[0], second]);
     }
-    const second = structuredClone(entries[1]); second.result.value.items[0].id = "bad\n"; rehash(second); refused(f.scope, [second]);
+    const second = structuredClone(entries[1]); second.result.value.items[0].id = "bad!"; rehash(second); refused(f.scope, [second]);
   }
 });
 
