@@ -5,6 +5,8 @@ import { summarizePagesCoverage, type PagesCoverageObservation, type PagesCovera
 export interface PagesRecordedCoverageScope extends PagesCoverageScope {
   readonly principalHash: string;
   readonly policyRevision: string;
+  /** Required for deployment lists: request names are distinct from resource IDs. */
+  readonly deploymentProjectName?: string;
 }
 export interface PagesRecordedObservation extends PagesCoverageObservation {
   readonly target: AuthorizationTarget;
@@ -27,6 +29,8 @@ export function summarizePagesRecordedCoverage(scope: PagesRecordedCoverageScope
   const principalHash = digest.parse(scope.principalHash);
   const policyRevision = text(80, /^[A-Za-z0-9][A-Za-z0-9_.-]*$/).parse(scope.policyRevision);
   const projects = summary.resource.id.endsWith(":pages:projects");
+  const deploymentProjectName = projects ? undefined : text(63, /^[a-z0-9][a-z0-9-]*$/).parse(scope.deploymentProjectName);
+  requireThat(!projects || scope.deploymentProjectName === undefined, "scope");
   const tool = projects ? "cloudflare.pages.projects.list" : "cloudflare.pages.deployments.list";
   const bindings: { page: number; hash: string }[] = [];
   for (const observation of observations) {
@@ -35,7 +39,7 @@ export function summarizePagesRecordedCoverage(scope: PagesRecordedCoverageScope
     const args = object(observation.arguments);
     requireThat(Object.keys(args).length === (projects ? 2 : 3) && args.page === pagination.page &&
       args.perPage === summary.perPage, "scope");
-    if (!projects) text(63, /^[a-z0-9][a-z0-9-]*$/).parse(args.projectName);
+    if (!projects) requireThat(args.projectName === deploymentProjectName, "scope");
     requireThat(target.contract === PROVIDER_CONTRACT && target.provider === "cloudflare" && target.tool === tool &&
       target.version === "1" && target.tier === "read" && target.artifactDigest === null &&
       resource.id === summary.resource.id && resource.revision === summary.resource.revision &&

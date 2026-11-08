@@ -34,7 +34,8 @@ function fixture({ deployments = false, auditFailure = false, totalPages = 2 } =
     return new Response(JSON.stringify({ success: true, errors: [], result: [], result_info: { page, per_page: 10, total_pages: totalPages } }),
       { headers: { "content-type": "application/json" } });
   });
-  const scope = { resource, perPage: 10, principalHash: canonicalHash(f.vector.principal), policyRevision: "policy-1" };
+  const scope = { resource, perPage: 10, principalHash: canonicalHash(f.vector.principal), policyRevision: "policy-1",
+    ...(deployments ? { deploymentProjectName: projectName } : {}) };
   function observation(result, page) {
     const evidence = receipts.find(record => record.event === result.event);
     const target = targets.find(target => canonicalHash(target) === evidence.targetHash);
@@ -76,6 +77,21 @@ test("Cloudflare Pages recorded coverage accepts the distinct deployment-list ta
   const entry = f.observation(result, 1);
   assert.ok(entry.target.resource.id.includes(`:project:${projectId}:deployments`));
   assert.equal(entry.arguments.projectName, projectName);
+  assert.equal(summarizePagesRecordedCoverage(f.scope, [entry]).recordedOutcome, "consistent-supplied-records");
+});
+
+test("Cloudflare Pages recorded coverage requires the selected deployment project name despite consistent rehashing", async () => {
+  const f = fixture({ deployments: true }), entry = f.observation(await f.invoke(1), 1);
+  const wrong = structuredClone(entry);
+  wrong.arguments.projectName = "other-project";
+  wrong.target.argumentsHash = canonicalHash(wrong.arguments);
+  rebind(wrong);
+  refused(f.scope, wrong);
+  for (const deploymentProjectName of [undefined, "other-project", "../foreign", "", null]) {
+    refused({ ...f.scope, deploymentProjectName }, entry);
+  }
+  const projects = fixture(), projectEntry = projects.observation(await projects.invoke(1), 1);
+  refused({ ...projects.scope, deploymentProjectName: projectName }, projectEntry);
   assert.equal(summarizePagesRecordedCoverage(f.scope, [entry]).recordedOutcome, "consistent-supplied-records");
 });
 
