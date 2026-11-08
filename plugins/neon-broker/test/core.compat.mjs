@@ -32,6 +32,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   branchConsumptionCases, branchConsumptionFixture, branchConsumptionScope,
   legacyConsumptionCases, legacyConsumptionFixture, legacyConsumptionFrame, legacyConsumptionPeriod,
   maskingRuleCases, maskingRuleFixture, maskingRuleScope, maskingRule,
+  authDetailsCases, authDetailsFixture, authDetailsScope, authDetails,
   fixture, scope, branch, operation, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
@@ -42,7 +43,8 @@ const { providerFixture, credentialCanary, derivedCanary } = await import(pathTo
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
 function brokerFixture(name, args, raw, overrides = {}, config) {
-  const factory = maskingRuleCases.some(([operation]) => operation === name) ? maskingRuleFixture :
+  const factory = authDetailsCases.some(([operation]) => operation === name) ? authDetailsFixture :
+    maskingRuleCases.some(([operation]) => operation === name) ? maskingRuleFixture :
     legacyConsumptionCases.some(([operation]) => operation === name) ? legacyConsumptionFixture :
     branchConsumptionCases.some(([operation]) => operation === name) ? branchConsumptionFixture :
     consumptionCases.some(([operation]) => operation === name) ? consumptionFixture :
@@ -247,7 +249,7 @@ test('reflected lease material in selected safe-looking fields is refused by the
   assert.equal((await f.call()).code, 'OUTPUT_REFUSED');
 });
 
-for (const [name, args, raw] of [...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases, ...regionCases, ...projectCountCases, ...authWebhookCases, ...userProfileCases, ...authEmailCases, ...projectCases, ...userOrganizationCases, ...sharedProjectCases]) {
+for (const [name, args, raw] of [...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases, ...regionCases, ...projectCountCases, ...authWebhookCases, ...userProfileCases, ...authEmailCases, ...projectCases, ...userOrganizationCases, ...sharedProjectCases]) {
   test(`${name}: replay and TOCTOU policy/resource changes refuse without a second request`, async () => {
     const replay = brokerFixture(name, args, raw);
     assert.equal((await replay.call()).ok, true);
@@ -1279,6 +1281,39 @@ test('shared projects require exact-user collection grant, selected output and s
   });
   assert.equal((await reflected.call()).code, 'OUTPUT_REFUSED');
   assert.equal(reflected.provider.requests.length, 2);
+});
+
+test('auth details require exact account authority without exposing opaque authentication data or implying user access', async () => {
+  const [name, args, raw, expected] = authDetailsCases[0];
+  const f = brokerFixture(name, args, { ...raw, auth_data: credentialCanary, password: 'password-canary', identity: derivedCanary });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, expected);
+  safeEnvelope(f, result);
+  for (const resource of ['neon/accounts/account-a', 'neon/accounts/account-b/auth', 'neon/users/account-a/profile',
+    'neon/organizations/account-a', 'neon/projects/project-a/auth']) {
+    const denied = brokerFixture(name, args, raw);
+    denied.common.vector.policy.resources = [resource];
+    assert.equal((await denied.call()).code, 'POLICY_DENIED');
+    assert.equal(denied.common.calls.secret, 0);
+    assert.equal(denied.provider.requests.length, 0);
+  }
+  for (const invalid of [{ ...raw, account_id: 'account-b' }, { ...raw, auth_method: 'api_key_project' },
+    { ...raw, pagination: {} }, { auth_method: raw.auth_method }]) {
+    const refused = brokerFixture(name, args, invalid);
+    const refusal = await refused.call();
+    assert.equal(refusal.code, 'UPSTREAM_UNAVAILABLE');
+    safeEnvelope(refused, refusal);
+  }
+  const config = { ...authDetailsScope, accountId: 'a'.repeat(80), revision: 'r'.repeat(80) };
+  const maximum = brokerFixture(name, { account_id: config.accountId }, { account_id: config.accountId, auth_method: 'session_cookie' }, {}, config);
+  assert.equal((await maximum.call()).ok, true);
+  const reflected = brokerFixture(name, args, raw, {
+    credentials: { async resolve() { return { value: authDetails.auth_method, redactions: [], async close() {} }; } },
+  });
+  const reflectedResult = await reflected.call();
+  assert.equal(reflectedResult.code, 'OUTPUT_REFUSED');
+  safeEnvelope(reflected, reflectedResult);
 });
 
 test('masking-rule identities require exact collection authority and never expose functions or literal data', async () => {

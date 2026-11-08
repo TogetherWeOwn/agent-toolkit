@@ -12,12 +12,31 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Cross-agent/resource access | Common agent AND exact-resource policy; separate collection targets; copied trusted scope; exact response project/child binding. No broad list inferred from project access. |
 | Provider scope drift | Bound scope revision enters canonical target and is revalidated by host/core before transport; exact provider IDs/parent relations checked. Actual current binding adapter remains required. |
 | Secrets in response/error/audit | Allowlist projection excludes settings/hosts/owners/credentials/passwords/URIs and arbitrary errors/timestamps. Database/role names are emitted only when exact trusted bindings match; other arbitrary names stay excluded. Fixed errors discard raw bodies. Common reflected-lease checks and safe audit envelopes remain mandatory. Arbitrary secret DLP is not claimed. |
-| Redirect/SSRF/path injection | Thirty-three fixed GET methods, constrained identifiers/catalog names, encoded cursor, fixed origin, redirect:error, no arbitrary URL/header arguments, no default fetch. Auth-status reads omit OAuth login/consent URLs, MCP resources and audiences; no secondary fetch. |
+| Redirect/SSRF/path injection | Explicit fixed GET methods, constrained identifiers/catalog names, encoded cursor, fixed origin, redirect:error, no arbitrary URL/header arguments, no default fetch. Auth-status reads omit OAuth login/consent URLs, MCP resources and audiences; no secondary fetch. |
 | Pagination/response/time amplification | 64 KiB per response; 1 s request including streamed body; 3.5 s operation; 10 branches/operations per page, three pages, duplicate/cycle checks; branch next/sort and operation cursor shapes are distinct; 30-row cap for other lists. No retries/partial success. |
 | Aggregate disclosure | Project-wide endpoint/operation collections and total branch counts have distinct exact-resource targets. Child/project grants never imply aggregate authority; response filtering is not request authorization. |
 | Read waking compute | No compute mutation/SQL/connection/secret fallback exists. GET is NOT proof; independent provider evidence and accepted enablement gates remain unsatisfied. |
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
+
+## Exact-account authentication metadata delta
+
+`getAuthDetails` copies a trusted account/revision and requires the exact
+account/auth resource, not user, organization, project or parent authority. Caller
+arguments cannot override the fixed credential-bound `/auth` request. Required
+account_id must match the trusted account before any result can leave projection;
+only that ID and the pinned five-value auth_method enum are returned. Opaque
+auth_data and unexpected credential/identity/diagnostic payloads are ignored
+without accessor evaluation. Account identity is not coerced into another
+namespace, and the method does not prove permissions or credential completeness.
+
+Missing/malformed fields, unknown method, wrong account and unexpected pagination
+refuse without a profile/catalog fallback, fabricated status or partial result.
+Source/common-core contracts cover copied scope, canonical arguments, exact
+account grants, principal policy, replay/TOCTOU, cancellation/resource revision,
+poisoned/accessor output, reflected lease values and maximum JSON budgets. No
+live credential probe, mint/rotate/reveal, authority change or runtime registration
+is supplied; native entitlement, effects and custody qualification remain unknown.
 
 ## Selected masking-rule identity delta
 

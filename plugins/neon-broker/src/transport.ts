@@ -8,6 +8,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  getAuthDetails(options: MetadataRequestOptions): Promise<unknown>;
   getMaskingRules(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   getConsumptionHistoryPerProject(organization: string, project: string, from: string, to: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
   getConsumptionHistoryPerBranchV2(organization: string, project: string, branch: string, from: string, to: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
@@ -173,6 +174,7 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    getAuthDetails: (options: MetadataRequestOptions) => get("/auth", new URLSearchParams(), options),
     getMaskingRules: (project: string, branch: string, options: MetadataRequestOptions) =>
       get(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/masking_rules`, new URLSearchParams(), options),
     getConsumptionHistoryPerProject: (organization: string, project: string, from: string, to: string, cursor: string | null, options: MetadataRequestOptions) => {

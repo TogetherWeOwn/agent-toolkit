@@ -7,6 +7,24 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonAuthDetailsOperations(trustedScope, transport)` adds `getAuthDetails`
+with a copied exact account ID/revision and dedicated
+`neon/accounts/<account>/auth` grant. Caller arguments must name that account; the
+fixed credential-bound `/auth` GET has no identity override. Its returned
+account_id must match exactly. The closed projection contains only that ID and
+one of the pinned auth_method values: keycloak, session_cookie, api_key_user,
+api_key_org or oauth. Opaque auth_data, credentials, identity payloads and arbitrary
+diagnostics are not read, evaluated or emitted. Unsupported IDs/methods, missing
+fields and unexpected pagination refuse; failures never trigger `/users/me`,
+organization discovery or another credential fallback.
+
+An account ID is not inferred to be a user or organization ID, and the observed
+method does not prove permissions, full credential scope, custody or safe runtime
+use. This is not a credential reveal/creation/rotation path or live identity
+probe. Native entitlement, provider effects and integration remain unqualified;
+all operations stay disabled. The earlier opaque-response exclusion is narrowed
+only to this explicit two-field schema-backed projection.
+
 `createNeonMaskingRuleOperations(trustedScope, transport)` adds `getMaskingRules`
 with a copied project/branch/revision and explicit database/schema/table/column
 selection. It requires the exact branch `masking_rules` collection grant; parent,
@@ -683,7 +701,7 @@ passwords, credentials and connection strings are excluded. Unknown lifecycle
 states fail closed until explicitly supported. No error body/headers are surfaced.
 Common lease-reflection checks remain necessary even in these selected fields.
 
-`createNeonMetadataTransport(injectedFetch)` has fifty-two typed methods only. Its
+`createNeonMetadataTransport(injectedFetch)` has sixty-three typed methods only. Its
 internal request builder fixes origin `https://console.neon.tech`, `/api/v2`
 paths, GET, JSON content, no redirects and no retries. No global fetch fallback
 exists. Each response is bounded to 64 KiB and 1 s, including streamed body time;
@@ -821,8 +839,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: fifty-nine implemented
-source adapters, 135 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: sixty-three implemented
+source adapters, 131 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

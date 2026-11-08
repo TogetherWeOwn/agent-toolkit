@@ -3303,7 +3303,7 @@
       "id": "getAuthDetails",
       "apiArea": "users",
       "tool": "neon.getAuthDetails",
-      "scope": "trusted-account",
+      "scope": "account_id/exact-auth",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3311,12 +3311,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-details.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Exact-account authentication metadata source and mocked contracts authored; native source review, provider effects, credential completeness and trusted runtime integration remain unresolved. No auth_data disclosure, user/org identity inference, credential action, live grant or enablement."
     },
     {
       "id": "createSnapshot",
