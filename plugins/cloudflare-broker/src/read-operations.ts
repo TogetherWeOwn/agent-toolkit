@@ -3,6 +3,7 @@ import { canonicalHash, type Json, type Prepared, type ProviderOperation, type T
 import { currentContentDescriptor, type CurrentContentScope } from "./current-content.js";
 import { subscriptionDescriptors, type SubscriptionScope } from "./subscriptions.js";
 import { workerScheduleDescriptor, type WorkerScheduleScope } from "./worker-schedules.js";
+import { scriptSettingsDescriptors, type ScriptSettingsScope } from "./script-settings.js";
 import { workerBuildDescriptor, type WorkerBuildScope } from "./worker-builds.js";
 import { deployHookDescriptor, type DeployHookScope } from "./deploy-hooks.js";
 import { buildTriggerDescriptor, type BuildTriggerScope } from "./build-triggers.js";
@@ -78,6 +79,8 @@ function bind<A>(descriptor: {
 export interface CloudflareReadScope extends MetadataScope {
   subscriptions?: SubscriptionScope["subscriptions"];
   workerSchedules?: WorkerScheduleScope["workers"];
+  workerObservabilityScriptNames?: ScriptSettingsScope["observabilityScriptNames"];
+  workerUsageModelScriptNames?: ScriptSettingsScope["usageModelScriptNames"];
   workerBuildConfigurations?: WorkerBuildScope["workers"];
   workerDeployHooks?: DeployHookScope["workers"];
   workerBuildTriggers?: BuildTriggerScope["workers"];
@@ -126,6 +129,8 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
   const { accountId, revision } = scope;
   const subscriptions = subscriptionDescriptors({ accountId, revision, subscriptions: scope.subscriptions ?? [] });
   const builds = buildRecordDescriptors({ accountId, revision, workers: scope.workerBuildRecords ?? [] });
+  const scriptSettings = scriptSettingsDescriptors({ accountId, revision,
+    observabilityScriptNames: scope.workerObservabilityScriptNames ?? [], usageModelScriptNames: scope.workerUsageModelScriptNames ?? [] });
   const consumers = queueConsumerDescriptors({ accountId, revision, queues: scope.queueConsumers ?? [] });
   const events = eventSubscriptionDescriptors({ accountId, revision, subscriptions: scope.eventSubscriptions ?? [] });
   const stores = secretsStoreMetadataDescriptors({ accountId, revision, stores: scope.secretStores ?? [] });
@@ -153,6 +158,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
   return Object.freeze([
     metadata(subscriptions.subscriptionsList), metadata(subscriptions.subscriptionGet),
     metadata(workerScheduleDescriptor({ accountId, revision, workers: scope.workerSchedules ?? [] })),
+    metadata(scriptSettings.scriptSettingsGet), metadata(scriptSettings.usageModelGet),
     metadata(workerBuildDescriptor({ accountId, revision, workers: scope.workerBuildConfigurations ?? [] })),
     metadata(deployHookDescriptor({ accountId, revision, workers: scope.workerDeployHooks ?? [] })),
     metadata(buildTriggerDescriptor({ accountId, revision, workers: scope.workerBuildTriggers ?? [] })),
