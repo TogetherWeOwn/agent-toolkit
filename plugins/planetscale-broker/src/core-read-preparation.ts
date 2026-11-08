@@ -7,7 +7,9 @@ import { prepare as prepareBranch } from "./tools/get-branch.js";
 import { prepare as prepareBackup } from "./tools/get-backup.js";
 import { prepare as prepareBackupPolicy } from "./tools/get-backup-policy.js";
 import { prepare as prepareDeployRequest } from "./tools/get-deploy-request.js";
-import { deployBinding } from "./lifecycle.js";
+import { deployBinding, deployNumber } from "./lifecycle.js";
+import { prepare as prepareDeployment } from "./tools/get-deployment.js";
+import { prepare as prepareSchemaRecommendation } from "./tools/get-schema-recommendation.js";
 import { prepare as prepareKeyspace } from "./tools/get-keyspace.js";
 import { prepare as prepareShard } from "./tools/get-shard.js";
 import { prepare as prepareMaintenanceEvent } from "./tools/get-maintenance-event.js";
@@ -39,6 +41,10 @@ const organizationTeamMemberTarget = closed({ ...organizationFields, ...teamFiel
 const serviceTokenTarget = closed({ ...organizationFields, tokenId: identifier });
 const oauthTokenTarget = closed({ ...organizationFields, applicationId: identifier, tokenId: identifier });
 const webhookTarget = closed({ ...databaseFields, webhookId: identifier });
+const deploymentTarget = closed({ ...databaseFields,
+  deployment: closed({ id: identifier, number: deployNumber, intoBranch: slug }), intoBranchId: identifier });
+const schemaRecommendationTarget = closed({ ...databaseFields,
+  recommendation: closed({ id: identifier, number: deployNumber }) });
 
 type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeof databaseTarget.parse> |
   ReturnType<typeof branchTarget.parse> | ReturnType<typeof backupTarget.parse> |
@@ -47,15 +53,17 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof maintenanceEventTarget.parse> | ReturnType<typeof organizationMembershipTarget.parse> |
   ReturnType<typeof organizationTeamTarget.parse> | ReturnType<typeof organizationTeamMemberTarget.parse> |
   ReturnType<typeof serviceTokenTarget.parse> | ReturnType<typeof oauthTokenTarget.parse> |
-  ReturnType<typeof webhookTarget.parse>;
+  ReturnType<typeof webhookTarget.parse> | ReturnType<typeof deploymentTarget.parse> |
+  ReturnType<typeof schemaRecommendationTarget.parse>;
 type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_backup" | "get_backup_policy" | "get_deploy_request" |
   "get_keyspace" | "get_shard" | "get_maintenance_event" |
   "get_organization_membership" | "get_organization_team" | "get_organization_team_member" |
-  "get_service_token" | "get_oauth_token" | "get_webhook";
+  "get_service_token" | "get_oauth_token" | "get_webhook" | "get_deployment" | "get_schema_recommendation";
 type ResponseIdentity = "name-only-not-immutable" | "record-id-only-parent-not-verified" |
   "record-and-source-ids-destination-not-verified" | "record-and-branch-ids-parent-not-verified" |
-  "record-and-user-ids-parent-not-verified";
+  "record-and-user-ids-parent-not-verified" | "record-and-number-parent-and-destination-not-verified" |
+  "record-and-number-parent-not-verified";
 
 // Pure preparation only. Host IDs/revisions bind a snapshot, not permission;
 // response projections still cannot authenticate every parent/destination ID.
@@ -183,6 +191,22 @@ export function bindGetOauthTokenPreparation(rawTarget: unknown): (raw: unknown)
     tokenId: target.tokenId }, {});
   return bindRead(`planetscale/oauth-token/${target.applicationId}/${target.tokenId}`, target,
     "get_oauth_token", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindGetDeploymentPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = deploymentTarget.parse(rawTarget);
+  const read = prepareDeployment({ organization: target.organization, database: target.database,
+    deployment: target.deployment }, {});
+  return bindRead(`planetscale/deployment/${target.deployment.id}`, target,
+    "get_deployment", read.request, "record-and-number-parent-and-destination-not-verified");
+}
+
+export function bindGetSchemaRecommendationPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = schemaRecommendationTarget.parse(rawTarget);
+  const read = prepareSchemaRecommendation({ organization: target.organization, database: target.database,
+    recommendation: target.recommendation }, {});
+  return bindRead(`planetscale/schema-recommendation/${target.recommendation.id}`, target,
+    "get_schema_recommendation", read.request, "record-and-number-parent-not-verified");
 }
 
 export function bindGetWebhookPreparation(rawTarget: unknown): (raw: unknown) => Prepared {

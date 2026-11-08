@@ -239,6 +239,22 @@ immutable snapshots, every-field hashes, binding refusals, secret canaries and
 resource separation. Twenty-seven total pure preparations remain separate from
 runtime integration; adapter coverage stays 134/291 with 157 missing.
 
+Two deployment-detail seams additionally bind existing deployment and schema-
+recommendation GETs. Closed host snapshots retain organization/database IDs and
+names, record ID, positive sequence number and revision; deployments also retain
+destination branch name and independently supplied immutable branch ID. Resources
+use `planetscale/deployment/<id>` and `planetscale/schema-recommendation/<id>`.
+Every field enters the plan hash; caller arguments remain empty. Number-addressed
+requests require independent current ID/number/parent binding before future use.
+Existing projections check record ID/number and deployment destination name, not
+immutable response parent/destination identity. Plans retain these limitations and
+unverified non-waking semantics. State/flags never grant deployment, dismissal,
+DDL, spend or native approval authority. No executor, registration or credential
+resolution is added. `test/core-deployment-detail-read-preparation.test.mjs` covers
+17 synthetic snapshot/hash/refusal/canary contracts. Twenty-nine total pure
+preparations remain separate from runtime integration; coverage stays 134/291,
+157 missing.
+
 All 291 entries remain `incomplete`, `implemented=false`, `reviewed=false`,
 `enabled=false`, and entitlement `unknown`. Existing offline read/preview test
 paths are linked as source evidence, never as full `ProviderOperation` tests.
