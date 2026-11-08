@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The 125 adapters are pure request builders and bounded output projections,
+The 127 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,19 +36,35 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 125 | Narrow projections; not full operation coverage |
-| Missing source adapters | 166 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 127 | Narrow projections; not full operation coverage |
+| Missing source adapters | 164 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-125 adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 150
+127 adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 148
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
 backups/restore, schema/deploy, topology, maintenance and every other official
 area remain in the map even when access or implementation is missing.
+
+## Instant-metric availability metadata
+
+`planetscale.get_instant_branch_metrics` and
+`planetscale.get_instant_tablet_metrics` each request one broker-bound documented
+metric enum with no caller filters. Response branch ID/name must independently
+match immutable bindings; only that metric may be returned (at most one row and
+32 samples, within the shared 64 KiB wire cap). Sample shapes are validated, but
+values/pods/roles, labels and timestamps are never returned. The receipt contains
+bound branch ID, metric enum and a samples-present boolean, plus
+`health: not-established`. An absent metric and an empty sample array remain
+distinct. Neither presence nor absence proves freshness, health, restore
+completion, topology, native closure or authority. Optional filters, historical
+metrics and full metrics capability remain incomplete. No pod/keyspace-level
+isolation is claimed; current branch ownership, parent collection permission,
+raw-body custody and non-waking evidence remain integration prerequisites.
 
 ## Query-tag metadata
 

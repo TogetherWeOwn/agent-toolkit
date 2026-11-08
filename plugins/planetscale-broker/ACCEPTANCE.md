@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 166 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 164 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -40,6 +40,33 @@ read-only transactions, statement/lock/row/byte/page/time caps and native closur
 evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
+
+## Instant-metric availability metadata source increment
+
+`test/instant-metrics.test.mjs` adds 18 synthetic contracts for two fixed
+instant branch/tablet reads. A single broker-bound documented metric enum is
+sent with immutable branch ID/name bindings; no caller filter or metric override.
+The whole response refuses on rebound identity, unexpected/duplicate metrics,
+malformed samples or caps (one metric, 32 samples, 64 KiB wire). Output is only
+bound branch ID, metric enum and samples-present boolean, plus
+`health: not-established`. Values/pods/roles/labels/times are never returned;
+sample presence proves neither freshness, health, restore completion nor closure.
+Missing metric rows and empty samples remain distinct, neither is an error state.
+Full metrics capability, optional filters and historical metrics stay incomplete.
+Current ownership, raw-body custody, collection authority and non-waking evidence
+remain prerequisites; no resource-level filter isolation is claimed.
+
+Coverage: 127/291 bounded metadata subsets, 164 missing (22 GETs, 142 mutations);
+tiers 127 provisional read / 16 unreviewed reserved / 148 unresolved. Zero
+integrated/reviewed/enabled/adopted. Previous query-budget head `a9617f5`
+[Actions test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42464869419/job/128681955303)
+passed. Aggregate attempt 1 failed because pinned actionlint download returned
+HTTP 504 before lint execution. The one same-head failed-job retry
+[passed](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42464869419/attempts/2),
+including lint/typecheck, native-policy and ci-ok; test evidence is 834/834 package
+tests, root 180/180, helpers 122/122 and GitHub broker 219/219, zero failures/skips.
+No source repair is claimed. These new fixtures still require exact-head Actions
+execution. No local suite/build/typecheck/CI mirror ran.
 
 ## Query-specific traffic-budget metadata source increment
 
