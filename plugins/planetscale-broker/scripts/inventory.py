@@ -11,6 +11,16 @@ import re
 import sys
 
 SOURCE_SHA256 = "ae45866599cb5d248fadb9d7f0ed30fd6aed440a17ec0950c4e9e0d58da4cb73"
+CORE_CONTRACT = "toolkit.provider-broker/v1"
+CORE_BINDING = {
+    "contract": CORE_CONTRACT,
+    "sourceCommit": "a838436aa4492c77dc7fb995bc776ec7c7d922e7",
+    "coverageSourceSha256": "6e96d7ab98ceb630af33007134bff79c996963c9a0deab23cee21db3f1110e68",
+    "artifact": "api/core-operation-map.json",
+    "status": "schema-mapping-candidate-not-runtime-integration",
+    "validatorExecution": "not-performed",
+    "runtimeIntegrated": False,
+}
 ADAPTERS = {
     "get_move_tables_workflow_status": "get-move-tables-workflow-status",
     "get_data_topology": "get-data-topology",
@@ -413,9 +423,58 @@ def inventory(raw):
             "operationCount": len(operations),
         },
         "credentialScopeReceipt": None,
-        "commonCoreContract": None,
+        "commonCoreContract": CORE_BINDING,
         "operations": operations,
     }
+
+
+def core_operation_map(result):
+    # Conservative metadata envelope, never an executable registry or a tier grant.
+    # Offline projections/plans do not meet ProviderOperation's execution contract.
+    operations = []
+    for row in result["operations"]:
+        tests = ([row["test"]] if row["test"] else [])
+        if row["localPlan"]:
+            tests.append(row["localPlan"]["test"])
+        operations.append({
+            "id": row["operationId"],
+            "apiArea": re.sub(r"[^a-z0-9]+", "-", row["areas"][0].lower()).strip("-"),
+            "tool": row["tool"],
+            "scope": "/".join(row["resourceParameters"]) or "provider-discovery",
+            "sideEffects": [row["sideEffects"], "classification-pending"],
+            "tier": "reserved",
+            "authorization": "native",
+            "entitlement": "unknown",
+            "status": "incomplete",
+            "tests": tests,
+            "implemented": False,
+            "reviewed": False,
+            "enabled": False,
+            "prerequisite": ";".join(row["prerequisites"] + [
+                "core-validator-execution-and-provider-operation-integration",
+                "operation-specific-tier-and-conjunctive-authority-review",
+                "authenticated-host-policy-journal-audit-credential-and-transport-adapters",
+            ]),
+        })
+    return {
+        "contract": CORE_CONTRACT,
+        "provider": "planetscale",
+        "version": "0.1.0",
+        "reference": {
+            "url": result["source"]["schemaUrl"],
+            "version": result["source"]["apiVersion"],
+            "sha256": result["source"]["sha256"],
+        },
+        "inventory": [row["operationId"] for row in result["operations"]],
+        "operations": operations,
+    }
+
+
+def render_map(result):
+    # One operation per line keeps these mechanical inventories reviewable.
+    header = {key: value for key, value in result.items() if key != "operations"}
+    prefix = json.dumps(header, indent=2)[:-2]
+    return prefix + ',\n  "operations": [\n' + ",\n".join("    " + json.dumps(o, separators=(",", ":")) for o in result["operations"]) + "\n  ]\n}\n"
 
 
 if __name__ == "__main__":
@@ -429,15 +488,13 @@ if __name__ == "__main__":
     else:
         raw = Path(sys.argv[1]).read_bytes()
     result = inventory(raw)
-    destination = root / "api" / "operation-map.json"
-    # One operation per line keeps this large, mechanical inventory reviewable.
-    header = {key: value for key, value in result.items() if key != "operations"}
-    prefix = json.dumps(header, indent=2)[:-2]
-    rendered = prefix + ',\n  "operations": [\n' + ",\n".join("    " + json.dumps(o, separators=(",", ":")) for o in result["operations"]) + "\n  ]\n}\n"
-    if check:
-        if destination.read_text() != rendered:
-            raise ValueError("operation map differs from pinned source/extractor")
-    else:
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_text(rendered)
+    for name, value in [("operation-map.json", result), ("core-operation-map.json", core_operation_map(result))]:
+        destination = root / "api" / name
+        rendered = render_map(value)
+        if check:
+            if destination.read_text() != rendered:
+                raise ValueError(f"{name} differs from pinned source/extractor")
+        else:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(rendered)
     print(f"Mapped {len(result['operations'])} operations; {len(ADAPTERS)} offline adapters; no enabled operations")

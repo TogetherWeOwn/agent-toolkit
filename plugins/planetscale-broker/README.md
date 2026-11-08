@@ -50,6 +50,36 @@ of harmless, non-waking or non-billable behavior. Billing/admin, token/role/pass
 backups/restore, schema/deploy, topology, maintenance and every other official
 area remain in the map even when access or implementation is missing.
 
+## Shared-core operation-map seam
+
+[Core-format map](api/core-operation-map.json) is generated alongside the detailed
+provider inventory for `toolkit.provider-broker/v1`. The inspected interface is
+`packages/core/src/provider/coverage.ts` at merged source commit
+`a838436aa4492c77dc7fb995bc776ec7c7d922e7`, SHA-256
+`6e96d7ab98ceb630af33007134bff79c996963c9a0deab23cee21db3f1110e68`.
+The main map records this source-schema candidate, **not runtime integration**.
+The shared-core validator has not been executed against this export yet; neither
+its runtime code nor a duplicate validator is added by this increment.
+
+All 291 entries remain `incomplete`, `implemented=false`, `reviewed=false`,
+`enabled=false`, and entitlement `unknown`. Existing offline read/preview test
+paths are linked as source evidence, never as full `ProviderOperation` tests.
+An all-`reserved` / `native` envelope avoids silently translating unresolved tiers
+into read/write authority. It is deliberately conservative metadata, not approved
+per-operation tier classification, a registered executor, or permission from one
+decider to bypass conjunctive owner/Operator/Release Manager obligations. The
+richer provider map remains authoritative for pending candidates and effects.
+
+Scopes identify required path-parameter categories, not concrete immutable
+resources or approved allowlists; discovery scopes do not grant global access.
+Actual integration still needs closed per-tool preparation, immutable resource
+ID/revision bindings, trusted identity/current ownership and policy, native
+conjunctive authority, durable journal/audit, broker-side credential custody,
+fixed bounded transport and no redirects, provider fencing and recovery. Reads
+still need non-waking proof; SQL retains its separate bounded-window gate.
+Regeneration/check covers both artifacts; tests verify complete source mapping
+and prevent offline adapters or previews from becoming core-implemented claims.
+
 ## Schema-recommendation dismissal plan subset
 
 `src/recommendation-dismissal-plan.ts` adds a pure preview for one open schema

@@ -41,6 +41,30 @@ evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
 
+## Shared-core map-format source increment
+
+`api/core-operation-map.json` projects all 291 official operations into the
+inspected `toolkit.provider-broker/v1` OperationMap format, pinned to core commit
+`a838436aa4492c77dc7fb995bc776ec7c7d922e7` and coverage source SHA-256
+`6e96d7ab98ceb630af33007134bff79c996963c9a0deab23cee21db3f1110e68`.
+Eight source-format contracts cover exact inventory/closed fields/reference,
+source pin/pending integration, tool/scope/effects, offline test tuples,
+incomplete/unknown/unreviewed/disabled state, retained prerequisites and the
+read-entitled destructive-report control. These are not execution/refusal tests
+of the common core; core validator execution is explicitly not performed.
+
+All entries use a conservative reserved/native metadata envelope, not accepted
+tier classifications or a runtime registry. None is claimed implemented or
+prohibited to satisfy completeness. Path-parameter scopes are not immutable
+resource bindings. The detailed provider map retains actual candidate routes and
+conjunctive obligations; 134 provisional read / 25 unreviewed reserved / 132
+unresolved is unchanged. Twelve pure previews stay separate from 134/291 bounded
+offline adapters and 157 missing adapters. Zero integrated/reviewed/enabled/adopted.
+No host, credential, authority, journal, audit, transport or executor was added.
+Next: execute the shared validator after source integration, then bind bounded
+per-operation preparations and trusted resource revisions without fabricating
+provider preconditions. Complete-package and live gates remain above.
+
 ## Schema-recommendation dismissal preview source increment
 
 `src/recommendation-dismissal-plan.ts` adds one preview-only subset and ten
