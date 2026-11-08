@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { metadataDescriptors, zoneMetadataDescriptors } from "../dist/plugins/cloudflare-broker/src/metadata.js";
+import { metadataDescriptors, zoneMetadataDescriptors, secretsStoreMetadataDescriptors } from "../dist/plugins/cloudflare-broker/src/metadata.js";
 import { deletionPlanDescriptors } from "../dist/plugins/cloudflare-broker/src/deletion-plans.js";
 import { inventory, source } from "../plugins/cloudflare-broker/scripts/inventory.mjs";
 import { familySummary } from "../plugins/cloudflare-broker/scripts/families.mjs";
@@ -25,7 +25,15 @@ const deletionScope = {
   databases: [target(db)], defaultBuckets: [target("safe-bucket")], dnsRecords: [target(own)],
 };
 const deletionDescriptors = deletionPlanDescriptors(deletionScope);
-const metadataOnly = { ...descriptors, ...zoneDescriptors };
+const secretsStoreScope = { accountId: account, revision: "policy-1", stores: [{ storeId: own, secretIds: [zone] }, { storeId: other, secretIds: [account] }] };
+const secretsStoreDescriptors = secretsStoreMetadataDescriptors(secretsStoreScope);
+const secretsStoreCases = [
+  ["storesList", { page: 2, perPage: 10 }, `?page=2&per_page=10`, ""],
+  ["storeGet", { storeId: own }, `/${own}`, `:${own}`],
+  ["secretsList", { storeId: own, page: 2, perPage: 10 }, `/${own}/secrets?page=2&per_page=10`, `:${own}:secrets`],
+  ["secretGet", { storeId: own, secretId: zone }, `/${own}/secrets/${zone}`, `:${own}:secret:${zone}`],
+];
+const metadataOnly = { ...descriptors, ...zoneDescriptors, ...secretsStoreDescriptors };
 const allDescriptors = { ...metadataOnly, ...deletionDescriptors };
 const deletionCases = [
   ["workerDelete", { scriptName: "safe-worker" }, `/accounts/${account}/workers/scripts/safe-worker?force=false`, `cloudflare:account:${account}:worker:safe-worker`],
@@ -408,6 +416,88 @@ test("Cloudflare version metadata refuses unbounded pagination and malformed pro
   }
 });
 
+test("Cloudflare Secrets Store metadata binds account, store and secret with closed GET arguments", () => {
+  for (const [name, args, suffix, resource] of secretsStoreCases) {
+    const descriptor = secretsStoreDescriptors[name];
+    const input = descriptor.prepare(args);
+    assert.equal(input.request.path, `/accounts/${account}/secrets_store/stores${suffix}`);
+    assert.equal(input.resource.id, `cloudflare:account:${account}:secrets-store${resource}`);
+    assert.equal(input.resource.revision, "policy-1");
+    assert.equal(input.request.method, "GET");
+    assert.equal(input.request.maxRequests, 1);
+    assert.equal(input.request.redirects, "deny");
+    for (const value of [descriptor, input, input.arguments, input.resource, input.request]) assert.ok(Object.isFrozen(value));
+    for (const key of ["accountId", "agentId", "approval", "url", "headers", "credential", "value", "scopes", "search", "order", "direction"]) refuses(() => descriptor.prepare({ ...args, [key]: "forged" }), "schema");
+  }
+  refuses(() => secretsStoreDescriptors.storeGet.prepare({ storeId: zone }), "scope");
+  refuses(() => secretsStoreDescriptors.secretGet.prepare({ storeId: own, secretId: account }), "scope");
+  refuses(() => secretsStoreDescriptors.secretGet.prepare({ storeId: other, secretId: zone }), "scope");
+  for (const storeId of [own.toUpperCase(), "../store", `${own}?search=x`, "a".repeat(33)]) refuses(() => secretsStoreDescriptors.storeGet.prepare({ storeId }), "schema");
+  for (const secretId of [zone.toUpperCase(), "../secret", `${zone}%2fvalue`]) refuses(() => secretsStoreDescriptors.secretGet.prepare({ storeId: own, secretId }), "schema");
+});
+
+test("Cloudflare Secrets Store projections filter each resource and return only IDs and secret names", () => {
+  const canary = "never-return-secret-store-private-data";
+  const store = { id: own, account_id: account, name: canary, created: canary, modified: canary, value: canary };
+  const secret = { id: zone, store_id: own, name: "DATABASE_URL", value: canary, comment: canary, scopes: [canary], status: canary, created: canary, modified: canary };
+  const get = secretsStoreDescriptors.storeGet.project(success(store), secretsStoreDescriptors.storeGet.prepare({ storeId: own }));
+  assert.deepEqual(get, { id: own });
+  const stores = secretsStoreDescriptors.storesList.project(success([store, { id: zone }]), secretsStoreDescriptors.storesList.prepare({ page: 1, perPage: 10 }));
+  assert.deepEqual(stores, { items: [get], complete: false });
+  const secretGet = secretsStoreDescriptors.secretGet.project(success(secret), secretsStoreDescriptors.secretGet.prepare({ storeId: own, secretId: zone }));
+  assert.deepEqual(secretGet, { id: zone, name: "DATABASE_URL" });
+  const secrets = secretsStoreDescriptors.secretsList.project(success([secret, { ...secret, id: account }]), secretsStoreDescriptors.secretsList.prepare({ storeId: own, page: 1, perPage: 10 }));
+  assert.deepEqual(secrets, { items: [secretGet], complete: false });
+  assert.ok(!JSON.stringify([get, stores, secretGet, secrets]).includes(canary));
+  const storeInput = secretsStoreDescriptors.storeGet.prepare({ storeId: own });
+  refuses(() => secretsStoreDescriptors.storeGet.project(success({ ...store, id: other }), storeInput), "scope");
+  refuses(() => secretsStoreDescriptors.storeGet.project(success({ ...store, account_id: other }), storeInput), "scope");
+  const secretInput = secretsStoreDescriptors.secretGet.prepare({ storeId: own, secretId: zone });
+  for (const change of [{ id: account }, { store_id: other }, { store_id: undefined }]) refuses(() => secretsStoreDescriptors.secretGet.project(success({ ...secret, ...change }), secretInput), "scope");
+  for (const name of ["invalid\nname", "has space", "x".repeat(129), null]) refuses(() => secretsStoreDescriptors.secretGet.project(success({ ...secret, name }), secretInput), "upstream");
+  refuses(() => secretsStoreDescriptors.secretsList.project(success([{ ...secret, store_id: other }]), secretsStoreDescriptors.secretsList.prepare({ storeId: own, page: 1, perPage: 10 })), "scope");
+  refuses(() => secretsStoreDescriptors.storesList.project(success([{ ...store, account_id: other }]), secretsStoreDescriptors.storesList.prepare({ page: 1, perPage: 10 })), "scope");
+});
+
+test("Cloudflare Secrets Store snapshots resist widening and empty secret sets expose nothing", () => {
+  const input = { accountId: account, revision: "policy-1", stores: [{ storeId: own, secretIds: [zone] }] };
+  const snapshot = secretsStoreMetadataDescriptors(input);
+  input.stores[0].secretIds.push(account);
+  input.stores.push({ storeId: other, secretIds: [zone] });
+  input.stores[0].storeId = other;
+  input.accountId = other;
+  refuses(() => snapshot.secretGet.prepare({ storeId: own, secretId: account }), "scope");
+  refuses(() => snapshot.storeGet.prepare({ storeId: other }), "scope");
+  assert.equal(snapshot.secretGet.prepare({ storeId: own, secretId: zone }).request.path, `/accounts/${account}/secrets_store/stores/${own}/secrets/${zone}`);
+  const empty = secretsStoreMetadataDescriptors({ accountId: account, revision: "policy-1", stores: [{ storeId: own, secretIds: [] }] });
+  refuses(() => empty.secretGet.prepare({ storeId: own, secretId: zone }), "scope");
+  assert.deepEqual(empty.secretsList.project(success([{ id: zone, store_id: own, name: "KEY" }]), empty.secretsList.prepare({ storeId: own, page: 1, perPage: 10 })), { items: [], complete: false });
+  const noStores = secretsStoreMetadataDescriptors({ accountId: account, revision: "policy-1", stores: [] });
+  refuses(() => noStores.storeGet.prepare({ storeId: own }), "scope");
+  assert.deepEqual(noStores.storesList.project(success([{ id: own }]), noStores.storesList.prepare({ page: 1, perPage: 10 })), { items: [], complete: false });
+  refuses(() => secretsStoreMetadataDescriptors({ ...secretsStoreScope, stores: [secretsStoreScope.stores[0], secretsStoreScope.stores[0]] }), "schema");
+  refuses(() => secretsStoreMetadataDescriptors({ ...secretsStoreScope, stores: Array(101).fill(secretsStoreScope.stores[0]) }), "cap");
+  refuses(() => secretsStoreMetadataDescriptors({ ...secretsStoreScope, stores: [{ storeId: own, secretIds: Array(101).fill(zone) }] }), "cap");
+  refuses(() => secretsStoreMetadataDescriptors({ ...secretsStoreScope, stores: [{ storeId: own, secretIds: ["invalid"] }] }), "schema");
+});
+
+test("Cloudflare Secrets Store metadata enforces bounded lists and fixed error refusals", () => {
+  for (const [name, args] of secretsStoreCases) {
+    const descriptor = secretsStoreDescriptors[name];
+    const input = descriptor.prepare(args);
+    refuses(() => descriptor.project("x".repeat(131073), input), "cap");
+    for (const raw of ["null", "not-json", JSON.stringify({ success: false, errors: [{ message: "private-value" }], result: {} }), JSON.stringify({ success: true, result: {} })]) refuses(() => descriptor.project(raw, input), "upstream");
+    if (!name.endsWith("List")) continue;
+    for (const page of [0, 1001, 1.5, "1"]) refuses(() => descriptor.prepare({ ...args, page }), "schema");
+    for (const perPage of [0, 101, 1.5, "10"]) refuses(() => descriptor.prepare({ ...args, perPage }), "schema");
+    const bounded = descriptor.prepare({ ...args, perPage: 1 });
+    refuses(() => descriptor.project(success([{ id: own }, { id: other }]), bounded), "cap");
+    refuses(() => descriptor.project(success(Array(101).fill({ id: own })), input), "cap");
+    refuses(() => descriptor.project(success({}), input), "cap");
+    refuses(() => descriptor.project(success([null]), input), "upstream");
+  }
+});
+
 test("Cloudflare deletion plans are exact, bounded, reserved and never claim provider dry-run", () => {
   for (const [name, args, path, resource] of deletionCases) {
     const descriptor = deletionDescriptors[name];
@@ -516,9 +606,9 @@ test("Cloudflare full schema inventory is pinned, explicit about holes, and cons
       }
     }
   }
-  assert.equal(operations.filter(row => row.typedTool !== null).length, 20);
+  assert.equal(operations.filter(row => row.typedTool !== null).length, 24);
   assert.equal(operations.filter(row => row.tier === "reserved").length, 5);
-  assert.equal(operations.filter(row => row.tier === "read").length, 15);
+  assert.equal(operations.filter(row => row.tier === "read").length, 19);
   assert.equal(manifest.counts.descriptors, Object.keys(allDescriptors).length);
   assert.equal(manifest.credentialScope.status, "operation-entitlements-unresolved");
   assert.equal(manifest.complete, false);

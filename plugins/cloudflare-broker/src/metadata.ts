@@ -400,3 +400,112 @@ export function zoneMetadataDescriptors(scope: ZoneMetadataScope) {
   });
   return Object.freeze({ zoneGet, dnsList, dnsGet });
 }
+
+export interface SecretsStoreMetadataScope {
+  accountId: string;
+  revision: string;
+  stores: readonly { storeId: string; secretIds: readonly string[] }[];
+}
+const store = closed({ storeId: resourceId });
+const storePage = closed({ storeId: resourceId, page: integer(1, 1000), perPage: integer(1, 100) });
+const storedSecret = closed({ storeId: resourceId, secretId: resourceId });
+
+// Secret IDs are scoped to their store, independently of Worker script secrets.
+export function secretsStoreMetadataDescriptors(scope: SecretsStoreMetadataScope) {
+  const account = accountId.parse(scope.accountId);
+  const revision = text(80, /^[A-Za-z0-9][A-Za-z0-9_.-]*$/).parse(scope.revision);
+  requireThat(Array.isArray(scope.stores) && scope.stores.length <= maxRows, "cap");
+  const stores = new Map<string, Set<string>>();
+  for (const entry of scope.stores) {
+    const id = resourceId.parse(entry.storeId);
+    requireThat(!stores.has(id), "schema");
+    requireThat(Array.isArray(entry.secretIds) && entry.secretIds.length <= maxRows, "cap");
+    stores.set(id, new Set<string>(entry.secretIds.map((value: unknown) => resourceId.parse(value))));
+  }
+  const root = `/accounts/${account}/secrets_store/stores`;
+  function prepared<A>(args: A, resource: string, path: string): PreparedMetadata<A> {
+    return Object.freeze({
+      arguments: args,
+      resource: Object.freeze({ id: `cloudflare:account:${account}:secrets-store${resource}`, revision }),
+      request: Object.freeze({ method: "GET", path, maxResponseBytes, timeoutMs: 10000, maxRequests: 1, redirects: "deny" }),
+    });
+  }
+  function storeScope(id: string) { requireThat(stores.has(id), "scope"); }
+  function secretScope(storeId: string, id: string) {
+    storeScope(storeId);
+    requireThat(stores.get(storeId)?.has(id) === true, "scope");
+  }
+  function storeMetadata(row: Row): { id: string } {
+    const id = providerText(row.id, resourceId);
+    storeScope(id);
+    requireThat(row.account_id === undefined || row.account_id === account, "scope");
+    return { id };
+  }
+  function secretMetadata(row: Row, storeId: string): { id: string; name: string } {
+    const id = providerText(row.id, resourceId);
+    secretScope(storeId, id);
+    requireThat(row.store_id === storeId, "scope");
+    return { id, name: providerText(row.name, secretName) };
+  }
+  const storesList: MetadataDescriptor<ReturnType<typeof page.parse>, PartialList<{ id: string }>> = Object.freeze({
+    name: "cloudflare.secrets_store.stores.list", version: "1", tier: "read", providerOperationId: "secrets-store-list",
+    prepare(raw: unknown) {
+      const args = page.parse(raw);
+      return prepared(args, "", `${root}?page=${args.page}&per_page=${args.perPage}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof page.parse>>) {
+      const args = page.parse(input.arguments);
+      const result = rows(envelope(raw).result);
+      requireThat(result.length <= args.perPage, "cap");
+      const items = result.filter(row => typeof row.id === "string" && stores.has(row.id)).map(storeMetadata);
+      return bounded({ items, complete: false as const });
+    },
+  });
+  const storeGet: MetadataDescriptor<ReturnType<typeof store.parse>, { id: string }> = Object.freeze({
+    name: "cloudflare.secrets_store.stores.get", version: "1", tier: "read", providerOperationId: "secrets-store-get-store-by-id",
+    prepare(raw: unknown) {
+      const args = store.parse(raw);
+      storeScope(args.storeId);
+      return prepared(args, `:${args.storeId}`, `${root}/${args.storeId}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof store.parse>>) {
+      const args = store.parse(input.arguments);
+      storeScope(args.storeId);
+      const row = object(envelope(raw).result);
+      requireThat(row.id === args.storeId, "scope");
+      return bounded(storeMetadata(row));
+    },
+  });
+  const secretsList: MetadataDescriptor<ReturnType<typeof storePage.parse>, PartialList<{ id: string; name: string }>> = Object.freeze({
+    name: "cloudflare.secrets_store.secrets.list", version: "1", tier: "read", providerOperationId: "secrets-store-secrets-list",
+    prepare(raw: unknown) {
+      const args = storePage.parse(raw);
+      storeScope(args.storeId);
+      return prepared(args, `:${args.storeId}:secrets`, `${root}/${args.storeId}/secrets?page=${args.page}&per_page=${args.perPage}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof storePage.parse>>) {
+      const args = storePage.parse(input.arguments);
+      storeScope(args.storeId);
+      const result = rows(envelope(raw).result);
+      requireThat(result.length <= args.perPage, "cap");
+      const items = result.filter(row => typeof row.id === "string" && stores.get(args.storeId)?.has(row.id)).map(row => secretMetadata(row, args.storeId));
+      return bounded({ items, complete: false as const });
+    },
+  });
+  const secretGet: MetadataDescriptor<ReturnType<typeof storedSecret.parse>, { id: string; name: string }> = Object.freeze({
+    name: "cloudflare.secrets_store.secrets.get", version: "1", tier: "read", providerOperationId: "secrets-store-get-by-id",
+    prepare(raw: unknown) {
+      const args = storedSecret.parse(raw);
+      secretScope(args.storeId, args.secretId);
+      return prepared(args, `:${args.storeId}:secret:${args.secretId}`, `${root}/${args.storeId}/secrets/${args.secretId}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof storedSecret.parse>>) {
+      const args = storedSecret.parse(input.arguments);
+      secretScope(args.storeId, args.secretId);
+      const row = object(envelope(raw).result);
+      requireThat(row.id === args.secretId, "scope");
+      return bounded(secretMetadata(row, args.storeId));
+    },
+  });
+  return Object.freeze({ storesList, storeGet, secretsList, secretGet });
+}
