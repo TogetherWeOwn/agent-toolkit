@@ -71,7 +71,7 @@ export function eventSubscriptionDescriptors(scope: EventSubscriptionScope): {
     const id = identifier.parse(subscription.subscriptionId);
     requireThat(!allowed.has(id), "schema");
     requireThat(Array.isArray(subscription.events) && subscription.events.length > 0 && subscription.events.length <= 100, "cap");
-    const events = new Set(subscription.events.map((event: string) => eventName.parse(event)));
+    const events = new Set<string>(subscription.events.map((event: string) => eventName.parse(event)));
     requireThat(events.size === subscription.events.length, "schema");
     allowed.set(id, { source: source(subscription.source), queueId: identifier.parse(subscription.queueId), events });
   }
