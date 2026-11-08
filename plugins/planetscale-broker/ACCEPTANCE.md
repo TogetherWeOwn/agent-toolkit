@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 169 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 167 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -40,6 +40,35 @@ read-only transactions, statement/lock/row/byte/page/time caps and native closur
 evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
+
+## Query-tag metadata source increment
+
+`test/query-tags.test.mjs` adds 17 synthetic contracts for fixed tag list/detail
+metadata. Broker-owned ID/name pairs are immutable and independently checked;
+the detail path uses the name, never the ID, and refuses the reserved static
+`summaries` route. Output is only the bound ID and strict `sql`/`system` source,
+plus `executionAuthority: not-established`. Tag names/values, dimensions,
+counts, actors and times are omitted. Whole-page identity/duplicate refusal,
+wire/page caps, closed arguments/scopes, accessor/injection rejection and pinned
+official schema/path agreement are covered. The first page reuses the documented
+nullable/optional envelope validator; no URL following or completeness claim.
+Other selector formats, filters/later pages and full capability remain incomplete.
+
+Grouped tag summaries remain missing/unresolved: official rows have untyped
+`dimensions` and no stable ID. The package builder owns a reviewed bounded
+dimensions identity/safe-projection and raw-value custody/refusal contract before
+implementation; the precise prerequisite is in the operation map. No adapter or
+coverage is invented. Parent ownership/collection permission, raw-body custody,
+non-waking evidence and every native live-use gate remain prerequisites.
+
+Coverage: 124/291 bounded metadata subsets, 167 missing; tiers 124 provisional
+read / 16 unreviewed reserved / 151 unresolved. Zero integrated/reviewed/enabled/
+adopted. Prior fingerprint head `b747003fb6c2c1147ff221995c2533f29176b3a8`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42462000406)
+passed [805/805 package tests](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42462000406/job/128673127480),
+lint/typecheck, native-policy and ci-ok. That is not execution evidence for these
+new fixtures; exact-head Actions must execute them. No local suite/build/typecheck
+ran. No runtime or live-use gate changed.
 
 ## Query-fingerprint statistics metadata source increment
 

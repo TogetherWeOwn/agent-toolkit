@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The 122 adapters are pure request builders and bounded output projections,
+The 124 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,19 +36,42 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 122 | Narrow projections; not full operation coverage |
-| Missing source adapters | 169 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 124 | Narrow projections; not full operation coverage |
+| Missing source adapters | 167 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-122 adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 153
+124 adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 151
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
 backups/restore, schema/deploy, topology, maintenance and every other official
 area remain in the map even when access or implementation is missing.
+
+## Query-tag metadata
+
+`planetscale.list_branch_query_tags` reads only `page=1&per_page=10`;
+`planetscale.get_branch_query_tag` routes by a broker-bound tag **name**, not its
+ID. Both independently match the response ID/name pair. Output contains only
+the bound ID, the documented `sql`/`system` source enum and
+`executionAuthority: not-established`. Tag names/values, SQL-derived dimensions,
+counts, actors and timestamps are omitted. The list snapshots 1–32 unique ID/name
+pairs and refuses the whole page on unknown/rebound/duplicate IDs, malformed
+pagination or over-cap data. Optional nullable page fields follow the official
+schema; no returned URL is exposed or followed. The detail route refuses the
+reserved `summaries` literal so it cannot select the separate grouped endpoint.
+Names/IDs use a deliberately restricted identifier grammar; other formats,
+optional filters/later pages and full tag capability remain incomplete. Source
+metadata never proves query provenance, enforcement, completeness or authority.
+Current parent/ID/name ownership, separate collection permission, broker raw-body
+custody and non-waking evidence remain prerequisites.
+
+`list_branch_query_tag_summaries` stays missing/unresolved: its documented rows
+have untyped `dimensions` and no stable ID. The package builder must provide a
+reviewed bounded dimensions identity/projection contract with raw-value custody
+and refusal tests; no invented ID or generic map export is counted as coverage.
 
 ## Query-fingerprint statistics metadata
 

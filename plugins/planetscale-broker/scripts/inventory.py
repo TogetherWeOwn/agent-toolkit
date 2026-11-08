@@ -12,6 +12,8 @@ import sys
 
 SOURCE_SHA256 = "ae45866599cb5d248fadb9d7f0ed30fd6aed440a17ec0950c4e9e0d58da4cb73"
 ADAPTERS = {
+    "get_branch_query_tag": "get-branch-query-tag",
+    "list_branch_query_tags": "list-branch-query-tags",
     "get_query_statistics": "get-query-statistics",
     "get_query_summary": "get-query-summary",
     "get_branch_query_error": "get-branch-query-error",
@@ -258,6 +260,7 @@ def policy_candidate(operation_id):
 
 def adapter_test(operation_id):
     for operations, name in [
+        ({"get_branch_query_tag", "list_branch_query_tags"}, "query-tags"),
         ({"get_query_statistics", "get_query_summary"}, "query-statistics"),
         ({"get_branch_query_error", "list_branch_query_errors"}, "query-errors"),
         ({"get_branch_query", "list_branch_queries"}, "query-records"),
@@ -353,7 +356,7 @@ def inventory(raw):
                 "implementation": "offline-adapter-only" if adapter else "missing",
                 "review": "not-reviewed",
                 "enablement": "disabled",
-                "prerequisites": ["operator-verified-scope-metadata", "reviewed-compatible-common-core", "exact-tier-security-crypto-qa-and-actions"] + ([] if adapter else ["typed-adapter-and-tier-tests"]) + (["reviewed-fixed-redirect-alias-contract-no-automatic-follow"] if operation_id in REDIRECT_ALIASES else []) + (["reviewed-report-download-redirect-and-custody-contract"] if operation_id == "get_query_patterns_report" else []) + (["package-builder-reviewed-vitess-workflow-identity-state-and-safe-projection-contract"] if operation_id in {"list_move_tables_workflows", "get_move_tables_workflow", "get_move_tables_workflow_status"} else []),
+                "prerequisites": ["operator-verified-scope-metadata", "reviewed-compatible-common-core", "exact-tier-security-crypto-qa-and-actions"] + ([] if adapter else ["typed-adapter-and-tier-tests"]) + (["reviewed-fixed-redirect-alias-contract-no-automatic-follow"] if operation_id in REDIRECT_ALIASES else []) + (["reviewed-report-download-redirect-and-custody-contract"] if operation_id == "get_query_patterns_report" else []) + (["package-builder-reviewed-vitess-workflow-identity-state-and-safe-projection-contract"] if operation_id in {"list_move_tables_workflows", "get_move_tables_workflow", "get_move_tables_workflow_status"} else []) + (["package-builder-reviewed-grouped-tag-dimensions-identity-and-safe-projection-contract"] if operation_id == "list_branch_query_tag_summaries" else []),
             })
     operations.sort(key=lambda o: o["operationId"])
     operation_ids = {o["operationId"] for o in operations}
