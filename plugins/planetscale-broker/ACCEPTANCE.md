@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 167 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 166 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -40,6 +40,29 @@ read-only transactions, statement/lock/row/byte/page/time caps and native closur
 evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
+
+## Query-specific traffic-budget metadata source increment
+
+`test/query-traffic-budgets.test.mjs` adds 12 synthetic contracts for the fixed
+query-specific budget list. Required broker-bound fingerprint/keyspace context,
+immutable unique budget IDs, closed arguments, bounded pages and whole-page
+identity/duplicate refusal reuse the existing traffic-budget projection. Output
+contains only bound ID, strict mode and `effectiveEnforcement: not-established`.
+SQL/rules/tags/limits/actors/times and query context are omitted. Rules are not
+interpreted; response provenance, current context/budget ownership, collection
+permission and raw-body custody remain required. A reported mode establishes
+neither effective enforcement nor applicability. Unfiltered query-wide selection,
+other selector formats and full capability remain incomplete.
+
+Coverage: 125/291 bounded metadata subsets, 166 missing (24 GETs, 142 mutations);
+tiers 125 provisional read / 16 unreviewed reserved / 150 unresolved. Zero
+integrated/reviewed/enabled/adopted. Prior query-tag head
+`ede7454a6e08bd0ce7584ac97fab9b05d1a72d19` passed
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42463506080),
+including [822/822 package tests](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42463506080/job/128677699476),
+lint/typecheck, native-policy and ci-ok. That is not execution evidence for these
+new fixtures; exact-head Actions must execute them. No local suite/build/typecheck
+ran. No runtime, non-waking or live-use gate changed.
 
 ## Query-tag metadata source increment
 

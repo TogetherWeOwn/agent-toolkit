@@ -136,5 +136,8 @@ test('traffic budget routes and selected fields match pinned official response c
     assert.equal(mapped.test, 'test/traffic-budgets.test.mjs');
     assert.equal(mapped.enablement, 'disabled');
   }
-  assert.equal(map.operations.find(row => row.operationId === 'list_traffic_budgets_for_query').implementation, 'missing');
+  const queryBudgets = map.operations.find(row => row.operationId === 'list_traffic_budgets_for_query');
+  assert.equal(queryBudgets.implementation, 'offline-adapter-only');
+  assert.equal(queryBudgets.test, 'test/query-traffic-budgets.test.mjs');
+  assert.equal(queryBudgets.enablement, 'disabled');
 });

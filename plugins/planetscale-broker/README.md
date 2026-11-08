@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The 124 adapters are pure request builders and bounded output projections,
+The 125 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,14 +36,14 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 124 | Narrow projections; not full operation coverage |
-| Missing source adapters | 167 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 125 | Narrow projections; not full operation coverage |
+| Missing source adapters | 166 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-124 adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 151
+125 adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 150
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
@@ -559,8 +559,14 @@ malformed selected fields refuse the whole page. Budget names, numeric limits,
 actors, rules, tags, query fingerprints, keyspaces, SQL and timestamps are omitted.
 `effectiveEnforcement: not-established` means a reported mode never establishes
 actual throttling, rule applicability, safety, change permission or spend authority.
-Optional filters and query-specific budget reads remain incomplete. Requesting a
-parent-wide list needs independent collection permission and broker-side raw-body
+`list_traffic_budgets_for_query` additionally fixes a broker-bound fingerprint and
+requires a snapshotted keyspace filter, with the same bounded pagination and
+budget-ID projection. Fingerprint/keyspace text never enters the receipt. The
+response does not identify its query context outside omitted rules; trusted
+request/response provenance and current fingerprint/keyspace/budget ownership
+remain required. No rule applicability or enforcement is inferred. Unfiltered
+query-wide selection, other selector formats and full capability remain
+incomplete. Requesting a parent-wide list needs independent collection permission and broker-side raw-body
 custody: output confinement does not restrict what the provider sends. Current
 parent ownership, immutable branch mapping, selected-field reflection guards and
 operation-specific non-waking evidence remain integration prerequisites.

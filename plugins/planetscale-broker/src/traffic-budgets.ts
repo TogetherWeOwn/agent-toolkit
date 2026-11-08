@@ -11,6 +11,7 @@ const ids: Schema<readonly string[]> = { parse(value) {
 // Broker-owned IDs confine output, not parent collection access or enforcement.
 export const trafficBudgetScope = closed({ organization: slug, database: slug, branch: slug, budgetId: identifier });
 export const trafficBudgetListScope = closed({ organization: slug, database: slug, branch: slug, budgetIds: ids });
+export const queryTrafficBudgetScope = closed({ organization: slug, database: slug, branch: slug, fingerprint: identifier, keyspace: slug, budgetIds: ids });
 const mode = oneOf(["enforce", "warn", "off"] as const);
 export interface TrafficBudgetSummary {
   readonly id: string;
