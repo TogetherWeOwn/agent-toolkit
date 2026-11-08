@@ -2783,7 +2783,7 @@
       "id": "getConsumptionHistoryPerProjectV2",
       "apiArea": "consumption",
       "tool": "neon.getConsumptionHistoryPerProjectV2",
-      "scope": "org_id/project_id/consumption/v2; exact copied hourly window <=24h; compute_unit_seconds only",
+      "scope": "org_id/project_id/consumption/v2",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"

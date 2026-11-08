@@ -41,7 +41,8 @@ test('consumption: strict exact arguments and immutable copied scope prevent wid
   const config = { ...scope };
   const [op] = createNeonConsumptionOperations(config, {});
   config.organizationId = 'other'; config.projectId = 'other'; config.from = scope.to; config.revision = 'changed';
-  assert.deepEqual(op.prepare(args).arguments, args);
+  assert.equal(Object.getPrototypeOf(op.prepare(args).arguments), null);
+  assert.deepEqual({ ...op.prepare(args).arguments }, args);
   for (const value of [null, [], {}, { ...args, org_id: 'other' }, { ...args, project_id: 'other' },
     { ...args, from: '2026-11-06T00:00:00Z' }, { ...args, to: '2026-11-07T01:00:00Z' },
     ...['agent', 'approved', 'credential', 'url', 'project_ids', 'cursor', 'limit', 'granularity', 'metrics'].map(key => ({ ...args, [key]: canary })),
