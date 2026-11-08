@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 161 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 160 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -40,6 +40,34 @@ read-only transactions, statement/lock/row/byte/page/time caps and native closur
 evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
+
+## Data-topology availability source increment
+
+`test/data-topology.test.mjs` adds 13 synthetic contracts for one fixed offline
+read. Closed arguments, snapshotted branch ID/name scope, 32 top-level opaque
+object entries, 80-character nullable sync string and shared 64 KiB wire cap.
+Only nonempty object/string presence and request-bound branch ID survive;
+no topology keys/contents/timestamps, freshness, verified provenance or authority.
+Opaque nested values are not interpreted as typed topology. Required object/sync
+shapes, caps, decoding, hostile scopes/arguments and mutation are covered.
+Current ownership, collection permission, trusted transport/request binding,
+raw-body custody and non-waking semantics remain prerequisites. Full topology
+inspection/validation/mutation is incomplete.
+
+Coverage: **131/291 bounded metadata subsets; 160 missing** (18 GETs, 142
+mutations). Tiers 131 provisional read / 16 unreviewed reserved / 144 unresolved;
+zero integrated/reviewed/enabled/adopted. Fresh exact-head Actions execution is
+required for the new contracts; no local suite/build/typecheck or CI mirror ran.
+
+Prior exact `c5ee43e35a93143c2c2d0c4bd84595b9ffa7575a`
+[Actions CI attempt 2](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42470261766/attempts/2)
+passed test/lint/typecheck/native-policy/ci-ok; all three CodeQL analyses passed.
+The original [test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42470261766/job/128699171930)
+passed 886/886 PlanetScale, root 181/181, helpers 122/122, GitHub broker 219/219,
+zero failures/cancellations/skips. Attempt 1 failed before lint after four bounded
+actionlint download HTTP 504s; retry success is not a source repair or future
+availability guarantee. No inline findings or submitted reviews returned;
+final fresh-context/Devin/native Security/Crypto/QA and merge gates remain.
 
 ## Keyspace VSchema availability source increment
 

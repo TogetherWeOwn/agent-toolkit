@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The 130 adapters are pure request builders and bounded output projections,
+The 131 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,19 +36,37 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 130 | Narrow projections; not full operation coverage |
-| Missing source adapters | 161 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 131 | Narrow projections; not full operation coverage |
+| Missing source adapters | 160 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-130 adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 145
+131 adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 144
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
 backups/restore, schema/deploy, topology, maintenance and every other official
 area remain in the map even when access or implementation is missing.
+
+## Data-topology availability metadata
+
+`planetscale.get_data_topology` binds an immutable branch ID and parent names,
+accepts no caller arguments and prepares one fixed GET. The official
+`NekiDataTopology` exposes an opaque object and nullable sync string, not a typed
+topology or target identity. The adapter bounds the object at 32 top-level entries,
+the sync string at 80 UTF-16 code units and the whole wire at 64 KiB. It returns
+only requestBranchId, topologyReported (nonempty object), syncTimeReported
+(nonempty string), and freshness/provenance not-established. Object keys,
+nested contents and timestamps never leave the projection. Invalid nonempty
+sync text is presence only, not a validated time or freshness verdict.
+
+Fresh branch ID/name ownership, trusted transport/request binding, raw-body
+custody, collection permission and non-waking semantics remain prerequisites.
+The bound ID is not verified response identity. This availability subset does
+not implement topology inspection, integrity validation, routing, mutation or
+execution authority.
 
 ## Keyspace VSchema availability metadata
 
@@ -706,7 +724,7 @@ The candidates only document requirements; native routing, expiry, exact-target
 binding, atomic consumption, replay/concurrent-use refusal and approved placement
 are **not implemented or tested as authority enforcement here**. Credential routes
 remain incomplete until a broker-only sink and reconciliation are accepted. The
-other 161 tier classifications are unresolved, not automatically harmless reads or
+other 144 tier classifications are unresolved, not automatically harmless reads or
 ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.
