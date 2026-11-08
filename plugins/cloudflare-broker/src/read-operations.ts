@@ -5,6 +5,7 @@ import { subscriptionDescriptors, type SubscriptionScope } from "./subscriptions
 import { workerScheduleDescriptor, type WorkerScheduleScope } from "./worker-schedules.js";
 import { scriptSettingsDescriptors, type ScriptSettingsScope } from "./script-settings.js";
 import { workerAccountDescriptors, type WorkerAccountScope } from "./worker-account.js";
+import { workerSecretDescriptor, type WorkerSecretScope } from "./worker-secret.js";
 import { workerBuildDescriptor, type WorkerBuildScope } from "./worker-builds.js";
 import { deployHookDescriptor, type DeployHookScope } from "./deploy-hooks.js";
 import { buildTriggerDescriptor, type BuildTriggerScope } from "./build-triggers.js";
@@ -80,6 +81,7 @@ function bind<A>(descriptor: {
 export interface CloudflareReadScope extends MetadataScope {
   subscriptions?: SubscriptionScope["subscriptions"];
   workerSchedules?: WorkerScheduleScope["workers"];
+  workerSecrets?: WorkerSecretScope["workers"];
   workerAccountSettingsReadAllowed?: WorkerAccountScope["settingsReadAllowed"];
   workerAccountExpectedSubdomain?: WorkerAccountScope["expectedSubdomain"];
   workerObservabilityScriptNames?: ScriptSettingsScope["observabilityScriptNames"];
@@ -166,6 +168,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(workerScheduleDescriptor({ accountId, revision, workers: scope.workerSchedules ?? [] })),
     metadata(scriptSettings.scriptSettingsGet), metadata(scriptSettings.usageModelGet),
     metadata(workerAccount.accountSettingsGet), metadata(workerAccount.accountSubdomainGet),
+    metadata(workerSecretDescriptor({ accountId, revision, workers: scope.workerSecrets ?? [] })),
     metadata(workerBuildDescriptor({ accountId, revision, workers: scope.workerBuildConfigurations ?? [] })),
     metadata(deployHookDescriptor({ accountId, revision, workers: scope.workerDeployHooks ?? [] })),
     metadata(buildTriggerDescriptor({ accountId, revision, workers: scope.workerBuildTriggers ?? [] })),
