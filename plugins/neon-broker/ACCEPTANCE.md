@@ -2,14 +2,15 @@
 
 ## Implemented source, not accepted enablement
 
-- Sixty-eight typed source operations, including selected database-schema identities and database-bound advisor summaries,
+- Sixty-nine typed source operations, including bounded selected log-value observations,
+  selected database-schema identities and database-bound advisor summaries,
   exact-user/organization key and branch credential identities and exact-account authentication metadata,
   selected masking-rule identities and legacy/project/branch consumption history,
   selected bucket-object metadata and branch log-field catalogs, exact-user profile/organization/shared-project catalogs, project security/access,
   email-auth configuration, auth webhook status and organization VPC/configuration/member/invitation metadata plus organization-filtered region/project catalogs and project count,
   with strict arguments, exact trusted scope and parent-child binding, safe projections
   and fixed bounded injected transport.
-- Full 194-row management inventory; 126 operations still lack source. All rows remain
+- Full 194-row management inventory; 125 operations still lack source. All rows remain
   unqualified and disabled, with unknown entitlement. These adapters do not complete
   the package. Prior source merge,
   current source review, native qualification and runtime enablement are separate.

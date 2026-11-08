@@ -1,3 +1,5 @@
+import { parseLogValueQuery } from "./log-value-query.js";
+
 export const NEON_ORIGIN = "https://console.neon.tech";
 export const RESPONSE_BYTES = 65_536;
 export const REQUEST_TIMEOUT_MS = 1000;
@@ -20,6 +22,7 @@ export interface NeonMetadataTransport {
   getConsumptionHistoryPerProjectV2(organization: string, project: string, from: string, to: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
   listProjectBranchBucketObjects(project: string, branch: string, bucket: string, prefix: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
   listProjectBranchLogFields(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
+  listProjectBranchLogFieldValues(project: string, branch: string, fieldName: string, startTime: string, endTime: string, source: string, options: MetadataRequestOptions): Promise<unknown>;
   listSharedProjects(cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
   listProjects(organization: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
   getNeonAuthEmailAndPasswordConfig(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -247,6 +250,11 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     },
     listProjectBranchLogFields: (project: string, branch: string, options: MetadataRequestOptions) =>
       get(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/logs/fields`, new URLSearchParams(), options),
+    listProjectBranchLogFieldValues: (project: string, branch: string, fieldName: string, startTime: string, endTime: string, source: string, options: MetadataRequestOptions) => {
+      const query = parseLogValueQuery({ field_name: fieldName, start_time: startTime, end_time: endTime, source });
+      return get(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/logs/fields/${query.field_name}/values`,
+        new URLSearchParams({ start_time: query.start_time, end_time: query.end_time, source: query.source, limit: "30" }), options);
+    },
     listSharedProjects: (cursor: string | null, options: MetadataRequestOptions) =>
       get("/projects/shared", cursorQuery(cursor), options),
     listProjects: (organization: string, cursor: string | null, options: MetadataRequestOptions) => {

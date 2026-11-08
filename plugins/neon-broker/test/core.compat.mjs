@@ -27,6 +27,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   userOrganizationCases, userOrganizationFixture, userOrganizationScope,
   sharedProjectCases, sharedProjectFixture, sharedProjectScope,
   logFieldCases, logFieldFixture, logFieldScope,
+  logValueCases, logValueFixture, logValueScope,
   bucketObjectCases, bucketObjectFixture, bucketObjectScope, bucketObject,
   consumptionCases, consumptionFixture, consumptionScope, consumptionFrame, consumptionPeriod,
   branchConsumptionCases, branchConsumptionFixture, branchConsumptionScope,
@@ -48,7 +49,8 @@ const { providerFixture, credentialCanary, derivedCanary } = await import(pathTo
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
 function brokerFixture(name, args, raw, overrides = {}, config) {
-  const factory = branchSchemaCases.some(([operation]) => operation === name) ? branchSchemaFixture :
+  const factory = logValueCases.some(([operation]) => operation === name) ? logValueFixture :
+    branchSchemaCases.some(([operation]) => operation === name) ? branchSchemaFixture :
     advisorCases.some(([operation]) => operation === name) ? advisorFixture :
     userKeyCases.some(([operation]) => operation === name) ? userKeyFixture :
     organizationKeyCases.some(([operation]) => operation === name) ? organizationKeyFixture :
@@ -100,6 +102,48 @@ function safeEnvelope(f, result) {
     assert(!serialized.includes(secret), `secret in output/audit/journal: ${secret}`);
   }
 }
+
+test('log values: exact field grant is distinct from catalog, log query and sibling authority', async () => {
+  const [name, args, raw, expected] = logValueCases[0];
+  const f = brokerFixture(name, args, { ...raw, values: [...raw.values, credentialCanary, derivedCanary], logs: [{ message: credentialCanary }] });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, expected);
+  safeEnvelope(f, result);
+  for (const resource of ['neon/projects/project-a', 'neon/projects/project-a/branches/br-a/logs',
+    'neon/projects/project-a/branches/br-a/logs/fields', 'neon/projects/project-a/branches/br-a/logs/fields/other/values',
+    'neon/projects/project-a/branches/br-b/logs/fields/level/values']) {
+    const denied = brokerFixture(name, args, raw);
+    denied.common.vector.policy.resources = [resource];
+    assert.equal((await denied.call()).code, 'POLICY_DENIED');
+    assert.equal(denied.common.calls.secret, 0);
+    assert.equal(denied.provider.requests.length, 0);
+  }
+  for (const invalid of [{ ...raw, is_truncated: true }, { ...raw, branch_id: 'br-b' }, { ...raw, source: 'storage' },
+    { ...raw, values: ['unselected', 'unselected'] }, { ...raw, pagination: {} }]) {
+    const f = brokerFixture(name, args, invalid);
+    const result = await f.call();
+    assert.equal(result.code, 'UPSTREAM_UNAVAILABLE');
+    safeEnvelope(f, result);
+  }
+});
+
+test('log values: maximum selected observations fit common budgets and reflected credentials refuse', async () => {
+  const values = Array.from({ length: 30 }, (_, i) => `value-${i}`.padEnd(80, 'x'));
+  const config = { ...logValueScope, projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), fieldName: 'f'.repeat(80), revision: 'r'.repeat(80), values };
+  const args = { project_id: config.projectId, branch_id: config.branchId, field_name: config.fieldName,
+    start_time: config.startTime, end_time: config.endTime, source: config.source };
+  const maximum = brokerFixture('listProjectBranchLogFieldValues', args, { values, is_truncated: false }, {}, config);
+  const result = await maximum.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { values });
+  safeEnvelope(maximum, result);
+  const reflectedValue = 'selected-log-observation';
+  const reflected = brokerFixture('listProjectBranchLogFieldValues', logValueCases[0][1], { values: [reflectedValue], is_truncated: false }, {
+    credentials: { async resolve() { return { value: reflectedValue, redactions: [], async close() {} }; } },
+  }, { ...logValueScope, values: [reflectedValue] });
+  assert.equal((await reflected.call()).code, 'OUTPUT_REFUSED');
+});
 
 test('branch schema: database schema grants do not follow from configuration, analysis or sibling access', async () => {
   const [name, args, raw] = branchSchemaCases[0];
@@ -331,7 +375,7 @@ test('reflected lease material in selected safe-looking fields is refused by the
   assert.equal((await f.call()).code, 'OUTPUT_REFUSED');
 });
 
-for (const [name, args, raw] of [...branchSchemaCases, ...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases, ...regionCases, ...projectCountCases, ...authWebhookCases, ...userProfileCases, ...authEmailCases, ...projectCases, ...userOrganizationCases, ...sharedProjectCases]) {
+for (const [name, args, raw] of [...logValueCases, ...branchSchemaCases, ...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases, ...regionCases, ...projectCountCases, ...authWebhookCases, ...userProfileCases, ...authEmailCases, ...projectCases, ...userOrganizationCases, ...sharedProjectCases]) {
   test(`${name}: replay and TOCTOU policy/resource changes refuse without a second request`, async () => {
     const replay = brokerFixture(name, args, raw);
     assert.equal((await replay.call()).ok, true);

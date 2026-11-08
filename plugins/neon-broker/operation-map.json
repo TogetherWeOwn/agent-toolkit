@@ -3623,7 +3623,7 @@
       "id": "listProjectBranchLogFieldValues",
       "apiArea": "logs",
       "tool": "neon.listProjectBranchLogFieldValues",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/logs/fields/field_name/values",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3631,12 +3631,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/log-values.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "listProjectBranchBucketObjects",

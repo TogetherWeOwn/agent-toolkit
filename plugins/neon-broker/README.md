@@ -7,6 +7,30 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonLogValueOperations(trustedScope, transport)` adds
+`listProjectBranchLogFieldValues`. One copied project/branch/field/source/revision,
+explicit UTC-second start/end window of at most one hour and at most 30 selected
+printable ASCII values bind the request. Canonical field names use the conservative
+80-character alphanumeric/underscore/dot/hyphen subset, starting alphanumeric or
+underscore; arbitrary provider-valid field names are not automatically accepted.
+The exact `neon/projects/<project>/branches/<branch>/logs/fields/<field>/values`
+grant is separate from the field catalog, log-query, parent and sibling grants.
+Every fixed GET sends start_time, end_time, source and limit=30. There is no
+relative/default-window, all-source, pagination or log-query fallback. A field
+must already be selected from the branch field catalog; unknown_field remains
+unavailable, not permission to discover another target.
+
+Closed output is selected value observations only, not log entries. Values are
+bounded to 80 printable ASCII characters; malformed/unselected rows, duplicate
+values, contradictory optional identity/window/source and pagination refuse
+before filtering. Required is_truncated must be false: a scan cap or partial
+list refuses rather than silently choosing from an arbitrary subset. Empty output
+is not a completeness claim. Logs and arbitrary extras are not evaluated/emitted;
+selection is not arbitrary-secret DLP, and common credential-reflection refusal
+remains necessary. Private Beta availability, sensitive-value entitlement and
+provider effects remain unqualified; no live provider call or enabled tool is
+supplied. GET and mocks do not prove non-waking behavior.
+
 `createNeonBranchSchemaOperations(trustedScope, transport)` adds
 `getProjectBranchSchema` with one copied project/branch/database/revision and an
 explicit selection of at most 30 schema/table/column tuples. A distinct exact
@@ -774,7 +798,7 @@ passwords, credentials and connection strings are excluded. Unknown lifecycle
 states fail closed until explicitly supported. No error body/headers are surfaced.
 Common lease-reflection checks remain necessary even in these selected fields.
 
-`createNeonMetadataTransport(injectedFetch)` has sixty-seven typed methods only. Its
+`createNeonMetadataTransport(injectedFetch)` has sixty-nine typed methods only. Its
 internal request builder fixes origin `https://console.neon.tech`, `/api/v2`
 paths, GET, JSON content, no redirects and no retries. No global fetch fallback
 exists. Each response is bounded to 64 KiB and 1 s, including streamed body time;
@@ -938,8 +962,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: sixty-seven implemented
-source adapters, 127 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: sixty-nine implemented
+source adapters, 125 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

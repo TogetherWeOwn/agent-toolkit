@@ -19,6 +19,25 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
 
+## Selected log-value observation delta
+
+`listProjectBranchLogFieldValues` reads selected observed values, not a passive
+field catalog or log entries. It requires a distinct exact field-values grant,
+copied field/source/revision and UTC-second window <=1h. Every request explicitly
+sends start_time/end_time/source/limit=30; no relative/default window or query
+fallback. Unknown fields and unavailable Beta refuse without discovery. Selected
+values cap at30 with80-character printable ASCII bounds. Duplicate/malformed rows,
+contradictory ancestry/window/source and pagination refuse before filtering;
+is_truncated must be exactly false, including when the provider's scan cap binds.
+No partial output, log entries, URLs or arbitrary diagnostics are emitted.
+
+Explicit selection is not general secret DLP. Sensitive log-value entitlement,
+provider effects and native runtime qualification remain missing; common leased
+credential reflection checks still apply to selected values. Scope revision and
+canonical arguments bind the selected window/source; host revalidation remains
+required. No live provider call, credential action, mutation or runtime
+registration is added. GET and mocks alone do not establish non-waking behavior.
+
 ## Selected database-schema identity delta
 
 `getProjectBranchSchema` is a database-schema read, not configuration metadata.
