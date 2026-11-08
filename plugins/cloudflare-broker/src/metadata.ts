@@ -1119,7 +1119,27 @@ export interface PagesMetadataScope {
   accountId: string;
   revision: string;
   projects: readonly { projectName: string; projectId: string; deploymentIds: readonly string[] }[];
+  provenanceProjects?: readonly { projectName: string; sourceType: "github" | "gitlab"; repositoryOwner: string;
+    repositoryName: string; productionBranch: string; deploymentBranches: readonly string[] }[];
 }
+type PagesUnavailable = { status: "unavailable"; reason: "not-returned" };
+type PagesConfigured<T> = { status: "configured"; value: T } | PagesUnavailable;
+type PagesReported<T> = { status: "provider-reported"; value: T } | PagesUnavailable;
+type PagesSource = PagesUnavailable | { status: "provider-reported"; type: "github" | "gitlab";
+  repositoryOwner: string; repositoryName: string; productionBranch: PagesConfigured<string>;
+  productionDeploymentsEnabled: PagesConfigured<boolean> };
+type PagesTrigger = PagesUnavailable | { status: "provider-reported"; type: "github:push" | "ad_hoc" | "deploy_hook";
+  branch: PagesReported<string>; commitHash: PagesReported<string> };
+type PagesProvenance = { subject: "configured-pages-project"; source: PagesSource;
+  productionBranch: PagesConfigured<string>; effectiveProduction: "not-established" }
+  | { subject: "provider-pages-deployment"; source: PagesSource; environment: PagesReported<"production" | "preview">;
+    trigger: PagesTrigger; servingDeployment: "not-established"; historicalSourceBinding: "not-established" };
+interface PagesMetadata {
+  id: string;
+  provenance?: PagesProvenance;
+}
+const pagesRepositoryPart = text(100, /^[A-Za-z0-9][A-Za-z0-9_.-]*$/);
+const pagesBranch = text(200, /^[A-Za-z0-9][A-Za-z0-9_./-]*$/);
 const pagesProjectName = text(63, /^[a-z0-9][a-z0-9-]*$/);
 const pagesProjectId = text(64, /^[a-z0-9][a-z0-9-]*$/);
 const pagesProject = closed({ projectName: pagesProjectName });
@@ -1141,6 +1161,65 @@ export function pagesMetadataDescriptors(scope: PagesMetadataScope) {
     projects.set(name, { id, deployments: new Set<string>(entry.deploymentIds.map((value: unknown) => deploymentId.parse(value))) });
     projectIds.add(id);
   }
+  const provenance = new Map<string, { sourceType: "github" | "gitlab"; owner: string; repository: string;
+    productionBranch: string; branches: Set<string> }>();
+  requireThat(Array.isArray(scope.provenanceProjects ?? []) && (scope.provenanceProjects?.length ?? 0) <= maxRows, "cap");
+  for (const entry of scope.provenanceProjects ?? []) {
+    requireThat(entry !== null && typeof entry === "object", "schema");
+    const name = pagesProjectName.parse(entry.projectName);
+    requireThat(projects.has(name) && !provenance.has(name), "scope");
+    requireThat(entry.sourceType === "github" || entry.sourceType === "gitlab", "schema");
+    requireThat(Array.isArray(entry.deploymentBranches) && entry.deploymentBranches.length <= maxRows, "cap");
+    const branches = entry.deploymentBranches.map((value: unknown) => pagesBranch.parse(value));
+    requireThat(new Set(branches).size === branches.length, "schema");
+    provenance.set(name, { sourceType: entry.sourceType, owner: pagesRepositoryPart.parse(entry.repositoryOwner),
+      repository: pagesRepositoryPart.parse(entry.repositoryName), productionBranch: pagesBranch.parse(entry.productionBranch),
+      branches: new Set<string>(branches) });
+  }
+  const unavailable = (): PagesUnavailable => ({ status: "unavailable", reason: "not-returned" });
+  function productionBranch(value: unknown, expected: string): PagesConfigured<string> {
+    if (value === undefined) return unavailable();
+    requireThat(value === expected, "scope");
+    return { status: "configured", value: expected };
+  }
+  function sourceMetadata(row: Row, selected: NonNullable<ReturnType<typeof provenance.get>>): PagesSource {
+    if (row.source === undefined) return unavailable();
+    const source = object(row.source);
+    const config = object(source.config);
+    requireThat(source.type === selected.sourceType && config.owner === selected.owner && config.repo_name === selected.repository, "scope");
+    requireThat(config.production_deployments_enabled === undefined || typeof config.production_deployments_enabled === "boolean", "upstream");
+    return { status: "provider-reported", type: selected.sourceType, repositoryOwner: selected.owner,
+      repositoryName: selected.repository, productionBranch: productionBranch(config.production_branch, selected.productionBranch),
+      productionDeploymentsEnabled: config.production_deployments_enabled === undefined ? unavailable()
+        : { status: "configured", value: config.production_deployments_enabled } };
+  }
+  function projectProvenance(row: Row, name: string): Pick<PagesMetadata, "provenance"> {
+    const selected = provenance.get(name);
+    if (selected === undefined) return {};
+    return { provenance: { subject: "configured-pages-project", source: sourceMetadata(row, selected),
+      productionBranch: productionBranch(row.production_branch, selected.productionBranch), effectiveProduction: "not-established" } };
+  }
+  function deploymentProvenance(row: Row, name: string): Pick<PagesMetadata, "provenance"> {
+    const selected = provenance.get(name);
+    if (selected === undefined) return {};
+    requireThat(row.environment === undefined || row.environment === "production" || row.environment === "preview", "upstream");
+    let trigger: PagesTrigger = unavailable();
+    if (row.deployment_trigger !== undefined) {
+      const value = object(row.deployment_trigger);
+      requireThat(value.type === "github:push" || value.type === "ad_hoc" || value.type === "deploy_hook", "upstream");
+      const metadata = value.metadata === undefined ? undefined : object(value.metadata);
+      const branch = metadata?.branch;
+      requireThat(branch === undefined || (typeof branch === "string" && selected.branches.has(branch)), "scope");
+      const hash = metadata?.commit_hash === undefined ? undefined
+        : providerText(metadata.commit_hash, text(64, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/));
+      trigger = { status: "provider-reported", type: value.type,
+        branch: branch === undefined ? unavailable() : { status: "provider-reported", value: branch },
+        commitHash: hash === undefined ? unavailable() : { status: "provider-reported", value: hash } };
+    }
+    return { provenance: { subject: "provider-pages-deployment", source: sourceMetadata(row, selected),
+      environment: row.environment === undefined ? unavailable() : { status: "provider-reported", value: row.environment },
+      trigger, servingDeployment: "not-established", historicalSourceBinding: "not-established" } };
+  }
   const root = `/accounts/${account}/pages/projects`;
   function prepared<A>(args: A, resource: string, path: string): PreparedMetadata<A> {
     return Object.freeze({
@@ -1155,21 +1234,21 @@ export function pagesMetadataDescriptors(scope: PagesMetadataScope) {
     return project;
   }
   function accountScope(row: Row) { requireThat(row.account_id === undefined || row.account_id === account, "scope"); }
-  function projectMetadata(row: Row, name: string): { id: string } {
+  function projectMetadata(row: Row, name: string): PagesMetadata {
     const project = projectScope(name);
     accountScope(row);
     requireThat(row.name === name && row.id === project.id, "scope");
-    return { id: providerText(row.id, pagesProjectId) };
+    return { id: providerText(row.id, pagesProjectId), ...projectProvenance(row, name) };
   }
-  function deploymentMetadata(row: Row, name: string): { id: string } {
+  function deploymentMetadata(row: Row, name: string): PagesMetadata {
     const project = projectScope(name);
     accountScope(row);
     requireThat(row.project_name === name && row.project_id === project.id, "scope");
     const id = providerText(row.id, deploymentId);
     requireThat(project.deployments.has(id), "scope");
-    return { id };
+    return { id, ...deploymentProvenance(row, name) };
   }
-  const pagesProjectsList: MetadataDescriptor<ReturnType<typeof page.parse>, PartialList<{ id: string }>> = Object.freeze({
+  const pagesProjectsList: MetadataDescriptor<ReturnType<typeof page.parse>, PartialList<PagesMetadata>> = Object.freeze({
     name: "cloudflare.pages.projects.list", version: "1", tier: "read", providerOperationId: "pages-project-get-projects",
     prepare(raw: unknown) {
       const args = page.parse(raw);
@@ -1183,7 +1262,7 @@ export function pagesMetadataDescriptors(scope: PagesMetadataScope) {
       return bounded({ items, complete: false as const });
     },
   });
-  const pagesProjectGet: MetadataDescriptor<ReturnType<typeof pagesProject.parse>, { id: string }> = Object.freeze({
+  const pagesProjectGet: MetadataDescriptor<ReturnType<typeof pagesProject.parse>, PagesMetadata> = Object.freeze({
     name: "cloudflare.pages.projects.get", version: "1", tier: "read", providerOperationId: "pages-project-get-project",
     prepare(raw: unknown) {
       const args = pagesProject.parse(raw);
@@ -1195,7 +1274,7 @@ export function pagesMetadataDescriptors(scope: PagesMetadataScope) {
       return bounded(projectMetadata(object(envelope(raw).result), args.projectName));
     },
   });
-  const pagesDeploymentsList: MetadataDescriptor<ReturnType<typeof pagesDeploymentsPage.parse>, PartialList<{ id: string }>> = Object.freeze({
+  const pagesDeploymentsList: MetadataDescriptor<ReturnType<typeof pagesDeploymentsPage.parse>, PartialList<PagesMetadata>> = Object.freeze({
     name: "cloudflare.pages.deployments.list", version: "1", tier: "read", providerOperationId: "pages-deployment-get-deployments",
     prepare(raw: unknown) {
       const args = pagesDeploymentsPage.parse(raw);
@@ -1211,7 +1290,7 @@ export function pagesMetadataDescriptors(scope: PagesMetadataScope) {
       return bounded({ items, complete: false as const });
     },
   });
-  const pagesDeploymentGet: MetadataDescriptor<ReturnType<typeof pagesDeployment.parse>, { id: string }> = Object.freeze({
+  const pagesDeploymentGet: MetadataDescriptor<ReturnType<typeof pagesDeployment.parse>, PagesMetadata> = Object.freeze({
     name: "cloudflare.pages.deployments.get", version: "1", tier: "read", providerOperationId: "pages-deployment-get-deployment-info",
     prepare(raw: unknown) {
       const args = pagesDeployment.parse(raw);
