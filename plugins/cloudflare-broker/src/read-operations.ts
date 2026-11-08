@@ -6,6 +6,7 @@ import { workerScheduleDescriptor, type WorkerScheduleScope } from "./worker-sch
 import { queueConsumerDescriptors, type QueueConsumerScope } from "./queue-consumers.js";
 import { pagesDomainDescriptors, type PagesDomainScope } from "./pages-domains.js";
 import { hostnameTlsDescriptors, type HostnameTlsScope } from "./hostname-tls.js";
+import { zoneTlsDescriptor, type ZoneTlsScope } from "./zone-tls.js";
 import { eventSubscriptionDescriptors, type EventSubscriptionScope } from "./event-subscriptions.js";
 import { versionAssetDescriptor, type VersionAssetScope } from "./version-assets.js";
 import { workerDomainMetadataDescriptors, type WorkerDomainScope } from "./worker-domains.js";
@@ -87,6 +88,7 @@ export interface CloudflareReadScope extends MetadataScope {
   zone?: Pick<ZoneMetadataScope, "zoneId" | "dnsRecordIds"> & {
     workerRoutes?: WorkerRouteMetadataScope["routes"];
     hostnameTls?: HostnameTlsScope["settings"];
+    tlsSettingIds?: ZoneTlsScope["settingIds"];
   };
 }
 
@@ -155,6 +157,8 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     ...(zone === undefined ? [] : [metadata(zone.zoneGet), metadata(zone.dnsList), metadata(zone.dnsGet)]),
     ...(routes === undefined ? [] : [metadata(routes.workerRoutesList), metadata(routes.workerRouteGet)]),
     ...(tls === undefined ? [] : [metadata(tls.settingsList), metadata(tls.settingGet)]),
+    ...(scope.zone === undefined ? [] : [metadata(zoneTlsDescriptor({ accountId, revision,
+      zoneId: scope.zone.zoneId, settingIds: scope.zone.tlsSettingIds ?? [] }))]),
     // Source acquisition needs exact native authority, even for digest-only output.
     bind(content, (args, credential, signal) => readContent(content, args, credential, signal)),
   ]);

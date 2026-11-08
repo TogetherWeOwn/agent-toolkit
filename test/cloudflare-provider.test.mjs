@@ -12,6 +12,7 @@ import { workerScheduleDescriptor } from "../dist/plugins/cloudflare-broker/src/
 import { queueConsumerDescriptors } from "../dist/plugins/cloudflare-broker/src/queue-consumers.js";
 import { pagesDomainDescriptors } from "../dist/plugins/cloudflare-broker/src/pages-domains.js";
 import { hostnameTlsDescriptors } from "../dist/plugins/cloudflare-broker/src/hostname-tls.js";
+import { zoneTlsDescriptor } from "../dist/plugins/cloudflare-broker/src/zone-tls.js";
 import { eventSubscriptionDescriptors } from "../dist/plugins/cloudflare-broker/src/event-subscriptions.js";
 import { r2CorsDescriptor } from "../dist/plugins/cloudflare-broker/src/r2-cors.js";
 import { r2NotificationDescriptors } from "../dist/plugins/cloudflare-broker/src/r2-notifications.js";
@@ -84,6 +85,7 @@ const allDescriptors = { ...metadataOnly, ...deletionDescriptors, contentDescrip
   ...queueConsumerDescriptors({ accountId: account, revision: "policy-1" }),
   ...pagesDomainDescriptors({ accountId: account, revision: "policy-1" }),
   ...hostnameTlsDescriptors({ accountId: account, zoneId: zone, revision: "policy-1" }),
+  zoneTls: zoneTlsDescriptor({ accountId: account, zoneId: zone, revision: "policy-1" }),
   ...eventSubscriptionDescriptors({ accountId: account, revision: "policy-1" }),
   ...workerDomainMetadataDescriptors({ accountId: account, revision: "policy-1" }),
   r2Cors: r2CorsDescriptor({ accountId: account, revision: "policy-1" }),
@@ -961,6 +963,10 @@ test("Cloudflare full schema inventory is pinned, explicit about holes, and cons
   assert.equal(operations.filter(row => row.tier === "reserved").length, Object.values(allDescriptors).filter(descriptor => descriptor.tier === "reserved").length);
   assert.equal(operations.filter(row => row.tier === "read").length, Object.values(allDescriptors).filter(descriptor => descriptor.tier === "read").length);
   assert.equal(operations.filter(row => row.implementation === "content-descriptor-only").length, 1);
+  assert.deepEqual(operations.find(row => row.typedTool === "cloudflare.tls.zone.get").variantCoverage, {
+    complete: false, supportedSettingIds: ["ssl", "min_tls_version", "tls_1_3", "always_use_https", "http2", "ciphers"],
+    prerequisite: "remaining-zone-setting-variants-and-native-qualification",
+  });
   assert.equal(manifest.counts.contentDescriptors, 1);
   assert.equal(manifest.counts.descriptors, Object.keys(allDescriptors).length);
   assert.equal(manifest.credentialScope.status, "operation-entitlements-unresolved");

@@ -10,8 +10,8 @@
     "openapi": "3.0.3",
     "version": "4.0.0"
   },
-  "inventorySha256": "aef349f99abda4b3926ce45c0cd66ccfc7f368577e0c2fcca8e89a2d83e61f57",
-  "counts": { "paths": 2352, "operations": 3777, "apiTags": 599, "descriptors": 65, "metadataDescriptors": 59, "contentDescriptors": 1, "planDescriptors": 5, "implementedTools": 0, "reviewedTools": 0, "enabledTools": 0 },
+  "inventorySha256": "bca3e391f9dbe0174b83b94997b83e91b605678b5df44df8f24b0b0612471806",
+  "counts": { "paths": 2352, "operations": 3777, "apiTags": 599, "descriptors": 66, "metadataDescriptors": 60, "contentDescriptors": 1, "planDescriptors": 5, "implementedTools": 0, "reviewedTools": 0, "enabledTools": 0 },
   "familySummary": { "file": "families.json", "grouping": "first-provider-tag-exclusive", "primaryFamilies": 596, "note": "Additive source-workload counts only, not credential intersection, policy classification or effort estimates; six operations have additional tags." },
   "credentialScope": {
     "status": "operation-entitlements-unresolved",
