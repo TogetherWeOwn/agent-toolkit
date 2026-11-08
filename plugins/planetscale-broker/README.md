@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The seventy-one adapters are pure request builders and bounded output projections,
+The seventy-seven adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,14 +36,14 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 71 | Narrow projections; not full operation coverage |
-| Missing source adapters | 220 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 77 | Narrow projections; not full operation coverage |
+| Missing source adapters | 214 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-Seventy-one adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 204
+Seventy-seven adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 198
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
@@ -233,6 +233,27 @@ text. The four router/neki list/get aliases, like the two admin-change aliases,
 document 308 only and remain missing pending an explicitly reviewed fixed-alias
 contract. No redirect is followed and no alias is counted as an implemented read.
 
+OAuth-application list/get tools return a bound ID and dynamic-registration,
+single-organization and organization-scope-required flags, always paired with
+`effectiveAuthority: not-established`. Names, client IDs, secrets, redirects,
+domains, scopes/tool groups and token counts are omitted. SSO status binds the
+immutable organization ID and returns only enabled/configured/directory/verified-
+domain flags; these are provider metadata, not effective enforcement or native
+acceptance. Nested domains and verification URLs are not projected. Separate SSO
+domain list/get tools return bound IDs, state and verification timestamp presence
+only: no domain names, failure reasons, verification material or raw times.
+Invitation lists return bound IDs, informational role and expired flag, never
+contact details, sender/recipient profiles or accepted membership/authority.
+
+Application/invitation lists use bounded explicit pagination. SSO domain lists
+use the official plain-array contract with empty arguments and a 32-row cap; no
+pagination/completeness claim is invented. Collections snapshot 1–32 unique broker-
+owned IDs and refuse the entire page/array on an unknown ID. Fixed paths and child
+IDs do not prove trusted parent ownership or upstream collection authority; both
+remain separate integration prerequisites. Domain verification presence is not
+current domain control, and provider SSO flags never authorize enforcement changes.
+Full details, mutations and non-waking semantics remain incomplete.
+
 Arguments are closed, scalar and bounded. Configured resource scope is separate
 from arguments and must eventually be resolved by the shared core from an
 authorized resource handle, not accepted from a model. Each request fixes HTTPS
@@ -280,7 +301,7 @@ No connector or replacement broker is introduced.
 ## Local mutation-plan artifacts — not executors
 
 `src/mutation-plans.ts` supplies three pure, bounded previews. They are **not API
-adapters**, do not consume authority and do not increase the 71-adapter count.
+adapters**, do not consume authority and do not increase the 77-adapter count.
 Each artifact labels itself `validated-local-plan-not-provider-dry-run`, with
 execution not implemented, remote preconditions not verified and provider dry-run
 not performed. No network executor, output projector or secret placement exists.
@@ -314,7 +335,7 @@ The candidates only document requirements; native routing, expiry, exact-target
 binding, atomic consumption, replay/concurrent-use refusal and approved placement
 are **not implemented or tested as authority enforcement here**. Credential routes
 remain incomplete until a broker-only sink and reconciliation are accepted. The
-other 204 tier classifications are unresolved, not automatically harmless reads or
+other 198 tier classifications are unresolved, not automatically harmless reads or
 ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.

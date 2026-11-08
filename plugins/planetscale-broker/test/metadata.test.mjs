@@ -131,7 +131,9 @@ test('complete official map distinguishes mapped, source-adapted, reviewed and e
   const maintenanceSchedules = ['get_maintenance_schedule', 'list_maintenance_schedules', 'get_branch_maintenance_window', 'list_maintenance_windows'];
   const routingRecords = ['get_router', 'list_routers', 'get_dedicated_read_replica', 'list_dedicated_read_replicas', 'get_switchover', 'list_switchovers'];
   const unifiedChangeRecords = ['get_change_request', 'list_change_requests', 'list_dedicated_read_replica_change_requests'];
+  const organizationSecurity = ['get_oauth_application', 'list_oauth_applications', 'get_organization_sso', 'get_organization_sso_domain', 'list_organization_sso_domains', 'list_organization_invitations'];
   const groups = [
+    [organizationSecurity, 'organization-security'],
     [unifiedChangeRecords, 'unified-change-records'],
     [routingRecords, 'routing-records'],
     [maintenanceSchedules, 'maintenance-schedules'],

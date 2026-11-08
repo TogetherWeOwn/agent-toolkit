@@ -83,6 +83,16 @@ ADAPTERS = {
     "get_change_request": "get-change-request",
     "list_change_requests": "list-change-requests",
     "list_dedicated_read_replica_change_requests": "list-dedicated-read-replica-change-requests",
+    "get_oauth_application": "get-oauth-application",
+    "list_oauth_applications": "list-oauth-applications",
+    "get_organization_sso": "get-organization-sso",
+    "get_organization_sso_domain": "get-organization-sso-domain",
+    "list_organization_sso_domains": "list-organization-sso-domains",
+    "list_organization_invitations": "list-organization-invitations",
+}
+ORGANIZATION_SECURITY = {
+    "get_oauth_application", "list_oauth_applications", "get_organization_sso",
+    "get_organization_sso_domain", "list_organization_sso_domains", "list_organization_invitations",
 }
 UNIFIED_CHANGE_RECORDS = {
     "get_change_request", "list_change_requests", "list_dedicated_read_replica_change_requests",
@@ -182,6 +192,7 @@ def policy_candidate(operation_id):
 
 def adapter_test(operation_id):
     for operations, name in [
+        (ORGANIZATION_SECURITY, "organization-security"),
         (UNIFIED_CHANGE_RECORDS, "unified-change-records"),
         (ROUTING_RECORDS, "routing-records"),
         (MAINTENANCE_SCHEDULES, "maintenance-schedules"),

@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 223 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 214 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -153,6 +153,30 @@ reviewed, enabled or adopted operations. Prior `3f3022b` [Actions CI](https://gi
 passed, including [test](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42436736199/job/128597089375),
 lint, native-policy and ci-ok; this is not execution of these new fixtures. Fresh
 exact-head Actions remains required; no local suite or native authority is claimed.
+
+`test/unified-change-records.test.mjs` adds 21 synthetic contracts for three
+unified/replica change-record reads. Exact ID/type/target and replica bindings,
+nullable target identity, immutable snapshots and whole-page refusal are covered;
+can-delete/state never grants action authority. Four router/neki 308-only aliases
+remain missing with no redirect following. At `190f6cabcda1020c2331fc7a0507e4b26e339156`,
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42439602836)
+passed [tests](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42439602836/job/128605819748),
+lint/typecheck, native-policy and ci-ok. This is historical evidence for 71 offline
+adapters, not execution of the newer organization-security fixtures.
+
+`test/organization-security.test.mjs` adds 34 synthetic contracts for six OAuth-
+application, SSO/domain and invitation reads. They cover fixed paths and official
+pagination/array shapes, bound IDs, immutable snapshots, whole-response refusal,
+wire/row/page caps, closed inputs, resource types/enums and excluded contact/client/
+scope/verification canaries. SSO flags, domain state/verification presence and
+invitation roles are informational, not effective enforcement, domain control,
+native acceptance or action authority. Parent ownership, collection permission,
+full details and non-waking semantics remain prerequisites. Source coverage is
+**77/291 bounded metadata subsets, 214 missing**; tiers 77 provisional read / 16
+unreviewed reserved / 198 unresolved. Zero integrated/reviewed/enabled/adopted.
+Fresh exact-head Actions is required; no local suite or native authority test is
+claimed. The missing-adapter prerequisite above is updated to this current count;
+earlier per-slice counts remain historical.
 
 ## Metrics preregistration — required before enablement
 
