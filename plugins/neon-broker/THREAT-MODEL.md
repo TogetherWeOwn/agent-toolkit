@@ -19,6 +19,25 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
 
+## Endpoint label-update source delta
+
+The endpoint rename subset copies exact project/branch/endpoint/revision and
+expected/desired bounded labels, requiring a separate exact endpoint/rename grant.
+Closed args reject compute sizing, connection/security flags, suspend timeout,
+settings, pooling, provisioner and branch changes. Unnamed endpoints are unsupported.
+A detail GET validates mandatory immutable ID/project/branch and expected name
+before one name-only PATCH; this preflight is not atomic CAS or a dry-run.
+
+Provider endpoint updates can activate idle compute. No exception for name-only
+updates, non-waking claim, readiness or lifecycle guarantee is asserted. Only HTTP200
+exact identity/name echo yields a closed response acknowledgement. Operations,
+hosts, settings, states and other unrelated fields are not read or emitted. One
+bounded observation after ambiguity remains uncertain even on desired state;
+no retry or invented idempotency header. Permanent common journal barriers block
+same-request replay/restart, not independent concurrent external writers. Native
+host/policy/custody, effects/entitlement, concurrency, durable recovery and independent
+review remain prerequisites. No live endpoint update or runtime enablement introduced.
+
 ## Project label-update source delta
 
 The project rename subset copies exact project/revision/expected-desired labels

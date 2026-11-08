@@ -7,6 +7,28 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonEndpointUpdateOperations(trustedScope, transport)` adds `updateProjectEndpoint`
+as a **name-only** write descriptor. Copy exact project/branch/endpoint/revision and
+expected and desired nonempty ASCII token labels <=64 characters; labels must differ.
+Require the distinct `neon/projects/<project>/branches/<branch>/endpoints/<endpoint>/rename`
+grant. Exact caller arguments, including the effective branch, must match that scope.
+Unnamed endpoints and changes to sizing, suspend timeout, disabled/passwordless flags,
+settings, pooling, provisioner or branch are unsupported and refuse.
+
+The fixed detail GET validates exact endpoint/project/branch and current label, then
+one PATCH sends `{endpoint: {name}}` only. **Preflight is not atomic CAS.** Provider
+endpoint updates can activate idle compute; the name-only subset claims no exception.
+HTTP200 exact identity/desired-label echo yields closed `{id, updated: true}` response
+acknowledgement only, not readiness, completion of returned operations or persistence.
+Hosts, labels, configuration, operations and arbitrary metadata are omitted without
+reading unrelated fields. No conditional/idempotency header is invented.
+
+Ambiguity permits one bounded detail observation then remains uncertain even if the
+desired state appears; no automatic mutation retry or observation-to-success conversion.
+The common permanent journal blocks same-request restart/replay; native durable recovery
+must retain it. Host/policy/custody, entitlement/effects, concurrency and independent
+qualification remain unresolved. No live rename, production or enabled runtime supplied.
+
 `createNeonProjectUpdateOperations(trustedScope, transport)` adds `updateProject`
 as a **name-only** write descriptor. Copy exact project/revision and expected and
 desired nonempty ASCII labels <=80 characters; labels must differ. Require the
