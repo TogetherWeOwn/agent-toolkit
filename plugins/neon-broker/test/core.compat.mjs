@@ -5,7 +5,8 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { allCases as cases, catalogCases, catalogFixture, catalogScopeAt, capabilityCases, capabilityFixture,
   capabilityScope, library, snapshot, schedule, branchFeatureCases, branchFeatureFixture, branchFeatureScope,
-  authStatusCases, authStatusFixture, authStatusScope, fixture, scope, branch, operation, response } from './helpers.mjs';
+  authStatusCases, authStatusFixture, authStatusScope, authDomainCases, authDomainFixture, authDomainScope,
+  fixture, scope, branch, operation, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
 // fallback and no embedded replacement for the common authority/policy executor.
@@ -15,7 +16,8 @@ const { providerFixture, credentialCanary, derivedCanary } = await import(pathTo
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
 function brokerFixture(name, args, raw, overrides = {}, config) {
-  const factory = authStatusCases.some(([operation]) => operation === name) ? authStatusFixture :
+  const factory = authDomainCases.some(([operation]) => operation === name) ? authDomainFixture :
+    authStatusCases.some(([operation]) => operation === name) ? authStatusFixture :
     branchFeatureCases.some(([operation]) => operation === name) ? branchFeatureFixture :
     capabilityCases.some(([operation]) => operation === name) ? capabilityFixture :
     catalogCases.some(([operation]) => operation === name) ? catalogFixture : fixture;
@@ -193,7 +195,7 @@ test('reflected lease material in selected safe-looking fields is refused by the
   assert.equal((await f.call()).code, 'OUTPUT_REFUSED');
 });
 
-for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases]) {
+for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases]) {
   test(`${name}: replay and TOCTOU policy/resource changes refuse without a second request`, async () => {
     const replay = brokerFixture(name, args, raw);
     assert.equal((await replay.call()).ok, true);
@@ -354,11 +356,38 @@ test('maximum auth status scope fits common budgets and no sibling status resour
   }
 });
 
+test('maximum auth-domain lists fit common budgets and legacy/branch grants never cross-authorize', async () => {
+  const config = { ...authDomainScope, branchIds: Array.from({ length: 30 }, (_, n) => `br-${n}`) };
+  const domains = Array.from({ length: 30 }, (_, n) => ({ domain: `domain-${n}.${'a'.repeat(63)}.${'b'.repeat(63)}.${'c'.repeat(63)}.invalid`, auth_provider: 'better_auth' }));
+  for (const [name, original] of authDomainCases) {
+    const args = 'branch_id' in original ? { ...original, branch_id: 'br-29' } : original;
+    const f = brokerFixture(name, args, { domains }, {}, config);
+    const result = await f.call();
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.value, { domains });
+    safeEnvelope(f, result);
+    const ownResource = f.provider.operation(name).prepare(args).resource.id;
+    for (const resource of ['neon/projects/project-a/auth', 'neon/projects/project-a/auth/domains',
+      'neon/projects/project-a/branches/br-0/auth/domains', 'neon/projects/project-a/branches/br-29/auth/domains'].filter(id => id !== ownResource)) {
+      const other = brokerFixture(name, args, { domains }, {}, config);
+      other.common.vector.policy.resources = [resource];
+      assert.equal((await other.call()).code, 'POLICY_DENIED');
+      assert.equal(other.common.calls.secret, 0);
+      assert.equal(other.provider.requests.length, 0);
+    }
+    const reflected = brokerFixture(name, args, { domains: [{ domain: credentialCanary, auth_provider: 'better_auth' }] }, {}, config);
+    assert.equal((await reflected.call()).code, 'OUTPUT_REFUSED');
+    const unavailable = brokerFixture(name, args, () => response({ message: credentialCanary }, { status: 410 }), {}, config);
+    assert.equal((await unavailable.call()).code, 'UPSTREAM_UNAVAILABLE');
+    assert.equal(unavailable.provider.requests.length, 1);
+  }
+});
+
 test('common operation-map validator confirms incomplete status for all unknown entitlements', () => {
   const map = JSON.parse(readFileSync(new URL('../operation-map.json', import.meta.url)));
   const result = validateOperationMap(map);
   assert.equal(result.complete, false);
   assert.equal(result.incomplete.length, 194);
-  assert.equal(map.operations.filter(operation => operation.implemented).length, 23);
+  assert.equal(map.operations.filter(operation => operation.implemented).length, 25);
   assert.equal(map.operations.filter(operation => operation.enabled).length, 0);
 });

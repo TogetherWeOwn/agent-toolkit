@@ -3,6 +3,7 @@ import { createNeonCatalogOperations } from '../dist/plugins/neon-broker/src/cat
 import { createNeonCapabilityOperations } from '../dist/plugins/neon-broker/src/capabilities.js';
 import { createNeonBranchFeatureOperations } from '../dist/plugins/neon-broker/src/branch-features.js';
 import { createNeonAuthStatusOperations } from '../dist/plugins/neon-broker/src/auth-status.js';
+import { createNeonAuthDomainOperations } from '../dist/plugins/neon-broker/src/auth-domains.js';
 import { createNeonMetadataTransport } from '../dist/plugins/neon-broker/src/transport.js';
 
 export const scope = {
@@ -76,7 +77,13 @@ export const authStatusCases = [
   ['getNeonAuthPhoneNumberPlugin', { project_id: 'project-a', branch_id: 'br-a' }, { enabled: true, otp_expires_in: 300 }, { enabled: true, otp_expires_in: 300 }],
   ['getNeonAuthOAuthProviderPlugin', { project_id: 'project-a', branch_id: 'br-a' }, { enabled: false }, { enabled: false }],
 ];
-export const allCases = [...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases];
+export const authDomainScope = { projectId: scope.projectId, revision: scope.revision, branchIds: scope.branchIds };
+export const authDomain = { domain: 'example.invalid', auth_provider: 'better_auth' };
+export const authDomainCases = [
+  ['listNeonAuthRedirectURIWhitelistDomains', { project_id: 'project-a' }, { domains: [authDomain] }, { domains: [authDomain] }],
+  ['listBranchNeonAuthTrustedDomains', { project_id: 'project-a', branch_id: 'br-a' }, { domains: [authDomain] }, { domains: [authDomain] }],
+];
+export const allCases = [...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });
@@ -92,6 +99,9 @@ export function branchFeatureFixture(value, config = branchFeatureScope) {
 }
 export function authStatusFixture(value, config = authStatusScope) {
   return fixture(value, config, createNeonAuthStatusOperations);
+}
+export function authDomainFixture(value, config = authDomainScope) {
+  return fixture(value, config, createNeonAuthDomainOperations);
 }
 export function fixture(value, config = scope, factory = createNeonMetadataOperations) {
   const requests = [];

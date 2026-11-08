@@ -31,6 +31,8 @@ export interface NeonMetadataTransport {
   getNeonAuthAllowLocalhost(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   getNeonAuthPhoneNumberPlugin(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   getNeonAuthOAuthProviderPlugin(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
+  listNeonAuthRedirectURIWhitelistDomains(project: string, options: MetadataRequestOptions): Promise<unknown>;
+  listBranchNeonAuthTrustedDomains(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
 }
 export type MetadataFetch = (url: string, init: RequestInit) => Promise<Response>;
 
@@ -168,5 +170,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       get(`/projects/${id(project)}/branches/${id(branch)}/auth/plugins/phone-number`, new URLSearchParams(), options),
     getNeonAuthOAuthProviderPlugin: (project: string, branch: string, options: MetadataRequestOptions) =>
       get(`/projects/${id(project)}/branches/${id(branch)}/auth/plugins/oauth-provider`, new URLSearchParams(), options),
+    listNeonAuthRedirectURIWhitelistDomains: (project: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/auth/domains`, new URLSearchParams(), options),
+    listBranchNeonAuthTrustedDomains: (project: string, branch: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/branches/${id(branch)}/auth/domains`, new URLSearchParams(), options),
   });
 }
