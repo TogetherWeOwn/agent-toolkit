@@ -41,7 +41,7 @@ export function createCloudflareReadBroker(scope: CloudflareReadScope, sourceSco
           ...operation,
           project(output: unknown) {
             const value = operation.project(output);
-            if (tool === contentTool || (value !== null && typeof value === "object" && !Array.isArray(value) && value.capture !== undefined)) {
+            if (tool === contentTool || (value !== null && typeof value === "object" && !Array.isArray(value) && "capture" in value && value.capture !== undefined)) {
               valueHash = canonicalHash(value);
             }
             return value;
