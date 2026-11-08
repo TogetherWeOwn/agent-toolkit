@@ -138,6 +138,7 @@ test('complete official map distinguishes mapped, source-adapted, reviewed and e
   const configurationDefinitions = ['list_extensions', 'list_shard_configuration_profile_extensions', 'list_parameters', 'list_admin_parameters', 'list_router_parameters', 'list_shard_configuration_profile_parameters'];
   const networkThrottler = ['get_database_postgres_cidr', 'list_database_postgres_cidrs', 'get_database_throttler', 'get_deploy_request_throttler'];
   const groups = [
+    [['get_branch_anomaly', 'list_branch_anomalies'], 'anomalies'],
     [['lint_branch_schema', 'check_deploy_request_storage'], 'schema-diagnostics'],
     [['get_query_patterns_report_status', 'list_generated_query_patterns_reports'], 'query-reports'],
     [['get_admin', 'list_admin_size_skus', 'list_router_size_skus', 'list_cluster_size_skus'], 'compute-catalog'],

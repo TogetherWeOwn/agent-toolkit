@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The 112 adapters are pure request builders and bounded output projections,
+The 114 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,19 +36,34 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 112 | Narrow projections; not full operation coverage |
-| Missing source adapters | 179 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 114 | Narrow projections; not full operation coverage |
+| Missing source adapters | 177 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-112 adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 163
+114 adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 161
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
 backups/restore, schema/deploy, topology, maintenance and every other official
 area remain in the map even when access or implementation is missing.
+
+## Anomaly metadata
+
+`planetscale.list_branch_anomalies` and `planetscale.get_branch_anomaly` return
+only broker-bound anomaly ID and strict active flag, explicitly paired with
+`remediationAuthority: not-established`. SQL correlations, fingerprints, keyspace
+names, latency/duration metrics and timestamps are omitted. Lists snapshot 1–32
+unique IDs and refuse the entire page on unknown, duplicate or malformed rows.
+Pagination is explicit and bounded; no provider URL is followed. Empty/last pages
+are not scope-completeness evidence. Provider active/inactive state is neither
+remediation authority nor proof of recovery, safe retry or native closure.
+Current parent ownership, independent upstream collection permission, broker-side
+raw-body custody, reflection guards and operation-specific non-waking evidence
+remain prerequisites. Optional time/period filters and full anomaly/insights
+capability remain incomplete. No SQL query or live remediation is implemented.
 
 ## Schema diagnostic metadata
 
@@ -485,7 +500,7 @@ No connector or replacement broker is introduced.
 ## Local mutation-plan artifacts — not executors
 
 `src/mutation-plans.ts` supplies three pure, bounded previews. They are **not API
-adapters**, do not consume authority and do not increase the 112-adapter count.
+adapters**, do not consume authority and do not increase the 114-adapter count.
 Each artifact labels itself `validated-local-plan-not-provider-dry-run`, with
 execution not implemented, remote preconditions not verified and provider dry-run
 not performed. No network executor, output projector or secret placement exists.
@@ -519,7 +534,7 @@ The candidates only document requirements; native routing, expiry, exact-target
 binding, atomic consumption, replay/concurrent-use refusal and approved placement
 are **not implemented or tested as authority enforcement here**. Credential routes
 remain incomplete until a broker-only sink and reconciliation are accepted. The
-other 163 tier classifications are unresolved, not automatically harmless reads or
+other 161 tier classifications are unresolved, not automatically harmless reads or
 ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.

@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 179 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 177 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -40,6 +40,26 @@ read-only transactions, statement/lock/row/byte/page/time caps and native closur
 evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
+
+## Anomaly metadata source increment
+
+`test/anomalies.test.mjs` adds 17 synthetic contracts for branch-anomaly list/get
+metadata: bound IDs, strict active flag, whole-page refusal, immutable snapshots,
+closed arguments/scopes, wire/page caps and pinned official path/field agreement.
+SQL correlations/fingerprints, keyspaces, metrics and timestamps are omitted.
+`remediationAuthority: not-established` never grants action authority or proves
+recovery, safe retry or native closure. Empty/last pages are not scope-completeness
+evidence. Current parent ownership, independent collection permission, raw-body
+custody, reflection guards and non-waking evidence remain integration prerequisites.
+Optional time/period filters and full anomaly/insights capability remain incomplete.
+
+Coverage is 114/291 bounded subsets, 177 missing; tiers 114 provisional read /
+16 unreviewed reserved / 161 unresolved. Zero integrated/reviewed/enabled/adopted.
+Fresh exact-head Actions is required; no local suite/build/typecheck ran. Prior
+schema-diagnostic head `59bcc959e3e746704946cb1c79869c41fb555afe` passed
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42453932641),
+including [tests](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42453932641/job/128648844149),
+lint/typecheck, native-policy and ci-ok. That does not execute these new fixtures.
 
 ## Schema diagnostic metadata source increment
 
