@@ -8,6 +8,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  getNeonAuthWebhookConfig(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   countProjects(organization: string, options: MetadataRequestOptions): Promise<unknown>;
   getActiveRegions(organization: string, options: MetadataRequestOptions): Promise<unknown>;
   getProjectBranchDataAPI(project: string, branch: string, database: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -161,6 +162,8 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    getNeonAuthWebhookConfig: (project: string, branch: string, options: MetadataRequestOptions) =>
+      get(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/webhooks`, new URLSearchParams(), options),
     countProjects: (organization: string, options: MetadataRequestOptions) =>
       get("/projects/count", new URLSearchParams({ org_id: authPathId(organization) }), options),
     getActiveRegions: (organization: string, options: MetadataRequestOptions) =>

@@ -20,6 +20,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   dataAPICases, dataAPIFixture, dataAPIScope,
   regionCases, regionFixture, regionScope, region,
   projectCountCases, projectCountFixture, projectCountScope,
+  authWebhookCases, authWebhookFixture, authWebhookScope,
   fixture, scope, branch, operation, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
@@ -30,7 +31,8 @@ const { providerFixture, credentialCanary, derivedCanary } = await import(pathTo
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
 function brokerFixture(name, args, raw, overrides = {}, config) {
-  const factory = projectCountCases.some(([operation]) => operation === name) ? projectCountFixture :
+  const factory = authWebhookCases.some(([operation]) => operation === name) ? authWebhookFixture :
+    projectCountCases.some(([operation]) => operation === name) ? projectCountFixture :
     regionCases.some(([operation]) => operation === name) ? regionFixture :
     dataAPICases.some(([operation]) => operation === name) ? dataAPIFixture :
     organizationInvitationCases.some(([operation]) => operation === name) ? organizationInvitationFixture :
@@ -223,7 +225,7 @@ test('reflected lease material in selected safe-looking fields is refused by the
   assert.equal((await f.call()).code, 'OUTPUT_REFUSED');
 });
 
-for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases, ...regionCases, ...projectCountCases]) {
+for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases, ...regionCases, ...projectCountCases, ...authWebhookCases]) {
   test(`${name}: replay and TOCTOU policy/resource changes refuse without a second request`, async () => {
     const replay = brokerFixture(name, args, raw);
     assert.equal((await replay.call()).ok, true);
@@ -1026,6 +1028,41 @@ test('organization-filtered project count needs its exact aggregate grant and dr
     assert.deepEqual(value.value, { count });
     safeEnvelope(maximum, value);
   }
+});
+
+test('auth webhook needs its exact grant, drops destination/secrets and refuses cross-branch responses', async () => {
+  const [name, args, raw, expected] = authWebhookCases[0];
+  const f = brokerFixture(name, args, { ...raw, webhook_url: credentialCanary, secret: derivedCanary, signing_key: 'password-canary' });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, expected);
+  safeEnvelope(f, result);
+  for (const resource of ['neon/projects/project-a/branches/br-a/auth', 'neon/projects/project-a/branches/br-b/auth/webhooks',
+    'neon/projects/project-a/branches/br-a/auth/plugins/phone-number']) {
+    const denied = brokerFixture(name, args, raw);
+    denied.common.vector.policy.resources = [resource];
+    assert.equal((await denied.call()).code, 'POLICY_DENIED');
+    assert.equal(denied.common.calls.secret, 0);
+    assert.equal(denied.provider.requests.length, 0);
+  }
+  for (const invalid of [{ ...raw, branch_id: 'br-b' }, { ...raw, enabled_events: [credentialCanary] }, { ...raw, timeout_seconds: 11 }]) {
+    const refused = brokerFixture(name, args, invalid);
+    const refusal = await refused.call();
+    assert.equal(refusal.code, 'UPSTREAM_UNAVAILABLE');
+    safeEnvelope(refused, refusal);
+  }
+});
+
+test('maximum webhook scope, exact resource and event projection fit common-core budgets', async () => {
+  const config = { ...authWebhookScope, projectId: 'p'.repeat(60), revision: 'r'.repeat(80),
+    branchIds: Array.from({ length: 30 }, (_, n) => `b${String(n).padStart(59, '0')}`) };
+  const raw = { enabled: true, enabled_events: ['user.before_create', 'user.created', 'send.otp', 'send.magic_link',
+    'organization.invitation.created', 'organization.invitation.accepted', 'phone_number.verified'], timeout_seconds: 10 };
+  const maximum = brokerFixture(authWebhookCases[0][0], { project_id: config.projectId, branch_id: config.branchIds[0] }, raw, {}, config);
+  const result = await maximum.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, raw);
+  safeEnvelope(maximum, result);
 });
 
 test('common operation-map validator confirms incomplete status for all unknown entitlements', () => {

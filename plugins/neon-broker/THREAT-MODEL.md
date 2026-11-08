@@ -241,6 +241,23 @@ transport failure, principal binding, replay, TOCTOU and maximum JSON budgets.
 No enumeration or mutation is introduced; beta availability, native entitlement,
 provider effects and runtime qualification remain unknown.
 
+## Auth webhook configuration delta
+
+`getNeonAuthWebhookConfig` copies project/revision/branch selection and requires
+its exact branch/auth/webhooks resource, not parent/auth/plugin authority. The
+fixed path GET returns only boolean enabled status, at most seven unique known
+event names and optional integer timeout of 1–10 seconds. Missing optional values
+are not defaulted. Destination URLs, signing material and arbitrary diagnostics
+are not read or emitted; no URL following, delivery/test, update or deletion path
+is introduced. Optional ancestry must match the trusted selection and the exact
+requested branch; pagination refuses. Non-200/invalid output never becomes disabled
+status or a fallback. Cached configuration is not evidence of delivery success,
+endpoint health or actual event processing. Source/common contracts cover copied
+scope, canonical arguments, exact grants, sibling/cross-branch refusal, output
+accessors/duplicates/enums/bounds, reflected material, replay/TOCTOU and maximum
+JSON budgets. Native entitlement, provider effects and runtime qualification stay
+unknown; no non-waking claim follows from mocks.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.
