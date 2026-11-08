@@ -263,9 +263,9 @@ test('transport refuses CR/LF credentials before invoking injected fetch', async
   }
 });
 
-test('fixed transport exposes only forty-eight methods and rejects path injection even at the transport seam', () => {
+test('fixed transport exposes exactly the mapped source methods and rejects path injection even at the transport seam', () => {
   const transport = createNeonMetadataTransport(() => { throw Error('not called'); });
-  assert.equal(Object.keys(transport).length, 48);
+  assert.deepEqual(Object.keys(transport).sort(), allCases.map(([name]) => name).sort());
   assert.throws(() => transport.getProject('../credentials', { credential: canary, signal: new AbortController().signal }));
 });
 
