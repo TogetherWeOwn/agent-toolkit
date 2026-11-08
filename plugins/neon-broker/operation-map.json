@@ -3698,7 +3698,7 @@
       "id": "getProjectBranchBucketObject",
       "apiArea": "buckets",
       "tool": "neon.getProjectBranchBucketObject",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/bucket_name/object_key/download",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3706,12 +3706,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/object-download.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source and refusal contracts only; exact object download grant, bounded stream/discard and closed observed byte count, never content output. Beta session/Editor/OAuth-update entitlement, provider effects, reviews and native runtime integration unresolved; no live download or credential action."
     },
     {
       "id": "deleteProjectBranchBucketObjectsByPrefix",

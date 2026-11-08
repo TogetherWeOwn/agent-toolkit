@@ -42,6 +42,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   branchSchemaCases, branchSchemaFixture, branchSchemaScope, schemaColumn, schemaTable,
   schemaComparisonCases, schemaComparisonFixture, schemaComparisonScope,
   oauthProviderCases, oauthProviderFixture, oauthProviderScope, oauthProvider,
+  objectDownloadCases, objectDownloadFixture, objectDownloadScope, binaryResponse,
   fixture, scope, branch, operation, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
@@ -52,7 +53,8 @@ const { providerFixture, credentialCanary, derivedCanary } = await import(pathTo
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
 function brokerFixture(name, args, raw, overrides = {}, config) {
-  const factory = oauthProviderCases.some(([operation]) => operation === name) ? oauthProviderFixture :
+  const factory = objectDownloadCases.some(([operation]) => operation === name) ? objectDownloadFixture :
+    oauthProviderCases.some(([operation]) => operation === name) ? oauthProviderFixture :
     logQueryCases.some(([operation]) => operation === name) ? logQueryFixture :
     schemaComparisonCases.some(([operation]) => operation === name) ? schemaComparisonFixture :
     logValueCases.some(([operation]) => operation === name) ? logValueFixture :
@@ -108,6 +110,40 @@ function safeEnvelope(f, result) {
     assert(!serialized.includes(secret), `secret in output/audit/journal: ${secret}`);
   }
 }
+
+test('object byte observation: exact download grant, closed count and stream contents never escape', async () => {
+  const [name, args] = objectDownloadCases[0];
+  const bytes = new TextEncoder().encode(`${credentialCanary}${derivedCanary}postgres://user:password-canary@example.invalid/db`);
+  const f = brokerFixture(name, args, { bytes: [...bytes] });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { observed_bytes: bytes.byteLength });
+  safeEnvelope(f, result);
+  const root = 'neon/projects/project-a/branches/br-a/buckets/assets/objects';
+  for (const resource of [root, `${root}/images/a.png`, `${root}/images/b.png/download`,
+    `${root}/images/a.png/presign`, root.replace('br-a', 'br-b') + '/images/a.png/download']) {
+    const denied = brokerFixture(name, args, { bytes: [] });
+    denied.common.vector.policy.resources = [resource];
+    assert.equal((await denied.call()).code, 'POLICY_DENIED');
+    assert.equal(denied.common.calls.secret, 0);
+    assert.equal(denied.provider.requests.length, 0);
+  }
+  const refused = brokerFixture(name, args, () => binaryResponse([1, 2], { 'content-length': '3' }));
+  assert.equal((await refused.call()).code, 'UPSTREAM_UNAVAILABLE');
+  safeEnvelope(refused, await refused.call());
+});
+
+test('object byte observation: exact 256-character resource and maximum binary response fit common budgets', async () => {
+  const config = { ...objectDownloadScope, projectId: 'p'.repeat(60), branchId: 'b'.repeat(60),
+    bucketName: 'a'.repeat(40), objectKey: 'k'.repeat(45), revision: 'r'.repeat(80) };
+  const args = { project_id: config.projectId, branch_id: config.branchId, bucket_name: config.bucketName, object_key: config.objectKey };
+  const f = brokerFixture('getProjectBranchBucketObject', args, { bytes: new Array(65536).fill(255) }, {}, config);
+  assert.equal(f.provider.operation('getProjectBranchBucketObject').prepare(args).resource.id.length, 256);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { observed_bytes: 65536 });
+  safeEnvelope(f, result);
+});
 
 for (const [name, args, raw, expected] of oauthProviderCases) {
   test(`${name}: exact collection authority separates legacy and branch metadata without exposing OAuth material`, async () => {
@@ -500,7 +536,7 @@ test('reflected lease material in selected safe-looking fields is refused by the
   assert.equal((await f.call()).code, 'OUTPUT_REFUSED');
 });
 
-for (const [name, args, raw] of [...logQueryCases, ...logValueCases, ...branchSchemaCases, ...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases, ...regionCases, ...projectCountCases, ...authWebhookCases, ...userProfileCases, ...authEmailCases, ...projectCases, ...userOrganizationCases, ...sharedProjectCases]) {
+for (const [name, args, raw] of [...objectDownloadCases, ...logQueryCases, ...logValueCases, ...branchSchemaCases, ...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases, ...regionCases, ...projectCountCases, ...authWebhookCases, ...userProfileCases, ...authEmailCases, ...projectCases, ...userOrganizationCases, ...sharedProjectCases]) {
   test(`${name}: replay and TOCTOU policy/resource changes refuse without a second request`, async () => {
     const replay = brokerFixture(name, args, raw);
     assert.equal((await replay.call()).ok, true);

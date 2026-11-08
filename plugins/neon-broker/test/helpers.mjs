@@ -41,6 +41,7 @@ import { createNeonBranchSchemaOperations } from '../dist/plugins/neon-broker/sr
 import { createNeonSchemaComparisonOperations } from '../dist/plugins/neon-broker/src/schema-comparison.js';
 import { createNeonLogQueryOperations } from '../dist/plugins/neon-broker/src/log-query.js';
 import { createNeonOAuthProviderOperations } from '../dist/plugins/neon-broker/src/oauth-providers.js';
+import { createNeonObjectDownloadOperations } from '../dist/plugins/neon-broker/src/object-download.js';
 
 export const scope = {
   projectId: 'project-a', revision: 'scope-v1', branchIds: ['br-a', 'br-b'],
@@ -442,7 +443,20 @@ export const oauthProviderCases = [
 export function oauthProviderFixture(value, config = oauthProviderScope) {
   return fixture(value, config, createNeonOAuthProviderOperations);
 }
-export const allCases = [...oauthProviderCases, ...logQueryCases, ...schemaComparisonCases, ...logValueCases, ...branchSchemaCases, ...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
+export const objectDownloadScope = { projectId: scope.projectId, branchId: 'br-a', bucketName: 'assets',
+  objectKey: 'images/a.png', revision: scope.revision };
+export const objectDownloadCases = [
+  ['getProjectBranchBucketObject', { project_id: 'project-a', branch_id: 'br-a', bucket_name: 'assets', object_key: 'images/a.png' },
+    { bytes: [0, 255, 1] }, { observed_bytes: 3 }],
+];
+export function binaryResponse(bytes, headers = {}) {
+  const data = Uint8Array.from(bytes);
+  return new Response(data, { headers: { 'content-type': 'application/octet-stream', 'content-length': String(data.byteLength), ...headers } });
+}
+export function objectDownloadFixture(value, config = objectDownloadScope) {
+  return fixture(typeof value === 'function' ? value : () => binaryResponse(value.bytes), config, createNeonObjectDownloadOperations);
+}
+export const allCases = [...objectDownloadCases, ...oauthProviderCases, ...logQueryCases, ...schemaComparisonCases, ...logValueCases, ...branchSchemaCases, ...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });

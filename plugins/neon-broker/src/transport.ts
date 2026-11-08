@@ -1,4 +1,5 @@
 import { parseLogValueQuery, parseLogWindow } from "./log-value-query.js";
+import { downloadBucketName, downloadObjectKey } from "./object-key.js";
 
 export const NEON_ORIGIN = "https://console.neon.tech";
 export const RESPONSE_BYTES = 65_536;
@@ -10,6 +11,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  getProjectBranchBucketObject(project: string, branch: string, bucket: string, key: string, options: MetadataRequestOptions): Promise<unknown>;
   listNeonAuthOauthProviders(project: string, options: MetadataRequestOptions): Promise<unknown>;
   listBranchNeonAuthOauthProviders(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   queryProjectBranchLogs(project: string, branch: string, query: { readonly start_time: string; readonly end_time: string; readonly source: string }, options: MetadataRequestOptions): Promise<unknown>;
@@ -124,7 +126,7 @@ function cursorQuery(cursor: string | null): URLSearchParams {
 // Construction is a source/test seam, not an installed or enabled runtime tool.
 export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadataTransport {
   const get = (path: string, query: URLSearchParams, options: MetadataRequestOptions) => request(path, query, options);
-  async function request(path: string, query: URLSearchParams, options: MetadataRequestOptions, body?: string): Promise<unknown> {
+  async function request(path: string, query: URLSearchParams, options: MetadataRequestOptions, body?: string, binary = false): Promise<unknown> {
     if (/[\r\n]/.test(options.credential)) throw Error("UPSTREAM_UNAVAILABLE");
     const expiresAt = performance.now() + REQUEST_TIMEOUT_MS;
     const controller = new AbortController();
@@ -146,17 +148,19 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       const suffix = query.size ? `?${query.toString()}` : "";
       const response = await fetcher(`${NEON_ORIGIN}/api/v2${path}${suffix}`, {
         method: body === undefined ? "GET" : "POST", redirect: "error", signal: controller.signal,
-        headers: { Authorization: `Bearer ${options.credential}`, Accept: "application/json",
+        headers: { Authorization: `Bearer ${options.credential}`, Accept: binary ? "application/octet-stream" : "application/json",
           ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
         ...(body === undefined ? {} : { body }),
       });
+      const mime = binary ? /^application\/octet-stream(?:\s*;|$)/i : /^application\/json(?:\s*;|$)/i;
       if (expired() || response.status !== 200 || response.redirected ||
-        !/^application\/json(?:\s*;|$)/i.test(response.headers.get("content-type") ?? "")) {
+        !mime.test(response.headers.get("content-type") ?? "") ||
+        (binary && ![null, "identity"].includes(response.headers.get("content-encoding")))) {
         void response.body?.cancel().catch(() => {});
         throw Error("UPSTREAM_UNAVAILABLE");
       }
       const length = response.headers.get("content-length");
-      if (length !== null && (!/^[0-9]+$/.test(length) || Number(length) > RESPONSE_BYTES)) {
+      if ((binary && length === null) || (length !== null && (!/^[0-9]+$/.test(length) || Number(length) > RESPONSE_BYTES))) {
         void response.body?.cancel().catch(() => {});
         throw Error("UPSTREAM_UNAVAILABLE");
       }
@@ -169,8 +173,12 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
         if (expired()) throw Error("UPSTREAM_UNAVAILABLE");
         if (item.done) break;
         bytes += item.value.byteLength;
-        if (bytes > RESPONSE_BYTES) throw Error("UPSTREAM_UNAVAILABLE");
-        chunks.push(item.value);
+        if (bytes > RESPONSE_BYTES || (binary && bytes > Number(length))) throw Error("UPSTREAM_UNAVAILABLE");
+        if (!binary) chunks.push(item.value);
+      }
+      if (binary) {
+        if (bytes !== Number(length)) throw Error("UPSTREAM_UNAVAILABLE");
+        return { observed_bytes: bytes };
       }
       return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks)));
     };
@@ -189,6 +197,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    getProjectBranchBucketObject: (project: string, branch: string, bucket: string, key: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/buckets/${downloadBucketName.parse(bucket)}/objects/${encodeURIComponent(downloadObjectKey.parse(key))}/download`,
+        new URLSearchParams(), options, undefined, true),
     listNeonAuthOauthProviders: (project: string, options: MetadataRequestOptions) =>
       get(`/projects/${authPathId(project)}/auth/oauth_providers`, new URLSearchParams(), options),
     listBranchNeonAuthOauthProviders: (project: string, branch: string, options: MetadataRequestOptions) =>
