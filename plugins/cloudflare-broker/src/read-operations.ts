@@ -5,6 +5,7 @@ import { subscriptionDescriptors, type SubscriptionScope } from "./subscriptions
 import { workerScheduleDescriptor, type WorkerScheduleScope } from "./worker-schedules.js";
 import { queueConsumerDescriptors, type QueueConsumerScope } from "./queue-consumers.js";
 import { pagesDomainDescriptors, type PagesDomainScope } from "./pages-domains.js";
+import { hostnameTlsDescriptors, type HostnameTlsScope } from "./hostname-tls.js";
 import { eventSubscriptionDescriptors, type EventSubscriptionScope } from "./event-subscriptions.js";
 import { versionAssetDescriptor, type VersionAssetScope } from "./version-assets.js";
 import { workerDomainMetadataDescriptors, type WorkerDomainScope } from "./worker-domains.js";
@@ -83,7 +84,10 @@ export interface CloudflareReadScope extends MetadataScope {
   workerPackageVersions?: VersionAssetScope["packageVersions"];
   accessApplications?: AccessApplicationMetadataScope["applications"];
   accessPolicies?: AccessPolicyMetadataScope["applications"];
-  zone?: Pick<ZoneMetadataScope, "zoneId" | "dnsRecordIds"> & { workerRoutes?: WorkerRouteMetadataScope["routes"] };
+  zone?: Pick<ZoneMetadataScope, "zoneId" | "dnsRecordIds"> & {
+    workerRoutes?: WorkerRouteMetadataScope["routes"];
+    hostnameTls?: HostnameTlsScope["settings"];
+  };
 }
 
 // Internal operation registry only; no tool registration or host/policy/credential
@@ -115,6 +119,8 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     zoneId: scope.zone.zoneId, dnsRecordIds: scope.zone.dnsRecordIds });
   const routes = scope.zone === undefined ? undefined : workerRouteMetadataDescriptors({ accountId, revision,
     zoneId: scope.zone.zoneId, routes: scope.zone.workerRoutes ?? [] });
+  const tls = scope.zone === undefined ? undefined : hostnameTlsDescriptors({ accountId, revision,
+    zoneId: scope.zone.zoneId, settings: scope.zone.hostnameTls ?? [] });
   const content = currentContentDescriptor(sourceScope);
   const readContent = currentContentTransport(fetcher);
   return Object.freeze([
@@ -148,6 +154,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(domains.workerDomainsList), metadata(domains.workerDomainGet),
     ...(zone === undefined ? [] : [metadata(zone.zoneGet), metadata(zone.dnsList), metadata(zone.dnsGet)]),
     ...(routes === undefined ? [] : [metadata(routes.workerRoutesList), metadata(routes.workerRouteGet)]),
+    ...(tls === undefined ? [] : [metadata(tls.settingsList), metadata(tls.settingGet)]),
     // Source acquisition needs exact native authority, even for digest-only output.
     bind(content, (args, credential, signal) => readContent(content, args, credential, signal)),
   ]);

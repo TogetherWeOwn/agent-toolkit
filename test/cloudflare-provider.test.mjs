@@ -11,6 +11,7 @@ import { subscriptionDescriptors } from "../dist/plugins/cloudflare-broker/src/s
 import { workerScheduleDescriptor } from "../dist/plugins/cloudflare-broker/src/worker-schedules.js";
 import { queueConsumerDescriptors } from "../dist/plugins/cloudflare-broker/src/queue-consumers.js";
 import { pagesDomainDescriptors } from "../dist/plugins/cloudflare-broker/src/pages-domains.js";
+import { hostnameTlsDescriptors } from "../dist/plugins/cloudflare-broker/src/hostname-tls.js";
 import { eventSubscriptionDescriptors } from "../dist/plugins/cloudflare-broker/src/event-subscriptions.js";
 import { r2CorsDescriptor } from "../dist/plugins/cloudflare-broker/src/r2-cors.js";
 import { r2NotificationDescriptors } from "../dist/plugins/cloudflare-broker/src/r2-notifications.js";
@@ -82,6 +83,7 @@ const allDescriptors = { ...metadataOnly, ...deletionDescriptors, contentDescrip
   workerSchedules: workerScheduleDescriptor({ accountId: account, revision: "policy-1" }),
   ...queueConsumerDescriptors({ accountId: account, revision: "policy-1" }),
   ...pagesDomainDescriptors({ accountId: account, revision: "policy-1" }),
+  ...hostnameTlsDescriptors({ accountId: account, zoneId: zone, revision: "policy-1" }),
   ...eventSubscriptionDescriptors({ accountId: account, revision: "policy-1" }),
   ...workerDomainMetadataDescriptors({ accountId: account, revision: "policy-1" }),
   r2Cors: r2CorsDescriptor({ accountId: account, revision: "policy-1" }),
