@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { metadataDescriptors, zoneMetadataDescriptors, secretsStoreMetadataDescriptors } from "../dist/plugins/cloudflare-broker/src/metadata.js";
+import { metadataDescriptors, zoneMetadataDescriptors, secretsStoreMetadataDescriptors, durableObjectMetadataDescriptors } from "../dist/plugins/cloudflare-broker/src/metadata.js";
 import { deletionPlanDescriptors } from "../dist/plugins/cloudflare-broker/src/deletion-plans.js";
 import { inventory, source } from "../plugins/cloudflare-broker/scripts/inventory.mjs";
 import { familySummary } from "../plugins/cloudflare-broker/scripts/families.mjs";
@@ -41,7 +41,15 @@ const secretsStoreCases = [
   ["secretsList", { storeId: own, page: 2, perPage: 10 }, `/${own}/secrets?page=2&per_page=10`, `:${own}:secrets`],
   ["secretGet", { storeId: own, secretId: zone }, `/${own}/secrets/${zone}`, `:${own}:secret:${zone}`],
 ];
-const metadataOnly = { ...descriptors, ...zoneDescriptors, ...secretsStoreDescriptors };
+const objectId = "e".repeat(64);
+const foreignObjectId = "f".repeat(64);
+const durableScope = { accountId: account, revision: "policy-1", namespaces: [{ namespaceId: own, objectIds: [objectId] }, { namespaceId: other, objectIds: [foreignObjectId] }] };
+const durableDescriptors = durableObjectMetadataDescriptors(durableScope);
+const durableCases = [
+  ["durableNamespacesList", { page: 2, perPage: 10 }, "?page=2&per_page=10", ":namespaces"],
+  ["durableObjectsList", { namespaceId: own, limit: 10 }, `/${own}/objects?limit=10`, `:namespace:${own}:objects`],
+];
+const metadataOnly = { ...descriptors, ...zoneDescriptors, ...secretsStoreDescriptors, ...durableDescriptors };
 const allDescriptors = { ...metadataOnly, ...deletionDescriptors };
 const deletionCases = [
   ["workerDelete", { scriptName: "safe-worker" }, `/accounts/${account}/workers/scripts/safe-worker?force=false`, `cloudflare:account:${account}:worker:safe-worker`],
@@ -667,6 +675,67 @@ test("Cloudflare KV and Queue metadata refuse invalid envelopes and oversized pa
   }
 });
 
+test("Cloudflare Durable Objects metadata uses closed bounded requests and trusted namespace scope", () => {
+  for (const [name, args, path, resource] of durableCases) {
+    const descriptor = durableDescriptors[name];
+    const input = descriptor.prepare(args);
+    assert.deepEqual(input.request, { method: "GET", path: `/accounts/${account}/workers/durable_objects/namespaces${path}`, maxResponseBytes: 131072, timeoutMs: 10000, maxRequests: 1, redirects: "deny" });
+    assert.deepEqual(input.resource, { id: `cloudflare:account:${account}:durable-objects${resource}`, revision: "policy-1" });
+    assert.ok(Object.isFrozen(descriptor) && Object.isFrozen(input) && Object.isFrozen(input.request) && Object.isFrozen(input.resource));
+    assert.equal(descriptor.execute, undefined);
+    for (const extra of [{ accountId: other }, { agentId: "foreign" }, { cursor: "untrusted" }, { sql: "SELECT 1" }, { url: "https://example.invalid" }, { headers: {} }, { approval: true }]) refuses(() => descriptor.prepare({ ...args, ...extra }), "schema");
+  }
+  refuses(() => durableDescriptors.durableObjectsList.prepare({ namespaceId: zone, limit: 10 }), "scope");
+  for (const namespaceId of ["../objects", own.toUpperCase(), "b".repeat(64)]) refuses(() => durableDescriptors.durableObjectsList.prepare({ namespaceId, limit: 10 }), "schema");
+});
+
+test("Cloudflare Durable Objects metadata projects only namespace-specific allowlisted IDs", () => {
+  const list = durableDescriptors.durableNamespacesList;
+  const input = list.prepare({ page: 1, perPage: 10 });
+  assert.deepEqual(list.project(success([{ id: own, name: "private", script: "private", class: "private", use_sqlite: true }, { id: zone }]), input), { items: [{ id: own }], complete: false });
+  const objects = durableDescriptors.durableObjectsList;
+  const objectInput = objects.prepare({ namespaceId: own, limit: 10 });
+  assert.deepEqual(objects.project(success([{ id: objectId, hasStoredData: true, name: "private", data: "private", account_id: account, namespace_id: own }, { id: foreignObjectId }]), objectInput), { items: [{ id: objectId }], complete: false });
+  const otherInput = objects.prepare({ namespaceId: other, limit: 10 });
+  assert.deepEqual(objects.project(success([{ id: objectId }]), otherInput), { items: [], complete: false });
+  refuses(() => list.project(success([{ id: own, account_id: other }]), input), "scope");
+  for (const fields of [{ account_id: other }, { namespace_id: other }]) refuses(() => objects.project(success([{ id: objectId, ...fields }]), objectInput), "scope");
+  const empty = durableObjectMetadataDescriptors({ accountId: account, revision: "policy-1", namespaces: [] });
+  assert.deepEqual(empty.durableNamespacesList.project(success([{ id: own }]), empty.durableNamespacesList.prepare({ page: 1, perPage: 10 })), { items: [], complete: false });
+  refuses(() => empty.durableObjectsList.prepare({ namespaceId: own, limit: 10 }), "scope");
+});
+
+test("Cloudflare Durable Objects scope snapshots are copied and invalid scope refuses", () => {
+  const mutable = structuredClone(durableScope);
+  const captured = durableObjectMetadataDescriptors(mutable);
+  mutable.accountId = other;
+  mutable.revision = "policy-2";
+  mutable.namespaces[0].objectIds.splice(0, 1, foreignObjectId);
+  mutable.namespaces.splice(0, 1);
+  const input = captured.durableObjectsList.prepare({ namespaceId: own, limit: 10 });
+  assert.equal(input.resource.revision, "policy-1");
+  assert.match(input.request.path, new RegExp(`/accounts/${account}/`));
+  assert.deepEqual(captured.durableObjectsList.project(success([{ id: objectId }, { id: foreignObjectId }]), input), { items: [{ id: objectId }], complete: false });
+  for (const namespaces of [null, Array(101).fill({ namespaceId: own, objectIds: [] }), [{ namespaceId: own, objectIds: null }], [{ namespaceId: own, objectIds: Array(101).fill(objectId) }]]) refuses(() => durableObjectMetadataDescriptors({ ...durableScope, namespaces }), "cap");
+  refuses(() => durableObjectMetadataDescriptors({ ...durableScope, namespaces: [durableScope.namespaces[0], durableScope.namespaces[0]] }), "schema");
+  for (const id of [own, objectId.toUpperCase(), "../object"]) refuses(() => durableObjectMetadataDescriptors({ ...durableScope, namespaces: [{ namespaceId: own, objectIds: [id] }] }), "schema");
+});
+
+test("Cloudflare Durable Objects metadata refuses invalid envelopes and oversized pages", () => {
+  for (const [name, args] of durableCases) {
+    const descriptor = durableDescriptors[name];
+    const input = descriptor.prepare(args);
+    refuses(() => descriptor.project("x".repeat(131073), input), "cap");
+    for (const raw of ["null", "not-json", JSON.stringify({ success: false, errors: [{ message: "private" }], result: [] }), JSON.stringify({ success: true, result: [] })]) refuses(() => descriptor.project(raw, input), "upstream");
+    refuses(() => descriptor.project(success(Array(11).fill({ id: own })), input), "cap");
+    refuses(() => descriptor.project(success({}), input), "cap");
+    refuses(() => descriptor.project(success([null]), input), "upstream");
+  }
+  for (const limit of [0, 9, 101, 10.5, "10"]) refuses(() => durableDescriptors.durableObjectsList.prepare({ namespaceId: own, limit }), "schema");
+  for (const page of [0, 1001, 1.5, "1"]) refuses(() => durableDescriptors.durableNamespacesList.prepare({ page, perPage: 10 }), "schema");
+  for (const perPage of [0, 101, 1.5, "10"]) refuses(() => durableDescriptors.durableNamespacesList.prepare({ page: 1, perPage }), "schema");
+});
+
 test("Cloudflare full schema inventory is pinned, explicit about holes, and consistent with descriptors", async () => {
   const bytes = await readFile(new URL("../plugins/cloudflare-broker/coverage/operations.jsonl", import.meta.url));
   const manifest = JSON.parse(await readFile(new URL("../plugins/cloudflare-broker/coverage/source.json", import.meta.url)));
@@ -702,9 +771,9 @@ test("Cloudflare full schema inventory is pinned, explicit about holes, and cons
       }
     }
   }
-  assert.equal(operations.filter(row => row.typedTool !== null).length, 28);
+  assert.equal(operations.filter(row => row.typedTool !== null).length, 30);
   assert.equal(operations.filter(row => row.tier === "reserved").length, 5);
-  assert.equal(operations.filter(row => row.tier === "read").length, 23);
+  assert.equal(operations.filter(row => row.tier === "read").length, 25);
   assert.equal(manifest.counts.descriptors, Object.keys(allDescriptors).length);
   assert.equal(manifest.credentialScope.status, "operation-entitlements-unresolved");
   assert.equal(manifest.complete, false);

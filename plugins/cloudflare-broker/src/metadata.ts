@@ -584,3 +584,73 @@ export function secretsStoreMetadataDescriptors(scope: SecretsStoreMetadataScope
   });
   return Object.freeze({ storesList, storeGet, secretsList, secretGet });
 }
+
+export interface DurableObjectMetadataScope {
+  accountId: string;
+  revision: string;
+  namespaces: readonly { namespaceId: string; objectIds: readonly string[] }[];
+}
+const durableObjectId = text(64, /^[a-f0-9]{64}$/);
+const durableObjectsPage = closed({ namespaceId: resourceId, limit: integer(10, 100) });
+
+// Object visibility is scoped to its namespace, not inferred from Worker access.
+export function durableObjectMetadataDescriptors(scope: DurableObjectMetadataScope) {
+  const account = accountId.parse(scope.accountId);
+  const revision = text(80, /^[A-Za-z0-9][A-Za-z0-9_.-]*$/).parse(scope.revision);
+  requireThat(Array.isArray(scope.namespaces) && scope.namespaces.length <= maxRows, "cap");
+  const namespaces = new Map<string, Set<string>>();
+  for (const entry of scope.namespaces) {
+    const id = resourceId.parse(entry.namespaceId);
+    requireThat(!namespaces.has(id), "schema");
+    requireThat(Array.isArray(entry.objectIds) && entry.objectIds.length <= maxRows, "cap");
+    namespaces.set(id, new Set<string>(entry.objectIds.map((value: unknown) => durableObjectId.parse(value))));
+  }
+  const root = `/accounts/${account}/workers/durable_objects/namespaces`;
+  function prepared<A>(args: A, resource: string, path: string): PreparedMetadata<A> {
+    return Object.freeze({
+      arguments: args,
+      resource: Object.freeze({ id: `cloudflare:account:${account}:durable-objects${resource}`, revision }),
+      request: Object.freeze({ method: "GET", path, maxResponseBytes, timeoutMs: 10000, maxRequests: 1, redirects: "deny" }),
+    });
+  }
+  function namespaceScope(id: string) { requireThat(namespaces.has(id), "scope"); }
+  function accountScope(row: Row) { requireThat(row.account_id === undefined || row.account_id === account, "scope"); }
+  const durableNamespacesList: MetadataDescriptor<ReturnType<typeof page.parse>, PartialList<{ id: string }>> = Object.freeze({
+    name: "cloudflare.durable_objects.namespaces.list", version: "1", tier: "read", providerOperationId: "durable-objects-namespace-list-namespaces",
+    prepare(raw: unknown) {
+      const args = page.parse(raw);
+      return prepared(args, ":namespaces", `${root}?page=${args.page}&per_page=${args.perPage}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof page.parse>>) {
+      const args = page.parse(input.arguments);
+      const result = rows(envelope(raw).result);
+      requireThat(result.length <= args.perPage, "cap");
+      const items = result.filter(row => typeof row.id === "string" && namespaces.has(row.id)).map(row => {
+        accountScope(row);
+        return { id: providerText(row.id, resourceId) };
+      });
+      return bounded({ items, complete: false as const });
+    },
+  });
+  const durableObjectsList: MetadataDescriptor<ReturnType<typeof durableObjectsPage.parse>, PartialList<{ id: string }>> = Object.freeze({
+    name: "cloudflare.durable_objects.objects.list", version: "1", tier: "read", providerOperationId: "durable-objects-namespace-list-objects",
+    prepare(raw: unknown) {
+      const args = durableObjectsPage.parse(raw);
+      namespaceScope(args.namespaceId);
+      return prepared(args, `:namespace:${args.namespaceId}:objects`, `${root}/${args.namespaceId}/objects?limit=${args.limit}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof durableObjectsPage.parse>>) {
+      const args = durableObjectsPage.parse(input.arguments);
+      namespaceScope(args.namespaceId);
+      const result = rows(envelope(raw).result);
+      requireThat(result.length <= args.limit, "cap");
+      const items = result.filter(row => typeof row.id === "string" && namespaces.get(args.namespaceId)?.has(row.id)).map(row => {
+        accountScope(row);
+        requireThat(row.namespace_id === undefined || row.namespace_id === args.namespaceId, "scope");
+        return { id: providerText(row.id, durableObjectId) };
+      });
+      return bounded({ items, complete: false as const });
+    },
+  });
+  return Object.freeze({ durableNamespacesList, durableObjectsList });
+}

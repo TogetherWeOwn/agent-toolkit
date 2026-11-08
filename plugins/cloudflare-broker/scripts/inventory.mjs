@@ -30,6 +30,8 @@ const descriptors = new Map([
   ["GET /accounts/{account_id}/secrets_store/stores/{store_id}/secrets/{secret_id}", "cloudflare.secrets_store.secrets.get"],
   ["GET /accounts/{account_id}/storage/kv/namespaces", "cloudflare.kv.namespaces.list"],
   ["GET /accounts/{account_id}/storage/kv/namespaces/{namespace_id}", "cloudflare.kv.namespaces.get"],
+  ["GET /accounts/{account_id}/workers/durable_objects/namespaces", "cloudflare.durable_objects.namespaces.list"],
+  ["GET /accounts/{account_id}/workers/durable_objects/namespaces/{id}/objects", "cloudflare.durable_objects.objects.list"],
   ["GET /accounts/{account_id}/queues", "cloudflare.queues.list"],
   ["GET /accounts/{account_id}/queues/{queue_id}", "cloudflare.queues.get"],
   ["GET /zones/{zone_id}", "cloudflare.zones.get"],
