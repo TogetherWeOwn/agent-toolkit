@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createNeonMetadataOperations, MAX_PAGES } from '../dist/plugins/neon-broker/src/metadata.js';
 import { createNeonMetadataTransport, NEON_ORIGIN, RESPONSE_BYTES, REQUEST_TIMEOUT_MS } from '../dist/plugins/neon-broker/src/transport.js';
-import { scope, project, branch, endpoint, cases, canary, fixture, response } from './helpers.mjs';
+import { scope, project, branch, endpoint, cases, allCases, canary, fixture, response } from './helpers.mjs';
 
 for (const [name, args, raw, expected] of cases) {
   test(`${name}: strict typed metadata and safe projection`, async () => {
@@ -263,20 +263,20 @@ test('transport refuses CR/LF credentials before invoking injected fetch', async
   }
 });
 
-test('fixed transport exposes only five methods and rejects path injection even at the transport seam', () => {
+test('fixed transport exposes only thirteen methods and rejects path injection even at the transport seam', () => {
   const transport = createNeonMetadataTransport(() => { throw Error('not called'); });
-  assert.equal(Object.keys(transport).length, 5);
+  assert.equal(Object.keys(transport).length, 13);
   assert.throws(() => transport.getProject('../credentials', { credential: canary, signal: new AbortController().signal }));
 });
 
-test('194-operation inventory stays explicit: five implemented, no review/enablement or package completeness', () => {
+test('194-operation inventory stays explicit: thirteen implemented, no qualification/enablement or package completeness', () => {
   const map = JSON.parse(readFileSync(new URL('../operation-map.json', import.meta.url)));
   const snapshot = JSON.parse(readFileSync(new URL('../api-snapshot.json', import.meta.url)));
   assert.equal(map.inventory.length, 194);
   assert.equal(new Set(map.inventory).size, 194);
   assert.deepEqual(map.inventory, snapshot.operations.map(op => op.id));
-  assert.deepEqual(map.operations.filter(op => op.implemented).map(op => op.id).sort(), cases.map(([name]) => name).sort());
-  assert.equal(map.operations.filter(op => op.status === 'incomplete').length, 189);
+  assert.deepEqual(map.operations.filter(op => op.implemented).map(op => op.id).sort(), allCases.map(([name]) => name).sort());
+  assert.equal(map.operations.filter(op => op.status === 'incomplete').length, 181);
   assert(map.operations.every(op => !op.reviewed && !op.enabled && op.entitlement === 'unknown' && op.prerequisite));
   assert.equal(map.reference.sha256, 'bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa');
 });

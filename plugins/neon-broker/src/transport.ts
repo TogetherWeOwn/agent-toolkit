@@ -13,12 +13,32 @@ export interface NeonMetadataTransport {
   getProjectBranch(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   listProjectBranchEndpoints(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   getProjectEndpoint(project: string, endpoint: string, options: MetadataRequestOptions): Promise<unknown>;
+  getProjectOperation(project: string, operation: string, options: MetadataRequestOptions): Promise<unknown>;
+  listProjectOperations(project: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
+  countProjectBranches(project: string, options: MetadataRequestOptions): Promise<unknown>;
+  listProjectEndpoints(project: string, options: MetadataRequestOptions): Promise<unknown>;
+  listProjectBranchDatabases(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
+  getProjectBranchDatabase(project: string, branch: string, database: string, options: MetadataRequestOptions): Promise<unknown>;
+  listProjectBranchRoles(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
+  getProjectBranchRole(project: string, branch: string, role: string, options: MetadataRequestOptions): Promise<unknown>;
 }
 export type MetadataFetch = (url: string, init: RequestInit) => Promise<Response>;
 
 function id(value: string): string {
-  if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(value)) throw Error("INVALID_ARGUMENTS");
+  if (typeof value !== "string" || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(value) || /[^A-Za-z0-9_-]/.test(value)) throw Error("INVALID_ARGUMENTS");
   return value;
+}
+function catalogName(value: string): string {
+  if (typeof value !== "string" || !/^[A-Za-z_][A-Za-z0-9_$-]{0,62}$/.test(value) || /[^A-Za-z0-9_$-]/.test(value)) throw Error("INVALID_ARGUMENTS");
+  return encodeURIComponent(value);
+}
+function cursorQuery(cursor: string | null): URLSearchParams {
+  const query = new URLSearchParams({ limit: String(PAGE_SIZE) });
+  if (cursor !== null) {
+    if (typeof cursor !== "string" || !/^[\x20-\x7e]{1,256}$/.test(cursor) || /[^\x20-\x7e]/.test(cursor)) throw Error("INVALID_ARGUMENTS");
+    query.set("cursor", cursor);
+  }
+  return query;
 }
 
 // No default fetch/global transport, SDK, SQL client, retries or discovery fallback.
@@ -90,11 +110,10 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     getProject: (project: string, options: MetadataRequestOptions) =>
       get(`/projects/${id(project)}`, new URLSearchParams(), options),
     listProjectBranches: (project: string, cursor: string | null, options: MetadataRequestOptions) => {
-      const query = new URLSearchParams({ limit: String(PAGE_SIZE), sort_by: "name", sort_order: "asc", include_deleted: "false" });
-      if (cursor !== null) {
-        if (!/^[\x20-\x7e]{1,256}$/.test(cursor)) throw Error("INVALID_ARGUMENTS");
-        query.set("cursor", cursor);
-      }
+      const query = cursorQuery(cursor);
+      query.set("sort_by", "name");
+      query.set("sort_order", "asc");
+      query.set("include_deleted", "false");
       return get(`/projects/${id(project)}/branches`, query, options);
     },
     getProjectBranch: (project: string, branch: string, options: MetadataRequestOptions) =>
@@ -103,5 +122,21 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       get(`/projects/${id(project)}/branches/${id(branch)}/endpoints`, new URLSearchParams(), options),
     getProjectEndpoint: (project: string, endpoint: string, options: MetadataRequestOptions) =>
       get(`/projects/${id(project)}/endpoints/${id(endpoint)}`, new URLSearchParams(), options),
+    getProjectOperation: (project: string, operation: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/operations/${id(operation)}`, new URLSearchParams(), options),
+    listProjectOperations: (project: string, cursor: string | null, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/operations`, cursorQuery(cursor), options),
+    countProjectBranches: (project: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/branches/count`, new URLSearchParams(), options),
+    listProjectEndpoints: (project: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/endpoints`, new URLSearchParams(), options),
+    listProjectBranchDatabases: (project: string, branch: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/branches/${id(branch)}/databases`, new URLSearchParams(), options),
+    getProjectBranchDatabase: (project: string, branch: string, database: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/branches/${id(branch)}/databases/${catalogName(database)}`, new URLSearchParams(), options),
+    listProjectBranchRoles: (project: string, branch: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/branches/${id(branch)}/roles`, new URLSearchParams(), options),
+    getProjectBranchRole: (project: string, branch: string, role: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/branches/${id(branch)}/roles/${catalogName(role)}`, new URLSearchParams(), options),
   });
 }

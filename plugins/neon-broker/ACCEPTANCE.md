@@ -2,9 +2,11 @@
 
 ## Implemented source, not accepted enablement
 
-- Five typed metadata operations with strict arguments, exact trusted scope and
-  parent-child binding, safe projections and fixed bounded injected transport.
-- Full 194-row management inventory; 189 operations remain explicitly incomplete.
+- Thirteen typed metadata/catalog operations with strict arguments, exact trusted
+  scope and parent-child binding, safe projections and fixed bounded injected transport.
+- Full 194-row management inventory; 181 operations remain explicitly incomplete.
+  The eight catalog adapters do not complete the package. Prior source merge,
+  current source review, native qualification and runtime enablement are separate.
 - Mocked contracts and common-candidate compatibility fixtures authored; accept
   actual results only from the exact PR head's Actions jobs.
 - No native adapter, credential custody, SQL, installation or runtime registration.

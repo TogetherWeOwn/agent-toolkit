@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { cases, fixture, scope, branch, response } from './helpers.mjs';
+import { allCases as cases, catalogCases, catalogFixture, fixture, scope, branch, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
 // fallback and no embedded replacement for the common authority/policy executor.
@@ -13,7 +13,7 @@ const { providerFixture, credentialCanary, derivedCanary } = await import(pathTo
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
 function brokerFixture(name, args, raw, overrides = {}) {
-  const provider = fixture(raw);
+  const provider = (catalogCases.some(([operation]) => operation === name) ? catalogFixture : fixture)(raw);
   const operation = provider.operation(name);
   const common = providerFixture(overrides);
   common.vector.policy.resources = [operation.prepare(args).resource.id];
@@ -109,7 +109,7 @@ for (const [name, args, raw, expected] of cases) {
       const poisoned = structuredClone(raw);
       for (const value of Object.values(poisoned).flat()) Object.assign(value, {
         password: 'password-canary', connection_uri: 'postgres://user:password-canary@example.invalid/db',
-        name: credentialCanary, credentials: derivedCanary,
+        ...(!Object.hasOwn(value, 'name') ? { name: credentialCanary } : {}), credentials: derivedCanary,
       });
       const f = brokerFixture(name, args, mode === 'success' ? poisoned : () => response({
         message: credentialCanary, password: 'password-canary', connection_uri: 'postgres://user:password-canary@example.invalid/db',
@@ -187,11 +187,48 @@ test('reflected lease material in selected safe-looking fields is refused by the
   assert.equal((await f.call()).code, 'OUTPUT_REFUSED');
 });
 
+for (const [name, args, raw] of catalogCases) {
+  test(`${name}: replay and TOCTOU policy/resource changes refuse without a second request`, async () => {
+    const replay = brokerFixture(name, args, raw);
+    assert.equal((await replay.call()).ok, true);
+    assert.equal((await replay.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(replay.provider.requests.length, 1);
+    for (const mode of ['resource', 'policy-revoked', 'policy-revision']) {
+      const f = brokerFixture(name, args, raw);
+      const resolve = f.common.dependencies.credentials.resolve;
+      f.common.dependencies.credentials.resolve = async (...parameters) => {
+        const lease = await resolve(...parameters);
+        if (mode === 'resource') f.common.dependencies.host.revalidate = async () => false;
+        else if (mode === 'policy-revoked') f.common.vector.policy.agents = [];
+        else f.common.vector.policy.revision = 'policy-v2';
+        return lease;
+      };
+      f.broker = f.common.broker();
+      const result = await f.call();
+      assert.equal(result.code, mode === 'resource' ? 'RESOURCE_CHANGED' : mode === 'policy-revoked' ? 'POLICY_DENIED' : 'POLICY_CHANGED');
+      assert.equal(f.provider.requests.length, 0);
+      assert.equal(f.common.calls.close, 1);
+      safeEnvelope(f, result);
+    }
+  });
+
+  test(`${name}: project, branch and sibling grants do not imply catalog or count authority`, async () => {
+    for (const resource of ['neon/projects/project-a', 'neon/projects/project-a/branches/br-a',
+      'neon/projects/project-a/branches', 'neon/projects/project-a/branches/br-a/roles/other']) {
+      const f = brokerFixture(name, args, raw);
+      f.common.vector.policy.resources = [resource];
+      assert.equal((await f.call()).code, 'POLICY_DENIED');
+      assert.equal(f.common.calls.secret, 0);
+      assert.equal(f.provider.requests.length, 0);
+    }
+  });
+}
+
 test('common operation-map validator confirms incomplete status for all unknown entitlements', () => {
   const map = JSON.parse(readFileSync(new URL('../operation-map.json', import.meta.url)));
   const result = validateOperationMap(map);
   assert.equal(result.complete, false);
   assert.equal(result.incomplete.length, 194);
-  assert.equal(map.operations.filter(operation => operation.implemented).length, 5);
+  assert.equal(map.operations.filter(operation => operation.implemented).length, 13);
   assert.equal(map.operations.filter(operation => operation.enabled).length, 0);
 });
