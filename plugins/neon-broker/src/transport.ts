@@ -37,6 +37,8 @@ export interface NeonMetadataTransport {
   listNeonAuthIntegrations(project: string, options: MetadataRequestOptions): Promise<unknown>;
   listProjectBranchFunctions(project: string, branch: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
   getProjectBranchFunction(project: string, branch: string, slug: string, options: MetadataRequestOptions): Promise<unknown>;
+  listProjectBranchTriggers(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
+  getProjectBranchTrigger(project: string, branch: string, trigger: string, options: MetadataRequestOptions): Promise<unknown>;
 }
 export type MetadataFetch = (url: string, init: RequestInit) => Promise<Response>;
 
@@ -190,5 +192,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       get(`/projects/${id(project)}/branches/${id(branch)}/functions`, cursorQuery(cursor), options),
     getProjectBranchFunction: (project: string, branch: string, slug: string, options: MetadataRequestOptions) =>
       get(`/projects/${id(project)}/branches/${id(branch)}/functions/${functionSlug(slug)}`, new URLSearchParams(), options),
+    listProjectBranchTriggers: (project: string, branch: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/branches/${id(branch)}/triggers`, new URLSearchParams(), options),
+    getProjectBranchTrigger: (project: string, branch: string, trigger: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/branches/${id(branch)}/triggers/${id(trigger)}`, new URLSearchParams(), options),
   });
 }

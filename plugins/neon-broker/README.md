@@ -191,6 +191,38 @@ truncate. Beta availability, provider side effects and runtime qualification rem
 unknown; 404 never becomes an empty list, a fabricated status or a deployment/invoke
 fallback. These reads create, deploy, invoke and delete nothing.
 
+`createNeonTriggerOperations(trustedScope, transport)` adds two beta trigger metadata reads:
+
+| Tool | Closed arguments | Authorization resource suffix (under project) |
+|---|---|---|
+| `neon.listProjectBranchTriggers` | `project_id`, `branch_id` | `branches/<branch>/triggers` |
+| `neon.getProjectBranchTrigger` | `project_id`, `branch_id`, `trigger_id` | `branches/<branch>/triggers/<trigger>` |
+
+Trigger scope copies up to 16 branch IDs and 16 exact ID/branch/function-slug
+bindings, unique by branch/ID. Inherited triggers retain a project-wide ID: selecting
+one on a parent does not select or authorize it on a child. Each effective branch
+needs an explicit binding and grant. Selected IDs use the common resource alphabet
+(1–80 ASCII letters/digits/underscore/hyphen, beginning alphanumeric), a conservative
+subset of the provider's 128-character/dot-capable ID schema; unsupported selected
+IDs refuse without normalization. Unselected provider-valid IDs are filtered from
+an authorized collection. Selected function slugs must match their trusted binding.
+The exact authenticated request path establishes branch context; optional returned
+project/branch fields must agree. The execute result carries that request context
+into projection, not fabricated provider ancestry evidence.
+
+Closed output is trigger_id, known type (schedule/storage_object_created), bound
+function_slug, enabled/inherited booleans and positive safe-integer version. Int64
+versions outside JavaScript's safe range refuse instead of rounding. Names, function
+paths, cron, bucket names/prefixes and next-run timestamps are omitted without being
+read or followed. Both enabled states and inherited status are preserved independently.
+The pinned list endpoint is nonpaginated: max 30 rows before filtering, duplicate
+IDs or any pagination refuse, no truncation. Detail must match the requested ID,
+not just another configured trigger. Collection/detail/function grants never imply
+each other. No trigger creation, update, enable, delete, invocation, scheduling or
+independent lifecycle enforcement is supplied. Beta availability/effects remain
+unknown, and non-200 responses never fabricate disabled/empty success or fallback.
+Maximum selections/output fit common JSON budgets.
+
 Trusted metadata scope contains one project, a revision, explicit branch IDs and endpoint
 parent bindings. Construction validates and copies it. Caller IDs only select
 already-configured resources; no caller identity, authority, origin, credential,
@@ -209,7 +241,7 @@ passwords, credentials and connection strings are excluded. Unknown lifecycle
 states fail closed until explicitly supported. No error body/headers are surfaced.
 Common lease-reflection checks remain necessary even in these selected fields.
 
-`createNeonMetadataTransport(injectedFetch)` has twenty-nine typed methods only. Its
+`createNeonMetadataTransport(injectedFetch)` has thirty-one typed methods only. Its
 internal request builder fixes origin `https://console.neon.tech`, `/api/v2`
 paths, GET, JSON content, no redirects and no retries. No global fetch fallback
 exists. Each response is bounded to 64 KiB and 1 s, including streamed body time;
@@ -249,8 +281,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: twenty-nine implemented
-source adapters, 165 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: thirty-one implemented
+source adapters, 163 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable
