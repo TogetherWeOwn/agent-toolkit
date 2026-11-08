@@ -31,11 +31,11 @@ export function createNeonOrganizationVPCOperations(scope: NeonOrganizationVPCSc
   check(config.endpoints.every(value => regions.has(value.regionId)));
 
   function parse(name: OrganizationVPCOperation, raw: unknown): { org_id: string; region_id?: string; vpc_endpoint_id?: string } {
-    const args = name === "listOrganizationVPCEndpointsAllRegions" ? organizationArguments.parse(raw) :
+    const args: { org_id: string; region_id?: string; vpc_endpoint_id?: string } = name === "listOrganizationVPCEndpointsAllRegions" ? organizationArguments.parse(raw) :
       name === "listOrganizationVPCEndpoints" ? regionArguments.parse(raw) : endpointArguments.parse(raw);
     if (args.org_id !== config.organizationId) throw Error("INVALID_ARGUMENTS");
-    if ("region_id" in args && !regions.has(args.region_id)) throw Error("INVALID_ARGUMENTS");
-    if ("vpc_endpoint_id" in args && (endpoints.get(args.vpc_endpoint_id) !== args.region_id || !args.region_id.startsWith("aws-"))) {
+    if (args.region_id !== undefined && !regions.has(args.region_id)) throw Error("INVALID_ARGUMENTS");
+    if (args.vpc_endpoint_id !== undefined && (endpoints.get(args.vpc_endpoint_id) !== args.region_id || !args.region_id?.startsWith("aws-"))) {
       throw Error("INVALID_ARGUMENTS");
     }
     return args;
