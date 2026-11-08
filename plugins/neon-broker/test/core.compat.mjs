@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { allCases as cases, catalogCases, catalogFixture, catalogScopeAt, capabilityCases, capabilityFixture,
+import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture, catalogScopeAt, capabilityCases, capabilityFixture,
   capabilityScope, library, snapshot, schedule, branchFeatureCases, branchFeatureFixture, branchFeatureScope,
   authStatusCases, authStatusFixture, authStatusScope, authDomainCases, authDomainFixture, authDomainScope,
   authIntegrationCases, authIntegrationFixture, authIntegrationScope,
@@ -147,7 +147,7 @@ for (const [name, args, raw, expected] of cases) {
 
 test('project-only policy cannot authorize collection reads or child endpoints', async () => {
   for (const index of [1, 2, 3, 4]) {
-    const [name, args, raw] = cases[index];
+    const [name, args, raw] = metadataCases[index];
     const f = brokerFixture(name, args, raw);
     f.common.vector.policy.resources = ['neon/projects/project-a'];
     assert.equal((await f.call()).code, 'POLICY_DENIED');
@@ -157,7 +157,7 @@ test('project-only policy cannot authorize collection reads or child endpoints',
 
 test('branch/endpoint resource binding and revocation are revalidated after credential resolution', async () => {
   for (const mode of ['resource', 'policy-revoked', 'policy-revision']) {
-    const [name, args, raw] = cases[4];
+    const [name, args, raw] = metadataCases[4];
     const f = brokerFixture(name, args, raw);
     const original = f.common.dependencies.credentials.resolve;
     f.common.dependencies.credentials.resolve = async (...parameters) => {
@@ -180,7 +180,7 @@ test('branch/endpoint resource binding and revocation are revalidated after cred
 });
 
 test('audit outage refuses before credentials/network; request replay never retries', async () => {
-  const [name, args, raw] = cases[0];
+  const [name, args, raw] = metadataCases[0];
   const unavailable = brokerFixture(name, args, raw, { audit: { async append() { throw Error(credentialCanary); } } });
   assert.equal((await unavailable.call()).code, 'AUDIT_UNAVAILABLE');
   assert.equal(unavailable.provider.requests.length, 0);
@@ -192,7 +192,7 @@ test('audit outage refuses before credentials/network; request replay never retr
 });
 
 test('no start/restart/resume/suspend, secret, SQL or connection lookup fallback exists', async () => {
-  const [name, args, raw] = cases[0];
+  const [name, args, raw] = metadataCases[0];
   const f = brokerFixture(name, args, raw);
   for (const tool of ['neon.startProjectEndpoint', 'neon.restartProjectEndpoint', 'neon.resume',
     'neon.suspendProjectEndpoint', 'neon.sql', 'neon.getConnectionURI', 'neon.getProjectBranchRolePassword']) {
@@ -203,7 +203,7 @@ test('no start/restart/resume/suspend, secret, SQL or connection lookup fallback
 });
 
 test('reflected lease material in selected safe-looking fields is refused by the common core', async () => {
-  const f = brokerFixture('getProjectBranch', cases[2][1], { branch }, {
+  const f = brokerFixture('getProjectBranch', metadataCases[2][1], { branch }, {
     credentials: { async resolve() { return { value: 'ready', redactions: [], async close() {} }; } },
   });
   assert.equal((await f.call()).code, 'OUTPUT_REFUSED');
