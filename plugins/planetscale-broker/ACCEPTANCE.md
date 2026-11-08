@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 183 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 181 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -40,6 +40,26 @@ read-only transactions, statement/lock/row/byte/page/time caps and native closur
 evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
+
+## Query report metadata source increment
+
+`test/query-reports.test.mjs` adds 19 synthetic contracts for report status and
+first-page list metadata. Output is bound report ID/state only; URLs, actor, SQL
+and timestamps are omitted. Collections snapshot 1–32 unique IDs and refuse the
+whole page on unknown/duplicate/invalid rows. The official cursor envelope is
+validated, but only the first page with fixed `limit=10` is supported: no numeric
+pagination, cursor/URL following or completeness claim. `hasMore` remains explicit.
+Download is officially 302-only and remains missing pending a reviewed redirect/
+custody contract. Completed/failed states never establish download authority,
+safe retry or native closure. Current parent ownership, independent collection
+permission, raw-body custody, reflection guards and non-waking semantics remain
+prerequisites. Coverage is 110/291 bounded subsets, 181 missing; tiers 110 provisional
+read / 16 unreviewed reserved / 165 unresolved. Zero integrated/reviewed/enabled/
+adopted. Fresh exact-head Actions is required; no local suite/build/typecheck ran.
+Prior admin/compute head `be4f0a15042be4fcd3f4c87f3d691f36f94a9096` passed
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42450375071),
+including [tests](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42450375071/job/128638124504),
+lint/typecheck, native-policy and ci-ok. That does not execute these new fixtures.
 
 ## Compute catalog source increment
 

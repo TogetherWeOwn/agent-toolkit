@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The 108 adapters are pure request builders and bounded output projections,
+The 110 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,19 +36,38 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 108 | Narrow projections; not full operation coverage |
-| Missing source adapters | 183 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 110 | Narrow projections; not full operation coverage |
+| Missing source adapters | 181 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-108 adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 167
+110 adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 165
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
 backups/restore, schema/deploy, topology, maintenance and every other official
 area remain in the map even when access or implementation is missing.
+
+## Query report metadata
+
+`planetscale.get_query_patterns_report_status` and
+`planetscale.list_generated_query_patterns_reports` return only bound report IDs
+and documented pending/completed/failed state. URLs (including download URLs),
+actors, timestamps and report/SQL content are omitted. Lists snapshot 1–32 unique
+broker-owned IDs, validate the official cursor envelope, cap rows at 10 and refuse
+the whole result on unknown/duplicate/malformed records. Only the first page with
+fixed `limit=10` and empty arguments is supported. `hasMore` records a partial
+result; `coverage: first-page-only-not-completeness-evidence` never claims full
+collection/scope coverage, even when false. No cursor, provider URL or redirect is
+followed. Later pages, report generation and full details remain incomplete.
+The download GET is officially 302-only and remains missing pending a reviewed
+redirect/custody contract; it is not a successful metadata read. Completed state
+and `downloadAuthority: not-established` never grant export access, prove native
+closure or authorize retry. Current immutable parent ownership, independent
+collection permission, broker-side raw-body custody, final selected-field reflection
+guards and operation-specific non-waking evidence remain prerequisites.
 
 ## Compute catalog metadata
 
@@ -440,7 +459,7 @@ No connector or replacement broker is introduced.
 ## Local mutation-plan artifacts — not executors
 
 `src/mutation-plans.ts` supplies three pure, bounded previews. They are **not API
-adapters**, do not consume authority and do not increase the 108-adapter count.
+adapters**, do not consume authority and do not increase the 110-adapter count.
 Each artifact labels itself `validated-local-plan-not-provider-dry-run`, with
 execution not implemented, remote preconditions not verified and provider dry-run
 not performed. No network executor, output projector or secret placement exists.
@@ -474,7 +493,7 @@ The candidates only document requirements; native routing, expiry, exact-target
 binding, atomic consumption, replay/concurrent-use refusal and approved placement
 are **not implemented or tested as authority enforcement here**. Credential routes
 remain incomplete until a broker-only sink and reconciliation are accepted. The
-other 171 tier classifications are unresolved, not automatically harmless reads or
+other 165 tier classifications are unresolved, not automatically harmless reads or
 ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.

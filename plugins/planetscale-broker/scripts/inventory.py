@@ -12,6 +12,8 @@ import sys
 
 SOURCE_SHA256 = "ae45866599cb5d248fadb9d7f0ed30fd6aed440a17ec0950c4e9e0d58da4cb73"
 ADAPTERS = {
+    "get_query_patterns_report_status": "get-query-patterns-report-status",
+    "list_generated_query_patterns_reports": "list-generated-query-patterns-reports",
     "get_admin": "get-admin",
     "list_admin_size_skus": "list-admin-size-skus",
     "list_router_size_skus": "list-router-size-skus",
@@ -244,6 +246,7 @@ def policy_candidate(operation_id):
 
 def adapter_test(operation_id):
     for operations, name in [
+        ({"get_query_patterns_report_status", "list_generated_query_patterns_reports"}, "query-reports"),
         ({"get_admin", "list_admin_size_skus", "list_router_size_skus", "list_cluster_size_skus"}, "compute-catalog"),
         ({"get_traffic_budget", "list_traffic_budgets"}, "traffic-budgets"),
         ({"get_keyspace_rollout_status", "get_vtctld_operation"}, "operation-status"),
@@ -331,7 +334,7 @@ def inventory(raw):
                 "implementation": "offline-adapter-only" if adapter else "missing",
                 "review": "not-reviewed",
                 "enablement": "disabled",
-                "prerequisites": ["operator-verified-scope-metadata", "reviewed-compatible-common-core", "exact-tier-security-crypto-qa-and-actions"] + ([] if adapter else ["typed-adapter-and-tier-tests"]) + (["reviewed-fixed-redirect-alias-contract-no-automatic-follow"] if operation_id in REDIRECT_ALIASES else []),
+                "prerequisites": ["operator-verified-scope-metadata", "reviewed-compatible-common-core", "exact-tier-security-crypto-qa-and-actions"] + ([] if adapter else ["typed-adapter-and-tier-tests"]) + (["reviewed-fixed-redirect-alias-contract-no-automatic-follow"] if operation_id in REDIRECT_ALIASES else []) + (["reviewed-report-download-redirect-and-custody-contract"] if operation_id == "get_query_patterns_report" else []),
             })
     operations.sort(key=lambda o: o["operationId"])
     operation_ids = {o["operationId"] for o in operations}
