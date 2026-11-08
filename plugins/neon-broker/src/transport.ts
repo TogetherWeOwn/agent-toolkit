@@ -39,6 +39,8 @@ export interface NeonMetadataTransport {
   getProjectBranchFunction(project: string, branch: string, slug: string, options: MetadataRequestOptions): Promise<unknown>;
   listProjectBranchTriggers(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   getProjectBranchTrigger(project: string, branch: string, trigger: string, options: MetadataRequestOptions): Promise<unknown>;
+  listNeonAuthOAuthClients(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
+  getNeonAuthOAuthClient(project: string, branch: string, client: string, options: MetadataRequestOptions): Promise<unknown>;
 }
 export type MetadataFetch = (url: string, init: RequestInit) => Promise<Response>;
 
@@ -52,6 +54,14 @@ function catalogName(value: string): string {
 }
 function functionSlug(value: string): string {
   if (typeof value !== "string" || value.length > 20 || !/^[a-z0-9]+$/.test(value) || /[^a-z0-9]/.test(value)) throw Error("INVALID_ARGUMENTS");
+  return value;
+}
+function authPathId(value: string): string {
+  if (typeof value !== "string" || value.length > 60 || !/^[a-z0-9-]+$/.test(value) || /[^a-z0-9-]/.test(value)) throw Error("INVALID_ARGUMENTS");
+  return value;
+}
+function authClientId(value: string): string {
+  if (typeof value !== "string" || value.length > 64 || !/^[A-Za-z0-9]+$/.test(value) || /[^A-Za-z0-9]/.test(value)) throw Error("INVALID_ARGUMENTS");
   return value;
 }
 function cursorQuery(cursor: string | null): URLSearchParams {
@@ -196,5 +206,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       get(`/projects/${id(project)}/branches/${id(branch)}/triggers`, new URLSearchParams(), options),
     getProjectBranchTrigger: (project: string, branch: string, trigger: string, options: MetadataRequestOptions) =>
       get(`/projects/${id(project)}/branches/${id(branch)}/triggers/${id(trigger)}`, new URLSearchParams(), options),
+    listNeonAuthOAuthClients: (project: string, branch: string, options: MetadataRequestOptions) =>
+      get(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/oauth-provider/clients`, new URLSearchParams(), options),
+    getNeonAuthOAuthClient: (project: string, branch: string, client: string, options: MetadataRequestOptions) =>
+      get(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/oauth-provider/clients/${authClientId(client)}`, new URLSearchParams(), options),
   });
 }

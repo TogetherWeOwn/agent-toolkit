@@ -1704,7 +1704,7 @@
       "id": "listNeonAuthOAuthClients",
       "apiArea": "auth",
       "tool": "neon.listNeonAuthOAuthClients",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/auth/oauth-provider/clients",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -1712,12 +1712,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-clients.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. Beta availability unknown. No live grant or enablement."
     },
     {
       "id": "createNeonAuthOAuthClient",
@@ -1742,7 +1745,7 @@
       "id": "getNeonAuthOAuthClient",
       "apiArea": "auth",
       "tool": "neon.getNeonAuthOAuthClient",
-      "scope": "project_id/branch_id/client_id",
+      "scope": "project_id/branch_id/auth/oauth-provider/clients/client_id",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -1750,12 +1753,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-clients.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. Beta availability unknown. No live grant or enablement."
     },
     {
       "id": "updateNeonAuthOAuthClient",

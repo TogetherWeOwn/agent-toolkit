@@ -223,6 +223,34 @@ independent lifecycle enforcement is supplied. Beta availability/effects remain
 unknown, and non-200 responses never fabricate disabled/empty success or fallback.
 Maximum selections/output fit common JSON budgets.
 
+`createNeonAuthClientOperations(trustedScope, transport)` adds two beta OAuth-client metadata reads:
+
+| Tool | Closed arguments | Authorization resource suffix (under project) |
+|---|---|---|
+| `neon.listNeonAuthOAuthClients` | `project_id`, `branch_id` | `branches/<branch>/auth/oauth-provider/clients` |
+| `neon.getNeonAuthOAuthClient` | `project_id`, `branch_id`, `client_id` | `branches/<branch>/auth/oauth-provider/clients/<client>` |
+
+Scope copies up to 16 branch IDs and 16 exact client-ID/branch bindings, unique per
+branch/ID, within common configuration/output budgets. Project/branch IDs follow the
+pinned path schema (lowercase alphanumeric/hyphen, 1–60); selected client IDs follow
+the detail path (ASCII alphanumeric, 1–64), without normalization. Unselected bounded
+printable IDs can be filtered from an authorized collection. Selection is per branch;
+no parent, sibling, collection or detail grant implies another. Identity is the fixed
+authenticated request path; optional returned identities must agree. Execute carries
+request branch context into projection, not invented provider ancestry evidence.
+Detail returns an unwrapped client and must match the exact requested client ID.
+
+Closed output contains only client_id, known type (public/confidential), skip_consent
+and disabled booleans. Both states remain independent; absent fields refuse, not default.
+Names, redirect URIs, resource audiences, timestamps and unexpected secrets are not
+read or emitted. The pinned GET response schemas explicitly exclude client secrets;
+create and rotate-secret responses are distinct and never requested. The list has
+no pagination: at most 30 rows before filtering; duplicate IDs, pagination and
+contradictory ancestry refuse, not truncate. Non-200 stays unavailable, never empty
+or disabled success or another endpoint fallback. No OAuth flow, client mutation,
+secret reveal/rotation, runtime grant or lifecycle enforcement is supplied. Beta
+availability, entitlement and provider effects remain unverified.
+
 Trusted metadata scope contains one project, a revision, explicit branch IDs and endpoint
 parent bindings. Construction validates and copies it. Caller IDs only select
 already-configured resources; no caller identity, authority, origin, credential,
@@ -241,7 +269,7 @@ passwords, credentials and connection strings are excluded. Unknown lifecycle
 states fail closed until explicitly supported. No error body/headers are surfaced.
 Common lease-reflection checks remain necessary even in these selected fields.
 
-`createNeonMetadataTransport(injectedFetch)` has thirty-one typed methods only. Its
+`createNeonMetadataTransport(injectedFetch)` has thirty-three typed methods only. Its
 internal request builder fixes origin `https://console.neon.tech`, `/api/v2`
 paths, GET, JSON content, no redirects and no retries. No global fetch fallback
 exists. Each response is bounded to 64 KiB and 1 s, including streamed body time;
@@ -281,8 +309,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: thirty-one implemented
-source adapters, 163 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: thirty-three implemented
+source adapters, 161 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

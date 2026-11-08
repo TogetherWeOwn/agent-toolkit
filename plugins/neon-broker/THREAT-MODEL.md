@@ -12,7 +12,7 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Cross-agent/resource access | Common agent AND exact-resource policy; separate collection targets; copied trusted scope; exact response project/child binding. No broad list inferred from project access. |
 | Provider scope drift | Bound scope revision enters canonical target and is revalidated by host/core before transport; exact provider IDs/parent relations checked. Actual current binding adapter remains required. |
 | Secrets in response/error/audit | Allowlist projection excludes settings/hosts/owners/credentials/passwords/URIs and arbitrary errors/timestamps. Database/role names are emitted only when exact trusted bindings match; other arbitrary names stay excluded. Fixed errors discard raw bodies. Common reflected-lease checks and safe audit envelopes remain mandatory. Arbitrary secret DLP is not claimed. |
-| Redirect/SSRF/path injection | Thirty-one fixed GET methods, constrained identifiers/catalog names, encoded cursor, fixed origin, redirect:error, no arbitrary URL/header arguments, no default fetch. Auth-status reads omit OAuth login/consent URLs, MCP resources and audiences; no secondary fetch. |
+| Redirect/SSRF/path injection | Thirty-three fixed GET methods, constrained identifiers/catalog names, encoded cursor, fixed origin, redirect:error, no arbitrary URL/header arguments, no default fetch. Auth-status reads omit OAuth login/consent URLs, MCP resources and audiences; no secondary fetch. |
 | Pagination/response/time amplification | 64 KiB per response; 1 s request including streamed body; 3.5 s operation; 10 branches/operations per page, three pages, duplicate/cycle checks; branch next/sort and operation cursor shapes are distinct; 30-row cap for other lists. No retries/partial success. |
 | Aggregate disclosure | Project-wide endpoint/operation collections and total branch counts have distinct exact-resource targets. Child/project grants never imply aggregate authority; response filtering is not request authorization. |
 | Read waking compute | No compute mutation/SQL/connection/secret fallback exists. GET is NOT proof; independent provider evidence and accepted enablement gates remain unsatisfied. |
@@ -87,6 +87,30 @@ No provisioning, TTL/spend/cleanup, scheduler or lifecycle enforcement is introd
 A trigger enabled flag is metadata, not execution authority or runtime readiness.
 No create/update/delete/invoke fallback exists; provider effects, beta availability,
 entitlement and native custody/host integration remain unverified qualification gates.
+
+## OAuth-client metadata delta
+
+The beta OAuth-client collection/detail have separate exact branch resources and
+copied client-ID/branch bindings (16 branches/bindings maximum). Project/branch and
+client identifiers follow pinned path limits; no caller authority, URL or secret is
+accepted. Fixed authenticated paths establish ancestry, optional returned identities
+must match, and detail must return the exact requested client ID in the unwrapped
+schema. Execute carries request context into projection. Collection filtering is
+additional minimization after collection authorization; it grants no detail access.
+Lists cap at 30 before filtering and reject duplicate IDs/pagination, never truncate.
+
+Output is client ID/type/skip-consent/disabled only. Names, redirect/resource URLs,
+timestamps and unexpected client secrets are dropped without reading or fetching
+them. Pinned GET schemas exclude client secrets; create/rotate schemas are never
+used. Unknown types, missing/malformed flags, wrong selected detail and ancestry
+refuse. Non-200 does not become empty/disabled success or mutation/secret fallback.
+`auth-clients.test.mjs` covers strict requests, detached revalidation, copied scope,
+exact paths/envelopes, poisoned outputs, accessors, bounds and unavailable transport.
+Each operation also consumes common identity, per-agent AND exact-resource, replay,
+TOCTOU, reflected-lease and maximum-scope/output budget tests. No resources, OAuth
+flows, grants, secrets, TTL/spend/teardown or lifecycle enforcement are introduced.
+Provider effects, beta availability, entitlement and native custody/host integration
+remain qualification gates; mock success proves none of them.
 
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into

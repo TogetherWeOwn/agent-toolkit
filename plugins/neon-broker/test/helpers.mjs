@@ -7,6 +7,7 @@ import { createNeonAuthDomainOperations } from '../dist/plugins/neon-broker/src/
 import { createNeonAuthIntegrationOperations } from '../dist/plugins/neon-broker/src/auth-integrations.js';
 import { createNeonFunctionOperations } from '../dist/plugins/neon-broker/src/functions.js';
 import { createNeonTriggerOperations } from '../dist/plugins/neon-broker/src/triggers.js';
+import { createNeonAuthClientOperations } from '../dist/plugins/neon-broker/src/auth-clients.js';
 import { createNeonMetadataTransport } from '../dist/plugins/neon-broker/src/transport.js';
 
 export const scope = {
@@ -108,7 +109,14 @@ export const triggerCases = [
   ['listProjectBranchTriggers', { project_id: 'project-a', branch_id: 'br-a' }, { triggers: [neonTrigger] }, { triggers: [neonTrigger] }],
   ['getProjectBranchTrigger', { project_id: 'project-a', branch_id: 'br-a', trigger_id: 'tr-a' }, { trigger: neonTrigger }, { trigger: neonTrigger }],
 ];
-export const allCases = [...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases];
+export const authClientScope = { projectId: scope.projectId, revision: scope.revision, branchIds: scope.branchIds,
+  clients: [{ id: 'ClientA', branchId: 'br-a' }, { id: 'ClientB', branchId: 'br-b' }, { id: 'ClientC', branchId: 'br-a' }] };
+export const authClient = { client_id: 'ClientA', type: 'confidential', skip_consent: false, disabled: true };
+export const authClientCases = [
+  ['listNeonAuthOAuthClients', { project_id: 'project-a', branch_id: 'br-a' }, { clients: [authClient] }, { clients: [authClient] }],
+  ['getNeonAuthOAuthClient', { project_id: 'project-a', branch_id: 'br-a', client_id: 'ClientA' }, authClient, authClient],
+];
+export const allCases = [...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });
@@ -136,6 +144,9 @@ export function functionFixture(value, config = functionScope) {
 }
 export function triggerFixture(value, config = triggerScope) {
   return fixture(value, config, createNeonTriggerOperations);
+}
+export function authClientFixture(value, config = authClientScope) {
+  return fixture(value, config, createNeonAuthClientOperations);
 }
 export function fixture(value, config = scope, factory = createNeonMetadataOperations) {
   const requests = [];
