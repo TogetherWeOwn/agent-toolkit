@@ -3,6 +3,7 @@ import { canonicalHash, type Json, type Prepared, type ProviderOperation, type T
 import { currentContentDescriptor, type CurrentContentScope } from "./current-content.js";
 import { subscriptionDescriptors, type SubscriptionScope } from "./subscriptions.js";
 import { workerScheduleDescriptor, type WorkerScheduleScope } from "./worker-schedules.js";
+import { workerBuildDescriptor, type WorkerBuildScope } from "./worker-builds.js";
 import { queueConsumerDescriptors, type QueueConsumerScope } from "./queue-consumers.js";
 import { pagesDomainDescriptors, type PagesDomainScope } from "./pages-domains.js";
 import { hostnameTlsDescriptors, type HostnameTlsScope } from "./hostname-tls.js";
@@ -74,6 +75,7 @@ function bind<A>(descriptor: {
 export interface CloudflareReadScope extends MetadataScope {
   subscriptions?: SubscriptionScope["subscriptions"];
   workerSchedules?: WorkerScheduleScope["workers"];
+  workerBuildConfigurations?: WorkerBuildScope["workers"];
   queueConsumers?: QueueConsumerScope["queues"];
   eventSubscriptions?: EventSubscriptionScope["subscriptions"];
   secretStores?: SecretsStoreMetadataScope["stores"];
@@ -141,6 +143,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
   return Object.freeze([
     metadata(subscriptions.subscriptionsList), metadata(subscriptions.subscriptionGet),
     metadata(workerScheduleDescriptor({ accountId, revision, workers: scope.workerSchedules ?? [] })),
+    metadata(workerBuildDescriptor({ accountId, revision, workers: scope.workerBuildConfigurations ?? [] })),
     metadata(descriptors.workersList), metadata(descriptors.secretNames),
     metadata(descriptors.hyperdriveList), metadata(descriptors.hyperdriveGet),
     metadata(descriptors.d1List), metadata(descriptors.d1Get),
