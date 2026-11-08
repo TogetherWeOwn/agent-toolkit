@@ -33,6 +33,8 @@ export interface NeonMetadataTransport {
   getNeonAuthOAuthProviderPlugin(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   listNeonAuthRedirectURIWhitelistDomains(project: string, options: MetadataRequestOptions): Promise<unknown>;
   listBranchNeonAuthTrustedDomains(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
+  getNeonAuth(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
+  listNeonAuthIntegrations(project: string, options: MetadataRequestOptions): Promise<unknown>;
 }
 export type MetadataFetch = (url: string, init: RequestInit) => Promise<Response>;
 
@@ -174,5 +176,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       get(`/projects/${id(project)}/auth/domains`, new URLSearchParams(), options),
     listBranchNeonAuthTrustedDomains: (project: string, branch: string, options: MetadataRequestOptions) =>
       get(`/projects/${id(project)}/branches/${id(branch)}/auth/domains`, new URLSearchParams(), options),
+    getNeonAuth: (project: string, branch: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/branches/${id(branch)}/auth`, new URLSearchParams(), options),
+    listNeonAuthIntegrations: (project: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/auth/integrations`, new URLSearchParams(), options),
   });
 }

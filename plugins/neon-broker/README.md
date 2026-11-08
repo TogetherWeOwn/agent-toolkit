@@ -138,6 +138,28 @@ never fabricates an empty list or falls back to a branch or other provider. OAut
 provider lists remain incomplete/excluded because their schema carries sensitive
 client-secret fields. No domain mutation, native verification or live grant occurs.
 
+`createNeonAuthIntegrationOperations(trustedScope, transport)` adds two integration metadata reads:
+
+| Tool | Closed arguments | Authorization resource suffix (under project) |
+|---|---|---|
+| `neon.getNeonAuth` | `project_id`, `branch_id` | `branches/<branch>/auth` |
+| `neon.listNeonAuthIntegrations` | `project_id` | `auth/integrations` |
+
+Integration scope contains one project/revision and up to 30 unique branch IDs,
+validated and copied at construction. Collection access requires its own exact
+project-level grant, not a child-auth grant. Closed output contains only the bound
+branch ID, known auth_provider and owned_by enums, plus optional known transfer_status.
+Missing transfer_status remains unknown/omitted. External provider project IDs,
+database names, application names, timestamps and JWKS/base URLs are neither exposed
+nor followed. Detail responses must match the exact requested branch, even if another
+branch is allowlisted. Legacy list output is a `data` array capped at 30 rows; every
+row must bind to a configured branch, duplicate branch/provider pairs and pagination
+refuse, and no filtering/truncation fabricates a complete result. Optional project
+identities must match. Legacy removal was scheduled for 2026-03-01 in the pinned schema;
+source support does not establish availability. A 404/410 stays unavailable, not an
+empty list, unconfigured status or fallback to another endpoint. These projections
+do not retrieve credentials, prove provider effects or authorize integration mutation.
+
 Trusted metadata scope contains one project, a revision, explicit branch IDs and endpoint
 parent bindings. Construction validates and copies it. Caller IDs only select
 already-configured resources; no caller identity, authority, origin, credential,
@@ -156,7 +178,7 @@ passwords, credentials and connection strings are excluded. Unknown lifecycle
 states fail closed until explicitly supported. No error body/headers are surfaced.
 Common lease-reflection checks remain necessary even in these selected fields.
 
-`createNeonMetadataTransport(injectedFetch)` has twenty-five typed methods only. Its
+`createNeonMetadataTransport(injectedFetch)` has twenty-seven typed methods only. Its
 internal request builder fixes origin `https://console.neon.tech`, `/api/v2`
 paths, GET, JSON content, no redirects and no retries. No global fetch fallback
 exists. Each response is bounded to 64 KiB and 1 s, including streamed body time;
@@ -196,8 +218,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: twenty-five implemented
-source adapters, 169 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: twenty-seven implemented
+source adapters, 167 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

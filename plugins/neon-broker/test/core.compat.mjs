@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { allCases as cases, catalogCases, catalogFixture, catalogScopeAt, capabilityCases, capabilityFixture,
   capabilityScope, library, snapshot, schedule, branchFeatureCases, branchFeatureFixture, branchFeatureScope,
   authStatusCases, authStatusFixture, authStatusScope, authDomainCases, authDomainFixture, authDomainScope,
+  authIntegrationCases, authIntegrationFixture, authIntegrationScope,
   fixture, scope, branch, operation, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
@@ -16,7 +17,8 @@ const { providerFixture, credentialCanary, derivedCanary } = await import(pathTo
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
 function brokerFixture(name, args, raw, overrides = {}, config) {
-  const factory = authDomainCases.some(([operation]) => operation === name) ? authDomainFixture :
+  const factory = authIntegrationCases.some(([operation]) => operation === name) ? authIntegrationFixture :
+    authDomainCases.some(([operation]) => operation === name) ? authDomainFixture :
     authStatusCases.some(([operation]) => operation === name) ? authStatusFixture :
     branchFeatureCases.some(([operation]) => operation === name) ? branchFeatureFixture :
     capabilityCases.some(([operation]) => operation === name) ? capabilityFixture :
@@ -195,7 +197,7 @@ test('reflected lease material in selected safe-looking fields is refused by the
   assert.equal((await f.call()).code, 'OUTPUT_REFUSED');
 });
 
-for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases]) {
+for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases]) {
   test(`${name}: replay and TOCTOU policy/resource changes refuse without a second request`, async () => {
     const replay = brokerFixture(name, args, raw);
     assert.equal((await replay.call()).ok, true);
@@ -383,11 +385,60 @@ test('maximum auth-domain lists fit common budgets and legacy/branch grants neve
   }
 });
 
+test('auth integrations redact database/provider identities and URLs through the common broker', async () => {
+  for (const [name, args, raw, expected] of authIntegrationCases) {
+    const poison = row => ({ ...row, db_name: credentialCanary, auth_provider_project_id: derivedCanary,
+      jwks_url: credentialCanary, base_url: derivedCanary, password: 'password-canary', name: credentialCanary });
+    const poisoned = name === 'getNeonAuth' ? poison(raw) : { data: raw.data.map(poison) };
+    const f = brokerFixture(name, args, poisoned);
+    const result = await f.call();
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.value, expected);
+    safeEnvelope(f, result);
+    for (const status of [404, 410]) {
+      const unavailable = brokerFixture(name, args, () => response({ message: credentialCanary }, { status }));
+      const refused = await unavailable.call();
+      assert.equal(refused.code, 'UPSTREAM_UNAVAILABLE');
+      assert.equal(unavailable.provider.requests.length, 1);
+      safeEnvelope(unavailable, refused);
+    }
+    const reflectedArgs = name === 'getNeonAuth' ? { ...args, branch_id: credentialCanary } : args;
+    const reflected = brokerFixture(name, reflectedArgs, name === 'getNeonAuth' ? { ...raw, branch_id: credentialCanary } :
+      { data: raw.data.map(row => ({ ...row, branch_id: credentialCanary })) }, {},
+      { ...authIntegrationScope, branchIds: [credentialCanary] });
+    assert.equal((await reflected.call()).code, 'OUTPUT_REFUSED');
+  }
+});
+
+test('maximum auth-integration scope/output fits common budgets and collection/branch grants remain distinct', async () => {
+  const branchIds = Array.from({ length: 30 }, (_, n) => `br-${n}`);
+  const config = { ...authIntegrationScope, branchIds };
+  const data = branchIds.map(branch_id => ({ branch_id, auth_provider: 'better_auth', owned_by: 'neon', transfer_status: 'finished' }));
+  for (const [name, original] of authIntegrationCases) {
+    const args = name === 'getNeonAuth' ? { ...original, branch_id: 'br-29' } : original;
+    const raw = name === 'getNeonAuth' ? data[29] : { data };
+    const f = brokerFixture(name, args, raw, {}, config);
+    const result = await f.call();
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.value, raw);
+    safeEnvelope(f, result);
+    const ownResource = f.provider.operation(name).prepare(args).resource.id;
+    for (const resource of ['neon/projects/project-a/auth', 'neon/projects/project-a/auth/integrations',
+      'neon/projects/project-a/branches/br-0/auth', 'neon/projects/project-a/branches/br-29/auth'].filter(id => id !== ownResource)) {
+      const other = brokerFixture(name, args, raw, {}, config);
+      other.common.vector.policy.resources = [resource];
+      assert.equal((await other.call()).code, 'POLICY_DENIED');
+      assert.equal(other.common.calls.secret, 0);
+      assert.equal(other.provider.requests.length, 0);
+    }
+  }
+});
+
 test('common operation-map validator confirms incomplete status for all unknown entitlements', () => {
   const map = JSON.parse(readFileSync(new URL('../operation-map.json', import.meta.url)));
   const result = validateOperationMap(map);
   assert.equal(result.complete, false);
   assert.equal(result.incomplete.length, 194);
-  assert.equal(map.operations.filter(operation => operation.implemented).length, 25);
+  assert.equal(map.operations.filter(operation => operation.implemented).length, 27);
   assert.equal(map.operations.filter(operation => operation.enabled).length, 0);
 });
