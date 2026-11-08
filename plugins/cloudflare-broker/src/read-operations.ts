@@ -7,6 +7,7 @@ import { queueConsumerDescriptors, type QueueConsumerScope } from "./queue-consu
 import { pagesDomainDescriptors, type PagesDomainScope } from "./pages-domains.js";
 import { hostnameTlsDescriptors, type HostnameTlsScope } from "./hostname-tls.js";
 import { zoneTlsDescriptor, type ZoneTlsScope } from "./zone-tls.js";
+import { dnssecDescriptor, type DnssecScope } from "./dnssec.js";
 import { eventSubscriptionDescriptors, type EventSubscriptionScope } from "./event-subscriptions.js";
 import { versionAssetDescriptor, type VersionAssetScope } from "./version-assets.js";
 import { workerDomainMetadataDescriptors, type WorkerDomainScope } from "./worker-domains.js";
@@ -89,6 +90,7 @@ export interface CloudflareReadScope extends MetadataScope {
     workerRoutes?: WorkerRouteMetadataScope["routes"];
     hostnameTls?: HostnameTlsScope["settings"];
     tlsSettingIds?: ZoneTlsScope["settingIds"];
+    dnssecReadAllowed?: DnssecScope["readAllowed"];
   };
 }
 
@@ -159,6 +161,8 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     ...(tls === undefined ? [] : [metadata(tls.settingsList), metadata(tls.settingGet)]),
     ...(scope.zone === undefined ? [] : [metadata(zoneTlsDescriptor({ accountId, revision,
       zoneId: scope.zone.zoneId, settingIds: scope.zone.tlsSettingIds ?? [] }))]),
+    ...(scope.zone === undefined ? [] : [metadata(dnssecDescriptor({ accountId, revision,
+      zoneId: scope.zone.zoneId, readAllowed: scope.zone.dnssecReadAllowed }))]),
     // Source acquisition needs exact native authority, even for digest-only output.
     bind(content, (args, credential, signal) => readContent(content, args, credential, signal)),
   ]);
