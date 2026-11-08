@@ -141,10 +141,14 @@ test('preload metadata rejects duplicate names, malformed selected fields and un
 test('backup schedule validates optional numeric boundaries and refuses unknown frequencies', async () => {
   const [name, args] = cases[3];
   for (const changed of [{ frequency: 'hourly' }, { hour: -1 }, { hour: 24 }, { day: 0 }, { day: 32 },
-    { month: 0 }, { month: 13 }, { retention_seconds: 3599 }, { retention_seconds: 3024001 }, { hour: -0 },
+    { month: 0 }, { month: 13 }, { retention_seconds: 3599 }, { retention_seconds: 3024001 },
     { hour: 0.5 }, { hour: '3' }, { hour: null }]) {
     await assert.rejects(fixture({ schedule: [{ ...schedule, ...changed }] }).run(name, args));
   }
+  // JSON.stringify normalizes -0 to 0: exercise the raw projection and wire -0 separately.
+  assert.throws(() => fixture({}).operation(name).project({ schedule: [{ ...schedule, hour: -0 }] }));
+  await assert.rejects(fixture(() => new Response('{"schedule":[{"frequency":"daily","hour":-0}]}',
+    { headers: { 'content-type': 'application/json' } })).run(name, args));
   for (const value of [{ frequency: 'weekly' }, { frequency: 'monthly', hour: 23, day: 31, month: 12, retention_seconds: 3024000 }]) {
     assert.deepEqual(await fixture({ schedule: [value] }).run(name, args), { schedule: [value] });
   }
