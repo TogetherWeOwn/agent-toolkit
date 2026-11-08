@@ -12,6 +12,10 @@ import sys
 
 SOURCE_SHA256 = "ae45866599cb5d248fadb9d7f0ed30fd6aed440a17ec0950c4e9e0d58da4cb73"
 ADAPTERS = {
+    "get_admin": "get-admin",
+    "list_admin_size_skus": "list-admin-size-skus",
+    "list_router_size_skus": "list-router-size-skus",
+    "list_cluster_size_skus": "list-cluster-size-skus",
     "get_traffic_budget": "get-traffic-budget",
     "list_traffic_budgets": "list-traffic-budgets",
     "get_keyspace_rollout_status": "get-keyspace-rollout-status",
@@ -240,6 +244,7 @@ def policy_candidate(operation_id):
 
 def adapter_test(operation_id):
     for operations, name in [
+        ({"get_admin", "list_admin_size_skus", "list_router_size_skus", "list_cluster_size_skus"}, "compute-catalog"),
         ({"get_traffic_budget", "list_traffic_budgets"}, "traffic-budgets"),
         ({"get_keyspace_rollout_status", "get_vtctld_operation"}, "operation-status"),
         (NETWORK_THROTTLER, "network-throttler"),

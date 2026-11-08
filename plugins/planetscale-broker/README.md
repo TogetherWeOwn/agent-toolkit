@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The 104 adapters are pure request builders and bounded output projections,
+The 108 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,19 +36,34 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 104 | Narrow projections; not full operation coverage |
-| Missing source adapters | 187 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 108 | Narrow projections; not full operation coverage |
+| Missing source adapters | 183 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-104 adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 171
+108 adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 167
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
 backups/restore, schema/deploy, topology, maintenance and every other official
 area remain in the map even when access or implementation is missing.
+
+## Compute catalog metadata
+
+`planetscale.get_admin` binds an exact admin ID and projects its documented state.
+`planetscale.list_admin_size_skus`, `planetscale.list_router_size_skus` and
+`planetscale.list_cluster_size_skus` project only broker-allowlisted names and,
+where supplied, the enabled flag. Plain arrays have 32-row/64-KiB limits; an
+unknown/duplicate name refuses the entire result. Scopes snapshot 1–32 unique
+names. Cluster engine is broker-bound (`mysql`, `postgresql`, `neki`), with
+`rates=false`; callers cannot enable pricing or optional filters. Prices, capacity,
+recommended sizes, provider/architecture and free text are omitted. Names are not
+immutable resource IDs. State/enabled and `actionAuthority: not-established`
+never authorize purchase, resize, restart or wake, or prove entitlement. Trusted
+current parent ownership and independent collection permission remain required;
+non-waking semantics and full optional capability are not demonstrated.
 
 ## Initial adapters
 
@@ -425,7 +440,7 @@ No connector or replacement broker is introduced.
 ## Local mutation-plan artifacts — not executors
 
 `src/mutation-plans.ts` supplies three pure, bounded previews. They are **not API
-adapters**, do not consume authority and do not increase the 104-adapter count.
+adapters**, do not consume authority and do not increase the 108-adapter count.
 Each artifact labels itself `validated-local-plan-not-provider-dry-run`, with
 execution not implemented, remote preconditions not verified and provider dry-run
 not performed. No network executor, output projector or secret placement exists.
