@@ -132,7 +132,7 @@ test('schema diagnostic paths and selected fields match the pinned official sche
   }
 });
 
-test('workflow reads with opaque detail records remain incomplete with an owning contract prerequisite', async () => {
+test('workflow map distinguishes missing opaque reads from bounded offline status without live authority', async () => {
   const schema = JSON.parse(gunzipSync(await readFile(new URL('../api/upstream/openapi-v1.json.gz', import.meta.url))).toString());
   const map = JSON.parse(await readFile(new URL('../api/operation-map.json', import.meta.url)));
   for (const operationId of ['list_move_tables_workflows', 'get_move_tables_workflow', 'get_move_tables_workflow_status']) {
@@ -141,7 +141,16 @@ test('workflow reads with opaque detail records remain incomplete with an owning
     if (operationId !== 'get_move_tables_workflow_status') { assert.equal(data.properties.workflows.items.additionalProperties, true); assert.equal(data.properties.workflows.items.properties, undefined); }
     else { assert.equal(data.properties.traffic_state.type, 'string'); assert.equal(data.properties.traffic_state.enum, undefined); }
     const mapped = map.operations.find(value => value.operationId === operationId);
-    assert.equal(mapped.implementation, 'missing'); assert.equal(mapped.adapter, null);
-    assert.ok(mapped.prerequisites.includes('package-builder-reviewed-vitess-workflow-identity-state-and-safe-projection-contract'));
+    if (operationId === 'get_move_tables_workflow_status') {
+      assert.equal(mapped.implementation, 'offline-adapter-only');
+      assert.equal(mapped.adapter, 'src/tools/get-move-tables-workflow-status.ts');
+      assert.equal(mapped.test, 'test/move-tables-status.test.mjs');
+      assert.equal(mapped.tier, 'read');
+    } else {
+      assert.equal(mapped.implementation, 'missing'); assert.equal(mapped.adapter, null);
+      assert.equal(mapped.test, null); assert.equal(mapped.tier, 'unresolved');
+    }
+    assert.equal(mapped.review, 'not-reviewed'); assert.equal(mapped.enablement, 'disabled');
+    for (const prerequisite of ['operator-verified-scope-metadata', 'reviewed-compatible-common-core', 'exact-tier-security-crypto-qa-and-actions', 'package-builder-reviewed-vitess-workflow-identity-state-and-safe-projection-contract']) assert.ok(mapped.prerequisites.includes(prerequisite));
   }
 });

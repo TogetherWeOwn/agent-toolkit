@@ -41,6 +41,24 @@ evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
 
+## MoveTables map-contract regression repair
+
+Source head `b41e164406d75eae2e47c948510bad3e3955d759`
+[Actions test](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42474363829/job/128712278835)
+passed 938/939 PlanetScale tests, including all 16 new status contracts. The
+schema-diagnostics map test still expected status to be missing alongside opaque
+list/detail. It now distinguishes the exact bounded offline status adapter/test
+and read tier from missing/unresolved list/detail, while requiring all three to
+remain unreviewed/disabled with scope, core, review and workflow-contract
+prerequisites. No operation implementation, tier, runtime policy or coverage
+changed: 134/291 bounded subsets, 157 missing; zero enabled/adopted.
+
+Root 181/181, helpers 122/122 and GitHub broker 219/219 passed at the source head;
+lint/typecheck/native-policy and all three CodeQL analyses passed. Aggregate
+correctly failed on the stale test. Repair-head Actions remains required; no
+local suite/build/typecheck or CI mirror ran. Earlier download/SDK recovery
+uncertainty and all independent review/live-use gates remain.
+
 ## MoveTables status availability source increment
 
 `test/move-tables-status.test.mjs` adds 16 synthetic contracts for one fixed
@@ -471,9 +489,10 @@ lint/typecheck, native-policy and ci-ok. That does not execute these new fixture
 
 Move-tables list/get schema records expose only opaque additional-properties
 objects; status exposes free-text traffic state and table/shard-keyed objects.
-All three reads remain missing, not generic JSON/count adapters. The package
-builder owns a reviewed Vitess workflow identity/state/safe-projection contract
-from documented provider/SDK evidence before implementing these operations. No
+All three reads were missing at this increment. The later status increment
+above adds bounded availability only; opaque list/detail still remain missing,
+not generic JSON/count adapters. The package builder retains the reviewed Vitess
+workflow identity/state/safe-projection prerequisite for full capabilities. No
 live investigation, arbitrary object reflection or parallel implementation chain
 is commissioned by this precise source prerequisite.
 
