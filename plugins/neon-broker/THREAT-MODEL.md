@@ -780,6 +780,29 @@ this does not establish atomicity across live branch heads. Database comparison
 may wake compute; native effects, entitlement and independent acceptance remain
 unresolved. No runtime tool is enabled.
 
+## Reserved branch-deletion acknowledgement delta
+
+`deleteProjectBranch` binds one copied project/branch/parent/revision to a dedicated
+branch/delete resource and reserved native exact-plan authority. Parent/project,
+rename, endpoint-delete, sibling-branch and cross-agent grants do not authorize it.
+Mandatory detail preflight binds immutable project/branch/parent, refuses root,
+default or protected branches and requires explicit false flags before one bodyless
+DELETE. No force/cascade, protection/default change, caller authority or arbitrary
+URL is accepted. Child constraints remain provider-enforced; preflight is not atomic
+CAS or a complete child inventory. Provider deletion idles compute and breaks client
+connections; source/mocks authorize no live disruption.
+
+Only bounded HTTP200 exact branch identity and unique operation-ID/known-status
+observations produce a closed acknowledgement. Empty lists and individual finished
+statuses never establish completed deletion, a connection fence, zero sessions,
+no reconnect or cutover enforcement. Names, endpoint IDs, state, dates, action/error
+and arbitrary diagnostics are omitted without evaluation. HTTP204 (absent/already
+deleted), lost, malformed or rejected mutation responses receive at most one bounded
+identity observation and remain uncertain even on absence; no automatic mutation
+retry or invented idempotency header. Native durable common journal integration must
+block restart/replay. Custody, host/policy, effects/entitlement, production deletion
+authority and independent native reviews remain unresolved; no runtime tool enabled.
+
 ## Reserved endpoint-restart acknowledgement delta
 
 `restartProjectEndpoint` binds one copied project/branch/endpoint/revision to a

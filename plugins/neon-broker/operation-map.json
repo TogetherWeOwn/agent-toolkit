@@ -2009,20 +2009,24 @@
       "id": "deleteProjectBranch",
       "apiArea": "branch",
       "tool": "neon.deleteProjectBranch",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/delete",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "branch-deletion-request"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/branch-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Mocked source only; reserved native exact-target/plan authority and dedicated delete grant required. Exact project/branch/parent detail preflight refuses root/default/protected branches before one bodyless DELETE; provider retains child-branch constraints, no force/cascade or protection change. HTTP200 closed acknowledgement and bounded operation observations only, not completed deletion, fencing, zero sessions or no-reconnect proof. HTTP204/ambiguity remains uncertain after one observation including absence, never retried; permanent common journal blocks restart/replay. Native host/policy/custody, durable recovery, entitlement/effects, production deletion authority and independent reviews unresolved. No live deletion, cutover enforcement or enablement."
     },
     {
       "id": "updateProjectBranch",
