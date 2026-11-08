@@ -10,7 +10,7 @@ export interface NeonProjectUpdateScope {
   readonly expectedName: string;
   readonly name: string;
 }
-const id = text(60, /^[a-z0-9-]+$/);
+const id = text(60, /^[a-z0-9][a-z0-9-]*$/);
 const revision = text(80, /^[A-Za-z0-9][A-Za-z0-9_-]*$/);
 export const projectLabel = text(80, /^[A-Za-z0-9][A-Za-z0-9_-]*$/);
 const argumentsSchema = closed({ project_id: id, name: projectLabel });

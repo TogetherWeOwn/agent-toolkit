@@ -52,6 +52,18 @@ test('project rename: copied exact arguments and plan refuse settings, compute, 
     ...unsupported.map(key => ({ [key]: null }))]) assert.throws(() => createNeonProjectUpdateOperations({ ...scope, ...change }, {}));
 });
 
+test('project rename: accepted project IDs fit both detail preflight and PATCH transports', async () => {
+  for (const projectId of ['-project', '-']) {
+    assert.throws(() => createNeonProjectUpdateOperations({ ...scope, projectId }, {}));
+  }
+  for (const projectId of ['p', '0', 'p-']) {
+    const f = fixture({ project: { id: projectId, name: 'after' } }, { ...scope, projectId });
+    assert.deepEqual(await f.run('updateProject', { ...args, project_id: projectId }), { id: projectId, updated: true });
+    assert.deepEqual(f.requests.map(({ init }) => init.method), ['GET', 'PATCH']);
+    assert(f.requests.every(({ url }) => url === `${NEON_ORIGIN}/api/v2/projects/${projectId}`));
+  }
+});
+
 test('project rename: stale labels, missing identity, wrong ancestry and pagination fail before PATCH', async () => {
   for (const raw of [null, {}, { project: {} }, { ...before, pagination: {} }, { ...before, project_id: 'other' },
     ...[{ id: 'other' }, { id: undefined }, { project_id: 'other' }, { name: 'changed' }, { name: 'after' }, { name: undefined }, { pagination: {} }]

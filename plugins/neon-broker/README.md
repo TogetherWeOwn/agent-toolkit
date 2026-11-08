@@ -13,6 +13,8 @@ desired nonempty ASCII labels <=80 characters; labels must differ. Require the
 separate `neon/projects/<project>/rename` grant. Caller arguments match the copied
 desired name. Settings (including IP allowlist and quota), default compute and
 history retention refuse and remain unsupported, not silently covered by this row.
+Project IDs are <=60 lowercase letters/digits/hyphens with an initial letter/digit,
+a narrower subset than the provider schema that fits both existing GET and PATCH.
 
 The exact diff leaves settings/compute/retention unchanged. A fixed project-detail
 GET requires immutable project ID and expected label before exactly one PATCH
