@@ -56,6 +56,19 @@ ADAPTERS = {
     "list_organization_teams": "list-organization-teams",
     "get_organization_team_member": "get-organization-team-member",
     "list_organization_team_members": "list-organization-team-members",
+    "get_bouncer": "get-bouncer",
+    "list_bouncers": "list-bouncers",
+    "list_bouncer_resize_requests": "list-bouncer-resize-requests",
+    "list_branch_bouncer_resize_requests": "list-branch-bouncer-resize-requests",
+    "get_branch_resize_request": "get-branch-resize-request",
+    "list_branch_resize_requests": "list-branch-resize-requests",
+    "get_keyspace_resize_request": "get-keyspace-resize-request",
+    "list_keyspace_resize_requests": "list-keyspace-resize-requests",
+}
+RESIZE_RECORDS = {
+    "get_bouncer", "list_bouncers", "list_bouncer_resize_requests",
+    "list_branch_bouncer_resize_requests", "get_branch_resize_request",
+    "list_branch_resize_requests", "get_keyspace_resize_request", "list_keyspace_resize_requests",
 }
 ORGANIZATION_RECORDS = {
     "get_organization_membership", "list_organization_members", "get_organization_team",
@@ -130,7 +143,7 @@ def policy_candidate(operation_id):
 
 def adapter_test(operation_id):
     for operations, name in [
-        (ORGANIZATION_RECORDS, "organization-records"),
+        (RESIZE_RECORDS, "resize-records"), (ORGANIZATION_RECORDS, "organization-records"),
         (TOPOLOGY, "topology"), (SECURITY_RECORDS, "security-records"),
         (DEPLOYMENT_DETAILS, "deployment-details"), (LIFECYCLE, "lifecycle"),
         (DISCOVERY, "discovery"),

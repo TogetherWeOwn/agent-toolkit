@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 259 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 239 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -108,6 +108,24 @@ ownership, collection authorization and final selected-field secret guarding are
 still integration prerequisites. Coverage is now 32/291 bounded metadata subsets,
 259 missing adapters, zero integrated/reviewed/enabled operations. Fresh exact-head
 Actions is required; no local suite or native authority enforcement is claimed.
+
+`test/topology.test.mjs` and `test/organization-records.test.mjs` add bounded
+keyspace/shard/maintenance and membership/team/member contracts respectively. At
+`bcc3af2afadb269965159079cb86a632282172b6`, [exact-head Actions](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42432394801/job/128583948834)
+passed 265/265 package tests; lint/typecheck, native-policy and ci-ok also passed.
+That is historical evidence for 44 adapters, not execution of later source.
+
+`test/resize-records.test.mjs` adds 43 synthetic contracts for eight bouncer and
+branch/keyspace resize metadata adapters: pinned GET paths/response enums,
+immutable ID/name/parent bindings, whole-page refusal, argument/scope closure,
+wire/page caps, ignored parameter/SKU/actor canaries and per-bouncer parent mismatch
+refusal. States are informational, never resize/spend/cancel authorization.
+Branch/keyspace resize schemas supply no parent identity; trusted current parent
+bindings and independent collection authority remain required. Full resize
+configuration, optional completion-time filters, price/capacity and mutations are
+not implemented. Source coverage is **52/291 bounded metadata subsets, 239 missing**;
+zero integrated/reviewed/enabled/adopted operations. Fresh exact-head Actions is
+required for this increment; no local suite or native authority test is claimed.
 
 ## Metrics preregistration — required before enablement
 

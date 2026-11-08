@@ -126,9 +126,11 @@ test('complete official map distinguishes mapped, source-adapted, reviewed and e
   const securityRecords = ['get_service_token', 'list_service_tokens', 'get_oauth_token', 'list_oauth_tokens', 'get_webhook', 'list_webhooks'];
   const topology = ['get_keyspace', 'list_keyspaces', 'get_shard', 'list_shards', 'get_maintenance_event', 'list_maintenance_events'];
   const organizationRecords = ['get_organization_membership', 'list_organization_members', 'get_organization_team', 'list_organization_teams', 'get_organization_team_member', 'list_organization_team_members'];
+  const resizeRecords = ['get_bouncer', 'list_bouncers', 'list_bouncer_resize_requests', 'list_branch_bouncer_resize_requests', 'get_branch_resize_request', 'list_branch_resize_requests', 'get_keyspace_resize_request', 'list_keyspace_resize_requests'];
   const groups = [
     [discovery, 'discovery'], [lifecycle, 'lifecycle'], [deploymentDetails, 'deployment-details'],
     [securityRecords, 'security-records'], [topology, 'topology'], [organizationRecords, 'organization-records'],
+    [resizeRecords, 'resize-records'],
   ];
   assert.deepEqual(implemented.map(row => row.operationId).sort(), [...fixtures.map(([adapter]) => adapter.operationId), ...groups.flatMap(([operations]) => operations)].sort());
   for (const row of map.operations) {
