@@ -323,6 +323,27 @@ closed metadata, fixed transport and common identity/policy/replay/TOCTOU/reflec
 boundaries. Catalog presence does not prove entitlement, capacity or non-waking
 provider effects; all qualification and credential-custody holds remain.
 
+## Exact-user organization catalog delta
+
+`getCurrentUserOrganizations` needs the exact selected user's organizations
+collection grant, not a profile, parent or organization-detail grant. Trusted
+user/revision and up to 30 unique organization IDs are copied. The pinned catalog
+can return an owning organization for userless keys; a fixed `/users/me` identity
+proof must therefore match the selected user before the catalog is requested with
+the same resolved credential. Failure, wrong identity or cancellation stops the
+sequence without a fallback. This is two bounded GETs, not atomic membership or
+current entitlement evidence; native provider-effect/custody qualification remains.
+
+Projection rechecks the identity proof and emits only selected organization IDs.
+Names, handles, plans, manager strings, timestamps, user profiles and diagnostics
+are not read or followed. Every row is validated before selection; lists over 30,
+duplicates, contradictory optional ancestry and pagination refuse without partial
+success. Detached execution rechecks exact arguments/resource/revision; contracts
+cover userless/wrong-user refusal before catalog, cancellation between requests,
+fixed paths/same credential, malformed/accessor/poisoned output and common-core
+identity/exact-grant/replay/TOCTOU/reflection/output budgets. No transfer, membership
+mutation, credential discovery, live integration or runtime authority is supplied.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.

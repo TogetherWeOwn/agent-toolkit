@@ -23,6 +23,7 @@ import { createNeonAuthWebhookOperations } from '../dist/plugins/neon-broker/src
 import { createNeonUserProfileOperations } from '../dist/plugins/neon-broker/src/user-profile.js';
 import { createNeonAuthEmailOperations } from '../dist/plugins/neon-broker/src/auth-email.js';
 import { createNeonProjectOperations } from '../dist/plugins/neon-broker/src/projects.js';
+import { createNeonUserOrganizationOperations } from '../dist/plugins/neon-broker/src/user-organizations.js';
 
 export const scope = {
   projectId: 'project-a', revision: 'scope-v1', branchIds: ['br-a', 'br-b'],
@@ -256,7 +257,16 @@ export const projectCases = [
 export function projectFixture(value, config = projectScope) {
   return fixture(value, config, createNeonProjectOperations);
 }
-export const allCases = [...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
+export const userOrganizationScope = { ...userProfileScope, organizationIds: ['org-a', 'org-b'] };
+export const userOrganizationCases = [
+  ['getCurrentUserOrganizations', { user_id: 'user-a' }, { user: userProfile, catalog: { organizations: [{ id: 'org-a' }] } },
+    { organizations: [{ id: 'org-a' }] }],
+];
+export function userOrganizationFixture(value, config = userOrganizationScope) {
+  return fixture(typeof value === 'function' ? value : url => response(
+    url.endsWith('/users/me') ? value.user : value.catalog), config, createNeonUserOrganizationOperations);
+}
+export const allCases = [...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });

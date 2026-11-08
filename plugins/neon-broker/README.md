@@ -592,6 +592,31 @@ or permission to provision. Pagination is unsupported and refuses. No profile
 mutation, authentication-details lookup, key retrieval or live qualification is
 introduced. Runtime entitlement and provider effects remain unknown.
 
+## Exact-user organization catalog
+
+`createNeonUserOrganizationOperations` adds `getCurrentUserOrganizations` with
+closed `{ user_id }` matching a copied trusted user/revision and a dedicated
+`neon/users/<user>/organizations` collection grant. Parent, profile, other-user and
+organization-detail grants cannot substitute. Up to 30 unique organization IDs
+are copied at construction; only selected IDs can be emitted.
+
+The pinned catalog endpoint can return the owning organization for an organization-
+or project-scoped key without identifying any user. This adapter deliberately
+supports only user-bound credentials: fixed `GET /users/me` must first return the
+exact selected user ID, then fixed `GET /users/me/organizations` uses the same
+resolved credential. Wrong-user, userless, failed or aborted identity proof refuses
+before the catalog; there is no fallback or inferred user-to-organization binding.
+Both requests use the existing per-request bounds and one operation deadline.
+
+Closed output is `organizations: [{ id }]` only. Names, handles, plan/manager,
+MFA/HIPAA flags, timestamps, profile and billing data are omitted. The collection
+is nonpaginated, capped at 30 before filtering; malformed/duplicate IDs, contradictory
+optional ancestry and unexpected pagination refuse without truncation or empty-
+success fallback. Empty output is not absence-of-membership, complete entitlement
+or current access evidence. No membership mutation, transfer, account discovery,
+credential retrieval or live qualification is introduced. The identity proof is
+part of this exact catalog operation, not a separately exposed profile grant.
+
 ## Organization-filtered project catalog
 
 `createNeonProjectOperations` adds `listProjects`. Trusted construction copies an
@@ -644,8 +669,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: fifty-four implemented
-source adapters, 140 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: fifty-five implemented
+source adapters, 139 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

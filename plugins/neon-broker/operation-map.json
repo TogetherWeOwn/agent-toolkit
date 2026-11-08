@@ -3247,7 +3247,7 @@
       "id": "getCurrentUserOrganizations",
       "apiArea": "users-organizations",
       "tool": "neon.getCurrentUserOrganizations",
-      "scope": "trusted-account",
+      "scope": "user_id/exact-organizations-collection",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3255,12 +3255,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/user-organizations.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed selected-organization catalog source with exact-user identity proof and mocked contracts authored; entitlement, provider effects, independent native review and runtime integration remain unresolved. Userless credentials refuse; no account-wide fallback, membership mutation, live qualification or enablement."
     },
     {
       "id": "transferProjectsFromUserToOrg",

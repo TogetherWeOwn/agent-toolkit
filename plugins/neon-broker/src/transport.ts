@@ -11,6 +11,7 @@ export interface NeonMetadataTransport {
   listProjects(organization: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
   getNeonAuthEmailAndPasswordConfig(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   getCurrentUserInfo(options: MetadataRequestOptions): Promise<unknown>;
+  getCurrentUserOrganizations(options: MetadataRequestOptions): Promise<unknown>;
   getNeonAuthWebhookConfig(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   countProjects(organization: string, options: MetadataRequestOptions): Promise<unknown>;
   getActiveRegions(organization: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -175,6 +176,8 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       get(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/email_and_password`, new URLSearchParams(), options),
     getCurrentUserInfo: (options: MetadataRequestOptions) =>
       get("/users/me", new URLSearchParams(), options),
+    getCurrentUserOrganizations: (options: MetadataRequestOptions) =>
+      get("/users/me/organizations", new URLSearchParams(), options),
     getNeonAuthWebhookConfig: (project: string, branch: string, options: MetadataRequestOptions) =>
       get(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/webhooks`, new URLSearchParams(), options),
     countProjects: (organization: string, options: MetadataRequestOptions) =>
