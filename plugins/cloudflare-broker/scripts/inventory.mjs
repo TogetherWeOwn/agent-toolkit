@@ -12,6 +12,8 @@ export const source = Object.freeze({
 });
 const methods = new Set(["get", "put", "post", "delete", "options", "head", "patch", "trace"]);
 const descriptors = new Map([
+  ["GET /accounts/{account_id}/access/apps", "cloudflare.access.applications.list"],
+  ["GET /accounts/{account_id}/access/apps/{app_id}", "cloudflare.access.applications.get"],
   ["GET /accounts/{account_id}/workers/scripts", "cloudflare.workers.list"],
   ["GET /accounts/{account_id}/workers/scripts/{script_name}/secrets", "cloudflare.workers.secret_names"],
   ["GET /accounts/{account_id}/workers/scripts/{script_name}/deployments", "cloudflare.workers.deployments.list"],
@@ -89,7 +91,7 @@ export function inventory(bytes) {
         approvalRoute: deletionPlan ? "release-manager-and-conditional-owner-security" : contentDescriptor ? "separate-source-agent-and-resource-policy" : typedTool ? "agent-and-resource-policy" : "unresolved",
         implementation: deletionPlan ? "plan-descriptor-only" : contentDescriptor ? "content-descriptor-only" : typedTool ? "descriptor-only" : "missing",
         review: "not-reviewed", enablement: "disabled",
-        tests: contentDescriptor ? ["test/cloudflare-current-content.test.mjs", "test/cloudflare-provider.test.mjs"] : typedTool?.startsWith("cloudflare.workers.routes.") ? ["test/cloudflare-provider.test.mjs", "test/cloudflare-routes.test.mjs"] : typedTool ? ["test/cloudflare-provider.test.mjs"] : [],
+        tests: typedTool?.startsWith("cloudflare.access.applications.") ? ["test/cloudflare-provider.test.mjs", "test/cloudflare-access.test.mjs"] : contentDescriptor ? ["test/cloudflare-current-content.test.mjs", "test/cloudflare-provider.test.mjs"] : typedTool?.startsWith("cloudflare.workers.routes.") ? ["test/cloudflare-provider.test.mjs", "test/cloudflare-routes.test.mjs"] : typedTool ? ["test/cloudflare-provider.test.mjs"] : [],
         prerequisites: deletionPlan ? ["credential-scope-attestation", "compatible-reviewed-core", "native-conjunctive-authority-and-security-impact", "provider-precondition-and-recovery-adapter", "execution-and-projection-adapter", "native-integration-and-tier-review"] : contentDescriptor ? ["credential-scope-attestation", "compatible-reviewed-core", "separate-source-authorization", "bounded-content-transport-and-success-media-contract", "trusted-capture-window-and-response-correlation", "module-attribution-and-library-projection", "native-integration-and-tier-review"] : typedTool ? ["credential-scope-attestation", "compatible-reviewed-core", "native-integration-and-tier-review"] : ["credential-scope-attestation", "typed-adapter-and-tier-classification", "native-integration-and-tier-review"],
       });
     }

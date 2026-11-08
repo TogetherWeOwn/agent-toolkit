@@ -701,6 +701,78 @@ export function workerRouteMetadataDescriptors(scope: WorkerRouteMetadataScope) 
   return Object.freeze({ workerRoutesList, workerRouteGet });
 }
 
+export interface AccessApplicationMetadataScope {
+  accountId: string;
+  revision: string;
+  applications: readonly { applicationId: string; primaryDomain: string }[];
+}
+const accessApplicationId = text(36, /^(?:[a-f0-9]{32}|[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})(?![\s\S])/);
+const accessDomain = text(1024, /^(?:\*\.)?[A-Za-z0-9][A-Za-z0-9.-]*(?:\/[A-Za-z0-9/._~!$&'()+,;=:%*@-]*)?(?![\s\S])/);
+const accessApplication = closed({ applicationId: accessApplicationId });
+interface AccessApplicationMetadata { id: string; primaryDomain: string; type: "self_hosted" }
+const accessObservation = Object.freeze({ subject: "configured-access-applications" as const, effectiveProtection: "not-established" as const });
+
+// Only self-hosted primary-domain bindings are projected; embedded policies,
+// destinations and identity settings are neither returned nor evaluated.
+export function accessApplicationMetadataDescriptors(scope: AccessApplicationMetadataScope) {
+  const account = accountId.parse(scope.accountId);
+  const revision = text(80, /^[A-Za-z0-9][A-Za-z0-9_.-]*$/).parse(scope.revision);
+  requireThat(Array.isArray(scope.applications) && scope.applications.length <= maxRows, "cap");
+  const applications = new Map<string, string>();
+  for (const entry of scope.applications) {
+    const id = accessApplicationId.parse(entry.applicationId);
+    requireThat(!applications.has(id), "schema");
+    applications.set(id, accessDomain.parse(entry.primaryDomain));
+  }
+  const root = `/accounts/${account}/access/apps`;
+  function prepared<A>(args: A, id: string, path: string): PreparedMetadata<A> {
+    return Object.freeze({ arguments: args,
+      resource: Object.freeze({ id: `cloudflare:account:${account}:access-applications${id}`, revision }),
+      request: Object.freeze({ method: "GET", path, maxResponseBytes, timeoutMs: 10000, maxRequests: 1, redirects: "deny" }),
+    });
+  }
+  function applicationMetadata(row: Row): AccessApplicationMetadata {
+    const id = providerText(row.id, accessApplicationId);
+    requireThat(applications.has(id) && row.domain === applications.get(id), "scope");
+    requireThat(row.account_id === undefined || row.account_id === account, "scope");
+    requireThat(row.type === "self_hosted", "upstream");
+    return { id, primaryDomain: applications.get(id)!, type: "self_hosted" };
+  }
+  const accessApplicationsList: MetadataDescriptor<ReturnType<typeof page.parse>, PartialList<AccessApplicationMetadata> & typeof accessObservation> = Object.freeze({
+    name: "cloudflare.access.applications.list", version: "1", tier: "read", providerOperationId: "access-applications-list-access-applications",
+    prepare(raw: unknown) {
+      const args = page.parse(raw);
+      requireThat(applications.size > 0, "scope");
+      return prepared(args, "", `${root}?page=${args.page}&per_page=${args.perPage}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof page.parse>>) {
+      const args = page.parse(input.arguments);
+      requireThat(applications.size > 0, "scope");
+      const result = rows(envelope(raw).result);
+      requireThat(result.length <= args.perPage, "cap");
+      const items = result.filter(row => typeof row.id === "string" && applications.has(row.id)).map(applicationMetadata);
+      requireThat(new Set(items.map(row => row.id)).size === items.length, "upstream");
+      return bounded({ items, complete: false as const, ...accessObservation });
+    },
+  });
+  const accessApplicationGet: MetadataDescriptor<ReturnType<typeof accessApplication.parse>, AccessApplicationMetadata & typeof accessObservation> = Object.freeze({
+    name: "cloudflare.access.applications.get", version: "1", tier: "read", providerOperationId: "access-applications-get-an-access-application",
+    prepare(raw: unknown) {
+      const args = accessApplication.parse(raw);
+      requireThat(applications.has(args.applicationId), "scope");
+      return prepared(args, `:${args.applicationId}`, `${root}/${args.applicationId}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof accessApplication.parse>>) {
+      const args = accessApplication.parse(input.arguments);
+      requireThat(applications.has(args.applicationId), "scope");
+      const row = object(envelope(raw).result);
+      requireThat(row.id === args.applicationId, "scope");
+      return bounded({ ...applicationMetadata(row), ...accessObservation });
+    },
+  });
+  return Object.freeze({ accessApplicationsList, accessApplicationGet });
+}
+
 export interface SecretsStoreMetadataScope {
   accountId: string;
   revision: string;
