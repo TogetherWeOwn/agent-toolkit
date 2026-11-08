@@ -3585,7 +3585,7 @@
       "id": "queryProjectBranchLogs",
       "apiArea": "logs",
       "tool": "neon.queryProjectBranchLogs",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/logs/query",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3593,12 +3593,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/log-query.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source and refusal contracts only; exact source and <=1h absolute window, fixed structured read-only POST, bounded nontruncated record-count observation only. Private Beta entitlement/effects, native reviews and runtime integration remain unresolved. No live query, content output or enablement."
     },
     {
       "id": "listProjectBranchLogFields",

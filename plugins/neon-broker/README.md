@@ -7,6 +7,28 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonLogQueryOperations(trustedScope, transport)` adds
+`queryProjectBranchLogs` with copied exact project/branch/revision, one source
+(function, storage or pg_endpoint) and explicit UTC-second start/end window <=1h.
+Its dedicated `neon/projects/<project>/branches/<branch>/logs/query` grant is not
+implied by log-field/value, parent or sibling access. The sole structured POST
+always sends these bounds, limit=30 and sort_order=asc; no raw LogQL, content
+filters, relative/default window, caller pagination or alternate request exists.
+This POST is a provider-documented read, not mutation or a generic executor.
+
+Closed output is only `observed_count` (0..30), not records, unique-event count,
+completeness, absence of errors or a security verdict. Truncation or any nonempty
+next_cursor refuses without partial success. Malformed rows, wrong source,
+contradictory optional ancestry/window, pagination, out-of-window or descending
+timestamps refuse. UTC timestamps retain up to nine fractional digits for exact
+ordering and inclusive-start/exclusive-end checks; equal timestamps are valid.
+Messages, attributes, entity/trace IDs, severity and arbitrary diagnostics are
+never evaluated or emitted; projection tests need not populate ignored fields.
+The fixed authenticated request supplies ancestry absent from provider rows.
+Private Beta availability, sensitive-log entitlement and effects remain unknown;
+HTTP method and mocks prove no non-waking/runtime safety. No live query, secret
+action, mutation, runtime registration or enablement is supplied.
+
 `createNeonSchemaComparisonOperations(trustedScope, transport)` adds
 `getProjectBranchSchemaComparison` for one copied project, target branch, distinct
 base branch, database and revision. Its directional exact
@@ -815,9 +837,9 @@ passwords, credentials and connection strings are excluded. Unknown lifecycle
 states fail closed until explicitly supported. No error body/headers are surfaced.
 Common lease-reflection checks remain necessary even in these selected fields.
 
-`createNeonMetadataTransport(injectedFetch)` has sixty-nine typed methods only. Its
+`createNeonMetadataTransport(injectedFetch)` has seventy-one typed methods only. Its
 internal request builder fixes origin `https://console.neon.tech`, `/api/v2`
-paths, GET, JSON content, no redirects and no retries. No global fetch fallback
+paths, GET (or the sole structured log-query POST), JSON content, no redirects and no retries. No global fetch fallback
 exists. Each response is bounded to 64 KiB and 1 s, including streamed body time;
 each operation has a 3.5 s common-core deadline. Branch lists request 10 rows per
 page, fixed name/ascending order and no deleted rows, for at most three pages.
@@ -979,8 +1001,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: seventy implemented
-source adapters, 124 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: seventy-one implemented
+source adapters, 123 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

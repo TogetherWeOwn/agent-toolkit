@@ -39,6 +39,7 @@ import { createNeonUserKeyOperations } from '../dist/plugins/neon-broker/src/use
 import { createNeonAdvisorOperations } from '../dist/plugins/neon-broker/src/advisor.js';
 import { createNeonBranchSchemaOperations } from '../dist/plugins/neon-broker/src/branch-schema.js';
 import { createNeonSchemaComparisonOperations } from '../dist/plugins/neon-broker/src/schema-comparison.js';
+import { createNeonLogQueryOperations } from '../dist/plugins/neon-broker/src/log-query.js';
 
 export const scope = {
   projectId: 'project-a', revision: 'scope-v1', branchIds: ['br-a', 'br-b'],
@@ -421,7 +422,17 @@ export const schemaComparisonCases = [
 export function schemaComparisonFixture(value, config = schemaComparisonScope) {
   return fixture(value, config, createNeonSchemaComparisonOperations);
 }
-export const allCases = [...schemaComparisonCases, ...logValueCases, ...branchSchemaCases, ...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
+export const logQueryScope = { projectId: scope.projectId, branchId: 'br-a', revision: scope.revision,
+  startTime: logValueScope.startTime, endTime: logValueScope.endTime, source: 'function' };
+export const logRecord = { timestamp: '2026-11-08T10:00:00.000000001Z', source: 'function', message: 'fixture message', attributes: {} };
+export const logQueryCases = [
+  ['queryProjectBranchLogs', { project_id: 'project-a', branch_id: 'br-a', start_time: logQueryScope.startTime,
+    end_time: logQueryScope.endTime, source: logQueryScope.source }, { logs: [logRecord], is_truncated: false }, { observed_count: 1 }],
+];
+export function logQueryFixture(value, config = logQueryScope) {
+  return fixture(value, config, createNeonLogQueryOperations);
+}
+export const allCases = [...logQueryCases, ...schemaComparisonCases, ...logValueCases, ...branchSchemaCases, ...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });

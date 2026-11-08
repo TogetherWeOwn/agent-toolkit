@@ -12,12 +12,33 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Cross-agent/resource access | Common agent AND exact-resource policy; separate collection targets; copied trusted scope; exact response project/child binding. No broad list inferred from project access. |
 | Provider scope drift | Bound scope revision enters canonical target and is revalidated by host/core before transport; exact provider IDs/parent relations checked. Actual current binding adapter remains required. |
 | Secrets in response/error/audit | Allowlist projection excludes settings/hosts/owners/credentials/passwords/URIs and arbitrary errors/timestamps. Database/role names are emitted only when exact trusted bindings match; other arbitrary names stay excluded. Fixed errors discard raw bodies. Common reflected-lease checks and safe audit envelopes remain mandatory. Arbitrary secret DLP is not claimed. |
-| Redirect/SSRF/path injection | Explicit fixed GET methods, constrained identifiers/catalog names, encoded cursor, fixed origin, redirect:error, no arbitrary URL/header arguments, no default fetch. Auth-status reads omit OAuth login/consent URLs, MCP resources and audiences; no secondary fetch. |
+| Redirect/SSRF/path injection | Explicit fixed GET methods and one structured log-query POST, constrained identifiers/catalog names, encoded cursor, fixed origin, redirect:error, no arbitrary URL/header arguments, no default fetch. Auth-status reads omit OAuth login/consent URLs, MCP resources and audiences; no secondary fetch. |
 | Pagination/response/time amplification | 64 KiB per response; 1 s request including streamed body; 3.5 s operation; 10 branches/operations per page, three pages, duplicate/cycle checks; branch next/sort and operation cursor shapes are distinct; 30-row cap for other lists. No retries/partial success. |
 | Aggregate disclosure | Project-wide endpoint/operation collections and total branch counts have distinct exact-resource targets. Child/project grants never imply aggregate authority; response filtering is not request authorization. |
 | Read waking compute | No compute mutation/SQL/connection/secret fallback exists. GET is NOT proof; independent provider evidence and accepted enablement gates remain unsatisfied. |
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
+
+## Bounded log-query count delta
+
+`queryProjectBranchLogs` has a dedicated exact branch/logs/query grant and copied
+source/revision/absolute window <=1h. Its fixed structured POST always sends
+source/start_time/end_time/limit30/ascending order. Raw LogQL, content filters,
+caller pagination, relative/default windows and GET/content fallbacks are absent.
+The public schema documents a read, but POST/mocks do not prove safe effects.
+Private Beta availability and sensitive-log entitlement remain unresolved.
+
+Only observed_count leaves projection; message, attributes, entity/trace identity,
+severity, cursor and diagnostics never do. This is bounded occurrence counting,
+not unique-event count, complete log evidence or an all-clear verdict. The
+nontruncated terminal response must fit30 rows; any continuing cursor, malformed
+row, source/optional ancestry contradiction, unexpected pagination or timestamp
+outside the half-open interval refuses without partial success. Exact UTC ordering
+preserves nanoseconds; equal timestamps are legitimate. Ignored fields are not
+comprehensive upstream-schema validation. Authenticated fixed path supplies the
+ancestry absent from provider rows. Host revision and common principal/resource,
+replay, TOCTOU, audit and lease boundaries remain mandatory. No live provider call,
+credential action, mutation, registration or lifecycle enforcement is added.
 
 ## Selected log-value observation delta
 

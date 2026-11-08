@@ -1,4 +1,4 @@
-import { parseLogValueQuery } from "./log-value-query.js";
+import { parseLogValueQuery, parseLogWindow } from "./log-value-query.js";
 
 export const NEON_ORIGIN = "https://console.neon.tech";
 export const RESPONSE_BYTES = 65_536;
@@ -10,6 +10,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  queryProjectBranchLogs(project: string, branch: string, query: { readonly start_time: string; readonly end_time: string; readonly source: string }, options: MetadataRequestOptions): Promise<unknown>;
   getProjectBranchSchemaComparison(project: string, branch: string, baseBranch: string, database: string, options: MetadataRequestOptions): Promise<unknown>;
   getProjectBranchSchema(project: string, branch: string, database: string, options: MetadataRequestOptions): Promise<unknown>;
   getProjectAdvisorSecurityIssues(project: string, branch: string, database: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -120,7 +121,8 @@ function cursorQuery(cursor: string | null): URLSearchParams {
 // No default fetch/global transport, SDK, SQL client, retries or discovery fallback.
 // Construction is a source/test seam, not an installed or enabled runtime tool.
 export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadataTransport {
-  async function get(path: string, query: URLSearchParams, options: MetadataRequestOptions): Promise<unknown> {
+  const get = (path: string, query: URLSearchParams, options: MetadataRequestOptions) => request(path, query, options);
+  async function request(path: string, query: URLSearchParams, options: MetadataRequestOptions, body?: string): Promise<unknown> {
     if (/[\r\n]/.test(options.credential)) throw Error("UPSTREAM_UNAVAILABLE");
     const expiresAt = performance.now() + REQUEST_TIMEOUT_MS;
     const controller = new AbortController();
@@ -141,8 +143,10 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       if (expired()) throw Error("UPSTREAM_UNAVAILABLE");
       const suffix = query.size ? `?${query.toString()}` : "";
       const response = await fetcher(`${NEON_ORIGIN}/api/v2${path}${suffix}`, {
-        method: "GET", redirect: "error", signal: controller.signal,
-        headers: { Authorization: `Bearer ${options.credential}`, Accept: "application/json" },
+        method: body === undefined ? "GET" : "POST", redirect: "error", signal: controller.signal,
+        headers: { Authorization: `Bearer ${options.credential}`, Accept: "application/json",
+          ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
+        ...(body === undefined ? {} : { body }),
       });
       if (expired() || response.status !== 200 || response.redirected ||
         !/^application\/json(?:\s*;|$)/i.test(response.headers.get("content-type") ?? "")) {
@@ -183,6 +187,11 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    queryProjectBranchLogs: (project: string, branch: string, raw: { readonly start_time: string; readonly end_time: string; readonly source: string }, options: MetadataRequestOptions) => {
+      const query = parseLogWindow(raw);
+      return request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/logs/query`, new URLSearchParams(), options,
+        JSON.stringify({ ...query, limit: 30, sort_order: "asc" }));
+    },
     getProjectBranchSchemaComparison: (project: string, branch: string, baseBranch: string, database: string, options: MetadataRequestOptions) => {
       if (authPathId(branch) === authPathId(baseBranch)) throw Error("INVALID_ARGUMENTS");
       return get(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/compare_schema`,
