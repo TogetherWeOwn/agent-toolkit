@@ -3032,7 +3032,7 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
+      "status": "implemented",
       "tests": [
         "plugins/neon-broker/test/organization-invitations.test.mjs",
         "plugins/neon-broker/test/core.compat.mjs"
