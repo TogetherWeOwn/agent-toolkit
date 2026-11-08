@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { closed, requireThat, text } from "../../../packages/core/src/index.js";
 import type { PreparedMetadata } from "./metadata.js";
+import { moduleDigests, moduleName } from "./module-digests.js";
 
 const accountId = text(32, /^[a-f0-9]{32}$/);
 const scriptName = text(128, /^[A-Za-z0-9][A-Za-z0-9_-]*$/);
@@ -12,6 +13,7 @@ export interface CurrentContentScope {
   accountId: string;
   revision: string;
   sourceDigestScriptNames?: readonly string[];
+  moduleDigestNamesByScript?: readonly { scriptName: string; moduleNames: readonly string[] }[];
 }
 
 // Source access requires separate native authorization even when output is a digest.
@@ -22,6 +24,18 @@ export function currentContentDescriptor(scope: CurrentContentScope) {
   const names = scope.sourceDigestScriptNames ?? [];
   requireThat(Array.isArray(names) && names.length <= 100, "cap");
   const scripts = new Set(names.map(value => scriptName.parse(value)));
+  const moduleScopes = scope.moduleDigestNamesByScript ?? [];
+  requireThat(Array.isArray(moduleScopes) && moduleScopes.length <= 100, "cap");
+  const modules = new Map<string, ReadonlySet<string>>();
+  for (const entry of moduleScopes) {
+    requireThat(entry !== null && typeof entry === "object", "schema");
+    const name = scriptName.parse(entry.scriptName);
+    requireThat(scripts.has(name) && !modules.has(name), "scope");
+    requireThat(Array.isArray(entry.moduleNames) && entry.moduleNames.length <= 16, "cap");
+    const selected = new Set(entry.moduleNames.map((value: unknown) => moduleName(value)));
+    requireThat(selected.size === entry.moduleNames.length, "schema");
+    modules.set(name, selected);
+  }
   const preparations = new WeakSet<object>();
   return Object.freeze({
     name: "cloudflare.workers.current_content.digest",
@@ -43,9 +57,12 @@ export function currentContentDescriptor(scope: CurrentContentScope) {
       preparations.add(prepared);
       return prepared;
     },
-    project(body: Uint8Array, prepared: PreparedMetadata<Arguments>) {
+    project(body: Uint8Array, prepared: PreparedMetadata<Arguments>, boundary?: string) {
       requireThat(preparations.has(prepared), "scope");
       requireThat(body instanceof Uint8Array && body.byteLength > 0 && body.byteLength <= maxResponseBytes, "cap");
+      const selected = modules.get(prepared.arguments.scriptName);
+      const moduleAttribution = selected === undefined || selected.size === 0 ? "not-parsed" as const :
+        moduleDigests(body, boundary ?? "", selected);
       return Object.freeze({
         scriptName: prepared.arguments.scriptName,
         semantics: "current-only" as const,
@@ -56,7 +73,7 @@ export function currentContentDescriptor(scope: CurrentContentScope) {
           byteLength: body.byteLength,
         }),
         historicalBinding: "not-established" as const,
-        moduleAttribution: "not-parsed" as const,
+        moduleAttribution,
         libraryVersions: "unavailable" as const,
       });
     },

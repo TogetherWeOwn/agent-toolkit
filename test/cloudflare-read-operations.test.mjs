@@ -228,6 +228,39 @@ test("Cloudflare content rejects stale, target-mismatched and unconsumable synth
   }
 });
 
+test("Cloudflare module projection through actual core retains source authority, policy and replay gates", async () => {
+  const source = { ...sourceScope(), moduleDigestNamesByScript: [{ scriptName: "safe-worker", moduleNames: ["main.js"] }] };
+  const missing = fixture({ source, fetcher: async () => multipart() });
+  assert.equal((await missing.invoke(content, args)).code, "AUTHORIZATION_UNAVAILABLE");
+  noEffects(missing);
+  const denied = fixture({ source, fetcher: async () => multipart(), authority: true });
+  denied.vector.policy.agents = ["different-agent"];
+  assert.equal((await denied.invoke(content, args)).ok, false);
+  noEffects(denied);
+  const f = fixture({ source, fetcher: async () => multipart(), authority: true });
+  const result = await f.invoke(content, args);
+  assert.equal(result.ok, true);
+  assert.equal(result.value.moduleAttribution.modules[0].name, "main.js");
+  assert.equal(result.value.moduleAttribution.modules[0].subject, "captured-module-part-bytes");
+  assert.equal(result.value.libraryVersions, "unavailable");
+  assert.equal(f.calls.consumed, 1);
+  assert.equal(f.calls.close, 1);
+  assert.equal((await f.invoke(content, args)).code, "REPLAY_CONFLICT");
+  assert.equal(f.requests.length, 1);
+  safe(f, result);
+});
+
+test("Cloudflare module projection failure cleans the lease and does not expose malformed source", async () => {
+  const source = { ...sourceScope(), moduleDigestNamesByScript: [{ scriptName: "safe-worker", moduleNames: ["missing.js"] }] };
+  const f = fixture({ source, fetcher: async () => multipart(), authority: true });
+  const result = await f.invoke(content, args);
+  assert.equal(result.ok, false);
+  assert.equal(f.requests.length, 1);
+  assert.equal(f.calls.close, 1);
+  assert.equal((await f.invoke(content, args)).code, "REPLAY_CONFLICT");
+  safe(f, result);
+});
+
 test("Cloudflare authorized synthetic content call returns digest/capture only and consumes exact source target once", async () => {
   const f = fixture({ fetcher: async () => multipart(), authority: true });
   const result = await f.invoke(content, args);

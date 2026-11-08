@@ -125,7 +125,7 @@ export function currentContentTransport(fetcher: typeof fetch = fetch) {
     // Framing only, not a module parser or proof of source semantics.
     requireThat(body.subarray(0, first.length).equals(first) && end >= first.length + last.length &&
       body.subarray(end - last.length, end).equals(last), "upstream");
-    const output = descriptor.project(bytes, prepared);
+    const output = descriptor.project(bytes, prepared, boundary);
     return Object.freeze({
       ...output,
       capture: Object.freeze({
