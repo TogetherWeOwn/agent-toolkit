@@ -654,3 +654,118 @@ export function durableObjectMetadataDescriptors(scope: DurableObjectMetadataSco
   });
   return Object.freeze({ durableNamespacesList, durableObjectsList });
 }
+
+export interface PagesMetadataScope {
+  accountId: string;
+  revision: string;
+  projects: readonly { projectName: string; projectId: string; deploymentIds: readonly string[] }[];
+}
+const pagesProjectName = text(63, /^[a-z0-9][a-z0-9-]*$/);
+const pagesProjectId = text(64, /^[a-z0-9][a-z0-9-]*$/);
+const pagesProject = closed({ projectName: pagesProjectName });
+const pagesDeploymentsPage = closed({ projectName: pagesProjectName, page: integer(1, 1000), perPage: integer(1, 100) });
+const pagesDeployment = closed({ projectName: pagesProjectName, deploymentId });
+
+// Pages resources have independent project/name bindings and deployment allowlists.
+export function pagesMetadataDescriptors(scope: PagesMetadataScope) {
+  const account = accountId.parse(scope.accountId);
+  const revision = text(80, /^[A-Za-z0-9][A-Za-z0-9_.-]*$/).parse(scope.revision);
+  requireThat(Array.isArray(scope.projects) && scope.projects.length <= maxRows, "cap");
+  const projects = new Map<string, { id: string; deployments: Set<string> }>();
+  const projectIds = new Set<string>();
+  for (const entry of scope.projects) {
+    const name = pagesProjectName.parse(entry.projectName);
+    const id = pagesProjectId.parse(entry.projectId);
+    requireThat(!projects.has(name) && !projectIds.has(id), "schema");
+    requireThat(Array.isArray(entry.deploymentIds) && entry.deploymentIds.length <= maxRows, "cap");
+    projects.set(name, { id, deployments: new Set<string>(entry.deploymentIds.map((value: unknown) => deploymentId.parse(value))) });
+    projectIds.add(id);
+  }
+  const root = `/accounts/${account}/pages/projects`;
+  function prepared<A>(args: A, resource: string, path: string): PreparedMetadata<A> {
+    return Object.freeze({
+      arguments: args,
+      resource: Object.freeze({ id: `cloudflare:account:${account}:pages${resource}`, revision }),
+      request: Object.freeze({ method: "GET", path, maxResponseBytes, timeoutMs: 10000, maxRequests: 1, redirects: "deny" }),
+    });
+  }
+  function projectScope(name: string) {
+    const project = projects.get(name);
+    requireThat(project !== undefined, "scope");
+    return project;
+  }
+  function accountScope(row: Row) { requireThat(row.account_id === undefined || row.account_id === account, "scope"); }
+  function projectMetadata(row: Row, name: string): { id: string } {
+    const project = projectScope(name);
+    accountScope(row);
+    requireThat(row.name === name && row.id === project.id, "scope");
+    return { id: providerText(row.id, pagesProjectId) };
+  }
+  function deploymentMetadata(row: Row, name: string): { id: string } {
+    const project = projectScope(name);
+    accountScope(row);
+    requireThat(row.project_name === name && row.project_id === project.id, "scope");
+    const id = providerText(row.id, deploymentId);
+    requireThat(project.deployments.has(id), "scope");
+    return { id };
+  }
+  const pagesProjectsList: MetadataDescriptor<ReturnType<typeof page.parse>, PartialList<{ id: string }>> = Object.freeze({
+    name: "cloudflare.pages.projects.list", version: "1", tier: "read", providerOperationId: "pages-project-get-projects",
+    prepare(raw: unknown) {
+      const args = page.parse(raw);
+      return prepared(args, ":projects", `${root}?page=${args.page}&per_page=${args.perPage}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof page.parse>>) {
+      const args = page.parse(input.arguments);
+      const result = rows(envelope(raw).result);
+      requireThat(result.length <= args.perPage, "cap");
+      const items = result.filter(row => typeof row.name === "string" && projects.has(row.name)).map(row => projectMetadata(row, providerText(row.name, pagesProjectName)));
+      return bounded({ items, complete: false as const });
+    },
+  });
+  const pagesProjectGet: MetadataDescriptor<ReturnType<typeof pagesProject.parse>, { id: string }> = Object.freeze({
+    name: "cloudflare.pages.projects.get", version: "1", tier: "read", providerOperationId: "pages-project-get-project",
+    prepare(raw: unknown) {
+      const args = pagesProject.parse(raw);
+      const project = projectScope(args.projectName);
+      return prepared(args, `:project:${project.id}`, `${root}/${args.projectName}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof pagesProject.parse>>) {
+      const args = pagesProject.parse(input.arguments);
+      return bounded(projectMetadata(object(envelope(raw).result), args.projectName));
+    },
+  });
+  const pagesDeploymentsList: MetadataDescriptor<ReturnType<typeof pagesDeploymentsPage.parse>, PartialList<{ id: string }>> = Object.freeze({
+    name: "cloudflare.pages.deployments.list", version: "1", tier: "read", providerOperationId: "pages-deployment-get-deployments",
+    prepare(raw: unknown) {
+      const args = pagesDeploymentsPage.parse(raw);
+      const project = projectScope(args.projectName);
+      return prepared(args, `:project:${project.id}:deployments`, `${root}/${args.projectName}/deployments?page=${args.page}&per_page=${args.perPage}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof pagesDeploymentsPage.parse>>) {
+      const args = pagesDeploymentsPage.parse(input.arguments);
+      const project = projectScope(args.projectName);
+      const result = rows(envelope(raw).result);
+      requireThat(result.length <= args.perPage, "cap");
+      const items = result.filter(row => typeof row.id === "string" && project.deployments.has(row.id)).map(row => deploymentMetadata(row, args.projectName));
+      return bounded({ items, complete: false as const });
+    },
+  });
+  const pagesDeploymentGet: MetadataDescriptor<ReturnType<typeof pagesDeployment.parse>, { id: string }> = Object.freeze({
+    name: "cloudflare.pages.deployments.get", version: "1", tier: "read", providerOperationId: "pages-deployment-get-deployment-info",
+    prepare(raw: unknown) {
+      const args = pagesDeployment.parse(raw);
+      const project = projectScope(args.projectName);
+      requireThat(project.deployments.has(args.deploymentId), "scope");
+      return prepared(args, `:project:${project.id}:deployment:${args.deploymentId}`, `${root}/${args.projectName}/deployments/${args.deploymentId}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof pagesDeployment.parse>>) {
+      const args = pagesDeployment.parse(input.arguments);
+      requireThat(projectScope(args.projectName).deployments.has(args.deploymentId), "scope");
+      const row = object(envelope(raw).result);
+      requireThat(row.id === args.deploymentId, "scope");
+      return bounded(deploymentMetadata(row, args.projectName));
+    },
+  });
+  return Object.freeze({ pagesProjectsList, pagesProjectGet, pagesDeploymentsList, pagesDeploymentGet });
+}

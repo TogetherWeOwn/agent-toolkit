@@ -1,6 +1,6 @@
 {
   "summaryVersion": 1,
-  "inventorySha256": "ca5b609caf5233bec0b660fdb29f62cac8c190706a0607cb77912b38285ac0ad",
+  "inventorySha256": "00230b24a88073e62d09742347ae4f6741abc527588120caf4dfeafc7cf52e5e",
   "grouping": "first-provider-tag-exclusive",
   "limitations": [
     "primary-area-counts-are-additive-not-tag-memberships",
@@ -9495,10 +9495,10 @@
         "response": 9
       },
       "coverage": {
-        "metadataDescriptors": 0,
+        "metadataDescriptors": 2,
         "planDescriptors": 0,
-        "missing": 9,
-        "unclassified": 9,
+        "missing": 7,
+        "unclassified": 7,
         "unknownEntitlement": 9,
         "integrated": 0,
         "reviewed": 0,
@@ -9554,10 +9554,10 @@
         "response": 8
       },
       "coverage": {
-        "metadataDescriptors": 0,
+        "metadataDescriptors": 2,
         "planDescriptors": 0,
-        "missing": 8,
-        "unclassified": 8,
+        "missing": 6,
+        "unclassified": 6,
         "unknownEntitlement": 8,
         "integrated": 0,
         "reviewed": 0,

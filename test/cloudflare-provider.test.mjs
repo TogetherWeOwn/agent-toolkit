@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { metadataDescriptors, zoneMetadataDescriptors, secretsStoreMetadataDescriptors, durableObjectMetadataDescriptors } from "../dist/plugins/cloudflare-broker/src/metadata.js";
+import { metadataDescriptors, zoneMetadataDescriptors, secretsStoreMetadataDescriptors, durableObjectMetadataDescriptors, pagesMetadataDescriptors } from "../dist/plugins/cloudflare-broker/src/metadata.js";
 import { deletionPlanDescriptors } from "../dist/plugins/cloudflare-broker/src/deletion-plans.js";
 import { inventory, source } from "../plugins/cloudflare-broker/scripts/inventory.mjs";
 import { familySummary } from "../plugins/cloudflare-broker/scripts/families.mjs";
@@ -49,7 +49,15 @@ const durableCases = [
   ["durableNamespacesList", { page: 2, perPage: 10 }, "?page=2&per_page=10", ":namespaces"],
   ["durableObjectsList", { namespaceId: own, limit: 10 }, `/${own}/objects?limit=10`, `:namespace:${own}:objects`],
 ];
-const metadataOnly = { ...descriptors, ...zoneDescriptors, ...secretsStoreDescriptors, ...durableDescriptors };
+const pagesScope = { accountId: account, revision: "policy-1", projects: [{ projectName: "safe-project", projectId: own, deploymentIds: [db] }, { projectName: "other-project", projectId: other, deploymentIds: [otherDb] }] };
+const pagesDescriptors = pagesMetadataDescriptors(pagesScope);
+const pagesCases = [
+  ["pagesProjectsList", { page: 2, perPage: 10 }, "?page=2&per_page=10", ":projects"],
+  ["pagesProjectGet", { projectName: "safe-project" }, "/safe-project", `:project:${own}`],
+  ["pagesDeploymentsList", { projectName: "safe-project", page: 2, perPage: 10 }, "/safe-project/deployments?page=2&per_page=10", `:project:${own}:deployments`],
+  ["pagesDeploymentGet", { projectName: "safe-project", deploymentId: db }, `/safe-project/deployments/${db}`, `:project:${own}:deployment:${db}`],
+];
+const metadataOnly = { ...descriptors, ...zoneDescriptors, ...secretsStoreDescriptors, ...durableDescriptors, ...pagesDescriptors };
 const allDescriptors = { ...metadataOnly, ...deletionDescriptors };
 const deletionCases = [
   ["workerDelete", { scriptName: "safe-worker" }, `/accounts/${account}/workers/scripts/safe-worker?force=false`, `cloudflare:account:${account}:worker:safe-worker`],
@@ -736,6 +744,86 @@ test("Cloudflare Durable Objects metadata refuses invalid envelopes and oversize
   for (const perPage of [0, 101, 1.5, "10"]) refuses(() => durableDescriptors.durableNamespacesList.prepare({ page: 1, perPage }), "schema");
 });
 
+test("Cloudflare Pages metadata binds project identities and exact closed requests", () => {
+  for (const [name, args, path, resource] of pagesCases) {
+    const descriptor = pagesDescriptors[name];
+    const input = descriptor.prepare(args);
+    assert.deepEqual(input.request, { method: "GET", path: `/accounts/${account}/pages/projects${path}`, maxResponseBytes: 131072, timeoutMs: 10000, maxRequests: 1, redirects: "deny" });
+    assert.deepEqual(input.resource, { id: `cloudflare:account:${account}:pages${resource}`, revision: "policy-1" });
+    assert.ok(Object.isFrozen(descriptor) && Object.isFrozen(input) && Object.isFrozen(input.arguments) && Object.isFrozen(input.resource) && Object.isFrozen(input.request));
+    for (const extra of [{ accountId: other }, { projectId: other }, { agentId: "other" }, { url: "https://example.invalid" }, { headers: {} }, { env: "production" }, { approval: true }]) refuses(() => descriptor.prepare({ ...args, ...extra }), "schema");
+  }
+  refuses(() => pagesDescriptors.pagesProjectGet.prepare({ projectName: "missing-project" }), "scope");
+  refuses(() => pagesDescriptors.pagesDeploymentGet.prepare({ projectName: "safe-project", deploymentId: otherDb }), "scope");
+  for (const projectName of ["../safe-project", "safe-project?force=true", "Safe-project", "x".repeat(64), "safе-project"]) refuses(() => pagesDescriptors.pagesProjectGet.prepare({ projectName }), "schema");
+  for (const id of ["../deployment", db.toUpperCase(), own]) refuses(() => pagesDescriptors.pagesDeploymentGet.prepare({ projectName: "safe-project", deploymentId: id }), "schema");
+});
+
+test("Cloudflare Pages projections omit configuration and bind deployments to their project", () => {
+  const canary = "private-build-secret";
+  const project = { id: own, name: "safe-project", account_id: account, deployment_configs: { production: { env_vars: { SECRET: { value: canary } } } }, build_config: canary, source: canary, domains: [canary], latest_deployment: { id: otherDb } };
+  const deployment = { id: db, project_id: own, project_name: "safe-project", env_vars: canary, build_config: canary, source: canary, url: canary, deployment_trigger: canary, aliases: [canary], stages: [canary] };
+  const outputs = [
+    pagesDescriptors.pagesProjectsList.project(success([project, { id: zone, name: "foreign-project" }]), pagesDescriptors.pagesProjectsList.prepare({ page: 1, perPage: 10 })),
+    pagesDescriptors.pagesProjectGet.project(success(project), pagesDescriptors.pagesProjectGet.prepare({ projectName: "safe-project" })),
+    pagesDescriptors.pagesDeploymentsList.project(success([deployment, { ...deployment, id: otherDb }]), pagesDescriptors.pagesDeploymentsList.prepare({ projectName: "safe-project", page: 1, perPage: 10 })),
+    pagesDescriptors.pagesDeploymentGet.project(success(deployment), pagesDescriptors.pagesDeploymentGet.prepare({ projectName: "safe-project", deploymentId: db })),
+  ];
+  assert.deepEqual(outputs, [{ items: [{ id: own }], complete: false }, { id: own }, { items: [{ id: db }], complete: false }, { id: db }]);
+  assert.ok(!JSON.stringify(outputs).includes(canary));
+  for (const change of [{ id: other }, { name: "other-project" }, { account_id: other }]) {
+    refuses(() => pagesDescriptors.pagesProjectGet.project(success({ ...project, ...change }), pagesDescriptors.pagesProjectGet.prepare({ projectName: "safe-project" })), "scope");
+  }
+  refuses(() => pagesDescriptors.pagesProjectsList.project(success([{ ...project, id: other }]), pagesDescriptors.pagesProjectsList.prepare({ page: 1, perPage: 10 })), "scope");
+  for (const change of [{ project_id: other }, { project_name: "other-project" }, { account_id: other }, { project_id: undefined }, { project_name: undefined }]) {
+    const row = { ...deployment, ...change };
+    refuses(() => pagesDescriptors.pagesDeploymentsList.project(success([row]), pagesDescriptors.pagesDeploymentsList.prepare({ projectName: "safe-project", page: 1, perPage: 10 })), "scope");
+    refuses(() => pagesDescriptors.pagesDeploymentGet.project(success(row), pagesDescriptors.pagesDeploymentGet.prepare({ projectName: "safe-project", deploymentId: db })), "scope");
+  }
+  refuses(() => pagesDescriptors.pagesDeploymentGet.project(success({ ...deployment, id: otherDb }), pagesDescriptors.pagesDeploymentGet.prepare({ projectName: "safe-project", deploymentId: db })), "scope");
+});
+
+test("Cloudflare Pages scope is copied, independently empty and refuses duplicate identities", () => {
+  const input = structuredClone(pagesScope);
+  const captured = pagesMetadataDescriptors(input);
+  input.accountId = other;
+  input.revision = "policy-2";
+  input.projects[0].projectId = other;
+  input.projects[0].deploymentIds.splice(0, 1, otherDb);
+  input.projects.splice(0, 1);
+  const prepared = captured.pagesDeploymentGet.prepare({ projectName: "safe-project", deploymentId: db });
+  assert.equal(prepared.resource.revision, "policy-1");
+  assert.equal(prepared.request.path, `/accounts/${account}/pages/projects/safe-project/deployments/${db}`);
+  refuses(() => captured.pagesDeploymentGet.prepare({ projectName: "safe-project", deploymentId: otherDb }), "scope");
+  const empty = pagesMetadataDescriptors({ ...pagesScope, projects: [] });
+  assert.deepEqual(empty.pagesProjectsList.project(success([{ id: own, name: "safe-project" }]), empty.pagesProjectsList.prepare({ page: 1, perPage: 10 })), { items: [], complete: false });
+  refuses(() => empty.pagesProjectGet.prepare({ projectName: "safe-project" }), "scope");
+  const noDeployments = pagesMetadataDescriptors({ ...pagesScope, projects: [{ ...pagesScope.projects[0], deploymentIds: [] }] });
+  assert.deepEqual(noDeployments.pagesDeploymentsList.project(success([{ id: db }]), noDeployments.pagesDeploymentsList.prepare({ projectName: "safe-project", page: 1, perPage: 10 })), { items: [], complete: false });
+  refuses(() => noDeployments.pagesDeploymentGet.prepare({ projectName: "safe-project", deploymentId: db }), "scope");
+  for (const projects of [null, Array(101).fill(pagesScope.projects[0]), [{ ...pagesScope.projects[0], deploymentIds: null }], [{ ...pagesScope.projects[0], deploymentIds: Array(101).fill(db) }]]) refuses(() => pagesMetadataDescriptors({ ...pagesScope, projects }), "cap");
+  for (const duplicate of [pagesScope.projects[0], { ...pagesScope.projects[1], projectId: own }]) refuses(() => pagesMetadataDescriptors({ ...pagesScope, projects: [pagesScope.projects[0], duplicate] }), "schema");
+  for (const change of [{ projectName: "../project" }, { projectId: "private\nproject" }, { deploymentIds: [own] }]) refuses(() => pagesMetadataDescriptors({ ...pagesScope, projects: [{ ...pagesScope.projects[0], ...change }] }), "schema");
+});
+
+test("Cloudflare Pages metadata refuses malformed responses and unbounded pagination", () => {
+  for (const [name, args] of pagesCases) {
+    const descriptor = pagesDescriptors[name];
+    const input = descriptor.prepare(args);
+    refuses(() => descriptor.project("x".repeat(131073), input), "cap");
+    for (const raw of ["null", "not-json", JSON.stringify({ success: false, errors: [{ message: "private" }], result: [] }), JSON.stringify({ success: true, result: [] })]) refuses(() => descriptor.project(raw, input), "upstream");
+  }
+  for (const [name, args] of [["pagesProjectsList", {}], ["pagesDeploymentsList", { projectName: "safe-project" }]]) {
+    const descriptor = pagesDescriptors[name];
+    for (const page of [0, 1001, 1.5, "1"]) refuses(() => descriptor.prepare({ ...args, page, perPage: 10 }), "schema");
+    for (const perPage of [0, 101, 1.5, "10"]) refuses(() => descriptor.prepare({ ...args, page: 1, perPage }), "schema");
+    const input = descriptor.prepare({ ...args, page: 1, perPage: 10 });
+    refuses(() => descriptor.project(success(Array(11).fill({ id: own })), input), "cap");
+    refuses(() => descriptor.project(success({}), input), "cap");
+    refuses(() => descriptor.project(success([null]), input), "upstream");
+  }
+});
+
 test("Cloudflare full schema inventory is pinned, explicit about holes, and consistent with descriptors", async () => {
   const bytes = await readFile(new URL("../plugins/cloudflare-broker/coverage/operations.jsonl", import.meta.url));
   const manifest = JSON.parse(await readFile(new URL("../plugins/cloudflare-broker/coverage/source.json", import.meta.url)));
@@ -771,9 +859,9 @@ test("Cloudflare full schema inventory is pinned, explicit about holes, and cons
       }
     }
   }
-  assert.equal(operations.filter(row => row.typedTool !== null).length, 30);
+  assert.equal(operations.filter(row => row.typedTool !== null).length, 34);
   assert.equal(operations.filter(row => row.tier === "reserved").length, 5);
-  assert.equal(operations.filter(row => row.tier === "read").length, 25);
+  assert.equal(operations.filter(row => row.tier === "read").length, 29);
   assert.equal(manifest.counts.descriptors, Object.keys(allDescriptors).length);
   assert.equal(manifest.credentialScope.status, "operation-entitlements-unresolved");
   assert.equal(manifest.complete, false);
