@@ -37,7 +37,7 @@ export function createNeonBucketObjectOperations(scope: NeonBucketObjectScope, t
   }
   function page(raw: unknown, max: number) {
     check(optional(raw, "pagination") === undefined);
-    for (const [name, expected] of [["project_id", config.projectId], ["branch_id", config.branchId], ["bucket_name", config.bucketName]]) {
+    for (const [name, expected] of [["project_id", config.projectId], ["branch_id", config.branchId], ["bucket_name", config.bucketName]] as const) {
       const observed = optional(raw, name);
       check(observed === undefined || observed === expected);
     }
