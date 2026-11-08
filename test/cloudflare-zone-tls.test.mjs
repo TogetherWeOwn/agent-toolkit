@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFile } from "node:fs/promises";
 import { zoneTlsDescriptor } from "../dist/plugins/cloudflare-broker/src/zone-tls.js";
 import { cloudflareReadOperations } from "../dist/plugins/cloudflare-broker/src/read-operations.js";
 import { createProviderBroker } from "../dist/packages/core/src/provider/index.js";
@@ -10,7 +11,9 @@ const zone = "b".repeat(32);
 const foreign = "f".repeat(32);
 const variants = { ssl: ["off", "flexible", "full", "strict"], min_tls_version: ["1.0", "1.1", "1.2", "1.3"],
   tls_1_3: ["on", "off", "zrt"], always_use_https: ["on", "off"], http2: ["on", "off"],
-  ciphers: [[], ["ECDHE-RSA-AES128-GCM-SHA256", "AES128-SHA"]] };
+  ciphers: [[], ["ECDHE-RSA-AES128-GCM-SHA256", "AES128-SHA"]],
+  automatic_https_rewrites: ["on", "off"], opportunistic_encryption: ["on", "off"], http3: ["on", "off"], "0rtt": ["on", "off"] };
+const addedSettings = ["automatic_https_rewrites", "opportunistic_encryption", "http3", "0rtt"];
 const scope = () => ({ accountId: account, zoneId: zone, revision: "resource-1", settingIds: Object.keys(variants) });
 const success = result => JSON.stringify({ success: true, errors: [], result });
 const row = id => ({ id, value: variants[id][0], modified_on: credentialCanary, editable: derivedCanary, private: credentialCanary });
@@ -53,13 +56,13 @@ test("Cloudflare zone TLS copies independent exact setting scope and authenticat
   assert.throws(() => d.project(success(row("ssl")), { ...p }), /scope/);
   assert.throws(() => zoneTlsDescriptor(scope()).project(success(row("ssl")), p), /scope/);
   assert.throws(() => zoneTlsDescriptor({ ...scope(), settingIds: ["ssl", "ssl"] }), /schema/);
-  assert.throws(() => zoneTlsDescriptor({ ...scope(), settingIds: Array(7).fill("ssl") }), /cap/);
+  assert.throws(() => zoneTlsDescriptor({ ...scope(), settingIds: Array(11).fill("ssl") }), /cap/);
   for (const id of ["security_header", "ssl/../http2", "SSL", "ssl\n", "ssl?x=1"]) {
     assert.throws(() => zoneTlsDescriptor({ ...scope(), settingIds: [id] }), /schema/);
   }
 });
 
-test("Cloudflare zone TLS validates all six pinned configured variants without defaults or effective claims", () => {
+test("Cloudflare zone TLS validates all ten pinned configured variants without defaults or effective claims", () => {
   const d = zoneTlsDescriptor(scope());
   for (const [settingId, values] of Object.entries(variants)) for (const value of values) {
     const out = d.project(success({ ...row(settingId), value }), d.prepare({ settingId }));
@@ -148,6 +151,77 @@ test("Cloudflare zone TLS current agent, resource, binding and lease-time revoca
     assert.equal(f.calls.close, denied === "revocation" ? 1 : 0);
     assert.equal(f.requests.length, 0);
     safe(f, out);
+  }
+});
+
+test("Cloudflare zone TLS ledger lists exactly the supported variant inputs without completing the generic endpoint", async () => {
+  const rows = (await readFile(new URL("../plugins/cloudflare-broker/coverage/operations.jsonl", import.meta.url), "utf8"))
+    .trimEnd().split("\n").map(line => JSON.parse(line));
+  const entries = rows.filter(row => row.typedTool === "cloudflare.tls.zone.get");
+  assert.equal(entries.length, 1);
+  assert.equal(entries[0].variantCoverage.complete, false);
+  assert.deepEqual(entries[0].variantCoverage.supportedSettingIds, Object.keys(variants));
+  const d = zoneTlsDescriptor(scope());
+  for (const settingId of entries[0].variantCoverage.supportedSettingIds) assert.equal(d.prepare({ settingId }).arguments.settingId, settingId);
+  for (const settingId of ["security_header", "tls_client_auth", "ssl_recommender", "websockets"]) {
+    assert.throws(() => d.prepare({ settingId }), /schema/);
+  }
+});
+
+test("Cloudflare added TLS variants require exact independent selection before credentials and never infer defaults", async () => {
+  for (const settingId of addedSettings) {
+    const s = { ...scope(), settingIds: [settingId] };
+    const d = zoneTlsDescriptor(s);
+    s.settingIds.push("ssl");
+    assert.throws(() => d.prepare({ settingId: "ssl" }), /scope/);
+    const p = d.prepare({ settingId });
+    for (const value of [undefined, null, true, 0, "ON", "zrt", "default", ["on"], { value: "on" }]) {
+      assert.throws(() => d.project(success({ id: settingId, value }), p), /upstream/);
+    }
+    for (const settingIds of [[], ["ssl"], addedSettings.filter(id => id !== settingId)]) {
+      const f = fixture(settingId, { settingIds });
+      assert.equal((await f.invoke()).code, "INVALID_ARGUMENTS");
+      assert.equal(f.calls.secret, 0);
+      assert.equal(f.requests.length, 0);
+    }
+    for (const value of ["on", "off"]) {
+      const f = fixture(settingId, { settingIds: [settingId], response: { ...row(settingId), value } });
+      const out = await f.invoke();
+      assert.equal(out.ok, true);
+      assert.deepEqual(out.value, { settingId, value, subject: "configured-zone-tls", effectiveProtection: "not-established" });
+      safe(f, out);
+    }
+  }
+});
+
+test("Cloudflare added TLS variants retain actual-core revocation, audit and uncertain replay denial", async () => {
+  for (const settingId of addedSettings) {
+    const revoked = fixture(settingId);
+    const resolve = revoked.dependencies.credentials.resolve;
+    revoked.dependencies.credentials.resolve = async target => {
+      const lease = await resolve(target);
+      revoked.vector.policy.revision = "revoked";
+      return lease;
+    };
+    assert.equal((await revoked.invoke()).code, "POLICY_CHANGED");
+    assert.equal(revoked.calls.close, 1);
+    assert.equal(revoked.requests.length, 0);
+    for (const failure of ["upstream", "audit"]) {
+      const f = fixture(settingId, failure === "upstream" ? { status: 403 } : {});
+      const append = f.dependencies.audit.append;
+      if (failure === "audit") f.dependencies.audit.append = async event => { if (event.phase === "outcome") throw new Error(credentialCanary); };
+      const out = await f.invoke();
+      assert.equal(out.code, failure === "audit" ? "OUTCOME_UNCERTAIN" : "UPSTREAM_UNAVAILABLE");
+      assert.equal([...f.journal.values()][0].outcome, "uncertain");
+      assert.equal(f.calls.close, 1);
+      const journal = structuredClone([...f.journal]);
+      f.dependencies.audit.append = append;
+      assert.equal((await f.invoke()).code, "REPLAY_CONFLICT");
+      assert.equal(f.calls.secret, 1);
+      assert.equal(f.requests.length, 1);
+      assert.deepEqual([...f.journal], journal);
+      safe(f, out);
+    }
   }
 });
 

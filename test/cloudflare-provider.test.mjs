@@ -968,7 +968,7 @@ test("Cloudflare full schema inventory is pinned, explicit about holes, and cons
   assert.equal(operations.filter(row => row.tier === "read").length, Object.values(allDescriptors).filter(descriptor => descriptor.tier === "read").length);
   assert.equal(operations.filter(row => row.implementation === "content-descriptor-only").length, 1);
   assert.deepEqual(operations.find(row => row.typedTool === "cloudflare.tls.zone.get").variantCoverage, {
-    complete: false, supportedSettingIds: ["ssl", "min_tls_version", "tls_1_3", "always_use_https", "http2", "ciphers"],
+    complete: false, supportedSettingIds: ["ssl", "min_tls_version", "tls_1_3", "always_use_https", "http2", "ciphers", "automatic_https_rewrites", "opportunistic_encryption", "http3", "0rtt"],
     prerequisite: "remaining-zone-setting-variants-and-native-qualification",
   });
   assert.equal(manifest.counts.contentDescriptors, 1);

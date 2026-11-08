@@ -3,7 +3,7 @@ import type { MetadataDescriptor, PreparedMetadata } from "./metadata.js";
 
 const identifier = text(32, /^[a-f0-9]{32}$(?![\s\S])/);
 const label = text(80, /^[A-Za-z0-9][A-Za-z0-9_.-]*$(?![\s\S])/);
-const setting = text(16, /^(?:ssl|min_tls_version|tls_1_3|always_use_https|http2|ciphers)$(?![\s\S])/);
+const setting = text(32, /^(?:ssl|min_tls_version|tls_1_3|always_use_https|http2|ciphers|automatic_https_rewrites|opportunistic_encryption|http3|0rtt)$(?![\s\S])/);
 const cipher = text(128, /^[A-Z0-9][A-Z0-9_-]*$(?![\s\S])/);
 const input = closed({ settingId: setting });
 type Arguments = ReturnType<typeof input.parse>;
@@ -30,7 +30,7 @@ export function zoneTlsDescriptor(scope: ZoneTlsScope): MetadataDescriptor<Argum
   const zone = identifier.parse(scope.zoneId);
   const revision = label.parse(scope.revision);
   const ids = scope.settingIds ?? [];
-  requireThat(Array.isArray(ids) && ids.length <= 6, "cap");
+  requireThat(Array.isArray(ids) && ids.length <= 10, "cap");
   const allowed = new Set<string>();
   for (const raw of ids) {
     const id = setting.parse(raw);

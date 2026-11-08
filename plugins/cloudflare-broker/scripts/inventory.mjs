@@ -104,7 +104,7 @@ export function inventory(bytes) {
         key, operationId: operation.operationId, areas: operation.tags,
         typedTool,
         ...(typedTool === "cloudflare.tls.zone.get" ? { variantCoverage: { complete: false,
-          supportedSettingIds: ["ssl", "min_tls_version", "tls_1_3", "always_use_https", "http2", "ciphers"],
+          supportedSettingIds: ["ssl", "min_tls_version", "tls_1_3", "always_use_https", "http2", "ciphers", "automatic_https_rewrites", "opportunistic_encryption", "http3", "0rtt"],
           prerequisite: "remaining-zone-setting-variants-and-native-qualification" } } : {}),
         resourceParameters: [...new Set([...path.matchAll(/\{([^}]+)\}/g)].map(match => match[1]))],
         providerPermissions: operation["x-cfPermissionsRequired"] ?? null,
