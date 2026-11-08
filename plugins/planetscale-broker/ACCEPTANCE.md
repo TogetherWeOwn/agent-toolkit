@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 173 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 171 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -41,17 +41,39 @@ evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
 
+## Query-error metadata source increment
+
+`test/query-errors.test.mjs` adds 17 synthetic contracts for fixed first-page
+error-summary and error-fingerprint query reads. Immutable summary ID/fingerprint
+pairs and separately bound query IDs, strict flags, closed arguments/scopes,
+whole-page refusal, pagination/wire caps and official schema/path agreement are
+covered. Error text, SQL, password objects, fingerprints and operational details
+are omitted. Query fingerprints differ from error fingerprints; no error
+provenance, collection completeness or native authority is established. Provider
+URLs are ignored. Fingerprint grammar is deliberately bounded; other formats,
+filters/later pages and full insights capability remain incomplete. Parent
+ownership, independently authorized collection, broker custody and non-waking
+semantics remain prerequisites. The inventory's unresolved-read control now uses
+still-missing `get_branch_metrics`, preserving the all-read disabled invariant.
+
+Coverage: 120/291 bounded metadata subsets, 171 missing; tiers 120 provisional
+read / 16 unreviewed reserved / 155 unresolved. Zero integrated/reviewed/enabled/
+adopted. Exact-head Actions must execute these fixtures; no local suite, build or
+typecheck ran. This does not change any runtime or live-use gate.
+
 ## Query-record inventory regression repair
 
 The query-record head `2c310b3e8b7bc94cfbca513257463114bcb420eb`
 [Actions test](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42459004355/job/128664091478)
 failed because the mutation-plan inventory test still expected `get_branch_query`
 to be unresolved after its offline adapter was added. The unresolved-read control
-now uses the still-missing `get_branch_query_error`. A separate invariant checks
+was changed to then-missing `get_branch_query_error`. A separate invariant checks
 that every provisional read remains an unreviewed, disabled, bounded offline
-adapter, while the missing query-error operation has no adapter. No tier, scope,
-implementation or runtime policy was changed. Fresh-head Actions must verify the
-repair; no local suite, build or typecheck was run.
+adapter. Repair head `3185329ff7c48aa3cb1673331f977aad11bd63b2` passed
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42460119812),
+including 771/771 package tests. The query-error increment above moves that
+negative control to still-missing branch metrics. No runtime policy changed;
+no local suite, build or typecheck was run.
 
 ## Query-record metadata source increment
 

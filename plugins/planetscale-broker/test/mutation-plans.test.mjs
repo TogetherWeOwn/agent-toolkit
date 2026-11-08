@@ -131,7 +131,7 @@ test('protected operation candidates preserve separate exact-decider obligations
   }
   // No candidate, scope table or HTTP verb silently classifies the remaining surface.
   assert.equal(map.operations.find(row => row.operationId === 'update_database_settings').tier, 'unresolved');
-  assert.equal(map.operations.find(row => row.operationId === 'get_branch_query_error').tier, 'unresolved');
+  assert.equal(map.operations.find(row => row.operationId === 'get_branch_metrics').tier, 'unresolved');
 });
 
 test('offline read classification never implies reviewed policy or runtime enablement', async () => {
@@ -149,7 +149,7 @@ test('offline read classification never implies reviewed policy or runtime enabl
     assert.equal(row.enablement, 'disabled');
     assert.equal(row.policyCandidate, null);
   }
-  const unresolved = map.operations.find(row => row.operationId === 'get_branch_query_error');
+  const unresolved = map.operations.find(row => row.operationId === 'get_branch_metrics');
   assert.equal(unresolved.implementation, 'missing');
   assert.equal(unresolved.adapter, null);
   assert.equal(unresolved.enablement, 'disabled');

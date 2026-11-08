@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The 118 adapters are pure request builders and bounded output projections,
+The 120 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,19 +36,38 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 118 | Narrow projections; not full operation coverage |
-| Missing source adapters | 173 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 120 | Narrow projections; not full operation coverage |
+| Missing source adapters | 171 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-118 adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 157
+120 adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 155
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
 backups/restore, schema/deploy, topology, maintenance and every other official
 area remain in the map even when access or implementation is missing.
+
+## Query-error metadata
+
+`planetscale.list_branch_query_errors` reads one fixed first page and validates
+broker-bound summary ID/error-fingerprint pairs; output is the bound summary ID
+only plus `executionAuthority: not-established`. `planetscale.get_branch_query_error`
+reads the fixed first query page for one bound error fingerprint, with separately
+bound query IDs and strict `explainable`/`truncated` flags. Both use
+`page=1&per_page=10`, snapshot at most 32 bindings and refuse the whole page on
+unknown/rebound/duplicate IDs or malformed pagination. Optional nullable official
+`current_page`/`per_page` fields are checked when present. No URLs are followed.
+Error messages, SQL, password objects, fingerprints, users, addresses, tags,
+metrics and times never enter output. Query fingerprints are not error
+fingerprints: the query response proves neither error provenance nor ownership.
+First-page coverage/hasMore never proves completeness or grants remediation,
+EXPLAIN, replay or execution authority. Fingerprints are restricted to the
+broker's bounded identifier grammar; other formats, filters and later pages
+remain incomplete. Current trusted parent/fingerprint/query bindings, separate
+collection permission, raw-body custody and non-waking evidence remain required.
 
 ## Query-record metadata
 
