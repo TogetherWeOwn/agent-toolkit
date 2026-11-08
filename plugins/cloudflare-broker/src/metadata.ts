@@ -31,6 +31,7 @@ export interface MetadataScope {
   revision: string;
   scriptNames: readonly string[];
   hyperdriveIds: readonly string[];
+  hyperdriveConfigurationIds?: readonly string[];
   databaseIds?: readonly string[];
   defaultBucketNames?: readonly string[];
   euBucketNames?: readonly string[];
@@ -67,6 +68,15 @@ export interface MetadataDescriptor<A, O> {
 }
 type Row = Record<string, unknown>;
 interface HyperdriveMetadata { id: string; cachingDisabled: boolean }
+interface HyperdriveDetailMetadata extends HyperdriveMetadata {
+  configuration?: {
+    subject: "configured-hyperdrive-cache-and-pool";
+    maxAgeSeconds: number | "unavailable";
+    staleWhileRevalidateSeconds: number | "unavailable";
+    originConnectionLimit: number | "unavailable";
+    effectiveCachingAndPooling: "not-established";
+  };
+}
 interface SecretMetadata { name: string; type: "secret_text" | "secret_key" }
 interface PartialList<T> { items: T[]; complete: false }
 interface UnavailableControl { status: "unavailable"; reason: "not-in-response-schema" }
@@ -151,6 +161,11 @@ export function metadataDescriptors(scope: MetadataScope) {
   requireThat(Array.isArray(scope.scriptNames) && scope.scriptNames.length <= 100 && Array.isArray(scope.hyperdriveIds) && scope.hyperdriveIds.length <= 100, "cap");
   const scripts = new Set(scope.scriptNames.map(value => scriptName.parse(value)));
   const hyperdrives = new Set(scope.hyperdriveIds.map(value => resourceId.parse(value)));
+  const hyperdriveConfigurationIds = scope.hyperdriveConfigurationIds ?? [];
+  requireThat(Array.isArray(hyperdriveConfigurationIds) && hyperdriveConfigurationIds.length <= maxRows, "cap");
+  const configurationHyperdrives = new Set(hyperdriveConfigurationIds.map(value => resourceId.parse(value)));
+  requireThat(configurationHyperdrives.size === hyperdriveConfigurationIds.length, "schema");
+  for (const id of configurationHyperdrives) requireThat(hyperdrives.has(id), "scope");
   const workerControlScriptNames = scope.workerControlScriptNames ?? [];
   requireThat(Array.isArray(workerControlScriptNames) && workerControlScriptNames.length <= maxRows, "cap");
   const controlScripts = new Set(workerControlScriptNames.map(value => scriptName.parse(value)));
@@ -269,7 +284,7 @@ export function metadataDescriptors(scope: MetadataScope) {
       return bounded({ items, complete: false as const });
     },
   });
-  const hyperdriveGet: MetadataDescriptor<ReturnType<typeof hyperdrive.parse>, HyperdriveMetadata> = Object.freeze({
+  const hyperdriveGet: MetadataDescriptor<ReturnType<typeof hyperdrive.parse>, HyperdriveDetailMetadata> = Object.freeze({
     name: "cloudflare.hyperdrive.get", version: "1", tier: "read", providerOperationId: "get-hyperdrive",
     prepare(raw: unknown) {
       const args = hyperdrive.parse(raw);
@@ -279,9 +294,26 @@ export function metadataDescriptors(scope: MetadataScope) {
     project(raw: string, input: PreparedMetadata<ReturnType<typeof hyperdrive.parse>>) {
       const args = hyperdrive.parse(input.arguments);
       hyperdriveScope(args.hyperdriveId);
-      const row = object(envelope(raw).result);
+      const body = envelope(raw);
+      const row = object(body.result);
       requireThat(row.id === args.hyperdriveId, "scope");
-      return bounded(hyperdriveMetadata(row));
+      requireThat(body.account_id === undefined || body.account_id === account, "scope");
+      requireThat(row.account_id === undefined || row.account_id === account, "scope");
+      const output: HyperdriveDetailMetadata = hyperdriveMetadata(row);
+      if (configurationHyperdrives.has(args.hyperdriveId)) {
+        function configuredInteger(value: unknown, minimum: number, maximum = Number.MAX_SAFE_INTEGER): number | "unavailable" {
+          if (value === undefined) return "unavailable";
+          requireThat(typeof value === "number" && Number.isSafeInteger(value) && value >= minimum && value <= maximum, "upstream");
+          return value;
+        }
+        const caching = object(row.caching);
+        output.configuration = { subject: "configured-hyperdrive-cache-and-pool",
+          maxAgeSeconds: configuredInteger(caching.max_age, 1, 3600),
+          staleWhileRevalidateSeconds: configuredInteger(caching.stale_while_revalidate, 0),
+          originConnectionLimit: configuredInteger(row.origin_connection_limit, 5),
+          effectiveCachingAndPooling: "not-established" };
+      }
+      return bounded(output);
     },
   });
   function databaseScope(id: string) { requireThat(databases.has(id), "scope"); }
