@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The 110 adapters are pure request builders and bounded output projections,
+The 112 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,19 +36,45 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 110 | Narrow projections; not full operation coverage |
-| Missing source adapters | 181 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 112 | Narrow projections; not full operation coverage |
+| Missing source adapters | 179 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-110 adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 165
+112 adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 163
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
 backups/restore, schema/deploy, topology, maintenance and every other official
 area remain in the map even when access or implementation is missing.
+
+## Schema diagnostic metadata
+
+`planetscale.lint_branch_schema` returns only broker-allowlisted keyspace names
+and documented table/vschema/routing-rule subject-type enums. Scope snapshots
+1–32 unique names; unknown keyspaces or malformed subjects refuse the whole page.
+Pagination is explicit and bounded; repeated subject rows are distinct errors,
+not duplicates to drop. Error codes/descriptions, table/column names, DDL, URLs
+and arbitrary detail strings are omitted. Empty/last pages do not prove a safe
+schema, effective rights or scope completeness.
+
+`planetscale.check_deploy_request_storage` returns only strict enough-storage and
+upgradeable flags. Bytes, capacity and per-keyspace/shard details are omitted.
+The response supplies no request/target/branch identity: a fixed request number
+never proves immutable current ownership. Both tools explicitly return
+`deploymentAuthority: not-established`; flags never authorize deploy, upgrade,
+safety weakening, spend or wake. Current parent/target bindings, independent
+collection permission, broker-side raw-body custody, reflection guards and
+operation-specific non-waking evidence remain prerequisites. Full diagnostics
+and mutations remain incomplete.
+
+Move-tables list/get records are opaque additional-properties objects in the
+pinned schema; status contains free-text traffic state and table/shard-keyed
+objects. All three remain missing pending a package-builder-owned reviewed
+Vitess identity/state/safe-projection contract. No arbitrary object or generic
+count adapter is counted as implementation, and no live probe is authorized.
 
 ## Query report metadata
 
@@ -459,7 +485,7 @@ No connector or replacement broker is introduced.
 ## Local mutation-plan artifacts — not executors
 
 `src/mutation-plans.ts` supplies three pure, bounded previews. They are **not API
-adapters**, do not consume authority and do not increase the 110-adapter count.
+adapters**, do not consume authority and do not increase the 112-adapter count.
 Each artifact labels itself `validated-local-plan-not-provider-dry-run`, with
 execution not implemented, remote preconditions not verified and provider dry-run
 not performed. No network executor, output projector or secret placement exists.
@@ -493,7 +519,7 @@ The candidates only document requirements; native routing, expiry, exact-target
 binding, atomic consumption, replay/concurrent-use refusal and approved placement
 are **not implemented or tested as authority enforcement here**. Credential routes
 remain incomplete until a broker-only sink and reconciliation are accepted. The
-other 165 tier classifications are unresolved, not automatically harmless reads or
+other 163 tier classifications are unresolved, not automatically harmless reads or
 ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.

@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 181 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 179 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -40,6 +40,39 @@ read-only transactions, statement/lock/row/byte/page/time caps and native closur
 evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
+
+## Schema diagnostic metadata source increment
+
+`test/schema-diagnostics.test.mjs` adds 19 synthetic contracts for two fixed
+schema-lint/deploy-storage reads and explicit workflow contract gaps. Lint output
+contains only allowlisted keyspace names and documented subject-type enums, with
+bounded explicit pagination and whole-page refusal. Repeated subjects remain
+separate diagnostics; no error-code enum is invented. Error codes/descriptions,
+table/column names, DDL, URLs and other arbitrary strings are omitted. Empty/last
+pages are not a safe-schema, effective-rights or scope-completeness receipt.
+Storage output contains only strict enough-storage/upgradeable booleans, never
+bytes, capacity, per-keyspace/shard details or an invented response identity.
+`deploymentAuthority: not-established` never grants deployment, safety weakening,
+upgrade, wake or spend authority. Fixed paths and request numbers do not prove
+current immutable request/target/branch ownership. Trusted current bindings,
+independent collection permission, raw-body custody, reflection guards and
+operation-specific non-waking evidence remain integration prerequisites.
+
+Coverage is 112/291 bounded subsets, 179 missing; tiers 112 provisional read /
+16 unreviewed reserved / 163 unresolved. Zero integrated/reviewed/enabled/adopted.
+Fresh exact-head Actions is required; no local suite/build/typecheck ran. Prior
+query-report head `8afee10fd0b3da3edc018eb5e2ac22292b309cea` passed
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42452587241),
+including [tests](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42452587241/job/128644795552),
+lint/typecheck, native-policy and ci-ok. That does not execute these new fixtures.
+
+Move-tables list/get schema records expose only opaque additional-properties
+objects; status exposes free-text traffic state and table/shard-keyed objects.
+All three reads remain missing, not generic JSON/count adapters. The package
+builder owns a reviewed Vitess workflow identity/state/safe-projection contract
+from documented provider/SDK evidence before implementing these operations. No
+live investigation, arbitrary object reflection or parallel implementation chain
+is commissioned by this precise source prerequisite.
 
 ## Query report metadata source increment
 
