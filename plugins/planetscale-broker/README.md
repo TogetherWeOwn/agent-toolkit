@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The 120 adapters are pure request builders and bounded output projections,
+The 122 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,19 +36,38 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 120 | Narrow projections; not full operation coverage |
-| Missing source adapters | 171 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 122 | Narrow projections; not full operation coverage |
+| Missing source adapters | 169 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-120 adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 155
+122 adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 153
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
 backups/restore, schema/deploy, topology, maintenance and every other official
 area remain in the map even when access or implementation is missing.
+
+## Query-fingerprint statistics metadata
+
+`planetscale.get_query_statistics` reads a fixed first page (`page=1&per_page=10`)
+for a broker-bound query fingerprint and required keyspace;
+`planetscale.get_query_summary` reads one separately bound summary for that same
+context. Every row must match both fingerprint and keyspace as well as its
+independently bound summary/query ID. Output is only the bound ID and strict
+`multishard` or `explainable`/`truncated` flags, plus
+`executionAuthority: not-established`. SQL, passwords, fingerprints, keyspace
+text, metrics, tables, users, addresses and timestamps are omitted. Statistics
+snapshot 1–32 unique query IDs and refuse whole pages on unknown, rebound or
+duplicate rows, invalid pagination and over-cap data. Summary IDs and individual
+query IDs are not interchangeable. No URL is exposed or followed; first-page
+coverage and flags prove neither completeness nor EXPLAIN/replay/execution
+authority. Fingerprint/keyspace selector grammars are deliberately bounded;
+other formats, optional filters/later pages and full insights remain incomplete.
+Current parent/context/child bindings, independent collection permission,
+broker-side raw-body custody and non-waking evidence remain prerequisites.
 
 ## Query-error metadata
 
