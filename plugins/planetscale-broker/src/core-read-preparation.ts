@@ -11,6 +11,9 @@ import { deployBinding } from "./lifecycle.js";
 import { prepare as prepareKeyspace } from "./tools/get-keyspace.js";
 import { prepare as prepareShard } from "./tools/get-shard.js";
 import { prepare as prepareMaintenanceEvent } from "./tools/get-maintenance-event.js";
+import { prepare as prepareOrganizationMembership } from "./tools/get-organization-membership.js";
+import { prepare as prepareOrganizationTeam } from "./tools/get-organization-team.js";
+import { prepare as prepareOrganizationTeamMember } from "./tools/get-organization-team-member.js";
 
 const organizationFields = { organization: slug, organizationId: identifier, revision: digest };
 const databaseFields = { ...organizationFields, database: slug, databaseId: identifier };
@@ -25,17 +28,25 @@ const keyspaceTarget = closed({ ...branchFields, keyspace: closed({ id: identifi
 const shardTarget = closed({ ...branchFields, shard: closed({ id: identifier }) });
 const maintenanceEventTarget = closed({ ...databaseFields,
   event: closed({ id: identifier, branchId: identifier, branch: slug }) });
+const membershipFields = { membership: closed({ id: identifier, userId: identifier }) };
+const teamFields = { team: closed({ id: identifier, slug }) };
+const organizationMembershipTarget = closed({ ...organizationFields, ...membershipFields });
+const organizationTeamTarget = closed({ ...organizationFields, ...teamFields });
+const organizationTeamMemberTarget = closed({ ...organizationFields, ...teamFields, ...membershipFields });
 
 type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeof databaseTarget.parse> |
   ReturnType<typeof branchTarget.parse> | ReturnType<typeof backupTarget.parse> |
   ReturnType<typeof backupPolicyTarget.parse> | ReturnType<typeof deployRequestTarget.parse> |
   ReturnType<typeof keyspaceTarget.parse> | ReturnType<typeof shardTarget.parse> |
-  ReturnType<typeof maintenanceEventTarget.parse>;
+  ReturnType<typeof maintenanceEventTarget.parse> | ReturnType<typeof organizationMembershipTarget.parse> |
+  ReturnType<typeof organizationTeamTarget.parse> | ReturnType<typeof organizationTeamMemberTarget.parse>;
 type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_backup" | "get_backup_policy" | "get_deploy_request" |
-  "get_keyspace" | "get_shard" | "get_maintenance_event";
+  "get_keyspace" | "get_shard" | "get_maintenance_event" |
+  "get_organization_membership" | "get_organization_team" | "get_organization_team_member";
 type ResponseIdentity = "name-only-not-immutable" | "record-id-only-parent-not-verified" |
-  "record-and-source-ids-destination-not-verified" | "record-and-branch-ids-parent-not-verified";
+  "record-and-source-ids-destination-not-verified" | "record-and-branch-ids-parent-not-verified" |
+  "record-and-user-ids-parent-not-verified";
 
 // Pure preparation only. Host IDs/revisions bind a snapshot, not permission;
 // response projections still cannot authenticate every parent/destination ID.
@@ -126,4 +137,26 @@ export function bindGetMaintenanceEventPreparation(rawTarget: unknown): (raw: un
     event: target.event }, {});
   return bindRead(`planetscale/maintenance-event/${target.event.id}`, target, "get_maintenance_event", read.request,
     "record-and-branch-ids-parent-not-verified");
+}
+
+export function bindGetOrganizationMembershipPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = organizationMembershipTarget.parse(rawTarget);
+  const read = prepareOrganizationMembership({ organization: target.organization, membership: target.membership }, {});
+  return bindRead(`planetscale/organization-membership/${target.membership.id}`, target,
+    "get_organization_membership", read.request, "record-and-user-ids-parent-not-verified");
+}
+
+export function bindGetOrganizationTeamPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = organizationTeamTarget.parse(rawTarget);
+  const read = prepareOrganizationTeam({ organization: target.organization, team: target.team }, {});
+  return bindRead(`planetscale/organization-team/${target.team.id}`, target,
+    "get_organization_team", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindGetOrganizationTeamMemberPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = organizationTeamMemberTarget.parse(rawTarget);
+  const read = prepareOrganizationTeamMember({ organization: target.organization, team: target.team,
+    membership: target.membership }, {});
+  return bindRead(`planetscale/organization-team-member/${target.team.id}/${target.membership.id}`, target,
+    "get_organization_team_member", read.request, "record-and-user-ids-parent-not-verified");
 }

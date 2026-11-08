@@ -194,8 +194,29 @@ capture/refusal, every-field hash sensitivity, namespace separation and projecti
 limits. Provider ready/authoritative/state/urgent flags never grant topology,
 maintenance, wake or spend authority or prove completion/closure. Current trusted
 parent/child mapping, policy, transport/custody and non-waking proof remain required.
-Twenty-one total pure preparations still mean zero runtime-integrated operations;
-adapter coverage stays 134/291 with 157 missing.
+Those twenty-one pure preparations remain separate from runtime integration.
+
+Three organization detail seams additionally bind existing membership, team and
+team-member GETs. Closed immutable host snapshots retain organization ID/name,
+revision, membership ID/user ID and team ID/slug as applicable. Memberships route
+by ID; teams route by slug. Resources use `planetscale/organization-membership/<id>`,
+`planetscale/organization-team/<id>` and
+`planetscale/organization-team-member/<team-id>/<membership-id>`; team-member
+resource identity retains the team even if membership IDs are reused. Every host
+field enters the plan hash, including IDs absent from the request path. Empty
+caller arguments cannot supply another target, credential, request or authority.
+
+Existing projections match membership/user IDs or team ID/slug, but do not verify
+organization identity or the team parent of a membership response. Plans retain
+`record-and-user-ids-parent-not-verified` or `record-id-only-parent-not-verified`
+and unverified non-waking semantics. Provider role/managed flags do not establish
+effective authority. Trusted current parent/child/user mapping, policy and bounded
+broker-side transport/custody remain prerequisites; no executor, project hook or
+credential resolution is added. `test/core-organization-read-preparation.test.mjs`
+covers deep snapshots, every-field hashes, response binding refusals, canary
+omission and resource identity separation. Twenty-four total pure preparations
+still mean zero runtime-integrated operations; adapter coverage stays 134/291
+with 157 missing.
 
 All 291 entries remain `incomplete`, `implemented=false`, `reviewed=false`,
 `enabled=false`, and entitlement `unknown`. Existing offline read/preview test
