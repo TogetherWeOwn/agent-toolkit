@@ -47,11 +47,14 @@ of a database's staging-like name, and uses its own Release Manager gate.
 inspected `toolkit.provider-broker/v1` OperationMap format, pinned to core commit
 `a838436aa4492c77dc7fb995bc776ec7c7d922e7` and coverage source SHA-256
 `6e96d7ab98ceb630af33007134bff79c996963c9a0deab23cee21db3f1110e68`.
-Eight source-format contracts cover exact inventory/closed fields/reference,
-source pin/pending integration, tool/scope/effects, offline test tuples,
+Source-format contracts cover exact inventory/closed fields/reference,
+source pin/pending runtime integration, tool/scope/effects, offline test tuples,
 incomplete/unknown/unreviewed/disabled state, retained prerequisites and the
-read-entitled destructive-report control. These are not execution/refusal tests
-of the common core; core validator execution is explicitly not performed.
+read-entitled destructive-report control. Additional contracts now import the
+actual compiled shared validator, verify the pinned source hash and require all
+291 rows to remain incomplete. Malformed inventory, extra fields, enabled/reviewed
+claim inflation and destructive-tier downgrades must refuse. Exact-head Actions
+must execute these contracts; source alone is not a passing result.
 
 All entries use a conservative reserved/native metadata envelope, not accepted
 tier classifications or a runtime registry. None is claimed implemented or
@@ -61,9 +64,21 @@ conjunctive obligations; 134 provisional read / 25 unreviewed reserved / 132
 unresolved is unchanged. Twelve pure previews stay separate from 134/291 bounded
 offline adapters and 157 missing adapters. Zero integrated/reviewed/enabled/adopted.
 No host, credential, authority, journal, audit, transport or executor was added.
-Next: execute the shared validator after source integration, then bind bounded
-per-operation preparations and trusted resource revisions without fabricating
-provider preconditions. Complete-package and live gates remain above.
+One pure branch-delete preparation now binds a closed trusted branch ID/revision
+snapshot into `Prepared`, retaining the full fixed preview and RM obligation.
+Six contracts cover fixed request, deep immutability, caller injection/accessors,
+protection/invalid targets, core hash sensitivity and determinism. This has no
+execute/project hook, registry, approval consumption or freshness guarantee and
+does not increase adapter coverage. Additional per-operation preparation and
+accepted host/provider revalidation remain incomplete. Complete-package and live
+gates remain above.
+
+The actual PR merge conflict required consuming current main, including the
+already-merged provider core and Neon package. The lock resolution retains both
+Neon and PlanetScale workspace records; no external version, integrity, install
+script policy or dependency was changed and no local install/build/suite ran.
+Exact-head Actions must qualify the reconciled source; earlier results do not
+qualify the merge or new contracts.
 
 ## Schema-recommendation dismissal preview source increment
 

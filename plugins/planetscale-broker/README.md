@@ -57,9 +57,21 @@ provider inventory for `toolkit.provider-broker/v1`. The inspected interface is
 `packages/core/src/provider/coverage.ts` at merged source commit
 `a838436aa4492c77dc7fb995bc776ec7c7d922e7`, SHA-256
 `6e96d7ab98ceb630af33007134bff79c996963c9a0deab23cee21db3f1110e68`.
-The main map records this source-schema candidate, **not runtime integration**.
-The shared-core validator has not been executed against this export yet; neither
-its runtime code nor a duplicate validator is added by this increment.
+The main map records a validator-consumer source seam, **not runtime integration**.
+`test/core-operation-map.test.mjs` consumes the actual compiled shared validator,
+checks its pinned source digest and requires `complete=false` with all 291 IDs
+incomplete. Negative contracts reject missing/duplicate inventory, unknown fields,
+claim inflation and destructive-tier downgrades. Execution evidence comes only
+from exact-head Actions; this source declaration is not a passing result.
+
+`src/core-preparation.ts` adds one pure `Prepared` seam for branch deletion. A
+trusted host-owned closed snapshot binds `planetscale/branch/<immutable-id>` and
+revision; names, production/protection flags, fixed request and RM obligation
+remain in the hashed preview. Empty caller arguments cannot replace the target or
+supply authority. No artifact bytes are executed (`artifactDigest=null`). The seam
+has no execute/project hook or registration and is not a complete adapter. Host
+ownership/revision revalidation and provider preconditions are still required;
+a digest snapshot alone does not prove freshness or safe deletion.
 
 All 291 entries remain `incomplete`, `implemented=false`, `reviewed=false`,
 `enabled=false`, and entitlement `unknown`. Existing offline read/preview test

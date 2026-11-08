@@ -17,8 +17,8 @@ CORE_BINDING = {
     "sourceCommit": "a838436aa4492c77dc7fb995bc776ec7c7d922e7",
     "coverageSourceSha256": "6e96d7ab98ceb630af33007134bff79c996963c9a0deab23cee21db3f1110e68",
     "artifact": "api/core-operation-map.json",
-    "status": "schema-mapping-candidate-not-runtime-integration",
-    "validatorExecution": "not-performed",
+    "status": "validator-consumer-source-not-runtime-integration",
+    "validatorContract": "test/core-operation-map.test.mjs",
     "runtimeIntegrated": False,
 }
 ADAPTERS = {
