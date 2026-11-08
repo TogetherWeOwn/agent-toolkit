@@ -283,6 +283,33 @@ partial output. Maximum scope/output fits common budgets. Beta entitlement/effec
 remain unknown; non-200 never becomes empty success or another API fallback. No
 bucket/domain mutation, DNS activation, invocation or object-data access is provided.
 
+`createNeonProjectSecurityOperations(trustedScope, transport)` adds two project security-metadata collections:
+
+| Tool | Closed arguments | Authorization resource suffix (under project) |
+|---|---|---|
+| `neon.getProjectJWKS` | `project_id` | `jwks` |
+| `neon.listProjectVPCEndpoints` | `project_id` | `vpc_endpoints` |
+
+Scope copies up to 16 branch IDs, 16 unique JWKS-ID/branch bindings and 16 unique
+VPC endpoint IDs. A null trusted JWKS branch binding means project-level configuration:
+its returned branch_id must be absent, not null or any branch. A selected branch-bound
+JWKS must return that exact branch, not another allowlisted branch. Every JWKS row
+must contain the exact project_id. Project collection grants remain distinct from
+parent/child and sibling grants; filtering is additional minimization after request
+authorization. Selected IDs use a conservative 1–80 ASCII alphanumeric/underscore/
+hyphen subset starting alphanumeric, with no normalization. Unselected bounded
+printable IDs can be filtered. This is not a complete project restriction inventory.
+
+Output is only JWKS configuration ID/project/optional bound branch or VPC endpoint ID.
+JWKS URLs, provider names, JWT audiences, roles, labels and timestamps are neither
+selected nor followed. No cryptographic key material is fetched. Both pinned lists
+are nonpaginated, capped at 30 rows before filtering; duplicate IDs, contradictory
+project ancestry or unexpected pagination refuse without partial/truncated success.
+VPC rows cannot claim branch context. Maximum configuration/output fits common JSON
+budgets. Non-200 refuses without empty success, another provider endpoint or mutation
+fallback. These reads change no authentication or network restrictions; availability,
+entitlement, side effects and native qualification remain unverified.
+
 Trusted metadata scope contains one project, a revision, explicit branch IDs and endpoint
 parent bindings. Construction validates and copies it. Caller IDs only select
 already-configured resources; no caller identity, authority, origin, credential,
@@ -301,7 +328,7 @@ passwords, credentials and connection strings are excluded. Unknown lifecycle
 states fail closed until explicitly supported. No error body/headers are surfaced.
 Common lease-reflection checks remain necessary even in these selected fields.
 
-`createNeonMetadataTransport(injectedFetch)` has thirty-five typed methods only. Its
+`createNeonMetadataTransport(injectedFetch)` has thirty-seven typed methods only. Its
 internal request builder fixes origin `https://console.neon.tech`, `/api/v2`
 paths, GET, JSON content, no redirects and no retries. No global fetch fallback
 exists. Each response is bounded to 64 KiB and 1 s, including streamed body time;
@@ -341,8 +368,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: thirty-five implemented
-source adapters, 159 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: thirty-seven implemented
+source adapters, 157 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

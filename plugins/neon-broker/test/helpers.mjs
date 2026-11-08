@@ -9,6 +9,7 @@ import { createNeonFunctionOperations } from '../dist/plugins/neon-broker/src/fu
 import { createNeonTriggerOperations } from '../dist/plugins/neon-broker/src/triggers.js';
 import { createNeonAuthClientOperations } from '../dist/plugins/neon-broker/src/auth-clients.js';
 import { createNeonBranchResourceOperations } from '../dist/plugins/neon-broker/src/branch-resources.js';
+import { createNeonProjectSecurityOperations } from '../dist/plugins/neon-broker/src/project-security.js';
 import { createNeonMetadataTransport } from '../dist/plugins/neon-broker/src/transport.js';
 
 export const scope = {
@@ -127,7 +128,15 @@ export const branchResourceCases = [
   ['listProjectBranchBuckets', { project_id: 'project-a', branch_id: 'br-a' }, { buckets: [bucket] }, { buckets: [bucket] }],
   ['listProjectBranchCustomDomains', { project_id: 'project-a', branch_id: 'br-a' }, { custom_domains: [customDomain] }, { custom_domains: [customDomain] }],
 ];
-export const allCases = [...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases];
+export const projectSecurityScope = { projectId: scope.projectId, revision: scope.revision, branchIds: scope.branchIds,
+  jwks: [{ id: 'jwks-a', branchId: 'br-a' }, { id: 'jwks-project', branchId: null }], vpcEndpointIds: ['vpce-a'] };
+export const jwks = { id: 'jwks-a', project_id: 'project-a', branch_id: 'br-a' };
+export const vpcEndpoint = { vpc_endpoint_id: 'vpce-a' };
+export const projectSecurityCases = [
+  ['getProjectJWKS', { project_id: 'project-a' }, { jwks: [jwks] }, { jwks: [jwks] }],
+  ['listProjectVPCEndpoints', { project_id: 'project-a' }, { endpoints: [vpcEndpoint] }, { endpoints: [vpcEndpoint] }],
+];
+export const allCases = [...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });
@@ -161,6 +170,9 @@ export function authClientFixture(value, config = authClientScope) {
 }
 export function branchResourceFixture(value, config = branchResourceScope) {
   return fixture(value, config, createNeonBranchResourceOperations);
+}
+export function projectSecurityFixture(value, config = projectSecurityScope) {
+  return fixture(value, config, createNeonProjectSecurityOperations);
 }
 export function fixture(value, config = scope, factory = createNeonMetadataOperations) {
   const requests = [];

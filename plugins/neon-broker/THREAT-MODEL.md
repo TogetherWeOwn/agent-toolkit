@@ -112,6 +112,25 @@ flows, grants, secrets, TTL/spend/teardown or lifecycle enforcement are introduc
 Provider effects, beta availability, entitlement and native custody/host integration
 remain qualification gates; mock success proves none of them.
 
+## Project security-metadata delta
+
+`getProjectJWKS` and `listProjectVPCEndpoints` require distinct exact project
+collection grants before credential access. Scope copies bounded explicit IDs;
+JWKS bindings distinguish project-level absence from an exact trusted branch.
+Selected rows require the configured project and branch, and all JWKS rows must
+contain the project ID. VPC rows cannot introduce branch context. Collection
+filtering is minimization, not an alternative authorization mechanism or proof of
+complete network restrictions. Outputs contain configuration/VPC IDs and bound
+JWKS ancestry only, never URLs, provider names, audiences, roles, labels or times.
+Returned JWKS URLs are not fetched; no key material or cryptographic verification
+is implemented. Both lists are nonpaginated and cap at 30 before selection, with
+duplicate, malformed, ancestry and pagination refusal rather than partial output.
+No authentication/network mutation or fallback is exposed. Dedicated contracts
+cover poisoned output, missing branch versus null, malformed/accessor inputs,
+transport failures and copied scope; common contracts cover identity, exact-resource
+policy, replay/TOCTOU, credential reflection and maximum configuration/output.
+Provider effects, entitlement and native qualification remain unverified.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.

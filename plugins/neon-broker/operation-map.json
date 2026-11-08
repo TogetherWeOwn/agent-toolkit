@@ -657,7 +657,7 @@
       "id": "getProjectJWKS",
       "apiArea": "project",
       "tool": "neon.getProjectJWKS",
-      "scope": "project_id",
+      "scope": "project_id/jwks",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -665,12 +665,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/project-security.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed source with mocked contracts only; credential entitlement, provider effects, compatible native integration and independent review remain unresolved. No live enablement."
     },
     {
       "id": "addProjectJWKS",
@@ -2519,7 +2522,7 @@
       "id": "listProjectVPCEndpoints",
       "apiArea": "project",
       "tool": "neon.listProjectVPCEndpoints",
-      "scope": "project_id",
+      "scope": "project_id/vpc_endpoints",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -2527,12 +2530,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/project-security.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed source with mocked contracts only; credential entitlement, provider effects, compatible native integration and independent review remain unresolved. No live enablement."
     },
     {
       "id": "assignProjectVPCEndpoint",

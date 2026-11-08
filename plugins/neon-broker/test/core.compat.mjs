@@ -11,6 +11,7 @@ import { allCases as cases, catalogCases, catalogFixture, catalogScopeAt, capabi
   triggerCases, triggerFixture, triggerScope, neonTrigger,
   authClientCases, authClientFixture, authClientScope, authClient,
   branchResourceCases, branchResourceFixture, branchResourceScope, bucket, customDomain,
+  projectSecurityCases, projectSecurityFixture, projectSecurityScope, jwks, vpcEndpoint,
   fixture, scope, branch, operation, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
@@ -21,7 +22,8 @@ const { providerFixture, credentialCanary, derivedCanary } = await import(pathTo
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
 function brokerFixture(name, args, raw, overrides = {}, config) {
-  const factory = branchResourceCases.some(([operation]) => operation === name) ? branchResourceFixture :
+  const factory = projectSecurityCases.some(([operation]) => operation === name) ? projectSecurityFixture :
+    branchResourceCases.some(([operation]) => operation === name) ? branchResourceFixture :
     authClientCases.some(([operation]) => operation === name) ? authClientFixture :
     triggerCases.some(([operation]) => operation === name) ? triggerFixture :
     functionCases.some(([operation]) => operation === name) ? functionFixture :
@@ -205,7 +207,7 @@ test('reflected lease material in selected safe-looking fields is refused by the
   assert.equal((await f.call()).code, 'OUTPUT_REFUSED');
 });
 
-for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases]) {
+for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases]) {
   test(`${name}: replay and TOCTOU policy/resource changes refuse without a second request`, async () => {
     const replay = brokerFixture(name, args, raw);
     assert.equal((await replay.call()).ok, true);
@@ -635,11 +637,54 @@ test('maximum branch resource scope/output fits common budgets including paginat
   }
 });
 
+test('project security metadata drops configuration and common policy separates project collections', async () => {
+  for (const [name, args, raw, expected] of projectSecurityCases) {
+    const collection = name === 'getProjectJWKS' ? 'jwks' : 'endpoints';
+    const poisoned = { [collection]: raw[collection].map(value => ({ ...value, jwks_url: credentialCanary,
+      provider_name: derivedCanary, jwt_audience: credentialCanary, role_names: [derivedCanary], label: credentialCanary,
+      created_at: derivedCanary, updated_at: credentialCanary })) };
+    const f = brokerFixture(name, args, poisoned);
+    const result = await f.call();
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.value, expected);
+    safeEnvelope(f, result);
+    const own = f.provider.operation(name).prepare(args).resource.id;
+    for (const resource of ['neon/projects/project-a', 'neon/projects/project-a/jwks', 'neon/projects/project-a/vpc_endpoints',
+      'neon/projects/project-a/branches/br-a', `${own}/child`, own.replace('project-a', 'project-b')].filter(id => id !== own)) {
+      const other = brokerFixture(name, args, raw);
+      other.common.vector.policy.resources = [resource];
+      assert.equal((await other.call()).code, 'POLICY_DENIED');
+      assert.equal(other.common.calls.secret, 0);
+      assert.equal(other.provider.requests.length, 0);
+    }
+    const reflected = brokerFixture(name, args, raw,
+      { credentials: { async resolve() { return { value: collection === 'jwks' ? 'jwks-a' : 'vpce-a', redactions: [], async close() {} }; } } });
+    assert.equal((await reflected.call()).code, 'OUTPUT_REFUSED');
+  }
+});
+
+test('maximum project security scope and selected output fit common configuration/output budgets', async () => {
+  const branchIds = Array.from({ length: 16 }, (_, n) => `br-${n}-${'a'.repeat(54)}`);
+  const bindings = Array.from({ length: 16 }, (_, n) => ({ id: `jwks-${n}-${'b'.repeat(71)}`, branchId: branchIds[n] }));
+  const vpcEndpointIds = Array.from({ length: 16 }, (_, n) => `vpce-${n}-${'c'.repeat(71)}`);
+  const config = { ...projectSecurityScope, branchIds, jwks: bindings, vpcEndpointIds };
+  for (const [name, args] of projectSecurityCases) {
+    const expected = name === 'getProjectJWKS' ? { jwks: bindings.map(({ id, branchId }) => ({ ...jwks, id, branch_id: branchId })) } :
+      { endpoints: vpcEndpointIds.map(vpc_endpoint_id => ({ ...vpcEndpoint, vpc_endpoint_id })) };
+    const f = brokerFixture(name, args, expected, {}, config);
+    const result = await f.call();
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.value, expected);
+    assert.equal(f.provider.requests.length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
 test('common operation-map validator confirms incomplete status for all unknown entitlements', () => {
   const map = JSON.parse(readFileSync(new URL('../operation-map.json', import.meta.url)));
   const result = validateOperationMap(map);
   assert.equal(result.complete, false);
   assert.equal(result.incomplete.length, 194);
-  assert.equal(map.operations.filter(operation => operation.implemented).length, 35);
+  assert.equal(map.operations.filter(operation => operation.implemented).length, 37);
   assert.equal(map.operations.filter(operation => operation.enabled).length, 0);
 });
