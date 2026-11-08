@@ -7,6 +7,25 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonCredentialMetadataOperations(trustedScope, transport)` adds
+`listCredentials` for one copied project/branch/revision and an explicit opaque
+credential-ID selection. It requires the exact branch `credentials` collection
+grant, not parent, sibling or individual-credential authority. The pinned Beta GET
+contract explicitly excludes secrets. Closed output contains only selected
+token_id values and the effective branch_id bound by the fixed request; an absent
+provider branch_id uses that request binding, while contradictory ancestry refuses.
+Labels, scopes (including unknown future values), principal/function identity,
+dates and unexpected secret-like fields are never read, evaluated or emitted.
+
+The nonpaginated response caps at 30 before selection. Duplicate or malformed IDs,
+contradictory optional project/branch ancestry and unexpected pagination refuse,
+including on unselected rows. IDs support the conservative common ASCII identifier
+subset up to 80 characters; unsupported forms refuse without normalization. This
+is not a credential-value retrieval, reveal, creation, rotation or revocation path.
+Listing identity proves neither effective ACL/scope, expiry, custody, current
+usability nor credential completeness. Beta availability, provider effects and
+runtime integration remain unqualified; no live grant or enablement is supplied.
+
 `createNeonAuthDetailsOperations(trustedScope, transport)` adds `getAuthDetails`
 with a copied exact account ID/revision and dedicated
 `neon/accounts/<account>/auth` grant. Caller arguments must name that account; the
@@ -839,8 +858,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: sixty-three implemented
-source adapters, 131 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: sixty-four implemented
+source adapters, 130 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

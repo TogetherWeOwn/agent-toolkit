@@ -19,6 +19,25 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
 
+## Selected branch credential identity delta
+
+`listCredentials` copies an exact project/branch/revision and explicit opaque-ID
+selection. Its dedicated branch/credentials collection target does not follow from
+parent, sibling or individual-credential grants. The pinned metadata GET excludes
+secrets; projection evaluates only token_id and optional project/branch ancestry.
+Scope strings, principal/function identity, labels, dates and unexpected payloads
+are ignored without accessor evaluation. No credential-value request or mutation
+is introduced, and identity listing is not scope/ACL/expiry/custody qualification.
+
+The response has a nonpaginated 30-row ceiling. Duplicate IDs, malformed shapes,
+contradictory optional ancestry and pagination refuse before filtering. An absent
+branch_id is bound to the fixed request's effective branch, never inferred from a
+caller-supplied token or discovered elsewhere. Copied scope, exact collection and
+principal policy, replay/TOCTOU, detached resource/revision, malformed/accessor
+responses, reflected-lease refusal and maximum common JSON budgets have source
+contracts. Unsupported IDs/availability refuse, with no reveal or broader catalog
+fallback. Native entitlement, provider effects and integration remain unqualified.
+
 ## Exact-account authentication metadata delta
 
 `getAuthDetails` copies a trusted account/revision and requires the exact
