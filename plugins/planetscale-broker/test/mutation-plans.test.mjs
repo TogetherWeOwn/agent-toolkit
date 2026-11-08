@@ -131,7 +131,28 @@ test('protected operation candidates preserve separate exact-decider obligations
   }
   // No candidate, scope table or HTTP verb silently classifies the remaining surface.
   assert.equal(map.operations.find(row => row.operationId === 'update_database_settings').tier, 'unresolved');
-  assert.equal(map.operations.find(row => row.operationId === 'get_branch_query').tier, 'unresolved');
+  assert.equal(map.operations.find(row => row.operationId === 'get_branch_query_error').tier, 'unresolved');
+});
+
+test('offline read classification never implies reviewed policy or runtime enablement', async () => {
+  const map = JSON.parse(await readFile(new URL('../api/operation-map.json', import.meta.url), 'utf8'));
+  const query = map.operations.find(row => row.operationId === 'get_branch_query');
+  assert.equal(query.tier, 'read');
+  assert.equal(query.adapter, 'src/tools/get-branch-query.ts');
+  const reads = map.operations.filter(row => row.tier === 'read');
+  assert.ok(reads.length > 0);
+  for (const row of reads) {
+    assert.equal(row.implementation, 'offline-adapter-only');
+    assert.equal(row.projectionCoverage, 'bounded-metadata-subset-not-full-operation');
+    assert.equal(row.review, 'not-reviewed');
+    assert.equal(row.tierReview, 'pending');
+    assert.equal(row.enablement, 'disabled');
+    assert.equal(row.policyCandidate, null);
+  }
+  const unresolved = map.operations.find(row => row.operationId === 'get_branch_query_error');
+  assert.equal(unresolved.implementation, 'missing');
+  assert.equal(unresolved.adapter, null);
+  assert.equal(unresolved.enablement, 'disabled');
 });
 
 test('plan-only artifacts never count as implemented API adapters', async () => {

@@ -41,6 +41,18 @@ evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
 
+## Query-record inventory regression repair
+
+The query-record head `2c310b3e8b7bc94cfbca513257463114bcb420eb`
+[Actions test](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42459004355/job/128664091478)
+failed because the mutation-plan inventory test still expected `get_branch_query`
+to be unresolved after its offline adapter was added. The unresolved-read control
+now uses the still-missing `get_branch_query_error`. A separate invariant checks
+that every provisional read remains an unreviewed, disabled, bounded offline
+adapter, while the missing query-error operation has no adapter. No tier, scope,
+implementation or runtime policy was changed. Fresh-head Actions must verify the
+repair; no local suite, build or typecheck was run.
+
 ## Query-record metadata source increment
 
 `test/query-records.test.mjs` adds 17 synthetic contracts for a fixed first query
