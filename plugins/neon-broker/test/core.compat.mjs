@@ -123,6 +123,10 @@ test('log query: only the dedicated query grant authorizes the bounded count, ne
     assert.equal(denied.common.calls.secret, 0);
     assert.equal(denied.provider.requests.length, 0);
   }
+  const { source, ...logWithoutEcho } = logRecord;
+  assert.equal(source, logQueryScope.source);
+  const noEcho = brokerFixture(name, args, { ...raw, logs: [logWithoutEcho] });
+  assert.deepEqual((await noEcho.call()).value, expected);
   for (const invalid of [{ ...raw, is_truncated: true }, { ...raw, next_cursor: 'more' }, { ...raw, source: 'storage' },
     { ...raw, logs: [{ ...logRecord, timestamp: args.end_time }] }, { ...raw, logs: [{ ...logRecord, branch_id: 'br-b' }] }]) {
     const f = brokerFixture(name, args, invalid);

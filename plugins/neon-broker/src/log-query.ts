@@ -62,7 +62,6 @@ export function createNeonLogQueryOperations(scope: NeonLogQueryScope, transport
     let previous = from;
     for (const log of logs) {
       ancestry(log);
-      check(field(log, "source") === query.source);
       const time = timestamp(field(log, "timestamp"));
       check(time >= from && time < to && time >= previous);
       previous = time;

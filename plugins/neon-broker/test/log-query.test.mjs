@@ -83,7 +83,7 @@ test('log query: malformed rows, truncation, continuation and contradictory ance
   for (const value of [null, [], {}, { logs: [] }, { ...raw, logs: null }, { ...raw, is_truncated: true },
     { ...raw, is_truncated: 'false' }, { ...raw, next_cursor: 'more' }, { ...raw, next_cursor: null }, { ...raw, pagination: {} },
     ...Object.keys(args).map(key => ({ ...raw, [key]: 'other' })),
-    ...[null, true, 0, {}, [], { timestamp: logRecord.timestamp }, { source: scope.source },
+    ...[null, true, 0, {}, [], { source: scope.source },
       { ...logRecord, source: 'storage' }, { ...logRecord, project_id: 'other' }, { ...logRecord, branch_id: 'br-b' }]
       .map(log => ({ ...raw, logs: [logRecord, log] })),
     { logs: Array.from({ length: 31 }, () => logRecord), is_truncated: false },
@@ -105,6 +105,22 @@ test('log query: malformed rows, truncation, continuation and contradictory ance
   assert.deepEqual(op.project({ ...raw, logs: [log] }), expected);
   assert.deepEqual(await fixture({ ...raw, ...args }).run(name, args), expected);
   assert.deepEqual(await fixture({ logs: Array.from({ length: 30 }, () => logRecord), is_truncated: false }).run(name, args), { observed_count: 30 });
+});
+
+test('log query: optional source echoes may be absent but never contradict the fixed request', async () => {
+  const { source, ...log } = logRecord;
+  assert.equal(source, scope.source);
+  assert.deepEqual(await fixture({ ...raw, logs: [log] }).run(name, args), expected);
+  const op = fixture(raw).operation(name);
+  const { prepare, execute, project } = op;
+  const transport = { async queryProjectBranchLogs() { return { ...raw, logs: [log] }; } };
+  const detached = createNeonLogQueryOperations(scope, transport)[0];
+  assert.deepEqual(detached.project(await detached.execute(detached.prepare(args), canary, new AbortController().signal)), expected);
+  assert.deepEqual(project({ ...raw, logs: [log] }), expected);
+  assert.deepEqual(project(await execute(prepare(args), canary, new AbortController().signal)), expected);
+  for (const source of ['storage', 'all', null, 0]) {
+    await assert.rejects(fixture({ ...raw, logs: [{ ...log, source }] }).run(name, args));
+  }
 });
 
 test('log query: exact nanosecond ordering, inclusive start and exclusive end are enforced', async () => {
