@@ -73,6 +73,16 @@ pass, security waiver or repair is claimed. New-head Actions evidence remains
 required for these new fixtures and full checks; no local suite/build/typecheck
 or CI mirror ran. Earlier SDK recovery cause remains unresolved.
 
+Initial historical head `f7f0617e280f10bf1ff60160ee0212da02249d98`
+[Actions test](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42468792605/job/128694459028)
+passed 872/874 package tests but failed two stale mutation-plan map assertions:
+`get_branch_metrics` was still hardcoded as unresolved/missing after receiving
+its adapter. Replaced both brittle single-operation controls with nonempty,
+all-missing-GET / all-unresolved-GET invariants; preserved the all-read
+unreviewed/disabled invariant and protected-operation obligations. No authority
+or runtime policy changed. Lint/typecheck and native-policy passed; aggregate
+failed as required. Fresh repair-head Actions evidence is still required.
+
 ## CI download resilience repair
 
 Exact source `69e169665ad5ef98e4ccdd1457dd4b801860a847`

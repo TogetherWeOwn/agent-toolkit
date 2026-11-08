@@ -131,7 +131,9 @@ test('protected operation candidates preserve separate exact-decider obligations
   }
   // No candidate, scope table or HTTP verb silently classifies the remaining surface.
   assert.equal(map.operations.find(row => row.operationId === 'update_database_settings').tier, 'unresolved');
-  assert.equal(map.operations.find(row => row.operationId === 'get_branch_metrics').tier, 'unresolved');
+  const missingReads = map.operations.filter(row => row.method === 'GET' && row.adapter === null);
+  assert.ok(missingReads.length > 0);
+  for (const row of missingReads) assert.equal(row.tier, 'unresolved');
 });
 
 test('offline read classification never implies reviewed policy or runtime enablement', async () => {
@@ -149,10 +151,13 @@ test('offline read classification never implies reviewed policy or runtime enabl
     assert.equal(row.enablement, 'disabled');
     assert.equal(row.policyCandidate, null);
   }
-  const unresolved = map.operations.find(row => row.operationId === 'get_branch_metrics');
-  assert.equal(unresolved.implementation, 'missing');
-  assert.equal(unresolved.adapter, null);
-  assert.equal(unresolved.enablement, 'disabled');
+  const unresolvedReads = map.operations.filter(row => row.method === 'GET' && row.tier === 'unresolved');
+  assert.ok(unresolvedReads.length > 0);
+  for (const row of unresolvedReads) {
+    assert.equal(row.implementation, 'missing');
+    assert.equal(row.adapter, null);
+    assert.equal(row.enablement, 'disabled');
+  }
 });
 
 test('plan-only artifacts never count as implemented API adapters', async () => {
