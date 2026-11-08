@@ -1,6 +1,7 @@
 import { createNeonMetadataOperations } from '../dist/plugins/neon-broker/src/metadata.js';
 import { createNeonCatalogOperations } from '../dist/plugins/neon-broker/src/catalog.js';
 import { createNeonCapabilityOperations } from '../dist/plugins/neon-broker/src/capabilities.js';
+import { createNeonBranchFeatureOperations } from '../dist/plugins/neon-broker/src/branch-features.js';
 import { createNeonMetadataTransport } from '../dist/plugins/neon-broker/src/transport.js';
 
 export const scope = {
@@ -59,7 +60,16 @@ export const capabilityCases = [
   ['listSnapshots', { project_id: 'project-a' }, { snapshots: [snapshot] }, { snapshots: [snapshot] }],
   ['getSnapshotSchedule', { project_id: 'project-a', branch_id: 'br-a' }, { schedule: [schedule] }, { schedule: [schedule] }],
 ];
-export const allCases = [...cases, ...catalogCases, ...capabilityCases];
+export const branchFeatureScope = { projectId: scope.projectId, revision: scope.revision, branchIds: scope.branchIds };
+export const realtime = { enabled: false, pending: true, revision: 1, invocation_url: 'https://example.invalid', allowed_origins: ['https://example.invalid'] };
+export const storage = { enabled: true, s3_endpoint: 'https://example.invalid', region: 'us-east-2', force_path_style: true };
+export const aiGateway = { enabled: true, base_url: 'https://example.invalid' };
+export const branchFeatureCases = [
+  ['getProjectBranchRealtime', { project_id: 'project-a', branch_id: 'br-a' }, realtime, { enabled: false, pending: true, revision: 1 }],
+  ['getProjectBranchStorage', { project_id: 'project-a', branch_id: 'br-a' }, storage, { enabled: true }],
+  ['getProjectBranchAiGateway', { project_id: 'project-a', branch_id: 'br-a' }, aiGateway, { enabled: true }],
+];
+export const allCases = [...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });
@@ -69,6 +79,9 @@ export function catalogFixture(value, config = catalogScope) {
 }
 export function capabilityFixture(value, config = capabilityScope) {
   return fixture(value, config, createNeonCapabilityOperations);
+}
+export function branchFeatureFixture(value, config = branchFeatureScope) {
+  return fixture(value, config, createNeonBranchFeatureOperations);
 }
 export function fixture(value, config = scope, factory = createNeonMetadataOperations) {
   const requests = [];

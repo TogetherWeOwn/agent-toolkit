@@ -73,6 +73,25 @@ values. All four endpoints are nonpaginated in the pinned schema: lists cap at 3
 rows, unexpected pagination refuses, and no partial/truncated result is returned.
 These are source projections, not native side-effect or entitlement evidence.
 
+`createNeonBranchFeatureOperations(trustedScope, transport)` adds three branch-status reads:
+
+| Tool | Closed arguments | Authorization resource suffix (under project) |
+|---|---|---|
+| `neon.getProjectBranchRealtime` | `project_id`, `branch_id` | `branches/<branch>/realtime` |
+| `neon.getProjectBranchStorage` | `project_id`, `branch_id` | `branches/<branch>/storage` |
+| `neon.getProjectBranchAiGateway` | `project_id`, `branch_id` | `branches/<branch>/ai_gateway` |
+
+Branch-feature scope contains one project/revision and up to 30 unique branch IDs,
+validated and copied at construction. Realtime projects only enabled/pending booleans
+and an optional positive int32 revision. Storage/gateway project only enabled=true:
+the pinned schema defines their 200 response as usable; false/unknown success shapes
+refuse. A 404 remains unavailable, not fabricated disabled status. Response schemas
+lack identity fields, so binding is the exact authenticated project/branch request
+path. Any returned project_id/branch_id must agree with the request. No response
+URLs, origins, regions, secrets, credentials or diagnostics are exposed or followed.
+These are real management-status projections, not data-plane endpoint lookup,
+provisioning, secret reveal, entitlement verification or non-waking qualification.
+
 Trusted metadata scope contains one project, a revision, explicit branch IDs and endpoint
 parent bindings. Construction validates and copies it. Caller IDs only select
 already-configured resources; no caller identity, authority, origin, credential,
@@ -91,7 +110,7 @@ passwords, credentials and connection strings are excluded. Unknown lifecycle
 states fail closed until explicitly supported. No error body/headers are surfaced.
 Common lease-reflection checks remain necessary even in these selected fields.
 
-`createNeonMetadataTransport(injectedFetch)` has seventeen typed methods only. Its
+`createNeonMetadataTransport(injectedFetch)` has twenty typed methods only. Its
 internal request builder fixes origin `https://console.neon.tech`, `/api/v2`
 paths, GET, JSON content, no redirects and no retries. No global fetch fallback
 exists. Each response is bounded to 64 KiB and 1 s, including streamed body time;
@@ -131,8 +150,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: seventeen implemented
-source adapters, 177 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: twenty implemented
+source adapters, 174 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

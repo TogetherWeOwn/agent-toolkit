@@ -25,6 +25,9 @@ export interface NeonMetadataTransport {
   getAnonymizedBranchStatus(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   listSnapshots(project: string, options: MetadataRequestOptions): Promise<unknown>;
   getSnapshotSchedule(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
+  getProjectBranchRealtime(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
+  getProjectBranchStorage(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
+  getProjectBranchAiGateway(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
 }
 export type MetadataFetch = (url: string, init: RequestInit) => Promise<Response>;
 
@@ -150,5 +153,11 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       get(`/projects/${id(project)}/snapshots`, new URLSearchParams(), options),
     getSnapshotSchedule: (project: string, branch: string, options: MetadataRequestOptions) =>
       get(`/projects/${id(project)}/branches/${id(branch)}/backup_schedule`, new URLSearchParams(), options),
+    getProjectBranchRealtime: (project: string, branch: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/branches/${id(branch)}/realtime`, new URLSearchParams(), options),
+    getProjectBranchStorage: (project: string, branch: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/branches/${id(branch)}/storage`, new URLSearchParams(), options),
+    getProjectBranchAiGateway: (project: string, branch: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/branches/${id(branch)}/ai_gateway`, new URLSearchParams(), options),
   });
 }
