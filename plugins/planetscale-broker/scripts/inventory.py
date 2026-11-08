@@ -12,6 +12,8 @@ import sys
 
 SOURCE_SHA256 = "ae45866599cb5d248fadb9d7f0ed30fd6aed440a17ec0950c4e9e0d58da4cb73"
 ADAPTERS = {
+    "get_keyspace_rollout_status": "get-keyspace-rollout-status",
+    "get_vtctld_operation": "get-vtctld-operation",
     "get_database_postgres_cidr": "get-database-postgres-cidr",
     "list_database_postgres_cidrs": "list-database-postgres-cidrs",
     "get_database_throttler": "get-database-throttler",
@@ -155,7 +157,8 @@ CHANGE_RECORDS = {
 REDIRECT_ALIASES = {
     "get_admin_change_request", "list_admin_change_requests", "get_neki_change_request",
     "list_neki_change_requests", "get_router_change_request", "list_router_change_requests",
-    "get_default_shard_configuration_profile",
+    "get_default_shard_configuration_profile", "get_shard_configuration_profile_change_request",
+    "list_shard_configuration_profile_change_requests",
 }
 RESIZE_RECORDS = {
     "get_bouncer", "list_bouncers", "list_bouncer_resize_requests",
@@ -235,6 +238,7 @@ def policy_candidate(operation_id):
 
 def adapter_test(operation_id):
     for operations, name in [
+        ({"get_keyspace_rollout_status", "get_vtctld_operation"}, "operation-status"),
         (NETWORK_THROTTLER, "network-throttler"),
         (CONFIGURATION_DEFINITIONS, "configuration-definitions"),
         (ACCOUNT_AVAILABILITY, "account-availability"),

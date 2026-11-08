@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The one hundred adapters are pure request builders and bounded output projections,
+The 102 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,14 +36,14 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 100 | Narrow projections; not full operation coverage |
-| Missing source adapters | 191 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 102 | Narrow projections; not full operation coverage |
+| Missing source adapters | 189 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-One hundred adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 175
+102 adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 173
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
@@ -343,6 +343,28 @@ mutations remain missing. The database throttler's service-token alternatives ar
 `read_deploy_request` / `create_deploy_request`, while its OAuth alternatives are
 `read_databases` / `read_database`: metadata projection never expands entitlements.
 
+Keyspace rollout status (`get_keyspace_rollout_status`) returns only the matching
+keyspace name, snapshotted allowed shard names and non-empty state/start/finish
+string-presence flags. Names are not immutable IDs; no rollout state enum is
+invented for the official free-text fields. Presence is not a parsed timestamp,
+successful rollout, complete topology or native closure. Unknown/duplicate shard
+names, malformed selected fields and more than 32 shards refuse the whole response.
+Empty shard arrays are supported, never a completeness receipt. Scope requires
+1–32 unique allowed names, including range-style names such as `-80` and `80-`.
+
+Vtctld operation status (`get_vtctld_operation`) matches the exact bound operation ID
+and documented `VtctldOperation` type. Only ID, state enum and nullable completion-
+string presence are returned. The official `completed` field is documented as a
+string, not a boolean: it is neither coerced nor projected. Action, metadata,
+results, errors, timeout, creation time and raw completion time are omitted.
+Completed/failed/cancelled states do not prove topology, rollback, safe retry or
+session closure. Both summaries say `executionAuthority: not-established`.
+Current branch/keyspace/shard/operation ownership, immutable target revalidation,
+independent collection permission and non-waking evidence remain prerequisites.
+The configuration-profile change list/get aliases document **308 only**, like the
+other change aliases, and remain missing pending a reviewed fixed-alias contract.
+No automatic redirect following or fabricated success adapter is implemented.
+
 Arguments are closed, scalar and bounded. Configured resource scope is separate
 from arguments and must eventually be resolved by the shared core from an
 authorized resource handle, not accepted from a model. Each request fixes HTTPS
@@ -390,7 +412,7 @@ No connector or replacement broker is introduced.
 ## Local mutation-plan artifacts — not executors
 
 `src/mutation-plans.ts` supplies three pure, bounded previews. They are **not API
-adapters**, do not consume authority and do not increase the 100-adapter count.
+adapters**, do not consume authority and do not increase the 102-adapter count.
 Each artifact labels itself `validated-local-plan-not-provider-dry-run`, with
 execution not implemented, remote preconditions not verified and provider dry-run
 not performed. No network executor, output projector or secret placement exists.
@@ -424,7 +446,7 @@ The candidates only document requirements; native routing, expiry, exact-target
 binding, atomic consumption, replay/concurrent-use refusal and approved placement
 are **not implemented or tested as authority enforcement here**. Credential routes
 remain incomplete until a broker-only sink and reconciliation are accepted. The
-other 175 tier classifications are unresolved, not automatically harmless reads or
+other 173 tier classifications are unresolved, not automatically harmless reads or
 ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.

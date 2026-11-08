@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 191 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 189 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -271,6 +271,19 @@ semantics remain prerequisites. Coverage is **100/291 bounded subsets, 191 missi
 tiers 100 provisional read / 16 unreviewed reserved / 175 unresolved. Zero integrated,
 reviewed, enabled or adopted. Fresh exact-head Actions is required; no local suite
 or native authority enforcement is claimed.
+
+`test/operation-status.test.mjs` adds synthetic contracts for two fixed offline
+rollout/vtctld-operation metadata reads: exact bound identities, snapshotted shard
+names, whole-response unknown/duplicate/overflow refusal, closed scope/arguments,
+wire bounds and immutable outputs. Free-text rollout states/times reduce to
+non-empty string presence; they are not parsed timestamps or completion evidence.
+Vtctld returns only a bound ID, documented state and nullable completion-string
+presence; action/result/error/metadata and the documented string `completed` are
+not projected/coerced. Presence and provider state never prove topology, rollback,
+safe retry, native closure or authority. Official configuration-profile change
+aliases are 308-only gaps with a reviewed-contract prerequisite, not adapters.
+Fresh exact-head Actions execution is required; these fixtures are not live policy,
+collection permission, current parent ownership or non-waking evidence.
 
 ## Metrics preregistration — required before enablement
 
