@@ -41,6 +41,35 @@ evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
 
+## Schema-recommendation dismissal preview source increment
+
+`src/recommendation-dismissal-plan.ts` adds one preview-only subset and ten
+synthetic contracts. Closed immutable database/recommendation IDs, sequence,
+revision and production snapshot; open-only local refusal, empty arguments and
+fixed number-addressed POST with an empty body. Optional reason/DDL/free text,
+executor, response projection, authority consumption and provider dry-run are
+absent. The provider response lacks database identity: independent trusted
+parent and current ID/number mapping remain required. Open state does not prove
+freshness or remote preconditions; dismissal is not DDL execution, resolution,
+rollback or authority to waive a security obligation.
+
+RM plus independently classified security/spend/host obligations remain unreviewed
+candidates. Twelve plan-only subsets stay separate from **134/291 bounded offline
+adapters; 157 missing** (15 GETs, 142 mutations). Tiers: 134 provisional read /
+25 unreviewed reserved / 132 unresolved; zero integrated/reviewed/enabled/adopted.
+Tests cover closed inputs/accessors/canaries, identity and safe-integer sequence,
+immutable snapshots, production obligations, official endpoint/optional-body
+agreement and missing/disabled/unreviewed map status. Exact-head Actions must
+execute these contracts; no local suite/build/typecheck/CI mirror ran.
+
+Prior exact `8d8c68a438263c59446434a1cb6b92cc7895a252`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42484447480)
+passed test/lint/typecheck/native-policy/ci-ok, including
+[1011/1011 PlanetScale tests](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42484447480/job/128743195825),
+root 181/181, helpers 122/122 and GitHub broker 219/219, zero failures/skips.
+All three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42484421873)
+passed. This is historical evidence, not a new-head result or live acceptance.
+
 ## Query-report deletion preview source increment
 
 `src/query-report-deletion-plan.ts` adds one preview-only subset and ten synthetic

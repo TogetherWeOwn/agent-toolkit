@@ -42,13 +42,35 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-134 adapter rows have a provisional read tier; twenty-four protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 133
+134 adapter rows have a provisional read tier; twenty-five protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 132
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
 backups/restore, schema/deploy, topology, maintenance and every other official
 area remain in the map even when access or implementation is missing.
+
+## Schema-recommendation dismissal plan subset
+
+`src/recommendation-dismissal-plan.ts` adds a pure preview for one open schema
+recommendation. Closed immutable snapshots bind database/recommendation IDs,
+positive safe sequence number, revision and production classification. The endpoint
+addresses the sequence number, not the immutable recommendation ID: independently
+revalidate their current mapping and parent ownership before any future use.
+The response lacks database identity. Open-only is a broker-narrow restriction,
+not a provider precondition or freshness guarantee.
+
+Arguments and POST body are empty; optional dismissal reason, DDL, table names,
+URLs and caller authority are not accepted. Dismissal is metadata mutation, not
+DDL execution or proof that a recommendation was applied, safe, resolved or
+reversible. RM plus independently classified conjunctive security/spend/host
+obligations remain unreviewed candidates; suppressing a recommendation must not
+silently waive a required security action. No executor, approval consumption,
+provider dry-run or response projection is supplied. Native policy/approval,
+current-state revalidation and uncertain-outcome recovery remain prerequisites.
+
+There are twelve local plan subsets, separate from 134/291 bounded offline
+adapters and 157 missing adapters; zero integrated/reviewed/enabled/adopted.
 
 ## Query-report deletion plan subset
 
@@ -68,7 +90,7 @@ download revocation or native closure. No executor, provider dry-run, freshness 
 or approval consumption is supplied. Native policy/approval binding, independent
 current identity/state revalidation and uncertain-outcome recovery remain missing.
 
-There are eleven local plan subsets, separate from 134/291 bounded offline adapters
+At that increment there were eleven local plan subsets, separate from 134/291 bounded offline adapters
 and 157 missing adapters. Zero operations are integrated, reviewed, enabled or adopted.
 
 ## Individual change-request cancellation plan subset

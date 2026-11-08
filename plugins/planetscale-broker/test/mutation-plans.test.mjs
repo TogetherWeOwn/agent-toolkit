@@ -20,6 +20,7 @@ const additionalPlans = {
   cancel_keyspace_config_change_request: { group: 'configuration-cancel-plans', authorities: ['release-manager'] },
   cancel_change_request: { group: 'change-cancel-plan', authorities: ['release-manager'] },
   delete_query_patterns_report: { group: 'query-report-deletion-plan', authorities: ['release-manager'] },
+  dismiss_schema_recommendation: { group: 'recommendation-dismissal-plan', authorities: ['release-manager'] },
 };
 const fixtures = [
   [prepareDeleteBranch, {}, 'delete_branch', 'DELETE', `${base}?delete_descendants=false`, null, ['release-manager']],
