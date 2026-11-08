@@ -38,6 +38,7 @@ export interface MetadataScope {
   workerDeployments?: readonly { scriptName: string; deploymentIds: readonly string[] }[];
   workerVersions?: readonly { scriptName: string; versionIds: readonly string[] }[];
   workerControlScriptNames?: readonly string[];
+  workerAttributionScriptNames?: readonly string[];
 }
 export interface MetadataRequest {
   readonly method: "GET";
@@ -65,6 +66,31 @@ interface HyperdriveMetadata { id: string; cachingDisabled: boolean }
 interface SecretMetadata { name: string; type: "secret_text" | "secret_key" }
 interface PartialList<T> { items: T[]; complete: false }
 interface UnavailableControl { status: "unavailable"; reason: "not-in-response-schema" }
+interface DeploymentMetadata {
+  id: string;
+  attribution?: {
+    createdOn: string;
+    traffic: {
+      subject: "deployment-configured-allocation";
+      strategy: "percentage";
+      versions: { versionId: string; percentage: number }[];
+    };
+    activeDeployment: "not-established";
+    observedTraffic: "not-established";
+  };
+}
+interface VersionMetadata {
+  id: string;
+  attribution?: { createdOn: { status: "provider-reported"; value: string } | { status: "unavailable"; reason: "not-returned" } };
+}
+
+function providerTimestamp(value: unknown): string {
+  const stamp = providerText(value, text(30, /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,9})?Z$/));
+  const seconds = stamp.slice(0, 19);
+  const parsed = Date.parse(`${seconds}Z`);
+  requireThat(Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 19) === seconds, "upstream");
+  return stamp;
+}
 interface WorkerBudgetMetadata {
   cpuMs: { status: "configured"; value: number } | { status: "unavailable"; reason: "not-returned" };
   bodyBytes: UnavailableControl;
@@ -108,6 +134,10 @@ export function metadataDescriptors(scope: MetadataScope) {
   requireThat(Array.isArray(workerControlScriptNames) && workerControlScriptNames.length <= maxRows, "cap");
   const controlScripts = new Set(workerControlScriptNames.map(value => scriptName.parse(value)));
   for (const name of controlScripts) requireThat(scripts.has(name), "scope");
+  const workerAttributionScriptNames = scope.workerAttributionScriptNames ?? [];
+  requireThat(Array.isArray(workerAttributionScriptNames) && workerAttributionScriptNames.length <= maxRows, "cap");
+  const attributionScripts = new Set(workerAttributionScriptNames.map(value => scriptName.parse(value)));
+  for (const name of attributionScripts) requireThat(scripts.has(name), "scope");
   const databaseIds = scope.databaseIds ?? [];
   const defaultBucketNames = scope.defaultBucketNames ?? [];
   requireThat(Array.isArray(databaseIds) && databaseIds.length <= 100 && Array.isArray(defaultBucketNames) && defaultBucketNames.length <= 100, "cap");
@@ -281,7 +311,44 @@ export function metadataDescriptors(scope: MetadataScope) {
     scriptScope(name);
     requireThat(deployments.get(name)?.has(id) === true, "scope");
   }
-  const deploymentsList: MetadataDescriptor<ReturnType<typeof deploymentPage.parse>, PartialList<{ id: string }>> = Object.freeze({
+  function attributionIdentity(row: Row, name: string) {
+    requireThat(row.account_id === undefined || row.account_id === account, "scope");
+    requireThat(row.script_name === undefined || row.script_name === name, "scope");
+  }
+  function deploymentMetadata(row: Row, name: string): DeploymentMetadata {
+    const id = providerText(row.id, deploymentId);
+    deploymentScope(name, id);
+    if (!attributionScripts.has(name)) return { id };
+    attributionIdentity(row, name);
+    const createdOn = providerTimestamp(row.created_on);
+    requireThat(row.strategy === "percentage", "upstream");
+    const result = rows(row.versions);
+    requireThat(result.length > 0, "upstream");
+    const seen = new Set<string>();
+    const allocation = result.map(item => {
+      const id = providerText(item.version_id, versionId);
+      versionScope(name, id);
+      requireThat(!seen.has(id), "upstream");
+      seen.add(id);
+      const percentage = item.percentage;
+      requireThat(typeof percentage === "number" && Number.isFinite(percentage) && percentage >= 0.01 && percentage <= 100, "upstream");
+      return { versionId: id, percentage };
+    });
+    requireThat(Math.abs(allocation.reduce((sum, item) => sum + item.percentage, 0) - 100) <= 1e-8, "upstream");
+    return { id, attribution: { createdOn, traffic: { subject: "deployment-configured-allocation", strategy: "percentage", versions: allocation }, activeDeployment: "not-established", observedTraffic: "not-established" } };
+  }
+  function versionMetadata(row: Row, name: string): VersionMetadata {
+    const id = providerText(row.id, versionId);
+    versionScope(name, id);
+    if (!attributionScripts.has(name)) return { id };
+    attributionIdentity(row, name);
+    const metadata = row.metadata === undefined ? {} : object(row.metadata);
+    const createdOn = metadata.created_on === undefined
+      ? { status: "unavailable" as const, reason: "not-returned" as const }
+      : { status: "provider-reported" as const, value: providerTimestamp(metadata.created_on) };
+    return { id, attribution: { createdOn } };
+  }
+  const deploymentsList: MetadataDescriptor<ReturnType<typeof deploymentPage.parse>, PartialList<DeploymentMetadata>> = Object.freeze({
     name: "cloudflare.workers.deployments.list", version: "1", tier: "read", providerOperationId: "worker-deployments-list-deployments",
     prepare(raw: unknown) {
       const args = deploymentPage.parse(raw);
@@ -293,11 +360,11 @@ export function metadataDescriptors(scope: MetadataScope) {
       scriptScope(args.scriptName);
       const result = rows(object(envelope(raw).result).deployments);
       requireThat(result.length <= args.perPage, "cap");
-      const items = result.filter(row => typeof row.id === "string" && deployments.get(args.scriptName)?.has(row.id)).map(row => ({ id: providerText(row.id, deploymentId) }));
+      const items = result.filter(row => typeof row.id === "string" && deployments.get(args.scriptName)?.has(row.id)).map(row => deploymentMetadata(row, args.scriptName));
       return bounded({ items, complete: false as const });
     },
   });
-  const deploymentGet: MetadataDescriptor<ReturnType<typeof deployment.parse>, { id: string }> = Object.freeze({
+  const deploymentGet: MetadataDescriptor<ReturnType<typeof deployment.parse>, DeploymentMetadata> = Object.freeze({
     name: "cloudflare.workers.deployments.get", version: "1", tier: "read", providerOperationId: "worker-deployments-get-deployment",
     prepare(raw: unknown) {
       const args = deployment.parse(raw);
@@ -309,14 +376,14 @@ export function metadataDescriptors(scope: MetadataScope) {
       deploymentScope(args.scriptName, args.deploymentId);
       const row = object(envelope(raw).result);
       requireThat(row.id === args.deploymentId, "scope");
-      return bounded({ id: providerText(row.id, deploymentId) });
+      return bounded(deploymentMetadata(row, args.scriptName));
     },
   });
   function versionScope(name: string, id: string) {
     scriptScope(name);
     requireThat(versions.get(name)?.has(id) === true, "scope");
   }
-  const versionsList: MetadataDescriptor<ReturnType<typeof versionPage.parse>, PartialList<{ id: string }>> = Object.freeze({
+  const versionsList: MetadataDescriptor<ReturnType<typeof versionPage.parse>, PartialList<VersionMetadata>> = Object.freeze({
     name: "cloudflare.workers.versions.list", version: "1", tier: "read", providerOperationId: "worker-versions-list-versions",
     prepare(raw: unknown) {
       const args = versionPage.parse(raw);
@@ -328,11 +395,11 @@ export function metadataDescriptors(scope: MetadataScope) {
       scriptScope(args.scriptName);
       const result = rows(object(envelope(raw).result).items);
       requireThat(result.length <= args.perPage, "cap");
-      const items = result.filter(row => typeof row.id === "string" && versions.get(args.scriptName)?.has(row.id)).map(row => ({ id: providerText(row.id, versionId) }));
+      const items = result.filter(row => typeof row.id === "string" && versions.get(args.scriptName)?.has(row.id)).map(row => versionMetadata(row, args.scriptName));
       return bounded({ items, complete: false as const });
     },
   });
-  const versionGet: MetadataDescriptor<ReturnType<typeof workerVersion.parse>, { id: string }> = Object.freeze({
+  const versionGet: MetadataDescriptor<ReturnType<typeof workerVersion.parse>, VersionMetadata> = Object.freeze({
     name: "cloudflare.workers.versions.get", version: "1", tier: "read", providerOperationId: "worker-versions-get-version-detail",
     prepare(raw: unknown) {
       const args = workerVersion.parse(raw);
@@ -344,7 +411,7 @@ export function metadataDescriptors(scope: MetadataScope) {
       versionScope(args.scriptName, args.versionId);
       const row = object(envelope(raw).result);
       requireThat(row.id === args.versionId, "scope");
-      return bounded({ id: providerText(row.id, versionId) });
+      return bounded(versionMetadata(row, args.scriptName));
     },
   });
   function namespaceScope(id: string) { requireThat(namespaces.has(id), "scope"); }
