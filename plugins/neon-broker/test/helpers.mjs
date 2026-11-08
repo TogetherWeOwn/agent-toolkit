@@ -1,5 +1,6 @@
 import { createNeonMetadataOperations } from '../dist/plugins/neon-broker/src/metadata.js';
 import { createNeonCatalogOperations } from '../dist/plugins/neon-broker/src/catalog.js';
+import { createNeonCapabilityOperations } from '../dist/plugins/neon-broker/src/capabilities.js';
 import { createNeonMetadataTransport } from '../dist/plugins/neon-broker/src/transport.js';
 
 export const scope = {
@@ -46,21 +47,36 @@ export const catalogCases = [
   ['listProjectBranchRoles', { project_id: 'project-a', branch_id: 'br-a' }, { roles: [role] }, { roles: [role] }],
   ['getProjectBranchRole', { project_id: 'project-a', branch_id: 'br-a', role_name: 'reader' }, { role }, { role }],
 ];
-export const allCases = [...cases, ...catalogCases];
+export const library = { library_name: 'pg_stat_statements', is_default: true, is_experimental: false, version: '1.11' };
+export const anonymized = { project_id: 'project-a', branch_id: 'br-a', state: 'anonymized' };
+export const snapshot = { id: 'snap-a', source_branch_id: 'br-a', created_at: '2026-11-08T00:00:00Z', manual: true };
+export const schedule = { frequency: 'daily', hour: 3, day: 1, month: 1, retention_seconds: 86400 };
+export const capabilityScope = { projectId: scope.projectId, revision: scope.revision, branchIds: scope.branchIds,
+  snapshots: [{ id: 'snap-a', branchId: 'br-a' }] };
+export const capabilityCases = [
+  ['getAvailablePreloadLibraries', { project_id: 'project-a' }, { libraries: [library] }, { libraries: [library] }],
+  ['getAnonymizedBranchStatus', { project_id: 'project-a', branch_id: 'br-a' }, anonymized, anonymized],
+  ['listSnapshots', { project_id: 'project-a' }, { snapshots: [snapshot] }, { snapshots: [snapshot] }],
+  ['getSnapshotSchedule', { project_id: 'project-a', branch_id: 'br-a' }, { schedule: [schedule] }, { schedule: [schedule] }],
+];
+export const allCases = [...cases, ...catalogCases, ...capabilityCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });
 }
 export function catalogFixture(value, config = catalogScope) {
-  return fixture(value, config, true);
+  return fixture(value, config, createNeonCatalogOperations);
 }
-export function fixture(value, config = scope, catalog = false) {
+export function capabilityFixture(value, config = capabilityScope) {
+  return fixture(value, config, createNeonCapabilityOperations);
+}
+export function fixture(value, config = scope, factory = createNeonMetadataOperations) {
   const requests = [];
   const transport = createNeonMetadataTransport(async (url, init) => {
     requests.push({ url, init });
     return typeof value === 'function' ? value(url, init, requests.length) : response(value);
   });
-  const operations = (catalog ? createNeonCatalogOperations : createNeonMetadataOperations)(structuredClone(config), transport);
+  const operations = factory(structuredClone(config), transport);
   return {
     operations, requests,
     operation(name) { return operations.find(operation => operation.name === `neon.${name}`); },

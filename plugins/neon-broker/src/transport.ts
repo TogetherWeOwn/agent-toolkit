@@ -21,6 +21,10 @@ export interface NeonMetadataTransport {
   getProjectBranchDatabase(project: string, branch: string, database: string, options: MetadataRequestOptions): Promise<unknown>;
   listProjectBranchRoles(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   getProjectBranchRole(project: string, branch: string, role: string, options: MetadataRequestOptions): Promise<unknown>;
+  getAvailablePreloadLibraries(project: string, options: MetadataRequestOptions): Promise<unknown>;
+  getAnonymizedBranchStatus(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
+  listSnapshots(project: string, options: MetadataRequestOptions): Promise<unknown>;
+  getSnapshotSchedule(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
 }
 export type MetadataFetch = (url: string, init: RequestInit) => Promise<Response>;
 
@@ -138,5 +142,13 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       get(`/projects/${id(project)}/branches/${id(branch)}/roles`, new URLSearchParams(), options),
     getProjectBranchRole: (project: string, branch: string, role: string, options: MetadataRequestOptions) =>
       get(`/projects/${id(project)}/branches/${id(branch)}/roles/${catalogName(role)}`, new URLSearchParams(), options),
+    getAvailablePreloadLibraries: (project: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/available_preload_libraries`, new URLSearchParams(), options),
+    getAnonymizedBranchStatus: (project: string, branch: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/branches/${id(branch)}/anonymized_status`, new URLSearchParams(), options),
+    listSnapshots: (project: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/snapshots`, new URLSearchParams(), options),
+    getSnapshotSchedule: (project: string, branch: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/branches/${id(branch)}/backup_schedule`, new URLSearchParams(), options),
   });
 }

@@ -48,6 +48,31 @@ role output is branch/name and optional boolean protected. Passwords/DSNs are ne
 selected, even when supplied by the role API. A total branch count is project-wide,
 not a count of allowlisted children: it requires its own exact `branches/count` grant.
 
+`createNeonCapabilityOperations(trustedScope, transport)` adds four metadata reads:
+
+| Tool | Closed arguments | Authorization resource suffix (under project) |
+|---|---|---|
+| `neon.getAvailablePreloadLibraries` | `project_id` | `available_preload_libraries` |
+| `neon.getAnonymizedBranchStatus` | `project_id`, `branch_id` | `branches/<branch>/anonymized_status` |
+| `neon.listSnapshots` | `project_id` | `snapshots` |
+| `neon.getSnapshotSchedule` | `project_id`, `branch_id` | `branches/<branch>/backup_schedule` |
+
+Capability scope contains one project/revision, up to 30 branch IDs and up to 30
+snapshot-ID/source-branch bindings. These arrays and maximum selected outputs fit
+the common JSON budgets. Snapshot lists filter unselected IDs, enforce selected
+source branches and expose only ID/source branch/validated UTC creation time and
+optional manual flag. The schema makes source_branch_id optional: selected rows
+without it refuse rather than invent binding evidence. Project binding otherwise
+comes from the fixed authenticated project path; a returned project_id must agree.
+Snapshot names, LSNs and arbitrary annotations are omitted. Library output contains
+bounded canonical library/version strings and default/experimental booleans, not
+descriptions. Anonymization output contains bound project/branch and known state,
+not status_message/last_run (which may contain table names or actor identities).
+Schedule output contains known frequency and bounded optional hour/day/month/retention
+values. All four endpoints are nonpaginated in the pinned schema: lists cap at 30
+rows, unexpected pagination refuses, and no partial/truncated result is returned.
+These are source projections, not native side-effect or entitlement evidence.
+
 Trusted metadata scope contains one project, a revision, explicit branch IDs and endpoint
 parent bindings. Construction validates and copies it. Caller IDs only select
 already-configured resources; no caller identity, authority, origin, credential,
@@ -66,7 +91,7 @@ passwords, credentials and connection strings are excluded. Unknown lifecycle
 states fail closed until explicitly supported. No error body/headers are surfaced.
 Common lease-reflection checks remain necessary even in these selected fields.
 
-`createNeonMetadataTransport(injectedFetch)` has thirteen typed methods only. Its
+`createNeonMetadataTransport(injectedFetch)` has seventeen typed methods only. Its
 internal request builder fixes origin `https://console.neon.tech`, `/api/v2`
 paths, GET, JSON content, no redirects and no retries. No global fetch fallback
 exists. Each response is bounded to 64 KiB and 1 s, including streamed body time;
@@ -106,8 +131,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: thirteen implemented
-source adapters, 181 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: seventeen implemented
+source adapters, 177 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

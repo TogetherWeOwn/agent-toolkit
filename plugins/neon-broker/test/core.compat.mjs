@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { allCases as cases, catalogCases, catalogFixture, catalogScopeAt, fixture, scope, branch, operation, response } from './helpers.mjs';
+import { allCases as cases, catalogCases, catalogFixture, catalogScopeAt, capabilityCases, capabilityFixture,
+  capabilityScope, library, snapshot, schedule, fixture, scope, branch, operation, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
 // fallback and no embedded replacement for the common authority/policy executor.
@@ -13,7 +14,9 @@ const { providerFixture, credentialCanary, derivedCanary } = await import(pathTo
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
 function brokerFixture(name, args, raw, overrides = {}, config) {
-  const provider = (catalogCases.some(([operation]) => operation === name) ? catalogFixture : fixture)(raw, config);
+  const factory = capabilityCases.some(([operation]) => operation === name) ? capabilityFixture :
+    catalogCases.some(([operation]) => operation === name) ? catalogFixture : fixture;
+  const provider = factory(raw, config);
   const operation = provider.operation(name);
   const common = providerFixture(overrides);
   common.vector.policy.resources = [operation.prepare(args).resource.id];
@@ -187,7 +190,7 @@ test('reflected lease material in selected safe-looking fields is refused by the
   assert.equal((await f.call()).code, 'OUTPUT_REFUSED');
 });
 
-for (const [name, args, raw] of catalogCases) {
+for (const [name, args, raw] of [...catalogCases, ...capabilityCases]) {
   test(`${name}: replay and TOCTOU policy/resource changes refuse without a second request`, async () => {
     const replay = brokerFixture(name, args, raw);
     assert.equal((await replay.call()).ok, true);
@@ -236,11 +239,45 @@ test('maximum supported catalog scope and paginated operation output fit real co
   safeEnvelope(f, result);
 });
 
+test('maximum capability selections and projected metadata fit real common-core budgets', async () => {
+  const indices = Array.from({ length: 30 }, (_, index) => index);
+  const config = { ...capabilityScope, branchIds: indices.map(n => `br-${n}`),
+    snapshots: indices.map(n => ({ id: `snap-${n}`, branchId: `br-${n}` })) };
+  const snapshots = config.snapshots.map(binding => ({ ...snapshot, id: binding.id, source_branch_id: binding.branchId }));
+  const values = [
+    ['listSnapshots', { snapshots }],
+    ['getAvailablePreloadLibraries', { libraries: indices.map(n => ({ ...library, library_name: `library_${n}` })) }],
+    ['getSnapshotSchedule', { schedule: indices.map(() => ({ ...schedule })) }],
+  ];
+  for (const [name, raw] of values) {
+    const args = name === 'getSnapshotSchedule' ? { project_id: 'project-a', branch_id: 'br-0' } : { project_id: 'project-a' };
+    const f = brokerFixture(name, args, raw, {}, config);
+    const result = await f.call();
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.value, raw);
+    safeEnvelope(f, result);
+  }
+});
+
+test('anonymization diagnostics and snapshot labels do not escape through the common broker', async () => {
+  for (const [name, args, raw, expected] of capabilityCases) {
+    const poisoned = { ...structuredClone(raw), status_message: credentialCanary, last_run: { triggered_by: derivedCanary } };
+    for (const value of Object.values(poisoned).filter(Array.isArray).flat()) Object.assign(value, {
+      name: credentialCanary, description: derivedCanary, password: 'password-canary',
+    });
+    const f = brokerFixture(name, args, poisoned);
+    const result = await f.call();
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.value, expected);
+    safeEnvelope(f, result);
+  }
+});
+
 test('common operation-map validator confirms incomplete status for all unknown entitlements', () => {
   const map = JSON.parse(readFileSync(new URL('../operation-map.json', import.meta.url)));
   const result = validateOperationMap(map);
   assert.equal(result.complete, false);
   assert.equal(result.incomplete.length, 194);
-  assert.equal(map.operations.filter(operation => operation.implemented).length, 13);
+  assert.equal(map.operations.filter(operation => operation.implemented).length, 17);
   assert.equal(map.operations.filter(operation => operation.enabled).length, 0);
 });
