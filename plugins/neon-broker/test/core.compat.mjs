@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { allCases as cases, catalogCases, catalogFixture, catalogScopeAt, capabilityCases, capabilityFixture,
   capabilityScope, library, snapshot, schedule, branchFeatureCases, branchFeatureFixture, branchFeatureScope,
-  fixture, scope, branch, operation, response } from './helpers.mjs';
+  authStatusCases, authStatusFixture, authStatusScope, fixture, scope, branch, operation, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
 // fallback and no embedded replacement for the common authority/policy executor.
@@ -15,7 +15,8 @@ const { providerFixture, credentialCanary, derivedCanary } = await import(pathTo
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
 function brokerFixture(name, args, raw, overrides = {}, config) {
-  const factory = branchFeatureCases.some(([operation]) => operation === name) ? branchFeatureFixture :
+  const factory = authStatusCases.some(([operation]) => operation === name) ? authStatusFixture :
+    branchFeatureCases.some(([operation]) => operation === name) ? branchFeatureFixture :
     capabilityCases.some(([operation]) => operation === name) ? capabilityFixture :
     catalogCases.some(([operation]) => operation === name) ? catalogFixture : fixture;
   const provider = factory(raw, config);
@@ -192,7 +193,7 @@ test('reflected lease material in selected safe-looking fields is refused by the
   assert.equal((await f.call()).code, 'OUTPUT_REFUSED');
 });
 
-for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases]) {
+for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases]) {
   test(`${name}: replay and TOCTOU policy/resource changes refuse without a second request`, async () => {
     const replay = brokerFixture(name, args, raw);
     assert.equal((await replay.call()).ok, true);
@@ -314,11 +315,50 @@ test('maximum branch feature scope fits common configuration limits and scopes d
   }
 });
 
+test('auth status omits OAuth locations and nested credentials through the common broker', async () => {
+  for (const [name, args, raw, expected] of authStatusCases) {
+    const poisoned = { ...raw, client_secret: credentialCanary, password: 'password-canary', login_page: derivedCanary,
+      consent_page: credentialCanary, mcp: { resource: derivedCanary }, resources: [{ identifier: credentialCanary }],
+      email_provider: { host: derivedCanary, username: credentialCanary, password: 'password-canary' }, message: credentialCanary };
+    const f = brokerFixture(name, args, poisoned);
+    const result = await f.call();
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.value, expected);
+    safeEnvelope(f, result);
+    const unavailable = brokerFixture(name, args, () => response(poisoned, { status: 404 }));
+    const refused = await unavailable.call();
+    assert.equal(refused.code, 'UPSTREAM_UNAVAILABLE');
+    assert.equal(unavailable.provider.requests.length, 1);
+    safeEnvelope(unavailable, refused);
+  }
+});
+
+test('maximum auth status scope fits common budgets and no sibling status resource cross-authorizes', async () => {
+  const config = { ...authStatusScope, branchIds: Array.from({ length: 30 }, (_, n) => `br-${n}`) };
+  const args = { project_id: 'project-a', branch_id: 'br-29' };
+  const resources = authStatusCases.map(([name, , raw]) => brokerFixture(name, args, raw, {}, config).provider.operation(name).prepare(args).resource.id);
+  for (const [name, , raw, expected] of authStatusCases) {
+    const f = brokerFixture(name, args, raw, {}, config);
+    const result = await f.call();
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.value, expected);
+    safeEnvelope(f, result);
+    for (const resource of ['neon/projects/project-a/branches/br-29/auth',
+      'neon/projects/project-a/branches/br-0/auth/allow_localhost', ...resources.filter(id => id !== f.provider.operation(name).prepare(args).resource.id)]) {
+      const other = brokerFixture(name, args, raw, {}, config);
+      other.common.vector.policy.resources = [resource];
+      assert.equal((await other.call()).code, 'POLICY_DENIED');
+      assert.equal(other.common.calls.secret, 0);
+      assert.equal(other.provider.requests.length, 0);
+    }
+  }
+});
+
 test('common operation-map validator confirms incomplete status for all unknown entitlements', () => {
   const map = JSON.parse(readFileSync(new URL('../operation-map.json', import.meta.url)));
   const result = validateOperationMap(map);
   assert.equal(result.complete, false);
   assert.equal(result.incomplete.length, 194);
-  assert.equal(map.operations.filter(operation => operation.implemented).length, 20);
+  assert.equal(map.operations.filter(operation => operation.implemented).length, 23);
   assert.equal(map.operations.filter(operation => operation.enabled).length, 0);
 });

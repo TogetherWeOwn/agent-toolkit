@@ -92,6 +92,28 @@ URLs, origins, regions, secrets, credentials or diagnostics are exposed or follo
 These are real management-status projections, not data-plane endpoint lookup,
 provisioning, secret reveal, entitlement verification or non-waking qualification.
 
+`createNeonAuthStatusOperations(trustedScope, transport)` adds three dedicated auth-status reads:
+
+| Tool | Closed arguments | Authorization resource suffix (under project) |
+|---|---|---|
+| `neon.getNeonAuthAllowLocalhost` | `project_id`, `branch_id` | `branches/<branch>/auth/allow_localhost` |
+| `neon.getNeonAuthPhoneNumberPlugin` | `project_id`, `branch_id` | `branches/<branch>/auth/plugins/phone-number` |
+| `neon.getNeonAuthOAuthProviderPlugin` | `project_id`, `branch_id` | `branches/<branch>/auth/plugins/oauth-provider` |
+
+Auth-status scope contains one project/revision and up to 30 unique branch IDs,
+validated and copied at construction. Each status has a distinct resource: neither
+branch/auth parent nor sibling status grants imply access. Output is a boolean
+allow_localhost or enabled, plus optional phone OTP lifetime (integer 60–600 seconds).
+Both true and false are preserved; omitted lifetime stays omitted, not filled from
+a documented default. Unknown/malformed status, contradictory ancestry, pagination
+and non-200 responses refuse. Identity comes from the fixed request path; any returned
+project_id/branch_id must agree. OAuth login/consent URLs, MCP configuration and
+resource audiences are not exposed or followed. These dedicated endpoints do not
+fetch aggregate plugin configs or email providers, whose pinned schema can include
+credential-bearing email responses. Those operations remain incomplete; no authority
+is inferred for them. Status source does not authorize an update, auth session access,
+secret lookup, runtime grant or a non-waking claim.
+
 Trusted metadata scope contains one project, a revision, explicit branch IDs and endpoint
 parent bindings. Construction validates and copies it. Caller IDs only select
 already-configured resources; no caller identity, authority, origin, credential,
@@ -110,7 +132,7 @@ passwords, credentials and connection strings are excluded. Unknown lifecycle
 states fail closed until explicitly supported. No error body/headers are surfaced.
 Common lease-reflection checks remain necessary even in these selected fields.
 
-`createNeonMetadataTransport(injectedFetch)` has twenty typed methods only. Its
+`createNeonMetadataTransport(injectedFetch)` has twenty-three typed methods only. Its
 internal request builder fixes origin `https://console.neon.tech`, `/api/v2`
 paths, GET, JSON content, no redirects and no retries. No global fetch fallback
 exists. Each response is bounded to 64 KiB and 1 s, including streamed body time;
@@ -150,8 +172,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: twenty implemented
-source adapters, 174 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: twenty-three implemented
+source adapters, 171 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

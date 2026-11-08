@@ -2,10 +2,10 @@
 
 ## Implemented source, not accepted enablement
 
-- Twenty typed metadata/catalog/capability/branch-feature operations with strict arguments, exact
+- Twenty-three typed metadata/catalog/capability/branch-feature/auth-status operations with strict arguments, exact
   trusted scope and parent-child binding, safe projections and fixed bounded injected transport.
-- Full 194-row management inventory; 174 operations remain explicitly incomplete.
-  The eight catalog, four capability and three branch-feature adapters do not complete the package. Prior source merge,
+- Full 194-row management inventory; 171 operations remain explicitly incomplete.
+  The eight catalog, four capability, three branch-feature and three auth-status adapters do not complete the package. Prior source merge,
   current source review, native qualification and runtime enablement are separate.
 - Mocked contracts and common-candidate compatibility fixtures authored; accept
   actual results only from the exact PR head's Actions jobs.
