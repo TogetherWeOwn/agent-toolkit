@@ -7,6 +7,40 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonSnapshotDeleteOperations(trustedScope, transport)` adds the first
+reserved mutation source: `deleteSnapshot`. Copy one exact project, source branch,
+snapshot ID and revision; require the separate
+`neon/projects/<project>/branches/<branch>/snapshots/<snapshot>/delete` grant.
+Neither snapshot listing nor a parent, sibling or non-delete grant substitutes.
+The common reserved path must verify and atomically consume native exact-target
+and plan evidence before transport. No authority implementation, live grant or
+runtime registration is supplied; calling a source descriptor directly is a test
+seam, not an authenticated entry point.
+
+The validated plan describes deletion *request*, bounded preflight/reconciliation
+reads and acceptance-only output, not a provider dry-run. A fixed project snapshot
+GET validates the complete nonpaginated <=30-row list, unique IDs and source-branch
+bindings before requiring the selected snapshot. Missing source ancestry, absent
+selection, contradiction, malformed rows or pagination refuses before DELETE.
+Snapshot IDs are the provider resource identity; labels and expiry are not mutation
+preconditions. The single bodyless DELETE uses only the exact project/snapshot path;
+no name/expiry edit, restore, credential action, retry or alternate endpoint exists.
+
+Only HTTP202 JSON is an acknowledgement. Closed output is `accepted: true` and
+<=30 unique operation UUID/status observations; empty operations is permitted by
+the pinned schema. This never claims deletion, quiescence or completion, even if an
+operation status is finished. Optional contradictory ancestry and compute-scoped
+receipts refuse. Error text, names, dates and arbitrary fields are not emitted.
+A failed/invalid acknowledgement triggers at most one bounded snapshot observation
+unless cancelled, then remains uncertain even if the snapshot is absent. There is
+no retry and no 404-as-success conversion. The accepted core's permanent journal
+binds one request key to the native target and blocks replay across runs; no
+unsupported provider idempotency header is invented. Native recovery must reconcile
+uncertain/accepted asynchronous work; source rollback must not remove tombstones.
+The native host, durable state, entitlement/effect qualification and applicable
+production/review gates remain unresolved. No live deletion or enablement is
+performed. This source is not the independent lifecycle-enforcing actor.
+
 `createNeonObjectDownloadOperations(trustedScope, transport)` adds
 `getProjectBranchBucketObject` as a closed byte-count observation, not a file-return
 tool. Copy one exact project/branch/bucket/object-key/revision. Require the separate

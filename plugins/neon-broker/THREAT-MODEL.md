@@ -12,12 +12,38 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Cross-agent/resource access | Common agent AND exact-resource policy; separate collection targets; copied trusted scope; exact response project/child binding. No broad list inferred from project access. |
 | Provider scope drift | Bound scope revision enters canonical target and is revalidated by host/core before transport; exact provider IDs/parent relations checked. Actual current binding adapter remains required. |
 | Secrets in response/error/audit | Allowlist projection excludes settings/hosts/owners/credentials/passwords/URIs and arbitrary errors/timestamps. Database/role names are emitted only when exact trusted bindings match; other arbitrary names stay excluded. Fixed errors discard raw bodies. Common reflected-lease checks and safe audit envelopes remain mandatory. Arbitrary secret DLP is not claimed. |
-| Redirect/SSRF/path injection | Explicit fixed GET methods and one structured log-query POST, constrained identifiers/catalog names, encoded cursor, fixed origin, redirect:error, no arbitrary URL/header arguments, no default fetch. Auth-status reads omit OAuth login/consent URLs, MCP resources and audiences; no secondary fetch. |
+| Redirect/SSRF/path injection | Explicit fixed GET methods, one reserved snapshot DELETE and one structured log-query POST, constrained identifiers/catalog names, encoded cursor, fixed origin, redirect:error, no arbitrary URL/header arguments, no default fetch. Auth-status reads omit OAuth login/consent URLs, MCP resources and audiences; no secondary fetch. |
 | Pagination/response/time amplification | 64 KiB per response; 1 s request including streamed body; 3.5 s operation; 10 branches/operations per page, three pages, duplicate/cycle checks; branch next/sort and operation cursor shapes are distinct; 30-row cap for other lists. No retries/partial success. |
 | Aggregate disclosure | Project-wide endpoint/operation collections and total branch counts have distinct exact-resource targets. Child/project grants never imply aggregate authority; response filtering is not request authorization. |
 | Read waking compute | No compute mutation/SQL/connection/secret fallback exists. GET is NOT proof; independent provider evidence and accepted enablement gates remain unsatisfied. |
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
+
+## Reserved snapshot-deletion source delta
+
+This source is a destructive mutation request, not a read, an enabled worker or a
+lifecycle enforcer. Its separate exact snapshot/delete grant, copied immutable
+ID/source-branch/revision and validated request-only plan require the common
+reserved native authority path. Policy alone cannot authorize it. No caller
+approval fields, native issuer, durable production journal, custody adapter or
+runtime registration are added. Missing native authority refuses before credential
+resolution; fixtures exercise exact target/plan binding and single-use consumption.
+
+A bounded project snapshot-list preflight requires the exact selected immutable ID
+and source branch. It validates the whole <=30-row nonpaginated list, rejecting
+duplicates and contradictory ancestry before a single fixed DELETE. It does not
+claim label/expiry CAS or lock the provider. HTTP202 and closed operation UUID/status
+observations mean only asynchronous acceptance, not removal or completion. No
+compute-scoped, foreign-project/branch or malformed receipt becomes success.
+
+Ambiguous effects trigger at most one bounded read, then stay uncertain regardless
+of observed absence/presence/read failure. No automatic DELETE retry, provider
+idempotency-header invention, 404-as-success or live polling exists. The consumed
+core's permanent journal tombstone blocks restart/replay; native recovery remains
+an integration prerequisite and may never discard an uncertain claim just to retry.
+Production deletion authority, provider entitlement/effects and native reviews
+remain unresolved; no live mutation, credential action or enablement occurs.
+Existing read-only tier statements below describe those individual deltas only.
 
 ## Selected OAuth-provider metadata delta
 
