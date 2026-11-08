@@ -159,6 +159,17 @@ test('pagination cycles, overflow, mismatched sort, duplicate rows and unsupport
   await assert.rejects(fixture({ endpoints: [endpoint], pagination: {} }).run('listProjectBranchEndpoints', cases[3][1]));
 });
 
+test('project projection accepts pinned-schema Postgres versions through 19 and refuses out-of-range values', async () => {
+  for (const pg_version of [14, 18, 19]) {
+    const value = { ...project, pg_version };
+    assert.deepEqual(await fixture({ project: value }).run('getProject', cases[0][1]), { project: value });
+  }
+  const operation = fixture({ project }).operation('getProject');
+  for (const pg_version of [13, 20, 19.5, '19', null]) {
+    assert.throws(() => operation.project({ project: { ...project, pg_version } }));
+  }
+});
+
 test('projection refuses malformed selected fields without reading accessors or arbitrary names', () => {
   const f = fixture({ project });
   for (const bad of [
@@ -196,6 +207,48 @@ test('pre-aborted calls do not touch transport; ignored cancellation still has a
   await assert.rejects(hung.run('getProject', cases[0][1]), { message: 'UPSTREAM_UNAVAILABLE' });
   assert(Date.now() - start < REQUEST_TIMEOUT_MS + 500);
   assert.equal(hung.requests.length, 1);
+});
+
+for (const boundary of ['fetch', 'body']) {
+  test(`transport refuses overdue ${boundary} success before the abort timer can run`, async () => {
+    const blockPastDeadline = () => {
+      const until = performance.now() + REQUEST_TIMEOUT_MS + 50;
+      const cell = new Int32Array(new SharedArrayBuffer(4));
+      while (performance.now() < until) Atomics.wait(cell, 0, 0, until - performance.now());
+    };
+    const f = fixture(() => {
+      if (boundary === 'fetch') {
+        blockPastDeadline();
+        return response({ project });
+      }
+      return new Response(new ReadableStream({
+        pull(controller) {
+          blockPastDeadline();
+          controller.enqueue(new TextEncoder().encode(JSON.stringify({ project })));
+          controller.close();
+        },
+      }, { highWaterMark: 0 }), { headers: { 'content-type': 'application/json' } });
+    });
+    const start = performance.now();
+    await assert.rejects(f.run('getProject', cases[0][1]), { message: 'UPSTREAM_UNAVAILABLE' });
+    assert(performance.now() - start >= REQUEST_TIMEOUT_MS);
+    assert.equal(f.requests.length, 1);
+    assert.equal(f.requests[0].init.signal.aborted, true);
+  });
+}
+
+test('transport accepts on-time success and refuses in-flight abort even when fetch ignores it', async () => {
+  const onTime = fixture({ project });
+  assert.deepEqual(await onTime.run('getProject', cases[0][1]), { project });
+  assert.equal(onTime.requests.length, 1);
+  const controller = new AbortController();
+  const aborted = fixture(() => {
+    controller.abort();
+    return new Promise(() => {});
+  });
+  await assert.rejects(aborted.run('getProject', cases[0][1], controller.signal), { message: 'UPSTREAM_UNAVAILABLE' });
+  assert.equal(aborted.requests.length, 1);
+  assert.equal(aborted.requests[0].init.signal.aborted, true);
 });
 
 test('transport refuses CR/LF credentials before invoking injected fetch', async () => {

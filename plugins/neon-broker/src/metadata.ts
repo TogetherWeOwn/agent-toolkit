@@ -180,7 +180,7 @@ export function createNeonMetadataOperations(scope: NeonMetadataScope, transport
         const project = field(raw, "project");
         check(field(project, "id") === projectId);
         return { project: { id: projectId, region_id: region.parse(field(project, "region_id")),
-          pg_version: integer(14, 18).parse(field(project, "pg_version")) } };
+          pg_version: integer(14, 19).parse(field(project, "pg_version")) } };
       }
       if (name === "getProjectBranch") return { branch: branch(field(raw, "branch")) };
       if (name === "getProjectEndpoint") return { endpoint: endpoint(field(raw, "endpoint")) };

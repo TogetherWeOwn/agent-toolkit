@@ -26,7 +26,10 @@ function id(value: string): string {
 export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadataTransport {
   async function get(path: string, query: URLSearchParams, options: MetadataRequestOptions): Promise<unknown> {
     if (/[\r\n]/.test(options.credential)) throw Error("UPSTREAM_UNAVAILABLE");
+    const expiresAt = performance.now() + REQUEST_TIMEOUT_MS;
     const controller = new AbortController();
+    // Timer callbacks cannot preempt synchronous fetch/body work or promise continuations.
+    const expired = () => controller.signal.aborted || performance.now() >= expiresAt;
     let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const abort = () => controller.abort();
@@ -39,13 +42,13 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       timer = setTimeout(abort, REQUEST_TIMEOUT_MS);
     });
     const work = async () => {
-      if (controller.signal.aborted) throw Error("UPSTREAM_UNAVAILABLE");
+      if (expired()) throw Error("UPSTREAM_UNAVAILABLE");
       const suffix = query.size ? `?${query.toString()}` : "";
       const response = await fetcher(`${NEON_ORIGIN}/api/v2${path}${suffix}`, {
         method: "GET", redirect: "error", signal: controller.signal,
         headers: { Authorization: `Bearer ${options.credential}`, Accept: "application/json" },
       });
-      if (controller.signal.aborted || response.status !== 200 || response.redirected ||
+      if (expired() || response.status !== 200 || response.redirected ||
         !/^application\/json(?:\s*;|$)/i.test(response.headers.get("content-type") ?? "")) {
         void response.body?.cancel().catch(() => {});
         throw Error("UPSTREAM_UNAVAILABLE");
@@ -61,7 +64,7 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       let bytes = 0;
       for (;;) {
         const item = await reader.read();
-        if (controller.signal.aborted) throw Error("UPSTREAM_UNAVAILABLE");
+        if (expired()) throw Error("UPSTREAM_UNAVAILABLE");
         if (item.done) break;
         bytes += item.value.byteLength;
         if (bytes > RESPONSE_BYTES) throw Error("UPSTREAM_UNAVAILABLE");
@@ -70,7 +73,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks)));
     };
     try {
-      return await Promise.race([work(), deadline]);
+      const result = await Promise.race([work(), deadline]);
+      if (expired()) throw Error("UPSTREAM_UNAVAILABLE");
+      return result;
     } catch {
       throw Error("UPSTREAM_UNAVAILABLE");
     } finally {
