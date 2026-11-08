@@ -14,6 +14,9 @@ import { prepare as prepareMaintenanceEvent } from "./tools/get-maintenance-even
 import { prepare as prepareOrganizationMembership } from "./tools/get-organization-membership.js";
 import { prepare as prepareOrganizationTeam } from "./tools/get-organization-team.js";
 import { prepare as prepareOrganizationTeamMember } from "./tools/get-organization-team-member.js";
+import { prepare as prepareServiceToken } from "./tools/get-service-token.js";
+import { prepare as prepareOauthToken } from "./tools/get-oauth-token.js";
+import { prepare as prepareWebhook } from "./tools/get-webhook.js";
 
 const organizationFields = { organization: slug, organizationId: identifier, revision: digest };
 const databaseFields = { ...organizationFields, database: slug, databaseId: identifier };
@@ -33,17 +36,23 @@ const teamFields = { team: closed({ id: identifier, slug }) };
 const organizationMembershipTarget = closed({ ...organizationFields, ...membershipFields });
 const organizationTeamTarget = closed({ ...organizationFields, ...teamFields });
 const organizationTeamMemberTarget = closed({ ...organizationFields, ...teamFields, ...membershipFields });
+const serviceTokenTarget = closed({ ...organizationFields, tokenId: identifier });
+const oauthTokenTarget = closed({ ...organizationFields, applicationId: identifier, tokenId: identifier });
+const webhookTarget = closed({ ...databaseFields, webhookId: identifier });
 
 type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeof databaseTarget.parse> |
   ReturnType<typeof branchTarget.parse> | ReturnType<typeof backupTarget.parse> |
   ReturnType<typeof backupPolicyTarget.parse> | ReturnType<typeof deployRequestTarget.parse> |
   ReturnType<typeof keyspaceTarget.parse> | ReturnType<typeof shardTarget.parse> |
   ReturnType<typeof maintenanceEventTarget.parse> | ReturnType<typeof organizationMembershipTarget.parse> |
-  ReturnType<typeof organizationTeamTarget.parse> | ReturnType<typeof organizationTeamMemberTarget.parse>;
+  ReturnType<typeof organizationTeamTarget.parse> | ReturnType<typeof organizationTeamMemberTarget.parse> |
+  ReturnType<typeof serviceTokenTarget.parse> | ReturnType<typeof oauthTokenTarget.parse> |
+  ReturnType<typeof webhookTarget.parse>;
 type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_backup" | "get_backup_policy" | "get_deploy_request" |
   "get_keyspace" | "get_shard" | "get_maintenance_event" |
-  "get_organization_membership" | "get_organization_team" | "get_organization_team_member";
+  "get_organization_membership" | "get_organization_team" | "get_organization_team_member" |
+  "get_service_token" | "get_oauth_token" | "get_webhook";
 type ResponseIdentity = "name-only-not-immutable" | "record-id-only-parent-not-verified" |
   "record-and-source-ids-destination-not-verified" | "record-and-branch-ids-parent-not-verified" |
   "record-and-user-ids-parent-not-verified";
@@ -159,4 +168,27 @@ export function bindGetOrganizationTeamMemberPreparation(rawTarget: unknown): (r
     membership: target.membership }, {});
   return bindRead(`planetscale/organization-team-member/${target.team.id}/${target.membership.id}`, target,
     "get_organization_team_member", read.request, "record-and-user-ids-parent-not-verified");
+}
+
+export function bindGetServiceTokenPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = serviceTokenTarget.parse(rawTarget);
+  const read = prepareServiceToken({ organization: target.organization, tokenId: target.tokenId }, {});
+  return bindRead(`planetscale/service-token/${target.tokenId}`, target,
+    "get_service_token", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindGetOauthTokenPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = oauthTokenTarget.parse(rawTarget);
+  const read = prepareOauthToken({ organization: target.organization, applicationId: target.applicationId,
+    tokenId: target.tokenId }, {});
+  return bindRead(`planetscale/oauth-token/${target.applicationId}/${target.tokenId}`, target,
+    "get_oauth_token", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindGetWebhookPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = webhookTarget.parse(rawTarget);
+  const read = prepareWebhook({ organization: target.organization, database: target.database,
+    webhookId: target.webhookId }, {});
+  return bindRead(`planetscale/webhook/${target.webhookId}`, target,
+    "get_webhook", read.request, "record-id-only-parent-not-verified");
 }

@@ -218,6 +218,27 @@ omission and resource identity separation. Twenty-four total pure preparations
 still mean zero runtime-integrated operations; adapter coverage stays 134/291
 with 157 missing.
 
+Three security-record detail seams additionally bind existing service-token,
+OAuth-token and webhook metadata GETs. Closed immutable host snapshots retain
+organization ID/name, revision, record ID and the OAuth application ID or database
+ID/name as applicable. Resources use `planetscale/service-token/<id>`,
+`planetscale/oauth-token/<application-id>/<token-id>` and
+`planetscale/webhook/<id>`; OAuth identity includes its application even if token
+IDs are reused. Every host field enters the plan hash. Empty caller arguments
+cannot supply another target, secret, request or authority.
+
+Existing projections verify only the record ID, not organization, database or
+application parent identity. Plans retain `record-id-only-parent-not-verified`
+and unverified non-waking semantics. Token timestamp presence does not establish
+validity, revocation or effective authority; webhook flags do not establish
+endpoint trust, delivery or authorization. Secret-bearing raw response bodies
+still require accepted broker-only transport/redaction/custody; safe synthetic
+projections are not that evidence. No executor, project hook, credential resolution
+or grant is supplied. `test/core-security-record-read-preparation.test.mjs` covers
+immutable snapshots, every-field hashes, binding refusals, secret canaries and
+resource separation. Twenty-seven total pure preparations remain separate from
+runtime integration; adapter coverage stays 134/291 with 157 missing.
+
 All 291 entries remain `incomplete`, `implemented=false`, `reviewed=false`,
 `enabled=false`, and entitlement `unknown`. Existing offline read/preview test
 paths are linked as source evidence, never as full `ProviderOperation` tests.

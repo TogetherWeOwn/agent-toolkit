@@ -1218,6 +1218,36 @@ and [CodeQL](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/4250508
 passed. This verifies the previous 22 topology contracts, not the new organization
 contracts. Earlier unchanged SDK recovery-test uncertainty remains unresolved.
 
+## Security-record detail core preparation — source increment
+
+`test/core-security-record-read-preparation.test.mjs` adds 26 synthetic contracts
+for three pure preparations of existing service-token/OAuth-token/webhook metadata
+reads. Closed immutable snapshots bind parent IDs/names, record ID, revision and
+OAuth application ID; all fields affect plan and full hashes. Fixed GET builders,
+empty caller arguments, complete/unsafe/extra-field refusals and accessor rejection
+are preserved. Resource kinds are separate; OAuth resource identity retains the
+application when token IDs are reused. Existing projections refuse record mismatch
+and omit synthetic raw-token/refresh-token/webhook-secret/URL/actor/grant canaries.
+They do not verify response organization/database/application parent identity.
+Plans retain this limitation and unverified non-waking semantics. Token presence
+flags never prove validity, revocation or effective authority; webhook flags never
+prove endpoint trust, delivery or authorization. Accepted broker-only raw-body
+transport/redaction/custody remains a prerequisite. No executor, project hook,
+registration, credential resolution, grant or authority consumption is supplied.
+Coverage stays 134/291 offline adapters, 157 missing, twelve previews and 27 pure
+preparations; zero runtime-integrated/reviewed/enabled/adopted operations. These 26
+contracts require exact-head Actions; no local suite, build or typecheck ran.
+
+Previous exact `3fc37b22f7a713c5b1c3aee882dee7e461095918`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42506669328)
+passed [tests](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42506669328/job/128810709776):
+1223/1223 PlanetScale, root 317/317, helpers 122/122, GitHub 219/219 and Neon 37/37,
+zero failures/skips/cancellations. Lint/typecheck/native-policy/ci-ok,
+[Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42506669257)
+and [CodeQL](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42506664914)
+passed. This verifies the previous 23 organization contracts, not the new security
+record contracts. Earlier unchanged SDK recovery-test uncertainty remains unresolved.
+
 ## Metrics preregistration — required before enablement
 
 Baseline and matched post-window measurements are **not yet collected or approved**.
