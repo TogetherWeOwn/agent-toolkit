@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The 102 adapters are pure request builders and bounded output projections,
+The 104 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,14 +36,14 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 102 | Narrow projections; not full operation coverage |
-| Missing source adapters | 189 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 104 | Narrow projections; not full operation coverage |
+| Missing source adapters | 187 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-102 adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 173
+104 adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 171
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
@@ -365,6 +365,19 @@ The configuration-profile change list/get aliases document **308 only**, like th
 other change aliases, and remain missing pending a reviewed fixed-alias contract.
 No automatic redirect following or fabricated success adapter is implemented.
 
+Traffic-budget list/get (`list_traffic_budgets`, `get_traffic_budget`) returns only
+broker-bound ID and documented `enforce`/`warn`/`off` mode. Scopes snapshot exact
+budget IDs; list scopes require 1–32 unique IDs. Unknown IDs, duplicate IDs and
+malformed selected fields refuse the whole page. Budget names, numeric limits,
+actors, rules, tags, query fingerprints, keyspaces, SQL and timestamps are omitted.
+`effectiveEnforcement: not-established` means a reported mode never establishes
+actual throttling, rule applicability, safety, change permission or spend authority.
+Optional filters and query-specific budget reads remain incomplete. Requesting a
+parent-wide list needs independent collection permission and broker-side raw-body
+custody: output confinement does not restrict what the provider sends. Current
+parent ownership, immutable branch mapping, selected-field reflection guards and
+operation-specific non-waking evidence remain integration prerequisites.
+
 Arguments are closed, scalar and bounded. Configured resource scope is separate
 from arguments and must eventually be resolved by the shared core from an
 authorized resource handle, not accepted from a model. Each request fixes HTTPS
@@ -412,7 +425,7 @@ No connector or replacement broker is introduced.
 ## Local mutation-plan artifacts — not executors
 
 `src/mutation-plans.ts` supplies three pure, bounded previews. They are **not API
-adapters**, do not consume authority and do not increase the 102-adapter count.
+adapters**, do not consume authority and do not increase the 104-adapter count.
 Each artifact labels itself `validated-local-plan-not-provider-dry-run`, with
 execution not implemented, remote preconditions not verified and provider dry-run
 not performed. No network executor, output projector or secret placement exists.
@@ -446,7 +459,7 @@ The candidates only document requirements; native routing, expiry, exact-target
 binding, atomic consumption, replay/concurrent-use refusal and approved placement
 are **not implemented or tested as authority enforcement here**. Credential routes
 remain incomplete until a broker-only sink and reconciliation are accepted. The
-other 173 tier classifications are unresolved, not automatically harmless reads or
+other 171 tier classifications are unresolved, not automatically harmless reads or
 ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.

@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 189 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 187 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -284,6 +284,28 @@ safe retry, native closure or authority. Official configuration-profile change
 aliases are 308-only gaps with a reviewed-contract prerequisite, not adapters.
 Fresh exact-head Actions execution is required; these fixtures are not live policy,
 collection permission, current parent ownership or non-waking evidence.
+
+`test/traffic-budgets.test.mjs` adds 19 synthetic contracts for two fixed offline
+traffic-budget list/get reads. Only broker-bound ID and the documented
+`enforce`/`warn`/`off` mode survive; `effectiveEnforcement: not-established`
+explicitly declines runtime enforcement or change authority. Name, limits, actors,
+rules, tags, query fingerprints, keyspaces, SQL and times are omitted wholesale.
+Scopes snapshot 1–32 unique IDs; unknown/duplicate/malformed rows refuse the whole
+page. Tests cover immutable snapshots, closed inputs, bounded wire/pagination,
+non-reflection and official selected-field/path agreement. Parent collection
+permission, current ownership/immutable target mapping, raw-body custody,
+selected-field reflection guards and non-waking evidence remain prerequisites.
+Optional filters and query-specific budget reads remain incomplete. Coverage is
+**104/291 bounded metadata subsets; 187 missing**; tiers 104 provisional read /
+16 unreviewed reserved / 171 unresolved; zero integrated/reviewed/enabled/adopted.
+Fresh exact-head Actions is required; no local suite or live policy is claimed.
+
+Prior exact `7c7a062a79690b435f18f3a9c5f31d4c05175fba`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42448907631)
+passed [test](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42448907631/job/128633734301),
+lint/typecheck, native-policy and ci-ok. This verifies the prior 102-adapter head,
+not the new traffic-budget fixtures. Earlier unchanged SDK recovery-test retry
+cause remains unresolved; no repair claim or weakened assertion.
 
 ## Metrics preregistration — required before enablement
 

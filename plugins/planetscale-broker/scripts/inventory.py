@@ -12,6 +12,8 @@ import sys
 
 SOURCE_SHA256 = "ae45866599cb5d248fadb9d7f0ed30fd6aed440a17ec0950c4e9e0d58da4cb73"
 ADAPTERS = {
+    "get_traffic_budget": "get-traffic-budget",
+    "list_traffic_budgets": "list-traffic-budgets",
     "get_keyspace_rollout_status": "get-keyspace-rollout-status",
     "get_vtctld_operation": "get-vtctld-operation",
     "get_database_postgres_cidr": "get-database-postgres-cidr",
@@ -238,6 +240,7 @@ def policy_candidate(operation_id):
 
 def adapter_test(operation_id):
     for operations, name in [
+        ({"get_traffic_budget", "list_traffic_budgets"}, "traffic-budgets"),
         ({"get_keyspace_rollout_status", "get_vtctld_operation"}, "operation-status"),
         (NETWORK_THROTTLER, "network-throttler"),
         (CONFIGURATION_DEFINITIONS, "configuration-definitions"),
