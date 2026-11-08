@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 164 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 162 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -40,6 +40,38 @@ read-only transactions, statement/lock/row/byte/page/time caps and native closur
 evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
+
+## Historical-metric availability source increment
+
+`test/historical-metrics.test.mjs` adds 22 synthetic contracts for two fixed
+branch/tablet historical reads. Broker-bound metric subsets (queries/query_errors
+or replication_lag/primary_cpu_usage), canonical UTC from/to, positive <=15 minute
+window and fixed steps=16. Whole-response refusal on mismatched times/metric,
+malformed type/interval/series or nonfinite, out-of-window, duplicate/unordered
+point timestamps. Caps: eight series, sixteen points each, 64 KiB wire. Only
+requestBranchId/metric and series/sample-presence flags survive, with explicit
+health/provenance not-established. Values, labels, pod/role/query details and
+timestamps are omitted; no native authority, completeness or operational health.
+
+MetricSeries has no branch identity. The request ID is never represented as a
+verified response identity. Trusted response/request transport provenance, fresh
+branch ownership, branch-wide collection permission, raw-body custody and
+non-waking semantics remain implementation/acceptance prerequisites. Other
+metrics/filters/windows, query/tag metrics and full capability stay incomplete.
+Coverage: 129/291 bounded metadata subsets, 162 missing (20 GETs, 142 mutations);
+tiers 129 provisional read / 16 unreviewed reserved / 146 unresolved. Zero
+integrated/reviewed/enabled/adopted.
+
+Previous exact repair head `13bb83ceeb8e52ed5c044de38d0af38dc01d8e77`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42467427310)
+passed test/lint/typecheck/native-policy/ci-ok: root 181/181, helpers 122/122,
+GitHub broker 219/219, PlanetScale 852/852, zero failures/skips. CodeQL actions
+and JS/TS passed, but [Python initialization](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42467408383/job/128690035715)
+failed downloading its bundle with repeated HTTP 504, before analysis. GitHub
+refused the one failed-job rerun request: this run cannot be retried. No analysis
+pass, security waiver or repair is claimed. New-head Actions evidence remains
+required for these new fixtures and full checks; no local suite/build/typecheck
+or CI mirror ran. Earlier SDK recovery cause remains unresolved.
 
 ## CI download resilience repair
 

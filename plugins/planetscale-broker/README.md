@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The 127 adapters are pure request builders and bounded output projections,
+The 129 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,19 +36,40 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 127 | Narrow projections; not full operation coverage |
-| Missing source adapters | 164 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 129 | Narrow projections; not full operation coverage |
+| Missing source adapters | 162 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-127 adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 148
+129 adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 146
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
 backups/restore, schema/deploy, topology, maintenance and every other official
 area remain in the map even when access or implementation is missing.
+
+## Historical-metric availability metadata
+
+`planetscale.get_branch_metrics` supports only `queries` / `query_errors`;
+`planetscale.get_tablet_metrics` supports only `replication_lag` /
+`primary_cpu_usage`. One metric and canonical UTC from/to stamps are broker-bound,
+with a positive window at most 15 minutes and fixed `steps=16`. No caller filters.
+Responses must match both stamps and the selected metric; bounded type/interval,
+series and finite chronological point-pair checks refuse the whole response on
+failure. Caps are eight series, sixteen points per series and 64 KiB wire.
+Only request-bound branch ID, metric enum, series/sample-presence booleans and
+`health` / `provenance: not-established` survive. No values, labels, role/pod/query
+details or times are returned. Empty series and empty samples remain distinct.
+
+The official `MetricSeries` response has **no branch identity**. A request-bound
+ID is not an independently verified response identity; matching stamps/metric
+cannot prove provenance. Integration requires trusted transport-to-request binding,
+fresh branch ID/name ownership, whole-branch collection permission, raw-body
+custody and non-waking evidence. No label, pod, shard or keyspace isolation,
+completeness, health, freshness, rollback or closure is established. Other metrics,
+filters/windows/steps, query/tag metrics and full capability remain incomplete.
 
 ## Instant-metric availability metadata
 
@@ -61,8 +82,8 @@ values/pods/roles, labels and timestamps are never returned. The receipt contain
 bound branch ID, metric enum and a samples-present boolean, plus
 `health: not-established`. An absent metric and an empty sample array remain
 distinct. Neither presence nor absence proves freshness, health, restore
-completion, topology, native closure or authority. Optional filters, historical
-metrics and full metrics capability remain incomplete. No pod/keyspace-level
+completion, topology, native closure or authority. Optional filters and full
+metrics capability remain incomplete; the historical subset is separate above. No pod/keyspace-level
 isolation is claimed; current branch ownership, parent collection permission,
 raw-body custody and non-waking evidence remain integration prerequisites.
 
