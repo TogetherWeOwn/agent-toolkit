@@ -91,6 +91,7 @@ export interface CloudflareReadScope extends MetadataScope {
   workerBuildTriggers?: BuildTriggerScope["workers"];
   workerBuildRecords?: BuildRecordScope["workers"];
   queueConsumers?: QueueConsumerScope["queues"];
+  queueConsumerConfigurations?: QueueConsumerScope["configurationConsumers"];
   eventSubscriptions?: EventSubscriptionScope["subscriptions"];
   secretStores?: SecretsStoreMetadataScope["stores"];
   durableNamespaces?: DurableObjectMetadataScope["namespaces"];
@@ -139,7 +140,8 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
   const workerAccount = workerAccountDescriptors({ accountId, revision,
     settingsReadAllowed: scope.workerAccountSettingsReadAllowed ?? false,
     ...(scope.workerAccountExpectedSubdomain === undefined ? {} : { expectedSubdomain: scope.workerAccountExpectedSubdomain }) });
-  const consumers = queueConsumerDescriptors({ accountId, revision, queues: scope.queueConsumers ?? [] });
+  const consumers = queueConsumerDescriptors({ accountId, revision, queues: scope.queueConsumers ?? [],
+    configurationConsumers: scope.queueConsumerConfigurations ?? [] });
   const events = eventSubscriptionDescriptors({ accountId, revision, subscriptions: scope.eventSubscriptions ?? [] });
   const stores = secretsStoreMetadataDescriptors({ accountId, revision, stores: scope.secretStores ?? [] });
   const durable = durableObjectMetadataDescriptors({ accountId, revision, namespaces: scope.durableNamespaces ?? [] });

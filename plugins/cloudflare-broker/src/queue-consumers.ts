@@ -13,10 +13,21 @@ export interface QueueConsumerScope {
   accountId: string;
   revision: string;
   queues?: readonly { queueId: string; consumers: readonly Consumer[] }[];
+  configurationConsumers?: readonly { queueId: string; consumerIds: readonly string[] }[];
 }
+type ConfiguredNumber = number | "unavailable";
+type ConsumerConfiguration = Readonly<{
+  subject: "configured-queue-consumer-delivery";
+  batchSize: ConfiguredNumber;
+  maxRetries: ConfiguredNumber;
+  retryDelaySeconds: ConfiguredNumber;
+  effectiveDelivery: "not-established";
+} & ({ maxConcurrency: ConfiguredNumber | null; maxWaitTimeMs: ConfiguredNumber } |
+  { visibilityTimeoutMs: ConfiguredNumber })>;
 interface ConsumerMetadata {
   readonly queueId: string;
   readonly consumer: Consumer;
+  readonly configuration?: ConsumerConfiguration;
   readonly subject: "configured-queue-consumer";
   readonly effectiveDelivery: "not-established";
 }
@@ -60,6 +71,33 @@ export function queueConsumerDescriptors(scope: QueueConsumerScope): {
       }
     }
     allowed.set(queueId, consumers);
+  }
+  const configurationConsumers = scope.configurationConsumers ?? [];
+  requireThat(Array.isArray(configurationConsumers) && configurationConsumers.length <= 100, "cap");
+  const configurations = new Map<string, Set<string>>();
+  for (const selected of configurationConsumers) {
+    requireThat(selected !== null && typeof selected === "object", "schema");
+    const queueId = identifier.parse(selected.queueId);
+    requireThat(!configurations.has(queueId) && allowed.has(queueId), "scope");
+    requireThat(Array.isArray(selected.consumerIds) && selected.consumerIds.length <= 100, "cap");
+    const ids = new Set<string>(selected.consumerIds.map((value: unknown) => identifier.parse(value)));
+    requireThat(ids.size === selected.consumerIds.length, "schema");
+    for (const id of ids) requireThat(allowed.get(queueId)!.has(id), "scope");
+    configurations.set(queueId, ids);
+  }
+  function configuration(row: Row, type: Consumer["type"]): ConsumerConfiguration {
+    const settings = row.settings === undefined ? {} : object(row.settings);
+    function number(key: string): ConfiguredNumber {
+      const value = settings[key];
+      if (value === undefined) return "unavailable";
+      requireThat(typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= Number.MAX_SAFE_INTEGER, "upstream");
+      return value;
+    }
+    return Object.freeze({ subject: "configured-queue-consumer-delivery" as const,
+      batchSize: number("batch_size"), maxRetries: number("max_retries"), retryDelaySeconds: number("retry_delay"),
+      ...(type === "worker" ? { maxConcurrency: settings.max_concurrency === null ? null : number("max_concurrency"),
+        maxWaitTimeMs: number("max_wait_time_ms") } : { visibilityTimeoutMs: number("visibility_timeout_ms") }),
+      effectiveDelivery: "not-established" as const });
   }
   function selections(queueId: string): Map<string, Consumer> {
     const result = allowed.get(queueId);
@@ -134,8 +172,9 @@ export function queueConsumerDescriptors(scope: QueueConsumerScope): {
       const { queueId, consumerId } = getInput.parse(value.arguments);
       const expected = selections(queueId).get(consumerId);
       requireThat(expected !== undefined, "scope");
-      return bounded({ queueId, consumer: consumer(row, queueId, expected), subject: "configured-queue-consumer" as const,
-        effectiveDelivery: "not-established" as const });
+      return bounded({ queueId, consumer: consumer(row, queueId, expected),
+        ...(configurations.get(queueId)?.has(consumerId) === true ? { configuration: configuration(row, expected.type) } : {}),
+        subject: "configured-queue-consumer" as const, effectiveDelivery: "not-established" as const });
     },
   });
   return Object.freeze({ consumersList, consumerGet });
