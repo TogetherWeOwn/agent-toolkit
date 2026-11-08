@@ -120,12 +120,16 @@ export function createNeonFunctionOperations(scope: NeonFunctionScope, transport
         values.forEach(validateRow);
         result.push(...values);
         const pagination = optional(raw, "pagination");
-        if (pagination === undefined) {
+        // CursorPaginationResponse returns next; cursor is the request parameter.
+        // No sorting parameters exist on this endpoint, so no sort echo is expected.
+        const next = pagination === undefined ? undefined : optional(pagination, "next");
+        if (pagination !== undefined) check(Reflect.ownKeys(pagination as object).every(key => key === "next"));
+        if (next === undefined) {
           const combined = { functions: result };
           projectFor(name, combined);
           return combined;
         }
-        cursor = closed({ cursor: text(256, /^[\x20-\x7e]+$/) }).parse(pagination).cursor;
+        cursor = text(256, /^[\x20-\x7e]+$/).parse(next);
         check(!cursors.has(cursor));
         cursors.add(cursor);
       }

@@ -455,7 +455,7 @@ test('maximum function selection/output fits common budgets and collection/detai
   config.branchIds[0] = 'br-a';
   const values = functions.map(({ id, slug }) => ({ ...neonFunction, id, slug }));
   const f = brokerFixture('listProjectBranchFunctions', functionCases[0][1], (url, init, n) => response(n === 1 ?
-    { functions: values.slice(0, 10), pagination: { cursor: 'page-2' } } : { functions: values.slice(10) }), {}, config);
+    { functions: values.slice(0, 10), pagination: { next: 'page-2' } } : { functions: values.slice(10), pagination: {} }), {}, config);
   const result = await f.call();
   assert.equal(result.ok, true);
   assert.deepEqual(result.value, { functions: values });

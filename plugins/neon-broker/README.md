@@ -182,7 +182,10 @@ status. Absent deployments remain absent; active deployment must be completed, a
 current pending/building/completed/failed remains distinct from active. Names,
 invocation URLs, source, environment names, runtime, memory, errors and timestamps
 are omitted and never followed. Pagination uses fixed 10-row pages and bounded
-encoded `pagination.cursor` for at most three pages. Duplicated IDs/slugs, oversized
+encoded response `pagination.next` (request `cursor`) for at most three pages.
+Absent `next`, including an empty pagination object, terminates the sequence;
+unexpected sort metadata refuses because the endpoint has no sorting parameters.
+Duplicated IDs/slugs, oversized
 pages, cursor cycles and an unfinished third page refuse rather than silently
 truncate. Beta availability, provider side effects and runtime qualification remain
 unknown; 404 never becomes an empty list, a fabricated status or a deployment/invoke

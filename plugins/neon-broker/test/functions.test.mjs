@@ -98,27 +98,32 @@ function fOperation(name) { return fixture({}).operation(name); }
 
 test('function list pagination is bounded, encoded, unique and never silently truncated', async () => {
   const [name, args] = cases[0];
-  const f = fixture((url, init, n) => response(n === 1 ? { functions: [], pagination: { cursor: 'opaque/+?&=' } } : { functions: [fn] }));
+  const f = fixture((url, init, n) => response(n === 1 ? { functions: [], pagination: { next: 'opaque/+?&=' } } : { functions: [fn] }));
   assert.deepEqual(await f.run(name, args), { functions: [fn] });
   assert.equal(f.requests.length, 2);
   const query = new URL(f.requests[1].url).searchParams;
   assert.equal(query.get('cursor'), 'opaque/+?&=');
   assert.equal(query.get('limit'), String(PAGE_SIZE));
   assert.deepEqual(await fixture({ functions: [] }).run(name, args), { functions: [] });
-  for (const value of [null, {}, { cursor: '' }, { cursor: 'x\n' }, { cursor: 'x'.repeat(257) }, { next: 'x' }, { cursor: 'x', limit: 10 }]) {
+  for (const pagination of [undefined, {}]) {
+    const terminal = fixture({ functions: [fn], ...(pagination === undefined ? {} : { pagination }) });
+    assert.deepEqual(await terminal.run(name, args), { functions: [fn] });
+    assert.equal(terminal.requests.length, 1);
+  }
+  for (const value of [null, { next: '' }, { next: 'x\n' }, { next: 'x'.repeat(257) }, { cursor: 'x' }, { next: 'x', limit: 10 }, { sort_order: 'asc' }]) {
     await assert.rejects(fixture({ functions: [], pagination: value }).run(name, args));
   }
-  const cycle = fixture({ functions: [], pagination: { cursor: 'same' } });
+  const cycle = fixture({ functions: [], pagination: { next: 'same' } });
   await assert.rejects(cycle.run(name, args));
   assert.equal(cycle.requests.length, 2);
-  const overflow = fixture((url, init, n) => response({ functions: [], pagination: { cursor: `page-${n}` } }));
+  const overflow = fixture((url, init, n) => response({ functions: [], pagination: { next: `page-${n}` } }));
   await assert.rejects(overflow.run(name, args), { message: 'UPSTREAM_UNAVAILABLE' });
   assert.equal(overflow.requests.length, 3);
-  const duplicates = fixture((url, init, n) => response(n === 1 ? { functions: [fn], pagination: { cursor: 'next' } } : { functions: [fn] }));
+  const duplicates = fixture((url, init, n) => response(n === 1 ? { functions: [fn], pagination: { next: 'next' } } : { functions: [fn] }));
   await assert.rejects(duplicates.run(name, args));
   await assert.rejects(fixture({ functions: Array(11).fill(fn) }).run(name, args));
   const aborted = new AbortController();
-  const cancelled = fixture(() => { aborted.abort(); return response({ functions: [], pagination: { cursor: 'next' } }); });
+  const cancelled = fixture(() => { aborted.abort(); return response({ functions: [], pagination: { next: 'next' } }); });
   await assert.rejects(cancelled.run(name, args, aborted.signal));
   assert.equal(cancelled.requests.length, 1);
 });
@@ -133,7 +138,7 @@ test('function list filters unrelated DNS-label functions but never hides a chan
   for (const functions of [new Array(1), Object.assign([fn], { extra: canary }),
     Object.defineProperty([fn], '0', { get() { throw Error('getter'); }, enumerable: true })]) assert.throws(() => op.project({ functions }));
   assert.throws(() => op.project({ functions: Array(31).fill(fn) }));
-  assert.throws(() => op.project({ functions: [fn], pagination: { cursor: 'more' } }));
+  assert.throws(() => op.project({ functions: [fn], pagination: { next: 'more' } }));
 });
 
 test('function scope copies bounded unique ID/slug/branch bindings and offers no deploy/invoke tools', () => {
