@@ -7,6 +7,27 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonLegacyConsumptionOperations(trustedScope, transport)` adds
+`getConsumptionHistoryPerProject` for legacy-plan history only. It copies one
+organization/project/revision and a canonical UTC hourly window of at most 24
+hours. Its distinct exact
+`neon/organizations/<org>/projects/<project>/consumption/legacy` grant is not
+interchangeable with V2 history, project metadata or parent grants. Every GET to
+`/consumption_history/projects` sends org_id, project_ids, the pinned window,
+hourly granularity and only compute_time_seconds. Closed output contains the
+exact project ID and observed hourly boundaries with nonnegative safe-integer
+CPU seconds. Billing metadata, other metrics and retired storage quantities are
+omitted. Absent history remains absent rather than fabricated zero usage.
+
+Ten-row cursor pages, a three-page ceiling, 30 unique periods and 24 total hourly
+frames bound the response. Foreign/duplicate projects, contradictory ancestry,
+nested pagination, duplicate periods, unsafe quantities and unordered, overlapping
+or out-of-window frames refuse without partial output. Canonical UTC-hour period
+boundaries are a conservative subset. Legacy-plan availability and provider effects
+remain unqualified; 403/404/406 refuse without V2 or unfiltered fallback. The
+public non-waking description is not native qualification. No plan upgrade,
+mutation, spend enforcement or runtime authority is supplied.
+
 `createNeonBranchConsumptionOperations(trustedScope, transport)` adds
 `getConsumptionHistoryPerBranchV2` for one copied organization/project/branch,
 revision and explicit UTC hour-aligned window of at most 24 hours. Its exact

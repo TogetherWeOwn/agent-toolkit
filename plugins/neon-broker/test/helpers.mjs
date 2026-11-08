@@ -29,6 +29,7 @@ import { createNeonLogFieldOperations } from '../dist/plugins/neon-broker/src/lo
 import { createNeonBucketObjectOperations } from '../dist/plugins/neon-broker/src/bucket-objects.js';
 import { createNeonConsumptionOperations } from '../dist/plugins/neon-broker/src/consumption.js';
 import { createNeonBranchConsumptionOperations } from '../dist/plugins/neon-broker/src/branch-consumption.js';
+import { createNeonLegacyConsumptionOperations } from '../dist/plugins/neon-broker/src/legacy-consumption.js';
 
 export const scope = {
   projectId: 'project-a', revision: 'scope-v1', branchIds: ['br-a', 'br-b'],
@@ -321,7 +322,18 @@ export const branchConsumptionCases = [
 export function branchConsumptionFixture(value, config = branchConsumptionScope) {
   return fixture(value, config, createNeonBranchConsumptionOperations);
 }
-export const allCases = [...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
+export const legacyConsumptionFrame = { timeframe_start: consumptionFrame.timeframe_start,
+  timeframe_end: consumptionFrame.timeframe_end, compute_time_seconds: 123 };
+export const legacyConsumptionPeriod = { ...consumptionPeriod, period_plan: 'scale', consumption: [legacyConsumptionFrame] };
+export const legacyConsumptionCases = [
+  ['getConsumptionHistoryPerProject', { org_id: 'org-a', project_id: 'project-a', from: consumptionScope.from, to: consumptionScope.to },
+    { projects: [{ project_id: 'project-a', periods: [legacyConsumptionPeriod] }] },
+    { projects: [{ project_id: 'project-a', consumption: [legacyConsumptionFrame] }] }],
+];
+export function legacyConsumptionFixture(value, config = consumptionScope) {
+  return fixture(value, config, createNeonLegacyConsumptionOperations);
+}
+export const allCases = [...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });

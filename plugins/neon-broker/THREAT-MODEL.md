@@ -19,6 +19,29 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
 
+## Legacy project consumption delta
+
+`getConsumptionHistoryPerProject` uses a distinct legacy consumption target with
+copied organization/project/revision and exact hour-aligned UTC window <=24h.
+Mandatory org_id/project_ids filters and compute_time_seconds selection prevent
+an account-wide or default multi-metric request. V2 and parent grants do not
+authorize legacy history. The fixed legacy endpoint is never a fallback from V2.
+
+Only exact project ID, observed hourly boundaries and safe-integer CPU seconds
+are projected. Billing identifiers/plans, other metrics, retired storage values
+and diagnostics are not read or exposed. Missing observations are not zero usage,
+capacity or entitlement evidence. Full pages validate before output; duplicates,
+conflicting ancestry, malformed periods, unsafe quantities, nested pagination,
+cycles and overlapping/unordered/out-of-window frames refuse without partial
+success. Ten rows/page, three pages, 30 periods and 24 total frames bound work.
+
+Strict copied arguments, detached execution, exact grants, identity, replay/TOCTOU,
+reflection and maximum budgets have authored source/common-core contracts.
+Unavailable legacy plans/ranges refuse; no upgrade, V2 fallback, mutation or spend
+control exists. Provider documentation describes a non-waking read, but native
+provider-effect and entitlement qualification remain required. No runtime
+registration, live grant or lifecycle authority is introduced.
+
 ## Selected bucket-object metadata delta
 
 `listProjectBranchBucketObjects` copies one project/branch/bucket/revision, required
