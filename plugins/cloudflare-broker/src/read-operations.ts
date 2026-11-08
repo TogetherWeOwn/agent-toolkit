@@ -5,6 +5,7 @@ import { subscriptionDescriptors, type SubscriptionScope } from "./subscriptions
 import { workerScheduleDescriptor, type WorkerScheduleScope } from "./worker-schedules.js";
 import { workerBuildDescriptor, type WorkerBuildScope } from "./worker-builds.js";
 import { buildTriggerDescriptor, type BuildTriggerScope } from "./build-triggers.js";
+import { buildRecordDescriptors, type BuildRecordScope } from "./build-records.js";
 import { queueConsumerDescriptors, type QueueConsumerScope } from "./queue-consumers.js";
 import { pagesDomainDescriptors, type PagesDomainScope } from "./pages-domains.js";
 import { hostnameTlsDescriptors, type HostnameTlsScope } from "./hostname-tls.js";
@@ -78,6 +79,7 @@ export interface CloudflareReadScope extends MetadataScope {
   workerSchedules?: WorkerScheduleScope["workers"];
   workerBuildConfigurations?: WorkerBuildScope["workers"];
   workerBuildTriggers?: BuildTriggerScope["workers"];
+  workerBuildRecords?: BuildRecordScope["workers"];
   queueConsumers?: QueueConsumerScope["queues"];
   eventSubscriptions?: EventSubscriptionScope["subscriptions"];
   secretStores?: SecretsStoreMetadataScope["stores"];
@@ -120,6 +122,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
   }
   const { accountId, revision } = scope;
   const subscriptions = subscriptionDescriptors({ accountId, revision, subscriptions: scope.subscriptions ?? [] });
+  const builds = buildRecordDescriptors({ accountId, revision, workers: scope.workerBuildRecords ?? [] });
   const consumers = queueConsumerDescriptors({ accountId, revision, queues: scope.queueConsumers ?? [] });
   const events = eventSubscriptionDescriptors({ accountId, revision, subscriptions: scope.eventSubscriptions ?? [] });
   const stores = secretsStoreMetadataDescriptors({ accountId, revision, stores: scope.secretStores ?? [] });
@@ -147,6 +150,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(workerScheduleDescriptor({ accountId, revision, workers: scope.workerSchedules ?? [] })),
     metadata(workerBuildDescriptor({ accountId, revision, workers: scope.workerBuildConfigurations ?? [] })),
     metadata(buildTriggerDescriptor({ accountId, revision, workers: scope.workerBuildTriggers ?? [] })),
+    metadata(builds.buildsList), metadata(builds.buildGet),
     metadata(descriptors.workersList), metadata(descriptors.secretNames),
     metadata(descriptors.hyperdriveList), metadata(descriptors.hyperdriveGet),
     metadata(descriptors.d1List), metadata(descriptors.d1Get),

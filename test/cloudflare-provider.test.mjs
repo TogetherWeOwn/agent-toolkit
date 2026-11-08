@@ -11,6 +11,7 @@ import { subscriptionDescriptors } from "../dist/plugins/cloudflare-broker/src/s
 import { workerScheduleDescriptor } from "../dist/plugins/cloudflare-broker/src/worker-schedules.js";
 import { workerBuildDescriptor } from "../dist/plugins/cloudflare-broker/src/worker-builds.js";
 import { buildTriggerDescriptor } from "../dist/plugins/cloudflare-broker/src/build-triggers.js";
+import { buildRecordDescriptors } from "../dist/plugins/cloudflare-broker/src/build-records.js";
 import { queueConsumerDescriptors } from "../dist/plugins/cloudflare-broker/src/queue-consumers.js";
 import { pagesDomainDescriptors } from "../dist/plugins/cloudflare-broker/src/pages-domains.js";
 import { hostnameTlsDescriptors } from "../dist/plugins/cloudflare-broker/src/hostname-tls.js";
@@ -91,6 +92,7 @@ const allDescriptors = { ...metadataOnly, ...deletionDescriptors, contentDescrip
   workerSchedules: workerScheduleDescriptor({ accountId: account, revision: "policy-1" }),
   workerBuild: workerBuildDescriptor({ accountId: account, revision: "policy-1" }),
   buildTriggers: buildTriggerDescriptor({ accountId: account, revision: "policy-1" }),
+  ...buildRecordDescriptors({ accountId: account, revision: "policy-1" }),
   ...queueConsumerDescriptors({ accountId: account, revision: "policy-1" }),
   ...pagesDomainDescriptors({ accountId: account, revision: "policy-1" }),
   ...hostnameTlsDescriptors({ accountId: account, zoneId: zone, revision: "policy-1" }),
