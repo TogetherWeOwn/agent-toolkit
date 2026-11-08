@@ -51,6 +51,26 @@ Outputs are fixed projections with enum/boolean/bounded-identifier validation.
 The eventual common-core secret guard must also reject reflected credential values
 in selected fields; dropping known secret fields alone cannot prove no disclosure.
 
+## Individual change-request cancellation — preview only
+
+`prepareCancelChangeRequest` binds closed immutable database/branch/request/target
+IDs, names, revision, production, state, canDelete and exact documented type pairs.
+Null target IDs refuse. Draft/pending plus canDelete=true are deliberately narrow
+local refusal rules; the API may still reject with 422. Neither flags nor revision
+authenticate current ownership, cancellability or authority. The plan identifies
+one request by ID with a bodyless DELETE; deprecated/collection resize-cancel
+paths are not substituted. Parameters, previous settings, SKUs, raw provider
+bodies and caller-chosen force/approval/credential selectors are unsupported.
+
+No executor, approval consumption, native precondition, provider dry-run or
+rollback mechanism is supplied. RM plus independent conjunctive security/spend/host
+effect classification remains unreviewed; cancelling a planned security improvement
+can weaken the intended outcome. Independent fresh parent and target bindings,
+state revalidation, native policy/approval and uncertain-outcome recovery remain
+prerequisites. Applying/terminal work refuses, but snapshots cannot prove unchanged
+configuration or native closure. Tests cover official type/state/path bindings,
+strict schemas, accessors, mutation, canaries and disabled/missing coverage.
+
 ## Organization audit-event metadata — offline only
 
 `list_audit_logs` fixes the organization audit-log path and first-page `limit=10`;

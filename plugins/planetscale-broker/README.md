@@ -42,13 +42,36 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-134 adapter rows have a provisional read tier; twenty-two protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 135
+134 adapter rows have a provisional read tier; twenty-three protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 134
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
 backups/restore, schema/deploy, topology, maintenance and every other official
 area remain in the map even when access or implementation is missing.
+
+## Individual change-request cancellation plan subset
+
+`src/change-cancel-plan.ts` adds one pure preview, not an API adapter or executor.
+Closed immutable broker snapshots bind database/branch/request/target IDs, parent
+and target names, revision, production, state and matching documented target and
+change types. Null target identity refuses. Only draft/pending plus canDelete=true
+are accepted: these are intentionally narrow local refusal rules, not documented
+remote preconditions or native authority. The provider may still refuse with 422.
+The fixed bodyless DELETE identifies one change request by ID; legacy collection
+resize cancellations and redirect aliases are not substituted. Arguments are empty;
+there are no configuration values, SKU parameters, force or rollback selectors.
+
+RM and independently classified conjunctive security/spend/host effects remain
+unreviewed candidates. A planned security improvement may be cancelled, so the
+verb never establishes safety. No executor, native precondition, provider dry-run
+or approval consumption exists. Fresh independent parent/target ownership and
+state revalidation, native policy/approval binding and uncertain-outcome recovery
+remain prerequisites. A snapshot never proves unchanged configuration or closure.
+
+There are ten local plan subsets, separately counted from the unchanged 134/291
+bounded offline metadata subsets and 157 missing adapters. Zero operations are
+integrated, reviewed, enabled or adopted.
 
 ## Configuration-cancellation plan subsets
 
@@ -71,7 +94,7 @@ prove freshness, unchanged settings, successful rollback or closure. Actual use
 requires reviewed native identity/policy/approval binding, fresh parent/keyspace
 identity and state revalidation plus uncertain-outcome recovery.
 
-There are nine separately counted local plan subsets. All remain missing API
+Including individual change cancellation, there are ten separately counted local plan subsets. All remain missing API
 adapters: coverage is 134/291 bounded metadata subsets, 157 missing, zero
 integrated/reviewed/enabled/adopted operations.
 
@@ -98,7 +121,7 @@ current destination identity, fresh state revalidation and uncertain-outcome
 recovery. Cancellation does not prove that deployment never began, that no schema
 changed, or that rollback/closure completed. No network or runtime is supplied.
 
-Including configuration cancellation, there are nine local plan subsets; these operations remain
+Including configuration and individual change cancellation, there are ten local plan subsets; these operations remain
 missing API adapters. Adapter coverage is unchanged at 134/291, 157 missing;
 zero integrated, reviewed, enabled or adopted operations.
 
@@ -124,7 +147,7 @@ state, ownership, protection, inventory completeness or safe recovery. Actual us
 requires reviewed native identity/policy/approval binding, fresh target/protection
 revalidation and uncertain-outcome recovery. Nothing is installed or enabled.
 
-Including deployment-stop and configuration cancellation, there are nine local plan subsets.
+Including deployment-stop, configuration and individual change cancellation, there are ten local plan subsets.
 Adapter coverage stays 134/291,
 with 157 missing adapters including these two. Remaining table/keyspace-table
 metric GETs have no documented success schema and remain missing; no projection

@@ -41,6 +41,39 @@ evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
 
+## Individual change-request cancellation preview source increment
+
+`src/change-cancel-plan.ts` adds one preview-only subset and ten synthetic
+contracts. Closed immutable snapshots bind database/branch/request/target IDs,
+parent and target names, revision, production, state and matching documented
+request/target type pairs. Null target IDs refuse. Only draft/pending snapshots
+with canDelete=true are accepted: these are broker-narrow refusal rules, not an
+official guarantee of cancellability or native authority. Applying, terminal,
+unknown/mismatched types, extra fields, accessors and all caller selectors refuse.
+The proposed DELETE is bodyless and identifies one request by ID, never a legacy
+collection resize cancellation. No parameters, SKU/configuration values, force,
+executor, approval consumption or provider dry-run is supplied.
+
+RM remains an unreviewed candidate plus independently classified conjunctive
+security/spend/host effects. Cancelling a planned security improvement is not
+inherently safe. Current independent parent/target ownership and state bindings,
+native policy/approval binding and uncertain-outcome recovery remain missing;
+a revision does not establish freshness, unchanged configuration, rollback or
+closure. Ten local plans are separate from 134/291 bounded offline metadata
+subsets; 157 adapters remain missing (15 GETs, 142 mutations). Tiers are now 134
+provisional read / 23 unreviewed reserved / 134 unresolved; zero integrated,
+reviewed, enabled or adopted. New contracts require exact-head Actions. No local
+suite/build/typecheck/CI mirror ran.
+
+Prior configuration head `dd8def6a2c379f6cd6f92105fddd4e5adfd82457`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42481386868)
+passed test/lint/typecheck/native-policy/ci-ok, including
+[991/991 PlanetScale tests](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42481386868/job/128733903431),
+root 181/181, helpers 122/122 and GitHub broker 219/219, zero failures/skips.
+All three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42481357293)
+passed. This is prior-head evidence, not verification of the new increment;
+final fresh-context/Devin/native specialist/merge gates remain.
+
 ## Configuration-cancellation preview source increment
 
 `src/configuration-cancel-plans.ts` adds two preview-only subsets and 18 synthetic
