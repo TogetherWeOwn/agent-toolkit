@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createHash, randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { readFile, writeFile, mkdir, lstat, realpath, rm, readdir, access } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, lstat, realpath, rm, readdir, access, copyFile } from 'node:fs/promises';
 import { join, dirname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
@@ -23,7 +23,7 @@ const check = (name, value) => {
   report.assertions.push({ name, passed: Boolean(value) });
   assert.ok(value, name);
 };
-const git = (cwd, ...args) => execFileSync('git', ['-C', cwd, ...args], {
+const git = (cwd, ...args) => execFileSync('git', ['--no-optional-locks', '-C', cwd, ...args], {
   encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 10_000,
 });
 async function ownedHome() {
@@ -57,9 +57,22 @@ async function networkFence(port) {
   });
   report.network = 'private network namespace; only fixture database TCP port allowed';
 }
+const sanitizedCase = callback => async () => {
+  try { await callback(); } catch { throw new Error('Native fixture case failed; sanitized assertions only'); }
+};
 async function gitSnapshot(worktree, source) {
   const index = git(worktree, 'rev-parse', '--git-path', 'index').trim();
+  const sourceIndex = git(source, 'rev-parse', '--git-path', 'index').trim();
   return {
+    sourceState: {
+      tracked: sha256(await readFile(join(source, 'tracked.txt'))),
+      index: sha256(await readFile(resolve(source, sourceIndex))),
+      head: git(source, 'rev-parse', 'HEAD').trim(),
+      branch: git(source, 'branch', '--show-current').trim(),
+      root: await realpath(source), top: git(source, 'rev-parse', '--show-toplevel').trim(),
+      origin: git(source, 'config', '--get-all', 'remote.origin.url').trim(),
+      status: git(source, 'status', '--porcelain=v1', '--untracked-files=all'),
+    },
     tracked: sha256(await readFile(join(worktree, 'tracked.txt'))),
     untracked: sha256(await readFile(join(worktree, 'sentinel.txt'))),
     index: sha256(await readFile(resolve(worktree, index))),
@@ -95,6 +108,25 @@ await test('native stale revision and separate scheduling control', { timeout: 1
       check(`module equivalence: ${file}`, hash === pin);
       report.modules[file] = hash;
     }
+    report.stage = 'scripts-disabled native library setup';
+    // The DB helper looks beside its bundled JS wrapper, while npm hoists the
+    // native package. Use its shipped alias helper on a fixture-owned copy only.
+    const nativePackage = dirname(dirname(fileURLToPath(import.meta.resolve('@embedded-postgres/linux-x64'))));
+    const lib = join(home, 'native-lib');
+    await mkdir(lib);
+    for (const entry of await readdir(join(nativePackage, 'native', 'lib'), { withFileTypes: true })) {
+      if (entry.isFile() && /^lib[^/]+\.so(?:\.[^/]+)?$/.test(entry.name))
+        await copyFile(join(nativePackage, 'native', 'lib', entry.name), join(lib, entry.name));
+    }
+    const { ensureLinuxSharedLibraryAliases } = await import('@paperclipai/db/embedded-postgres-native');
+    report.nativeAliases = (await ensureLinuxSharedLibraryAliases(lib)).length;
+    check('required ICU aliases present without lifecycle scripts',
+      (await lstat(join(lib, 'libicuuc.so.60'))).isSymbolicLink());
+    process.env.LD_LIBRARY_PATH = lib;
+    let sanitized = false;
+    try { await sanitizedCase(async () => { throw new Error('synthetic-private-marker'); })(); }
+    catch (error) { sanitized = error.message === 'Native fixture case failed; sanitized assertions only' && !error.cause; }
+    check('case errors cannot expose original native exception', sanitized);
     report.stage = 'native imports';
     const native = await import(new URL('./dist/services/execution-workspaces.js', `file://${serverRoot}/`));
     const tables = await import('@paperclipai/db');
@@ -157,11 +189,21 @@ await test('native stale revision and separate scheduling control', { timeout: 1
     }
     const service = native.executionWorkspaceService(db);
     report.stage = 'stale new-key witness';
-    await t.test('stale new key refuses with no record or dirty Git mutation', async () => {
+    await t.test('stale new key refuses with no record or dirty Git mutation', sanitizedCase(async () => {
       report.executed++;
       const input = await fixture('FIX-1');
       const before = await records();
       const files = await gitSnapshot(worktree, source);
+      const original = await readFile(join(source, 'tracked.txt'));
+      let detectsSourceMutation = false;
+      try {
+        await writeFile(join(source, 'tracked.txt'), 'synthetic source mutation control\n');
+        detectsSourceMutation = !isDeepStrictEqual(files, await gitSnapshot(worktree, source));
+      } finally {
+        await writeFile(join(source, 'tracked.txt'), original);
+      }
+      check('snapshot detects source checkout mutation', detectsSourceMutation);
+      check('source mutation control restored', isDeepStrictEqual(files, await gitSnapshot(worktree, source)));
       const task = before.issues.find(row => row.id === input.issueId);
       check('positive revision without applied or pending key', task.workspaceBindingRevision > 0 &&
         task.workspaceSelection === null && task.workspacePendingSelection === null);
@@ -178,9 +220,9 @@ await test('native stale revision and separate scheduling control', { timeout: 1
       report.staleAuditDelta = after.activityLog.length - before.activityLog.length;
       check('tracked untracked index HEAD branch root source unchanged', isDeepStrictEqual(files, await gitSnapshot(worktree, source)));
       report.passed++;
-    });
+    }));
     report.stage = 'separate synthetic valid control';
-    await t.test('independent valid control reaches native scheduling', async () => {
+    await t.test('independent valid control reaches native scheduling', sanitizedCase(async () => {
       report.executed++;
       const input = await fixture('FIX-2');
       const result = await service.selectTaskWorkspace({ ...input, expectedBindingRevision: 1 });
@@ -192,7 +234,7 @@ await test('native stale revision and separate scheduling control', { timeout: 1
         isDeepStrictEqual(task.workspacePendingSelection.intent.selection, input.selection));
       report.control = 'separate task mutation: revision 1 to 2 and pending intent; not admission';
       report.passed++;
-    });
+    }));
     check('both witnesses executed without skip', report.executed === 2 && report.passed === 2);
     report.stage = 'teardown';
   } catch {

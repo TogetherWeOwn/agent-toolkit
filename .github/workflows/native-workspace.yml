@@ -23,6 +23,14 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
+      - name: Initialize sanitized setup evidence
+        run: |
+          python3 -I - <<'PY'
+          import json, os, pathlib
+          report = pathlib.Path(os.environ['RUNNER_TEMP']) / 'native-workspace-report'
+          report.mkdir(mode=0o700)
+          (report / 'setup.json').write_text(json.dumps({'event': 'setup started', 'note': 'This is not fixture execution or acceptance evidence; inspect runner report and job conclusion.'}) + '\n')
+          PY
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '24.21.0'
@@ -47,6 +55,7 @@ jobs:
         with:
           name: native-workspace-${{ github.event.pull_request.head.sha }}
           path: |
+            ${{ runner.temp }}/native-workspace-report/setup.json
             ${{ runner.temp }}/native-workspace-report/runner.json
             ${{ runner.temp }}/native-workspace-report/assertions.json
             ${{ runner.temp }}/native-workspace-report/test.xml
