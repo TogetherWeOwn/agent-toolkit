@@ -7,6 +7,7 @@ import { currentContentDescriptor } from "../dist/plugins/cloudflare-broker/src/
 import { cloudflareReadOperations } from "../dist/plugins/cloudflare-broker/src/read-operations.js";
 import { versionAssetDescriptor } from "../dist/plugins/cloudflare-broker/src/version-assets.js";
 import { workerDomainMetadataDescriptors } from "../dist/plugins/cloudflare-broker/src/worker-domains.js";
+import { subscriptionDescriptors } from "../dist/plugins/cloudflare-broker/src/subscriptions.js";
 import { r2CorsDescriptor } from "../dist/plugins/cloudflare-broker/src/r2-cors.js";
 import { r2NotificationDescriptors } from "../dist/plugins/cloudflare-broker/src/r2-notifications.js";
 import { r2LifecycleDescriptor } from "../dist/plugins/cloudflare-broker/src/r2-lifecycle.js";
@@ -73,6 +74,7 @@ const accessPolicyDescriptors = accessPolicyMetadataDescriptors({ accountId: acc
 const metadataOnly = { ...descriptors, ...zoneDescriptors, ...routeDescriptors, ...accessDescriptors, ...accessPolicyDescriptors, ...secretsStoreDescriptors, ...durableDescriptors, ...pagesDescriptors };
 const contentDescriptor = currentContentDescriptor({ accountId: account, revision: "source-policy-1", sourceDigestScriptNames: ["safe-worker"] });
 const allDescriptors = { ...metadataOnly, ...deletionDescriptors, contentDescriptor,
+  ...subscriptionDescriptors({ accountId: account, revision: "policy-1" }),
   ...workerDomainMetadataDescriptors({ accountId: account, revision: "policy-1" }),
   r2Cors: r2CorsDescriptor({ accountId: account, revision: "policy-1" }),
   ...r2NotificationDescriptors({ accountId: account, revision: "policy-1" }),

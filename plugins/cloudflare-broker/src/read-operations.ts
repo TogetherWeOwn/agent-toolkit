@@ -1,6 +1,7 @@
 import { jsonData, requireThat } from "../../../packages/core/src/index.js";
 import { canonicalHash, type Json, type Prepared, type ProviderOperation, type Tier } from "../../../packages/core/src/provider/index.js";
 import { currentContentDescriptor, type CurrentContentScope } from "./current-content.js";
+import { subscriptionDescriptors, type SubscriptionScope } from "./subscriptions.js";
 import { versionAssetDescriptor, type VersionAssetScope } from "./version-assets.js";
 import { workerDomainMetadataDescriptors, type WorkerDomainScope } from "./worker-domains.js";
 import { r2CorsDescriptor, type R2CorsScope } from "./r2-cors.js";
@@ -60,6 +61,7 @@ function bind<A>(descriptor: {
 }
 
 export interface CloudflareReadScope extends MetadataScope {
+  subscriptions?: SubscriptionScope["subscriptions"];
   secretStores?: SecretsStoreMetadataScope["stores"];
   durableNamespaces?: DurableObjectMetadataScope["namespaces"];
   pagesProjects?: PagesMetadataScope["projects"];
@@ -87,6 +89,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     return bind(descriptor, (args, credential, signal) => read(descriptor, args, credential, signal));
   }
   const { accountId, revision } = scope;
+  const subscriptions = subscriptionDescriptors({ accountId, revision, subscriptions: scope.subscriptions ?? [] });
   const stores = secretsStoreMetadataDescriptors({ accountId, revision, stores: scope.secretStores ?? [] });
   const durable = durableObjectMetadataDescriptors({ accountId, revision, namespaces: scope.durableNamespaces ?? [] });
   const pages = pagesMetadataDescriptors({ accountId, revision, projects: scope.pagesProjects ?? [] });
@@ -104,6 +107,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
   const content = currentContentDescriptor(sourceScope);
   const readContent = currentContentTransport(fetcher);
   return Object.freeze([
+    metadata(subscriptions.subscriptionsList), metadata(subscriptions.subscriptionGet),
     metadata(descriptors.workersList), metadata(descriptors.secretNames),
     metadata(descriptors.hyperdriveList), metadata(descriptors.hyperdriveGet),
     metadata(descriptors.d1List), metadata(descriptors.d1Get),
