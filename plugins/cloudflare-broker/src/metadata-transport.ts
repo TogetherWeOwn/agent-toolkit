@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { requireThat, text } from "../../../packages/core/src/index.js";
+import { Refusal, requireThat, text } from "../../../packages/core/src/index.js";
 import type { currentContentDescriptor } from "./current-content.js";
 import type { MetadataDescriptor, MetadataRequest } from "./metadata.js";
 
@@ -69,7 +69,7 @@ async function boundedResponse(fetcher: typeof fetch, request: MetadataRequest, 
     })()]);
   } catch {
     // Never expose fetch, header, provider-body or cancellation diagnostics.
-    requireThat(false, "upstream");
+    throw new Refusal("upstream");
   } finally {
     clearTimeout(timer);
     signal.removeEventListener("abort", cancel);
