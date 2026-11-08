@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The 131 adapters are pure request builders and bounded output projections,
+The 133 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,14 +36,14 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 131 | Narrow projections; not full operation coverage |
-| Missing source adapters | 160 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 133 | Narrow projections; not full operation coverage |
+| Missing source adapters | 158 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-131 adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 144
+133 adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 142
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
@@ -104,7 +104,18 @@ cannot prove provenance. Integration requires trusted transport-to-request bindi
 fresh branch ID/name ownership, whole-branch collection permission, raw-body
 custody and non-waking evidence. No label, pod, shard or keyspace isolation,
 completeness, health, freshness, rollback or closure is established. Other metrics,
-filters/windows/steps, query/tag metrics and full capability remain incomplete.
+filters/windows/steps and full capability remain incomplete.
+
+`planetscale.get_branch_query_metrics` and `planetscale.get_branch_tag_metrics`
+reuse the same scope, `queries` / `query_errors` subset, fixed window/steps and
+validator. They request the fixed `/metrics/query` and `/metrics/tag` endpoints
+without optional query/fingerprint/keyspace/tag-set/search/tablet/budget/rule
+selectors. These are **whole-branch availability subsets**, not isolated query or
+tag reads; branch-wide collection permission is required. Neither labels nor
+query/tag identifiers or contents leave the projection. The official response
+has no branch, query or tag identity; matching a metric/window cannot authenticate
+origin or selector application. All ownership/transport/custody/non-waking
+prerequisites above remain; full query/tag metrics and filters are incomplete.
 
 ## Instant-metric availability metadata
 
@@ -724,7 +735,7 @@ The candidates only document requirements; native routing, expiry, exact-target
 binding, atomic consumption, replay/concurrent-use refusal and approved placement
 are **not implemented or tested as authority enforcement here**. Credential routes
 remain incomplete until a broker-only sink and reconciliation are accepted. The
-other 144 tier classifications are unresolved, not automatically harmless reads or
+other 142 tier classifications are unresolved, not automatically harmless reads or
 ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.

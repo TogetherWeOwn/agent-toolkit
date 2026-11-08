@@ -140,7 +140,7 @@ test('complete official map distinguishes mapped, source-adapted, reviewed and e
   const groups = [
     [['get_data_topology'], 'data-topology'],
     [['get_keyspace_vschema'], 'keyspace-vschema'],
-    [['get_branch_metrics', 'get_tablet_metrics'], 'historical-metrics'],
+    [['get_branch_metrics', 'get_tablet_metrics', 'get_branch_query_metrics', 'get_branch_tag_metrics'], 'historical-metrics'],
     [['get_instant_branch_metrics', 'get_instant_tablet_metrics'], 'instant-metrics'],
     [['list_traffic_budgets_for_query'], 'query-traffic-budgets'],
     [['get_branch_query_tag', 'list_branch_query_tags'], 'query-tags'],

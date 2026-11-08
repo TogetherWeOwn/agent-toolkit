@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 160 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 158 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -40,6 +40,38 @@ read-only transactions, statement/lock/row/byte/page/time caps and native closur
 evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
+
+## Query/tag historical-metric availability source increment
+
+Two fixed offline query/tag metric reads reuse the historical metric scope and
+validator; no new parser, executor or authority path. The shared
+`test/historical-metrics.test.mjs` adds 24 synthetic contracts for fixed paths,
+closed arguments/scopes, immutable branch/window binding, canonical dates,
+finite chronological samples, whole-response refusal, bounds, canaries and the
+pinned official schema. The query/tag endpoints have optional selectors; this
+subset deliberately supplies none. Branch-wide collection permission is required;
+no query/tag isolation, response identity or provenance is established. Only
+requestBranchId, selected metric, presence booleans and explicit not-established
+health/provenance survive. No labels, samples, SQL, fingerprints, tag sets or times.
+Optional filters and full capabilities remain incomplete.
+
+Coverage: **133/291 bounded metadata subsets; 158 missing** (16 GETs, 142
+mutations). Tiers 133 provisional read / 16 unreviewed reserved / 142 unresolved;
+zero integrated/reviewed/enabled/adopted. New contracts require fresh exact-head
+Actions; no local suite/build/typecheck or CI mirror ran.
+
+Prior repair head `3a143d9098bfae86fccdd8e494797931775ee41e`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42471717435)
+passed lint/typecheck/native-policy/ci-ok, including
+[899/899 package tests](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42471717435/job/128703840310),
+root 181/181, helpers 122/122 and GitHub broker 219/219; zero failures/skips.
+Source head b844a1f had one omitted exact-map fixture group, repaired at 3a143d9;
+all 13 new topology contracts had passed. Repair-head CodeQL actions/Python
+passed, but JS/TS failed before analysis on bundle download HTTP 504. One
+failed-job retry request was refused: workflow cannot be retried. No source
+CodeQL finding, pass or waiver inferred; fresh new-head analysis remains required.
+No inline findings/reviews returned. Final fresh-context/Devin/native specialist
+review and merge gates remain; earlier SDK recovery cause is unresolved.
 
 ## Data-topology availability source increment
 

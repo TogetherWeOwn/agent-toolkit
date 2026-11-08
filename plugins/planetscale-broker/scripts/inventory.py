@@ -14,6 +14,8 @@ SOURCE_SHA256 = "ae45866599cb5d248fadb9d7f0ed30fd6aed440a17ec0950c4e9e0d58da4cb7
 ADAPTERS = {
     "get_data_topology": "get-data-topology",
     "get_keyspace_vschema": "get-keyspace-vschema",
+    "get_branch_query_metrics": "get-branch-query-metrics",
+    "get_branch_tag_metrics": "get-branch-tag-metrics",
     "get_branch_metrics": "get-branch-metrics",
     "get_tablet_metrics": "get-tablet-metrics",
     "get_instant_branch_metrics": "get-instant-branch-metrics",
@@ -269,7 +271,7 @@ def adapter_test(operation_id):
     for operations, name in [
         ({"get_data_topology"}, "data-topology"),
         ({"get_keyspace_vschema"}, "keyspace-vschema"),
-        ({"get_branch_metrics", "get_tablet_metrics"}, "historical-metrics"),
+        ({"get_branch_metrics", "get_tablet_metrics", "get_branch_query_metrics", "get_branch_tag_metrics"}, "historical-metrics"),
         ({"get_instant_branch_metrics", "get_instant_tablet_metrics"}, "instant-metrics"),
         ({"list_traffic_budgets_for_query"}, "query-traffic-budgets"),
         ({"get_branch_query_tag", "list_branch_query_tags"}, "query-tags"),

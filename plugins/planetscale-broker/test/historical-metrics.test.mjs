@@ -4,13 +4,15 @@ import { gunzipSync } from 'node:zlib';
 import test from 'node:test';
 import * as branch from '../../../dist/plugins/planetscale-broker/src/tools/get-branch-metrics.js';
 import * as tablet from '../../../dist/plugins/planetscale-broker/src/tools/get-tablet-metrics.js';
+import * as query from '../../../dist/plugins/planetscale-broker/src/tools/get-branch-query-metrics.js';
+import * as tag from '../../../dist/plugins/planetscale-broker/src/tools/get-branch-tag-metrics.js';
 import { historicalBranchMetricNames, historicalTabletMetricNames } from '../../../dist/plugins/planetscale-broker/src/historical-metrics.js';
 
 const canary = 'synthetic-secret://NEVER-RETURN-this-value';
 const wire = value => new TextEncoder().encode(JSON.stringify(value));
 const parent = { organization: 'example-org', database: 'app', branch: 'staging', branchId: 'branch123', from: '2026-11-07T12:00:00Z', to: '2026-11-07T12:15:00Z' };
 const start = Date.parse(parent.from) / 1000;
-const fixtures = [[branch, historicalBranchMetricNames, ''], [tablet, historicalTabletMetricNames, '/tablets']];
+const fixtures = [[branch, historicalBranchMetricNames, ''], [tablet, historicalTabletMetricNames, '/tablets'], [query, historicalBranchMetricNames, '/query'], [tag, historicalBranchMetricNames, '/tag']];
 const series = metric => ({ type: 'TimeSeries', metric, label: canary, labels: { role: canary, pod: canary }, points: [[start, 42.5]], secret: canary });
 const response = metric => ({ type: 'MetricSeries', start_date: parent.from, end_date: parent.to, interval: 60, series: [series(metric)], secret: canary });
 const expected = (metric, seriesPresent = true, samplesPresent = true) => ({ requestBranchId: 'branch123', metric, seriesPresent, samplesPresent, health: 'not-established', provenance: 'not-established' });
@@ -28,14 +30,14 @@ for (const [adapter, metrics, suffix] of fixtures) {
     for (const value of [prepared, prepared.request, output]) assert.ok(Object.isFrozen(value));
   });
   test(`${adapter.operationId}: closed caller arguments refuse filters and authority overrides`, () => {
-    for (const field of ['metrics', 'from', 'to', 'steps', 'period', 'keyspace', 'shard', 'pod', 'role', 'query_ids', 'fingerprint', 'sql', 'url', 'credential', 'approval', 'agentId', 'production']) assert.throws(() => adapter.prepare(scope, { [field]: canary }));
+    for (const field of ['metrics', 'from', 'to', 'steps', 'period', 'keyspace', 'shard', 'pod', 'role', 'query_ids', 'fingerprint', 'tag_sets', 'tablet_type', 'budget_id', 'rule_id', 'q', 'sql', 'url', 'credential', 'approval', 'agentId', 'production']) assert.throws(() => adapter.prepare(scope, { [field]: canary }));
     for (const args of [null, [], 1, true, 'x', JSON.parse('{"__proto__":{}}')]) assert.throws(() => adapter.prepare(scope, args));
     const hostile = Object.defineProperty({}, 'metric', { enumerable: true, get() { throw new Error(canary); } });
     assert.throws(() => adapter.prepare(scope, hostile), error => !String(error).includes(canary));
   });
   test(`${adapter.operationId}: broker scope refuses injection and unsupported metrics`, () => {
     for (const field of Object.keys(scope)) for (const value of [undefined, null, '', '../foreign', 'x/y', 'x%2fy', 'é', 'a'.repeat(81), canary]) assert.throws(() => adapter.prepare({ ...scope, [field]: value }, {}));
-    for (const bad of [null, [], { ...scope, approval: true }, { ...scope, agentId: 'other' }, { ...scope, metric: adapter === branch ? historicalTabletMetricNames[0] : historicalBranchMetricNames[0] }]) assert.throws(() => adapter.prepare(bad, {}));
+    for (const bad of [null, [], { ...scope, approval: true }, { ...scope, agentId: 'other' }, { ...scope, metric: metrics === historicalTabletMetricNames ? historicalBranchMetricNames[0] : historicalTabletMetricNames[0] }]) assert.throws(() => adapter.prepare(bad, {}));
     const hostile = Object.defineProperty({ ...scope }, 'from', { enumerable: true, get() { throw new Error(canary); } });
     assert.throws(() => adapter.prepare(hostile, {}), error => !String(error).includes(canary));
   });
@@ -85,6 +87,18 @@ for (const [adapter, metrics, suffix] of fixtures) {
     assert.deepEqual(adapter.prepare(scope, {}).project(wire(body)), expected(scope.metric));
     // No branch field is documented. Caller-supplied bodies are never provenance.
     assert.equal(adapter.prepare({ ...scope, branchId: 'other' }, {}).project(wire(body)).provenance, 'not-established');
+  });
+  if (adapter === query || adapter === tag) test(`${adapter.operationId}: whole-branch subset never accepts selector-based authority`, () => {
+    const prepared = adapter.prepare(scope, {});
+    const selectors = ['query_ids', 'fingerprint', 'keyspace', 'tag_sets', 'tablet_type', 'budget_id', 'rule_id', 'q'];
+    for (const name of selectors) {
+      assert.ok(!new URL('https://api.planetscale.com' + prepared.request.path).searchParams.has(name));
+      assert.throws(() => adapter.prepare({ ...scope, [name]: 'foreign' }, {}));
+    }
+    const body = response(scope.metric);
+    body.series[0].labels = { query_id: 'foreign', tag_sets: [canary], fingerprint: canary, keyspace: 'foreign' };
+    assert.deepEqual(prepared.project(wire(body)), expected(scope.metric));
+    assert.equal(prepared.project(wire(body)).provenance, 'not-established');
   });
   test(`${adapter.operationId}: fixed subset agrees with pinned official contract and inventory`, async () => {
     const schema = JSON.parse(gunzipSync(await readFile(new URL('../api/upstream/openapi-v1.json.gz', import.meta.url))).toString());
