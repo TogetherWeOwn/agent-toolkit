@@ -2699,20 +2699,24 @@
       "id": "deleteProjectEndpoint",
       "apiArea": "endpoint",
       "tool": "neon.deleteProjectEndpoint",
-      "scope": "project_id/endpoint_id",
+      "scope": "project_id/branch_id/endpoint_id/delete",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "endpoint-deletion-request"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/endpoint-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Mocked source only; reserved native exact-target/plan authority and dedicated delete grant required. Exact endpoint/project/branch detail preflight then one bodyless DELETE; HTTP200 closed acknowledgement and operation observations only, not completed deletion, session closure, fencing or no-reconnect proof. HTTP204 absent/already-deleted is not success. Ambiguity remains uncertain after one observation including absence, never retried; permanent common journal blocks restart/replay. Native host/policy/custody, durable recovery, entitlement/effects, production deletion authority and independent reviews unresolved. No live deletion, cutover enforcement or enablement."
     },
     {
       "id": "updateProjectEndpoint",

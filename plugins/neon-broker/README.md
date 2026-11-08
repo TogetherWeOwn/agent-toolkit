@@ -7,6 +7,30 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonEndpointDeleteOperations(trustedScope, transport)` adds reserved
+`deleteProjectEndpoint` source. Copy exact project/branch/endpoint/revision;
+require a distinct `neon/projects/<project>/branches/<branch>/endpoints/<endpoint>/delete`
+grant plus common-core native exact-target/plan authorization before credentials.
+A mandatory endpoint-detail GET binds immutable ID/project/branch before exactly
+one bodyless DELETE to the fixed endpoint path. No force, action, configuration
+or authority override is accepted. Preflight is not an atomic conditional delete.
+
+Only HTTP200 exact endpoint identity and bounded unique operation-ID/status
+observations yield closed `{id, acknowledged: true, operations}`. Optional operation
+ancestry cannot contradict the copied target. Even `finished` observations do not
+certify the complete operation chain, deletion completion or session closure.
+Provider documentation says deletion drops existing connections and completes
+when the last operation finishes successfully; this source does not verify either.
+HTTP204 means absent/already deleted and is not accepted as causal success.
+
+Ambiguity triggers one bounded detail observation and remains uncertain, including
+on HTTP404/absence or an apparently deleted state; no mutation retry or invented
+idempotency header. The permanent common journal blocks same-request restart/replay.
+Hosts, settings, states, action/error text and dates are not evaluated or emitted.
+No fencing, zero-session/no-reconnect, deadline-enforcement or cutover guarantee is
+supplied. Native host/policy/custody, durable recovery, effects/entitlement, production
+deletion authority and independent reviews remain gates; no live deletion or enablement.
+
 `createNeonEndpointSuspendOperations(trustedScope, transport)` adds reserved
 `suspendProjectEndpoint` source. Copy exact project/branch/endpoint/revision and
 require a distinct `neon/projects/<project>/branches/<branch>/endpoints/<endpoint>/suspend`

@@ -19,6 +19,26 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
 
+## Reserved endpoint-deletion source delta
+
+Exact copied project/branch/endpoint/revision and a distinct endpoint/delete grant
+are required, plus reserved common-core native exact-target/plan authorization
+before credentials. Fixed detail GET binds mandatory immutable ancestry before
+one bodyless DELETE; not atomic conditional deletion. Caller force, action,
+configuration and authority overrides refuse. Only HTTP200 exact endpoint echo and
+bounded unique operation-ID/status observations acknowledge the request. Optional
+operation ancestry cannot contradict the copied target. Status data, even finished,
+is not complete-chain verification or completed deletion/session-closure evidence.
+Provider-documented dropped connections are not proved by mocked acknowledgements.
+
+HTTP204 (absent/already deleted) is not causal success. Ambiguity permits one bounded
+observation then stays uncertain even on absence; never mutate again or invent an
+idempotency header. Permanent common journal barriers block same-request restart/replay,
+not concurrent external writers. Unrelated hosts/settings/states/errors/dates remain
+unevaluated. No new fence, no-reconnect/deadline enforcer, scheduler, live deletion or
+runtime registration. Native effects/entitlement, host/policy/custody, durable recovery,
+production authority and independent reviews remain unresolved qualification gates.
+
 ## Reserved endpoint-suspension source delta
 
 Exact copied project/branch/endpoint/revision and a distinct endpoint/suspend grant

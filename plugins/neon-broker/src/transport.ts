@@ -15,6 +15,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  deleteProjectEndpoint(project: string, endpoint: string, options: MetadataRequestOptions): Promise<unknown>;
   suspendProjectEndpoint(project: string, endpoint: string, options: MetadataRequestOptions): Promise<unknown>;
   updateProjectEndpoint(project: string, endpoint: string, name: string, options: MetadataRequestOptions): Promise<unknown>;
   updateProject(project: string, name: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -136,7 +137,7 @@ function cursorQuery(cursor: string | null): URLSearchParams {
 // Construction is a source/test seam, not an installed or enabled runtime tool.
 export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadataTransport {
   const get = (path: string, query: URLSearchParams, options: MetadataRequestOptions) => request(path, query, options);
-  async function request(path: string, query: URLSearchParams, options: MetadataRequestOptions, body?: string, binary = false, snapshotDelete = false, patch = false, suspend = false): Promise<unknown> {
+  async function request(path: string, query: URLSearchParams, options: MetadataRequestOptions, body?: string, binary = false, deleteStatus: 200 | 202 | false = false, patch = false, suspend = false): Promise<unknown> {
     if (/[\r\n]/.test(options.credential)) throw Error("UPSTREAM_UNAVAILABLE");
     const expiresAt = performance.now() + REQUEST_TIMEOUT_MS;
     const controller = new AbortController();
@@ -157,13 +158,13 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       if (expired()) throw Error("UPSTREAM_UNAVAILABLE");
       const suffix = query.size ? `?${query.toString()}` : "";
       const response = await fetcher(`${NEON_ORIGIN}/api/v2${path}${suffix}`, {
-        method: snapshotDelete ? "DELETE" : patch ? "PATCH" : suspend ? "POST" : body === undefined ? "GET" : "POST", redirect: "error", signal: controller.signal,
+        method: deleteStatus !== false ? "DELETE" : patch ? "PATCH" : suspend ? "POST" : body === undefined ? "GET" : "POST", redirect: "error", signal: controller.signal,
         headers: { Authorization: `Bearer ${options.credential}`, Accept: binary ? "application/octet-stream" : "application/json",
           ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
         ...(body === undefined ? {} : { body }),
       });
       const mime = binary ? /^application\/octet-stream(?:\s*;|$)/i : /^application\/json(?:\s*;|$)/i;
-      if (expired() || response.status !== (snapshotDelete ? 202 : 200) || response.redirected ||
+      if (expired() || response.status !== (deleteStatus === false ? 200 : deleteStatus) || response.redirected ||
         !mime.test(response.headers.get("content-type") ?? "") ||
         (binary && ![null, "identity"].includes(response.headers.get("content-encoding")))) {
         void response.body?.cancel().catch(() => {});
@@ -207,6 +208,8 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    deleteProjectEndpoint: (project: string, endpoint: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/endpoints/${authPathId(endpoint)}`, new URLSearchParams(), options, undefined, false, 200),
     suspendProjectEndpoint: (project: string, endpoint: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/endpoints/${authPathId(endpoint)}/suspend`, new URLSearchParams(), options,
         undefined, false, false, false, true),
@@ -223,7 +226,7 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       request(`/projects/${authPathId(project)}/snapshots/${authPathId(snapshot)}`, new URLSearchParams(), options,
         JSON.stringify({ snapshot: { name: snapshotLabel.parse(name) } }), false, false, true),
     deleteSnapshot: (project: string, snapshot: string, options: MetadataRequestOptions) =>
-      request(`/projects/${authPathId(project)}/snapshots/${authPathId(snapshot)}`, new URLSearchParams(), options, undefined, false, true),
+      request(`/projects/${authPathId(project)}/snapshots/${authPathId(snapshot)}`, new URLSearchParams(), options, undefined, false, 202),
     getProjectBranchBucketObject: (project: string, branch: string, bucket: string, key: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/buckets/${downloadBucketName.parse(bucket)}/objects/${encodeURIComponent(downloadObjectKey.parse(key))}/download`,
         new URLSearchParams(), options, undefined, true),
