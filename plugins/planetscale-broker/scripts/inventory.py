@@ -74,6 +74,16 @@ ADAPTERS = {
     "list_maintenance_schedules": "list-maintenance-schedules",
     "get_branch_maintenance_window": "get-branch-maintenance-window",
     "list_maintenance_windows": "list-maintenance-windows",
+    "get_router": "get-router",
+    "list_routers": "list-routers",
+    "get_dedicated_read_replica": "get-dedicated-read-replica",
+    "list_dedicated_read_replicas": "list-dedicated-read-replicas",
+    "get_switchover": "get-switchover",
+    "list_switchovers": "list-switchovers",
+}
+ROUTING_RECORDS = {
+    "get_router", "list_routers", "get_dedicated_read_replica",
+    "list_dedicated_read_replicas", "get_switchover", "list_switchovers",
 }
 MAINTENANCE_SCHEDULES = {
     "get_maintenance_schedule", "list_maintenance_schedules",
@@ -163,6 +173,7 @@ def policy_candidate(operation_id):
 
 def adapter_test(operation_id):
     for operations, name in [
+        (ROUTING_RECORDS, "routing-records"),
         (MAINTENANCE_SCHEDULES, "maintenance-schedules"),
         (CHANGE_RECORDS, "change-records"), (RESIZE_RECORDS, "resize-records"),
         (ORGANIZATION_RECORDS, "organization-records"),

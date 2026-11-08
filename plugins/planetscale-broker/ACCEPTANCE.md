@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 229 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 223 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -138,6 +138,21 @@ is now **62/291 bounded metadata subsets, 229 missing**; zero integrated/reviewe
 enabled/adopted operations. Prior `80ff2ba` [Actions test](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42435353232/job/128592914327)
 passed 342/342 package tests, not these new fixtures. Fresh exact-head Actions is
 required; no local suite or native authority enforcement is claimed.
+
+`test/routing-records.test.mjs` adds 38 synthetic contracts for six router,
+dedicated-read-replica and switchover metadata reads. Tests cover pinned GET paths,
+plain-array versus paginated response contracts, immutable ID/name bindings,
+whole-response refusal, closed arguments/scopes, selected types/enums, wire/row/page
+caps and dropped address/configuration/SKU/error/actor canaries. Router and replica
+collections have no pagination parameters; they accept only empty arguments and
+refuse arrays above 32 rows. Switchover state never proves unchanged primary,
+rollback, safe retry or native closure. Parent ownership/collection authority,
+non-waking semantics and full optional details/mutations remain incomplete.
+Coverage is **68/291 bounded metadata subsets, 223 missing**; zero integrated,
+reviewed, enabled or adopted operations. Prior `3f3022b` [Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42436736199)
+passed, including [test](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42436736199/job/128597089375),
+lint, native-policy and ci-ok; this is not execution of these new fixtures. Fresh
+exact-head Actions remains required; no local suite or native authority is claimed.
 
 ## Metrics preregistration — required before enablement
 

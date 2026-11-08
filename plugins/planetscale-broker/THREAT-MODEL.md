@@ -79,6 +79,30 @@ calls, logging or state mutation occurs. `test/maintenance-schedules.test.mjs`
 covers exact schema paths, scope/identity refusal, immutability, bounds, malformed
 fields and ignored canaries; native policy/custody/approval tests remain missing.
 
+## Router, dedicated-replica and switchover records — offline only
+
+Router and dedicated-replica detail reads use a broker-bound name in the fixed
+path and require the exact ID/name pair in the response. Their list operations
+return plain arrays in the pinned schema, not paginated envelopes. Empty closed
+arguments reject invented pagination; arrays over 32 rows or any unknown/rebound
+child refuse the whole response. Scopes snapshot 1–32 unique ID/name pairs. No
+collection completeness or parent ownership is established by these arrays.
+Router output is ID/name, state, default and autoscaling flags; replica output is
+ID/name, prose-documented state and ready flag. Parameters, connection hosts,
+private service/address/region data, storage/SKUs/costs, counts and actors are
+omitted. Trusted parent ownership and parent-wide collection authority remain
+separate prerequisites before any future call.
+
+Switchover reads require bound IDs, with existing bounded explicit pagination for
+the list. Output includes only ID, state and start/finish timestamp presence.
+Method, errors and actors are omitted. A failed switchover can have an unconfirmed
+outcome: never infer unchanged primary, safe retry, rollback or native closure.
+Provider readiness/default/autoscaling/success never grants restart, failover,
+resize, wake or spend authority. No runtime operation or mutation is supplied.
+`test/routing-records.test.mjs` covers pure shapes, whole-response refusal,
+immutable bindings, caps, selected types and dropped canaries; native policy,
+credential custody and non-waking semantics remain unverified.
+
 ## Transport, pagination and errors
 
 All current request descriptions fix HTTPS `api.planetscale.com`, GET and endpoint

@@ -23,6 +23,17 @@ export interface PreparedRead<T> {
 }
 
 export function prepared<T>(path: string, project: (body: Record<string, unknown>) => T): PreparedRead<T> {
+  return preparedValue(path, body => project(record(body)));
+}
+
+export function preparedArray<T>(path: string, project: (row: Record<string, unknown>) => T): PreparedRead<readonly T[]> {
+  return preparedValue(path, body => {
+    requireThat(Array.isArray(body) && body.length <= 32, "upstream");
+    return Object.freeze(body.map(row => project(record(row))));
+  });
+}
+
+function preparedValue<T>(path: string, project: (body: unknown) => T): PreparedRead<T> {
   requireThat(path.startsWith("/v1/") && path.length <= 1024 && !/[\r\n#]/.test(path), "schema");
   return Object.freeze({
     request: Object.freeze({ method: "GET" as const, origin: "https://api.planetscale.com" as const, path }),
@@ -31,7 +42,7 @@ export function prepared<T>(path: string, project: (body: Record<string, unknown
       let parsed: unknown;
       try { parsed = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body)); }
       catch { requireThat(false, "upstream"); }
-      return project(record(parsed));
+      return project(parsed);
     },
   });
 }
