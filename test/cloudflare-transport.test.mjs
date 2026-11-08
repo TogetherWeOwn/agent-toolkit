@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { metadataDescriptors } from "../dist/plugins/cloudflare-broker/src/metadata.js";
+import { metadataDescriptors, zoneMetadataDescriptors } from "../dist/plugins/cloudflare-broker/src/metadata.js";
 import { metadataTransport } from "../dist/plugins/cloudflare-broker/src/metadata-transport.js";
 
 const account = "a".repeat(32);
@@ -27,6 +27,23 @@ test("Cloudflare internal transport makes one fixed-origin GET and projects meta
   assert.equal(calls[0].init.cache, "no-store");
   assert.deepEqual(calls[0].init.headers, { authorization: `Bearer ${credential}`, accept: "application/json" });
   assert.equal(calls[0].init.signal.aborted, true);
+});
+
+test("Cloudflare transport accepts the exact zone-detail root without exposing account or malformed roots", async () => {
+  const zone = zoneMetadataDescriptors({ accountId: account, revision: "resource-1", zoneId: own, dnsRecordIds: [] }).zoneGet;
+  const calls = [];
+  const read = metadataTransport(async (url, init) => {
+    calls.push({ url, init });
+    return response(JSON.stringify({ success: true, errors: [], result: { id: own, account: { id: account }, name: "never-return" } }));
+  });
+  assert.deepEqual(await read(zone, {}, credential, signal()), { id: own });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, `https://api.cloudflare.com/client/v4/zones/${own}`);
+  assert.equal(calls[0].init.redirect, "manual");
+  for (const path of [`/accounts/${account}`, `/zones/${own}/`, `/zones/${own}?extra=1`, `/zones/${own}/../${account}`]) {
+    await assert.rejects(read(changed({ path }), args, credential, signal()));
+  }
+  assert.equal(calls.length, 1);
 });
 
 test("Cloudflare transport validates model scope and trusted request constraints before fetch", async () => {

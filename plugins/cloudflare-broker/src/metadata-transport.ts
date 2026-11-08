@@ -11,7 +11,7 @@ function endpoint(request: MetadataRequest): string {
   requireThat(Number.isSafeInteger(request.maxResponseBytes) && request.maxResponseBytes > 0 && request.maxResponseBytes <= 131072, "cap");
   requireThat(Number.isSafeInteger(request.timeoutMs) && request.timeoutMs > 0 && request.timeoutMs <= 10000, "cap");
   requireThat(typeof request.path === "string" && request.path.length <= 2048 &&
-    /^\/(accounts|zones)\/[a-f0-9]{32}\/[A-Za-z0-9_/?=&.-]+$/.test(request.path), "schema");
+    /^\/(?:accounts\/[a-f0-9]{32}\/[A-Za-z0-9_/?=&.-]+|zones\/[a-f0-9]{32}(?:\/[A-Za-z0-9_/?=&.-]+)?)$/.test(request.path), "schema");
   const url = new URL(`/client/v4${request.path}`, origin);
   requireThat(url.origin === origin && url.pathname + url.search === `/client/v4${request.path}`, "schema");
   return url.href;
