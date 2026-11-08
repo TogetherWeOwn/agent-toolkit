@@ -25,6 +25,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   authEmailCases, authEmailFixture, authEmailScope,
   projectCases, projectFixture, projectScope,
   userOrganizationCases, userOrganizationFixture, userOrganizationScope,
+  sharedProjectCases, sharedProjectFixture, sharedProjectScope,
   fixture, scope, branch, operation, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
@@ -35,7 +36,8 @@ const { providerFixture, credentialCanary, derivedCanary } = await import(pathTo
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
 function brokerFixture(name, args, raw, overrides = {}, config) {
-  const factory = userOrganizationCases.some(([operation]) => operation === name) ? userOrganizationFixture :
+  const factory = sharedProjectCases.some(([operation]) => operation === name) ? sharedProjectFixture :
+    userOrganizationCases.some(([operation]) => operation === name) ? userOrganizationFixture :
     projectCases.some(([operation]) => operation === name) ? projectFixture :
     authEmailCases.some(([operation]) => operation === name) ? authEmailFixture :
     userProfileCases.some(([operation]) => operation === name) ? userProfileFixture :
@@ -116,7 +118,7 @@ for (const [name, args, raw, expected] of cases) {
     const result = await f.call();
     assert.equal(result.ok, true);
     assert.deepEqual(result.value, expected);
-    assert.equal(f.provider.requests.length, name === 'getCurrentUserOrganizations' ? 2 : 1);
+    assert.equal(f.provider.requests.length, ['getCurrentUserOrganizations', 'listSharedProjects'].includes(name) ? 2 : 1);
     assert.equal(f.common.calls.secret, 1);
     assert.equal(f.common.calls.close, 1);
     assert.equal(f.common.audit.filter(record => record.phase === 'intent').length, 1);
@@ -163,7 +165,7 @@ for (const [name, args, raw, expected] of cases) {
       const result = await f.call();
       assert.equal(result.ok, mode === 'success');
       if (mode === 'error') assert.equal(result.code, 'UPSTREAM_UNAVAILABLE');
-      assert.equal(f.provider.requests.length, name === 'getCurrentUserOrganizations' && mode === 'success' ? 2 : 1);
+      assert.equal(f.provider.requests.length, ['getCurrentUserOrganizations', 'listSharedProjects'].includes(name) && mode === 'success' ? 2 : 1);
       safeEnvelope(f, result);
     }
   });
@@ -233,12 +235,12 @@ test('reflected lease material in selected safe-looking fields is refused by the
   assert.equal((await f.call()).code, 'OUTPUT_REFUSED');
 });
 
-for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases, ...regionCases, ...projectCountCases, ...authWebhookCases, ...userProfileCases, ...authEmailCases, ...projectCases, ...userOrganizationCases]) {
+for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases, ...regionCases, ...projectCountCases, ...authWebhookCases, ...userProfileCases, ...authEmailCases, ...projectCases, ...userOrganizationCases, ...sharedProjectCases]) {
   test(`${name}: replay and TOCTOU policy/resource changes refuse without a second request`, async () => {
     const replay = brokerFixture(name, args, raw);
     assert.equal((await replay.call()).ok, true);
     assert.equal((await replay.call()).code, 'REPLAY_CONFLICT');
-    assert.equal(replay.provider.requests.length, name === 'getCurrentUserOrganizations' ? 2 : 1);
+    assert.equal(replay.provider.requests.length, ['getCurrentUserOrganizations', 'listSharedProjects'].includes(name) ? 2 : 1);
     for (const mode of ['resource', 'policy-revoked', 'policy-revision']) {
       const f = brokerFixture(name, args, raw);
       const resolve = f.common.dependencies.credentials.resolve;
@@ -1219,6 +1221,49 @@ test('user organization catalog requires its exact collection grant, proves user
   safeEnvelope(maximum, maxResult);
   const reflected = brokerFixture(name, args, raw, {
     credentials: { async resolve() { return { value: 'org-a', redactions: [], async close() {} }; } },
+  });
+  assert.equal((await reflected.call()).code, 'OUTPUT_REFUSED');
+  assert.equal(reflected.provider.requests.length, 2);
+});
+
+test('shared projects require exact-user collection grant, selected output and same-credential identity proof', async () => {
+  const [name, args, raw, expected] = sharedProjectCases[0];
+  for (const resource of ['neon/users/user-a', 'neon/users/user-a/profile', 'neon/users/user-a/organizations',
+    'neon/users/other/shared_projects', 'neon/organizations/org-a/projects']) {
+    const f = brokerFixture(name, args, raw);
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = brokerFixture(name, args, { user: { ...raw.user, email: credentialCanary }, catalog: { projects: [
+    { ...raw.catalog.projects[0], name: credentialCanary, owner: { email: derivedCanary } },
+    { ...raw.catalog.projects[0], id: 'unselected', settings: { password: credentialCanary } }] } });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, expected);
+  assert.equal(f.common.calls.secret, 1);
+  assert.equal(f.provider.requests.length, 2);
+  safeEnvelope(f, result);
+  for (const invalid of [{ ...raw, user: { id: 'other' } }, { ...raw, catalog: { projects: [], unavailable_project_ids: ['project-a'] } },
+    { ...raw, catalog: { projects: [raw.catalog.projects[0], raw.catalog.projects[0]] } }]) {
+    const refused = brokerFixture(name, args, invalid);
+    const refusal = await refused.call();
+    assert.equal(refusal.code, 'UPSTREAM_UNAVAILABLE');
+    safeEnvelope(refused, refusal);
+  }
+  const config = { ...sharedProjectScope, userId: 'u'.repeat(80), revision: 'r'.repeat(80),
+    projectIds: Array.from({ length: 30 }, (_, n) => `p${String(n).padStart(59, '0')}`) };
+  const projects = config.projectIds.map(id => ({ id, region_id: 'r'.repeat(80), pg_version: 19 }));
+  const maximum = brokerFixture(name, { user_id: config.userId }, (url, init, n) => response(n === 1 ? { id: config.userId } :
+    { projects: projects.slice((n - 2) * 10, (n - 1) * 10), ...(n < 4 ? { pagination: { cursor: `page-${n}` } } : {}) }), {}, config);
+  const maxResult = await maximum.call();
+  assert.equal(maxResult.ok, true);
+  assert.deepEqual(maxResult.value, { projects });
+  assert.equal(maximum.provider.requests.length, 4);
+  safeEnvelope(maximum, maxResult);
+  const reflected = brokerFixture(name, args, raw, {
+    credentials: { async resolve() { return { value: 'project-a', redactions: [], async close() {} }; } },
   });
   assert.equal((await reflected.call()).code, 'OUTPUT_REFUSED');
   assert.equal(reflected.provider.requests.length, 2);

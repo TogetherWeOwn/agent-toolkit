@@ -8,6 +8,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  listSharedProjects(cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
   listProjects(organization: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
   getNeonAuthEmailAndPasswordConfig(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   getCurrentUserInfo(options: MetadataRequestOptions): Promise<unknown>;
@@ -166,6 +167,8 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    listSharedProjects: (cursor: string | null, options: MetadataRequestOptions) =>
+      get("/projects/shared", cursorQuery(cursor), options),
     listProjects: (organization: string, cursor: string | null, options: MetadataRequestOptions) => {
       const query = cursorQuery(cursor);
       query.set("org_id", authPathId(organization));

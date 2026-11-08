@@ -344,6 +344,28 @@ fixed paths/same credential, malformed/accessor/poisoned output and common-core
 identity/exact-grant/replay/TOCTOU/reflection/output budgets. No transfer, membership
 mutation, credential discovery, live integration or runtime authority is supplied.
 
+## Exact-user shared-project catalog delta
+
+`listSharedProjects` requires its dedicated exact-user shared_projects collection
+grant and copied explicit project selection. Profile, organization catalog and
+project-detail authority cannot substitute. The same resolved credential first
+proves the exact selected user via fixed /users/me, then reads /projects/shared;
+wrong-user and userless keys refuse before the catalog. No ownership or effective
+permission is inferred from shared membership. Output is selected ID/region/PG
+version only, omitting owner/profile/organization details, names, URLs, settings,
+permission labels, usage and diagnostics.
+
+All rows are validated before filtering; duplicate IDs, contradictory optional
+user/project/branch ancestry, malformed or repeated cursors and pages over ten
+refuse. Three catalog pages plus one identity request fit a single 4.5-second
+operation deadline; continuation at the ceiling refuses without partial success.
+Every page and detached projection rejects unavailable selected IDs. No caller
+search/cursor/limit, cross-catalog fallback, blind retry, mutation or live runtime
+is introduced. The proof and catalog are not an atomic access snapshot. Mocked
+contracts cover strict scope/arguments, cancellation, availability, pagination,
+closed output and common-core identity/grant/replay/TOCTOU/reflection/budget
+boundaries; native provider-effect/entitlement/custody gates remain unresolved.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.

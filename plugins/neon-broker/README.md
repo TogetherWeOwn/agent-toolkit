@@ -644,6 +644,33 @@ provider-effect evidence. No creation, recovery, deletion, URL follow, live call
 or runtime enablement is introduced. Empty selections emit no project metadata;
 failed upstream requests never become empty success or drop the organization filter.
 
+## Exact-user shared-project catalog
+
+`createNeonSharedProjectOperations` adds `listSharedProjects` with canonical
+`{ user_id }`, a copied exact user/revision and up to 30 unique selected project
+IDs. Its `neon/users/<user>/shared_projects` grant is distinct from profile,
+organization catalog, organization project catalog and project-detail grants.
+Fixed `GET /users/me` must first prove the selected user; only then does fixed
+`GET /projects/shared?limit=10` use the same credential. Userless/wrong-user keys
+refuse before catalog transport. Search and caller-controlled pagination are not
+exposed, and no other catalog is used as fallback.
+
+Only selected project ID, region and PostgreSQL version are emitted. Names,
+owners, organization details, effective permissions, URLs, settings and usage are
+omitted. Shared catalog membership under the proven user plus explicit trusted
+project selection binds output; it does not establish ownership or active access.
+Every row is validated and deduplicated before filtering. Pagination uses the
+pinned `Pagination.cursor`, with ten rows per page and three catalog pages at most;
+continuing at that ceiling refuses without partial output. Selected unavailable
+project IDs refuse on every page and detached projection, not empty success.
+
+Identity proof plus pagination uses up to four bounded requests within one
+4.5-second operation deadline. Failure, cancellation, malformed or cyclic
+pagination and contradictory optional user/project/branch ancestry refuse without
+retry or discovery. This is not an atomic access snapshot or non-waking evidence;
+credential custody, native integration, entitlement and provider-effect gates
+remain. No mutation, live call, secret retrieval or runtime enablement is added.
+
 ## Shared contract and candidate compatibility
 
 Contract: `toolkit.provider-broker/v1`. Merged core: [PR #17](https://github.com/TogetherWeOwn/agent-toolkit/pull/17),
@@ -669,8 +696,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: fifty-five implemented
-source adapters, 139 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: fifty-six implemented
+source adapters, 138 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable
