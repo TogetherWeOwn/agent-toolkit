@@ -101,7 +101,7 @@ export function summarizePagesCoverage(scope: PagesCoverageScope, observations: 
     pageCoverage: known ? missingRanges.length === 0 ? "all-reported-pages-observed" as const : "gaps" as const : "unavailable" as const,
     missingRanges: known ? Object.freeze(missingRanges.map(range => Object.freeze(range))) : null,
     window: Object.freeze({ startedAt, completedAt, provenance: "internal-transport-observation" as const }),
-    observationsHash: canonicalHash(bindings),
+    observationsHash: bindings.reduce((previous, binding) => canonicalHash({ previous, binding }), canonicalHash([])),
     complete: false as const, enumeration: "not-established" as const, snapshotConsistency: "not-established" as const,
     hostingAbsence: "not-established" as const, nativeAcceptance: "not-established" as const,
   });

@@ -103,10 +103,12 @@ test("Cloudflare Pages coverage requires matching successful capture receipts an
 test("Cloudflare Pages coverage bounds inputs and returns hashes not selected item or unrelated payloads", () => {
   for (const entries of [[], Array.from({ length: 101 }, () => observation()), null]) assert.throws(() => summarizePagesCoverage(scope, entries), /cap/);
   denied(observation(1, 1001));
-  denied(changed(v => { v.extra = "x".repeat(32768); }));
-  assert.throws(() => summarizePagesCoverage(scope, Array.from({ length: 40 }, (_, i) => changed(v => {
-    v.extra = "x".repeat(30000);
-  }, observation(i + 1, 40)))), /cap/);
+  const oversized = observation();
+  oversized.result.value.extra = "x".repeat(32768);
+  denied(oversized);
+  assert.throws(() => summarizePagesCoverage(scope, Array.from({ length: 100 }, (_, i) => changed(v => {
+    v.extra = Array.from({ length: 4 }, () => "x".repeat(3000));
+  }, observation(i + 1, 100)))), /cap/);
   denied(changed(v => { v.items = Array.from({ length: 11 }, () => ({ id: "x" })); }));
   const o = observation(1, 1, [{ id: "private-selected-id", provenance: { repositoryName: "private-repository" } }]);
   const out = summarizePagesCoverage(scope, [o]);
@@ -114,6 +116,20 @@ test("Cloudflare Pages coverage bounds inputs and returns hashes not selected it
   for (const omitted of ["private-selected-id", "private-repository", o.result.event, o.result.value.capture.correlationId, o.evidence.targetHash]) {
     assert.ok(!serialized.includes(omitted));
   }
+});
+
+test("Cloudflare Pages coverage accepts the full 100-observation bound without hashing an oversized core JSON array", () => {
+  const entries = Array.from({ length: 100 }, (_, i) => observation(i + 1, 100));
+  const out = summarizePagesCoverage(scope, entries);
+  assert.equal(out.pageCoverage, "all-reported-pages-observed");
+  assert.equal(out.observedPages.length, 100);
+  assert.equal(out.observationsHash, summarizePagesCoverage(scope, [...entries].reverse()).observationsHash);
+  const bindings = entries.map(o => ({ page: o.result.value.pagination.page, event: o.result.event,
+    targetHash: o.evidence.targetHash, valueHash: o.evidence.valueHash }));
+  assert.throws(() => canonicalHash(bindings), /schema/);
+  assert.equal(out.observationsHash, bindings.reduce((previous, binding) => canonicalHash({ previous, binding }), canonicalHash([])));
+  entries[99] = observation(100, 100);
+  assert.notEqual(out.observationsHash, summarizePagesCoverage(scope, entries).observationsHash);
 });
 
 function brokerFixture({ auditFailure = false } = {}) {
