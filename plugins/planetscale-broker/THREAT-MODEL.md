@@ -51,6 +51,30 @@ Outputs are fixed projections with enum/boolean/bounded-identifier validation.
 The eventual common-core secret guard must also reject reflected credential values
 in selected fields; dropping known secret fields alone cannot prove no disclosure.
 
+## Organization audit-event metadata — offline only
+
+`list_audit_logs` fixes the organization audit-log path and first-page `limit=10`;
+empty arguments cannot select a cursor, target, URL, credential or authority.
+The closed broker scope snapshots 1–32 unique event IDs. The whole result refuses
+unknown/malformed/duplicate IDs, over-cap data, non-string or oversized selected
+action fields, inconsistent cursor boundaries, previous-page flags and impossible
+empty pages claiming more data. Output contains only bound ID, bounded-string
+action presence and `integrity: not-established`; all actor/target IDs and types,
+action text, names, network/location data, change metadata and timestamps are
+omitted. No cursor is returned or followed. First-page-only output never proves
+complete history, event integrity, correct authorization, enforcement or closure.
+
+Audit access needs its separate documented `read_audit_logs` entitlement, trusted
+current organization ownership and whole-collection policy before any request;
+known event IDs only confine output. Raw audit bodies can contain sensitive change
+and credential material, so broker-side no-log/error/custody and reflected-secret
+guards remain required. No credential, network, audit-store write or runtime
+registration exists here. Resource creation TTL/spend/teardown is inapplicable to
+this pure builder, but future transport/rate/time/byte limits and non-waking proof
+remain prerequisites. `test/audit-events.test.mjs` covers fixed scope/path, cursor,
+immutability, bounds, malformed data, unknown identities and omitted canaries;
+native authorization/replay/custody tests remain incomplete.
+
 ## Maintenance schedule/window metadata — offline only
 
 - `get_maintenance_schedule`: fixed database schedule path and broker-bound ID;

@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The 115 adapters are pure request builders and bounded output projections,
+The 116 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,19 +36,35 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 115 | Narrow projections; not full operation coverage |
-| Missing source adapters | 176 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 116 | Narrow projections; not full operation coverage |
+| Missing source adapters | 175 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-115 adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 160
+116 adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 159
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
 backups/restore, schema/deploy, topology, maintenance and every other official
 area remain in the map even when access or implementation is missing.
+
+## Audit-event metadata
+
+`planetscale.list_audit_logs` is a fixed organization first-page read with
+`limit=10`. It snapshots 1–32 broker-owned event IDs and returns only bound IDs,
+`auditActionRecorded` string-presence flags and `integrity: not-established`.
+Action strings, actor/target identities, display names, IP/location/ASN, change
+metadata and timestamps are omitted. Unknown IDs, duplicates, malformed rows,
+over-cap pages and inconsistent cursor envelopes refuse the whole response.
+No cursor is exposed or followed; `hasMore` and explicit first-page-only coverage
+never establish history completeness. Presence never proves event integrity,
+correct authorization, effective enforcement or native closure. The documented
+`read_audit_logs` scope is separate from general organization/database reads;
+actual entitlement, independent organization collection permission, trusted
+ownership, raw-body custody and operation-specific non-waking proof remain
+prerequisites. Later pages and full audit-log capability remain incomplete.
 
 ## Vitess parameter metadata
 
