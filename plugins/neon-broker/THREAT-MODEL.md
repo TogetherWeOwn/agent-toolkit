@@ -19,6 +19,25 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
 
+## Selected database-schema identity delta
+
+`getProjectBranchSchema` is a database-schema read, not configuration metadata.
+One copied exact project/branch/database/revision and explicit column selection
+bind the fixed current-head JSON GET and its distinct database/schema grant.
+Historical selectors, SQL format and omitted/default database paths refuse;
+there is no schema comparison, SQL connection or fallback. Provider effects and
+non-waking behavior require separate qualification; no live read is performed.
+
+Projection emits only selected schema/table/column identities. SQL DDL, types,
+nullability, defaults, generated expressions and constraints are not evaluated.
+Thirty tables and thirty columns per table bound validation before filtering;
+duplicates, malformed/unselected rows, contradictory optional ancestry and
+pagination refuse without partial output. The explicit selection caps at thirty
+identities to fit common output budgets. The constrained ASCII identifier subset
+can refuse valid quoted Postgres names; empty selected output is not evidence of
+schema completeness or permission to mutate schema. No runtime registration,
+credential action or lifecycle enforcement is added.
+
 ## Database-bound advisor summary delta
 
 `getProjectAdvisorSecurityIssues` is database analysis, not passive catalog

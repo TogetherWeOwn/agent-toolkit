@@ -37,6 +37,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   organizationKeyCases, organizationKeyFixture, organizationKeyScope,
   userKeyCases, userKeyFixture, userKeyScope,
   advisorCases, advisorFixture, advisorScope, advisorIssue,
+  branchSchemaCases, branchSchemaFixture, branchSchemaScope, schemaColumn, schemaTable,
   fixture, scope, branch, operation, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
@@ -47,7 +48,8 @@ const { providerFixture, credentialCanary, derivedCanary } = await import(pathTo
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
 function brokerFixture(name, args, raw, overrides = {}, config) {
-  const factory = advisorCases.some(([operation]) => operation === name) ? advisorFixture :
+  const factory = branchSchemaCases.some(([operation]) => operation === name) ? branchSchemaFixture :
+    advisorCases.some(([operation]) => operation === name) ? advisorFixture :
     userKeyCases.some(([operation]) => operation === name) ? userKeyFixture :
     organizationKeyCases.some(([operation]) => operation === name) ? organizationKeyFixture :
     credentialMetadataCases.some(([operation]) => operation === name) ? credentialMetadataFixture :
@@ -98,6 +100,45 @@ function safeEnvelope(f, result) {
     assert(!serialized.includes(secret), `secret in output/audit/journal: ${secret}`);
   }
 }
+
+test('branch schema: database schema grants do not follow from configuration, analysis or sibling access', async () => {
+  const [name, args, raw] = branchSchemaCases[0];
+  for (const resource of ['neon/projects/project-a/branches/br-a/databases/main',
+    'neon/projects/project-a/branches/br-a/data-api/main',
+    'neon/projects/project-a/branches/br-a/databases/main/advisors/security',
+    'neon/projects/project-a/branches/br-a/databases/other/schema',
+    'neon/projects/project-a/branches/br-b/databases/main/schema']) {
+    const f = brokerFixture(name, args, raw);
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.provider.requests.length, 0);
+    assert.equal(f.common.calls.secret, 0);
+  }
+  for (const invalid of [{ sql: 'CREATE TABLE ignored' }, { json: { tables: [schemaTable, schemaTable] } },
+    { ...raw, db_name: 'other' }, { ...raw, pagination: {} }]) {
+    const f = brokerFixture(name, args, invalid);
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    safeEnvelope(f, result);
+  }
+});
+
+test('branch schema: maximum selected identities fit common budgets while DDL and attributes remain hidden', async () => {
+  const columns = Array.from({ length: 30 }, (_, i) => ({ schema_name: 's'.repeat(63), table_name: 't'.repeat(63), column_name: `c${i}`.padEnd(63, 'c') }));
+  const config = { ...branchSchemaScope, projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), databaseName: 'd'.repeat(63), revision: 'r'.repeat(80), columns };
+  const args = { project_id: config.projectId, branch_id: config.branchId, db_name: config.databaseName };
+  const raw = { sql: credentialCanary, json: { tables: [{ schema: columns[0].schema_name, name: columns[0].table_name,
+    constraints: derivedCanary, columns: columns.map(c => ({ name: c.column_name, type: credentialCanary, default: derivedCanary })) }] } };
+  const f = brokerFixture('getProjectBranchSchema', args, raw, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { columns });
+  safeEnvelope(f, result);
+  const reflected = brokerFixture('getProjectBranchSchema', branchSchemaCases[0][1], branchSchemaCases[0][2], {
+    credentials: { async resolve() { return { value: schemaColumn.schema_name, redactions: [], async close() {} }; } },
+  });
+  assert.equal((await reflected.call()).code, 'OUTPUT_REFUSED');
+});
 
 test('advisor: exact database analysis grant is separate from catalog, parent and sibling authority', async () => {
   const [name, args, raw] = advisorCases[0];
@@ -290,7 +331,7 @@ test('reflected lease material in selected safe-looking fields is refused by the
   assert.equal((await f.call()).code, 'OUTPUT_REFUSED');
 });
 
-for (const [name, args, raw] of [...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases, ...regionCases, ...projectCountCases, ...authWebhookCases, ...userProfileCases, ...authEmailCases, ...projectCases, ...userOrganizationCases, ...sharedProjectCases]) {
+for (const [name, args, raw] of [...branchSchemaCases, ...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases, ...regionCases, ...projectCountCases, ...authWebhookCases, ...userProfileCases, ...authEmailCases, ...projectCases, ...userOrganizationCases, ...sharedProjectCases]) {
   test(`${name}: replay and TOCTOU policy/resource changes refuse without a second request`, async () => {
     const replay = brokerFixture(name, args, raw);
     assert.equal((await replay.call()).ok, true);

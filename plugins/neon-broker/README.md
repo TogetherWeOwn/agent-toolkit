@@ -7,6 +7,24 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonBranchSchemaOperations(trustedScope, transport)` adds
+`getProjectBranchSchema` with one copied project/branch/database/revision and an
+explicit selection of at most 30 schema/table/column tuples. A distinct exact
+`neon/projects/<project>/branches/<branch>/databases/<database>/schema` grant is
+required; catalog, Data API and advisor access do not imply schema authority.
+The fixed branch `/schema` GET always sends mandatory db_name and format=json.
+It reads current head only: lsn, timestamp, SQL-format and default-target overrides
+are refused. Closed output is selected column identities only; SQL DDL, data types,
+nullability, generated/default values, constraints and expressions are never
+read or emitted. Response tables and columns per table each cap at 30; duplicate
+table/column identities, malformed names, contradictory optional ancestry and
+unexpected pagination refuse before filtering, even for unselected rows. Names
+use the bounded ASCII catalog-name subset, not every legal quoted Postgres name.
+Empty selection/output does not establish schema completeness. This endpoint reads
+database schema; GET and mocks do not establish non-waking behavior. Native
+entitlement/effects, independent review and runtime integration remain unresolved.
+No SQL client, live schema call, schema mutation or runtime enablement is supplied.
+
 `createNeonAdvisorOperations(trustedScope, transport)` adds
 `getProjectAdvisorSecurityIssues` for a single copied project/branch/database and
 revision. Its distinct exact database `advisors/security` grant is not implied by

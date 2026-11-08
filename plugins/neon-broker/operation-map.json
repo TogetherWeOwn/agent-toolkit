@@ -2057,20 +2057,24 @@
       "id": "getProjectBranchSchema",
       "apiArea": "branch",
       "tool": "neon.getProjectBranchSchema",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/db_name/schema",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "database-schema-read"
       ],
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/branch-schema.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source and refusal contracts only; current-head database-bound JSON schema read with copied explicit selected column identities, dedicated schema grant and bounded tables/columns. No DDL, attributes or SQL fallback. Native entitlement/effects, reviews and runtime integration unresolved; no live schema read or non-waking claim."
     },
     {
       "id": "getProjectBranchSchemaComparison",
