@@ -7,6 +7,7 @@ import { currentContentDescriptor } from "../dist/plugins/cloudflare-broker/src/
 import { cloudflareReadOperations } from "../dist/plugins/cloudflare-broker/src/read-operations.js";
 import { versionAssetDescriptor } from "../dist/plugins/cloudflare-broker/src/version-assets.js";
 import { workerDomainMetadataDescriptors } from "../dist/plugins/cloudflare-broker/src/worker-domains.js";
+import { r2LifecycleDescriptor } from "../dist/plugins/cloudflare-broker/src/r2-lifecycle.js";
 import { deletionPlanDescriptors } from "../dist/plugins/cloudflare-broker/src/deletion-plans.js";
 import { inventory, source } from "../plugins/cloudflare-broker/scripts/inventory.mjs";
 import { familySummary } from "../plugins/cloudflare-broker/scripts/families.mjs";
@@ -69,6 +70,7 @@ const metadataOnly = { ...descriptors, ...zoneDescriptors, ...routeDescriptors, 
 const contentDescriptor = currentContentDescriptor({ accountId: account, revision: "source-policy-1", sourceDigestScriptNames: ["safe-worker"] });
 const allDescriptors = { ...metadataOnly, ...deletionDescriptors, contentDescriptor,
   ...workerDomainMetadataDescriptors({ accountId: account, revision: "policy-1" }),
+  r2Lifecycle: r2LifecycleDescriptor({ accountId: account, revision: "policy-1" }),
   versionAssets: versionAssetDescriptor({ accountId: account, revision: "policy-1", workers: [{ scriptName: "safe-worker", versionIds: [db] }] }),
 };
 const deletionCases = [
@@ -935,9 +937,9 @@ test("Cloudflare full schema inventory is pinned, explicit about holes, and cons
       }
     }
   }
-  assert.equal(operations.filter(row => row.typedTool !== null).length, 47);
+  assert.equal(operations.filter(row => row.typedTool !== null).length, 48);
   assert.equal(operations.filter(row => row.tier === "reserved").length, 6);
-  assert.equal(operations.filter(row => row.tier === "read").length, 41);
+  assert.equal(operations.filter(row => row.tier === "read").length, 42);
   assert.equal(operations.filter(row => row.implementation === "content-descriptor-only").length, 1);
   assert.equal(manifest.counts.contentDescriptors, 1);
   assert.equal(manifest.counts.descriptors, Object.keys(allDescriptors).length);
@@ -954,7 +956,7 @@ test("Cloudflare descriptor, coverage and core-binding tiers agree for every sou
   const rows = (await readFile(new URL("../plugins/cloudflare-broker/coverage/operations.jsonl", import.meta.url), "utf8"))
     .trimEnd().split("\n").map(line => JSON.parse(line));
   const rowsByName = new Map(rows.filter(row => row.typedTool !== null).map(row => [row.typedTool, row]));
-  assert.equal(bound.length, 42);
+  assert.equal(bound.length, 43);
   assert.equal(new Set(bound.map(operation => operation.name)).size, bound.length);
   for (const operation of bound) {
     assert.equal(operation.tier, descriptorsByName.get(operation.name)?.tier, operation.name);
