@@ -7,6 +7,34 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonObjectDownloadOperations(trustedScope, transport)` adds
+`getProjectBranchBucketObject` as a closed byte-count observation, not a file-return
+tool. Copy one exact project/branch/bucket/object-key/revision. Require the separate
+`neon/projects/<project>/branches/<branch>/buckets/<bucket>/objects/<key>/download`
+grant: listing, object metadata, presign, parent and sibling grants cannot substitute.
+The composed resource must fit 256 characters. Keys use a conservative 80-character
+ASCII alphanumeric/underscore/dot/slash/hyphen subset; empty/dot path segments,
+percent escapes, queries and fragments refuse. The fixed GET percent-encodes the
+whole object key as one segment, including nested slashes. No range, redirect,
+presign, retry, list or credential fallback exists.
+
+The transport requires HTTP200, application/octet-stream, absent/identity content
+encoding and a numeric Content-Length <=65,536. It counts and discards each stream
+chunk without buffering, text decoding or JSON parsing. Early EOF, extra bytes,
+over-limit headers/streams, missing body/length, cancellation or the existing 1s
+deadline refuse without partial success. Closed output is `observed_bytes` only;
+object content, ETag/hash, filename/disposition and arbitrary headers never leave
+transport. Zero bytes is valid, not evidence of an absent object. A matching byte
+count does not establish an immutable snapshot, content integrity or completeness.
+
+The pinned Beta endpoint is served by a user session and requires Editor or higher
+on the per-project role model; OAuth clients also need the project-update scope.
+These are unresolved operation-specific entitlement/custody prerequisites, not a
+claim that the metadata credential or source name can download objects. The fixed
+request supplies effective-branch ancestry, including inherited objects. Effects,
+availability and native qualification remain unknown. No live download, content
+exposure, credential action, mutation or runtime enablement is supplied.
+
 `createNeonOAuthProviderOperations(trustedScope, transport)` adds
 `listNeonAuthOauthProviders` and `listBranchNeonAuthOauthProviders`. One copied
 project/branch/revision and nonempty unique selection from google, github,
@@ -25,7 +53,8 @@ and arbitrary extras are never evaluated or emitted. This narrows the earlier
 OAuth-provider exclusion because the pinned NeonAuthOauthProvider GET schema
 explicitly documents masked client_secret, including masked Apple fingerprints;
 it does not extend to email/aggregate endpoints whose schema can return stored
-passwords. Those reads and binary object downloads remain incomplete.
+passwords. Those reads remain incomplete. Binary object source is limited to the
+separate stream/discard byte-count observation above; no content-return tool exists.
 
 Legacy project OAuth listing is deprecated with a schema sunset of 2026-03-01;
 branch listing is Beta. Availability, entitlement and provider effects remain

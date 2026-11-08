@@ -655,6 +655,34 @@ this does not establish atomicity across live branch heads. Database comparison
 may wake compute; native effects, entitlement and independent acceptance remain
 unresolved. No runtime tool is enabled.
 
+## Bounded binary object byte-count observation delta
+
+One copied project/branch/bucket/key/revision binds an exact object/download grant,
+separate from listing, metadata, presign, parent or sibling access. Conservative
+canonical key segments reject empty/dot segments, encoded escapes and path/query
+injection; nested slashes are encoded into one provider path segment. Resource
+length is checked against the common 256-character ceiling at construction.
+No caller identity, header/range, credential, URL or dynamic selector is accepted.
+
+Raw object bytes may contain arbitrary sensitive data. The transport counts and
+discards stream chunks, never buffers or decodes the object, never parses it as
+JSON and never emits content, hash/ETag, filename/disposition or arbitrary headers.
+Only a closed terminal observed_bytes integer (0..65,536) leaves the boundary.
+Content-Length is mandatory and must equal the total stream bytes. Missing/invalid
+length, wrong MIME/encoding, partial HTTP206, redirects, short/long streams, size
+limits, failures and cancellation/deadline refuse without partial-success output
+or alternate endpoint/credential/retry. Existing JSON methods keep their parser;
+the binary mode is private and reachable only through the fixed object endpoint.
+
+The Beta endpoint's user-session/Editor-or-higher/OAuth-project-update entitlement
+is not established by metadata access, a test credential or a source name. Those
+native custody/entitlement and provider-effect prerequisites remain unresolved,
+as do all independent review gates. Effective ancestry comes from the exact fixed
+branch request, including inherited objects; the count is not snapshot/integrity
+or credential-completeness evidence. Source mocks do not authorize a live object
+read, secret retrieval, configuration change or runtime registration. The three
+password-bearing email/aggregate reads remain incomplete. No tool is enabled.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.

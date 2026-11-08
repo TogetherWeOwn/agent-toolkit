@@ -2,7 +2,8 @@
 
 ## Implemented source, not accepted enablement
 
-- Seventy-three typed source operations, including selected OAuth-provider ID/type metadata,
+- Seventy-four typed source operations, including bounded binary-object byte-count observations,
+  selected OAuth-provider ID/type metadata,
   bounded log-query counts, current-head schema comparison and selected log-value observations,
   selected database-schema identities and database-bound advisor summaries,
   exact-user/organization key and branch credential identities and exact-account authentication metadata,
@@ -11,7 +12,7 @@
   email-auth configuration, auth webhook status and organization VPC/configuration/member/invitation metadata plus organization-filtered region/project catalogs and project count,
   with strict arguments, exact trusted scope and parent-child binding, safe projections
   and fixed bounded injected transport.
-- Full 194-row management inventory; 121 operations still lack source. All rows remain
+- Full 194-row management inventory; 120 operations still lack source. All rows remain
   unqualified and disabled, with unknown entitlement. These adapters do not complete
   the package. Prior source merge,
   current source review, native qualification and runtime enablement are separate.
@@ -30,8 +31,10 @@
 2. Accepted authenticated host identity and current project/task ownership adapter;
    exact agent AND resource policy for each tool, including explicit collection
    grants; current trusted scope/revision and provider parent-binding evidence.
-3. Verified metadata-only credential entitlement, broker-only credential custody,
-   bounded/revocable lease and reflected-value redactions. No new credential,
+3. Verified operation-specific credential entitlement, broker-only credential custody,
+   bounded/revocable lease and reflected-value redactions. Binary object observation
+   needs accepted session/Editor/OAuth-update authority, never inferred from metadata
+   access; its source only counts/discards bytes and returns no content. No new credential,
    mint/reset or placement is authorized by source delivery.
 4. Independent provider evidence for non-waking behavior on these exact selected
    endpoints, API version/configuration and resources. GET/mocks/read labels are
