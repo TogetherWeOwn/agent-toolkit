@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createNeonCatalogOperations, CATALOG_OPERATIONS } from '../dist/plugins/neon-broker/src/catalog.js';
+import { createNeonCatalogOperations, CATALOG_OPERATIONS, MAX_CATALOG_BINDINGS } from '../dist/plugins/neon-broker/src/catalog.js';
 import { MAX_ITEMS, MAX_PAGES } from '../dist/plugins/neon-broker/src/metadata.js';
 import { createNeonMetadataTransport, NEON_ORIGIN } from '../dist/plugins/neon-broker/src/transport.js';
-import { catalogCases as cases, catalogFixture as fixture, catalogScope as scope, operation, database, role, endpoint, canary, response } from './helpers.mjs';
+import { catalogCases as cases, catalogFixture as fixture, catalogScope as scope, catalogScopeAt, operation, database, role, endpoint, canary, response } from './helpers.mjs';
 
 const paths = [
   `/projects/project-a/operations/${operation.id}`, '/projects/project-a/operations', '/projects/project-a/branches/count',
@@ -152,6 +152,31 @@ test('collection filtering is additional projection, not a substitute for collec
   }
 });
 
+test('unselected project endpoints and provider-valid quoted/Unicode catalog names are filtered', async () => {
+  const config = { ...scope, branchIds: ['br-a'], endpoints: [scope.endpoints[0]] };
+  assert.deepEqual(await fixture({ endpoints: [endpoint, { ...endpoint, id: 'ep-other', branch_id: 'br-unconfigured' }] }, config)
+    .run('listProjectEndpoints', cases[3][1]), { endpoints: [endpoint] });
+  for (const [name, args, raw, expected] of [cases[4], cases[6]]) {
+    const kind = Object.keys(raw)[0];
+    for (const other of ['app.user', '应用', 'app$user']) {
+      assert.deepEqual(await fixture({ [kind]: [...raw[kind], { ...raw[kind][0], name: other }] }).run(name, args), expected);
+    }
+  }
+});
+
+test('canonical selected names exclude resource characters unsupported by the common broker', () => {
+  for (const name of ['app$user', 'app.user', '应用']) {
+    assert.throws(() => createNeonCatalogOperations({ ...scope, roles: [{ branchId: 'br-a', name }] }, {}));
+    assert.throws(() => createNeonCatalogOperations({ ...scope, databases: [{ id: database.id, branchId: 'br-a', name }] }, {}));
+  }
+});
+
+test('explicit catalog binding ceiling fits the full configuration budget and rejects oversize registries', () => {
+  assert.equal(MAX_CATALOG_BINDINGS, 16);
+  assert.equal(createNeonCatalogOperations(catalogScopeAt(MAX_CATALOG_BINDINGS), {}).length, 8);
+  assert.throws(() => createNeonCatalogOperations(catalogScopeAt(MAX_CATALOG_BINDINGS + 1), {}));
+});
+
 test('operation cursor pagination is opaque, encoded, bounded, and distinct from branch next cursors', async () => {
   const cursor = '2022-12-07T00:45:05.262011Z?&limit=1000';
   const f = fixture((url, init, n) => response(n === 1 ? { operations: [operation], pagination: { cursor } } : { operations: [] }));
@@ -199,7 +224,7 @@ test('transport seam rejects SQL/path/query injection and trailing newlines befo
   let calls = 0;
   const transport = createNeonMetadataTransport(() => { calls++; throw Error('must not fetch'); });
   const options = { credential: canary, signal: new AbortController().signal };
-  for (const bad of ['../role', 'role/password', 'role%2fpassword', 'role?reveal=true', 'reader\n', 'rеader', 'x'.repeat(64)]) {
+  for (const bad of ['../role', 'role/password', 'role%2fpassword', 'role?reveal=true', 'app$user', 'reader\n', 'rеader', 'x'.repeat(64)]) {
     assert.throws(() => transport.getProjectBranchRole('project-a', 'br-a', bad, options));
     assert.throws(() => transport.getProjectBranchDatabase('project-a', 'br-a', bad, options));
   }

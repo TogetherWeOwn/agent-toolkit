@@ -15,6 +15,17 @@ export const catalogScope = { ...scope,
   databases: [{ id: database.id, branchId: 'br-a', name: database.name }],
   roles: [{ branchId: 'br-a', name: role.name }],
 };
+export function catalogScopeAt(count) {
+  const indices = Array.from({ length: count }, (_, index) => index);
+  return { ...scope,
+    branchIds: indices.map(index => `br-${index}`),
+    endpoints: indices.map(index => ({ id: `ep-${index}`, branchId: `br-${index}` })),
+    operations: indices.map(index => ({ id: `00000000-0000-0000-0000-${index.toString(16).padStart(12, '0')}`,
+      branchId: `br-${index}`, endpointId: `ep-${index}` })),
+    databases: indices.map(index => ({ id: index + 1, name: `db_${index}`, branchId: `br-${index}` })),
+    roles: indices.map(index => ({ name: `reader_${index}`, branchId: `br-${index}` })),
+  };
+}
 export const project = { id: 'project-a', region_id: 'aws-us-east-2', pg_version: 17 };
 export const branch = { id: 'br-a', project_id: 'project-a', current_state: 'ready', default: true, protected: false };
 export const endpoint = { id: 'ep-a', project_id: 'project-a', branch_id: 'br-a', type: 'read_write', current_state: 'idle', disabled: false };

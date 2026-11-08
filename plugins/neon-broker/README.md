@@ -32,8 +32,16 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 Catalog scope additionally contains exact operation UUIDs and nullable branch/endpoint
 bindings, database numeric-ID/name/branch bindings, and role name/branch bindings.
-Database/role names support a conservative canonical ASCII subset, max 63 characters;
-other provider-valid names remain unavailable, never normalized into another target.
+Database/role names support the common resource alphabet's conservative canonical
+ASCII subset (letters/digits/underscore/hyphen, beginning with a letter/underscore),
+max 63 characters. Other selected provider-valid names remain unavailable, never
+normalized into another target; unrelated quoted/Unicode names in a collection are
+filtered without blocking configured canonical names. Unselected project endpoints
+on unconfigured branches are likewise omitted, while selected bindings stay exact.
+Each of the five catalog binding arrays is capped at 16: a full registry fits the
+common 256-node configuration guard, and every possible selected operation output
+fits its 256-node output guard. This is a selection ceiling, not a provider limit;
+larger trusted selections fail closed at construction and need scoped integration.
 Operation output contains bound IDs, known action/status and bounded failure/duration
 counters, not arbitrary errors or timestamps. Database output is ID/branch/name;
 role output is branch/name and optional boolean protected. Passwords/DSNs are never

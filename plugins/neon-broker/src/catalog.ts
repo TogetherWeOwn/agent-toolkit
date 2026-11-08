@@ -8,20 +8,23 @@ export const CATALOG_OPERATIONS = ["getProjectOperation", "listProjectOperations
   "listProjectEndpoints", "listProjectBranchDatabases", "getProjectBranchDatabase",
   "listProjectBranchRoles", "getProjectBranchRole"] as const;
 type CatalogOperation = typeof CATALOG_OPERATIONS[number];
-interface CatalogArguments {
+type CatalogArguments = {
   readonly project_id: string;
   readonly branch_id?: string;
   readonly operation_id?: string;
   readonly database_name?: string;
   readonly role_name?: string;
-}
+};
 export interface NeonCatalogScope extends NeonMetadataScope {
   readonly operations: readonly { readonly id: string; readonly branchId: string | null; readonly endpointId: string | null }[];
   readonly databases: readonly { readonly id: number; readonly name: string; readonly branchId: string }[];
   readonly roles: readonly { readonly name: string; readonly branchId: string }[];
 }
 
-const catalogName = text(63, /^[A-Za-z_][A-Za-z0-9_$-]*$/);
+// Five full binding arrays fit both the common 256-node configuration budget
+// and its projected-output budget. Larger selections require a scoped successor.
+export const MAX_CATALOG_BINDINGS = 16;
+const catalogName = text(63, /^[A-Za-z_][A-Za-z0-9_-]*$/);
 const operationId = text(36, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
 const nonnegative = integer(0, 2_147_483_647);
 const databaseId = integer(1, Number.MAX_SAFE_INTEGER);
@@ -44,11 +47,11 @@ const action = oneOf(["create_compute", "create_timeline", "start_compute", "sus
 // Scope is trusted construction data, never a caller identity, grant or approval.
 export function createNeonCatalogOperations(scope: NeonCatalogScope, transport: NeonMetadataTransport): readonly ProviderOperation[] {
   const config = closed({ projectId: identifier, revision: text(80, /^[A-Za-z0-9][A-Za-z0-9_-]*$/),
-    branchIds: { parse: (v: unknown) => rows(v, MAX_ITEMS).map(value => identifier.parse(value)) },
-    endpoints: { parse: (v: unknown) => rows(v, MAX_ITEMS).map(value => closed({ id: identifier, branchId: identifier }).parse(value)) },
-    operations: { parse: (v: unknown) => rows(v, MAX_ITEMS).map(value => closed({ id: operationId, branchId: nullableId, endpointId: nullableId }).parse(value)) },
-    databases: { parse: (v: unknown) => rows(v, MAX_ITEMS).map(value => closed({ id: databaseId, name: catalogName, branchId: identifier }).parse(value)) },
-    roles: { parse: (v: unknown) => rows(v, MAX_ITEMS).map(value => closed({ name: catalogName, branchId: identifier }).parse(value)) },
+    branchIds: { parse: (v: unknown) => rows(v, MAX_CATALOG_BINDINGS).map(value => identifier.parse(value)) },
+    endpoints: { parse: (v: unknown) => rows(v, MAX_CATALOG_BINDINGS).map(value => closed({ id: identifier, branchId: identifier }).parse(value)) },
+    operations: { parse: (v: unknown) => rows(v, MAX_CATALOG_BINDINGS).map(value => closed({ id: operationId, branchId: nullableId, endpointId: nullableId }).parse(value)) },
+    databases: { parse: (v: unknown) => rows(v, MAX_CATALOG_BINDINGS).map(value => closed({ id: databaseId, name: catalogName, branchId: identifier }).parse(value)) },
+    roles: { parse: (v: unknown) => rows(v, MAX_CATALOG_BINDINGS).map(value => closed({ name: catalogName, branchId: identifier }).parse(value)) },
   }).parse(scope);
   const branches = new Set(config.branchIds);
   const endpoints = new Map(config.endpoints.map(value => [value.id, value.branchId]));
@@ -116,11 +119,13 @@ export function createNeonCatalogOperations(scope: NeonCatalogScope, transport: 
         check(field(value, "project_id") === projectId && !seen.has(id));
         seen.add(id);
         if (kind === "operations") return operations.has(id) ? [operation(value)] : [];
-        check(branches.has(identifier.parse(field(value, "branch_id"))));
         return endpoints.has(id) ? [endpoint(value)] : [];
       }
       const branchId = identifier.parse(field(value, "branch_id"));
-      const name = catalogName.parse(field(value, "name"));
+      const name = field(value, "name");
+      // Unselected PostgreSQL names may be quoted/Unicode. Validate their shape
+      // and bound before filtering, but apply canonical naming only if selected.
+      check(typeof name === "string" && name.length > 0 && Buffer.byteLength(name, "utf8") <= 63);
       const target = key(branchId, name);
       check(branches.has(branchId) && !seen.has(target));
       seen.add(target);

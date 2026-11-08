@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { allCases as cases, catalogCases, catalogFixture, fixture, scope, branch, response } from './helpers.mjs';
+import { allCases as cases, catalogCases, catalogFixture, catalogScopeAt, fixture, scope, branch, operation, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
 // fallback and no embedded replacement for the common authority/policy executor.
@@ -12,8 +12,8 @@ const root = resolve(process.env.PROVIDER_CORE_ROOT);
 const { providerFixture, credentialCanary, derivedCanary } = await import(pathToFileURL(resolve(root, 'packages/core/testing/provider-fixture.mjs')));
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
-function brokerFixture(name, args, raw, overrides = {}) {
-  const provider = (catalogCases.some(([operation]) => operation === name) ? catalogFixture : fixture)(raw);
+function brokerFixture(name, args, raw, overrides = {}, config) {
+  const provider = (catalogCases.some(([operation]) => operation === name) ? catalogFixture : fixture)(raw, config);
   const operation = provider.operation(name);
   const common = providerFixture(overrides);
   common.vector.policy.resources = [operation.prepare(args).resource.id];
@@ -223,6 +223,18 @@ for (const [name, args, raw] of catalogCases) {
     }
   });
 }
+
+test('maximum supported catalog scope and paginated operation output fit real common-core budgets', async () => {
+  const config = catalogScopeAt(16);
+  const operations = config.operations.map(binding => ({ ...operation, id: binding.id, branch_id: binding.branchId, endpoint_id: binding.endpointId }));
+  const f = brokerFixture('listProjectOperations', { project_id: 'project-a' }, (url, init, n) => response(n === 1 ?
+    { operations: operations.slice(0, 10), pagination: { cursor: 'page-2' } } : { operations: operations.slice(10) }), {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { operations });
+  assert.equal(f.provider.requests.length, 2);
+  safeEnvelope(f, result);
+});
 
 test('common operation-map validator confirms incomplete status for all unknown entitlements', () => {
   const map = JSON.parse(readFileSync(new URL('../operation-map.json', import.meta.url)));

@@ -29,7 +29,7 @@ function id(value: string): string {
   return value;
 }
 function catalogName(value: string): string {
-  if (typeof value !== "string" || !/^[A-Za-z_][A-Za-z0-9_$-]{0,62}$/.test(value) || /[^A-Za-z0-9_$-]/.test(value)) throw Error("INVALID_ARGUMENTS");
+  if (typeof value !== "string" || !/^[A-Za-z_][A-Za-z0-9_-]{0,62}$/.test(value) || /[^A-Za-z0-9_-]/.test(value)) throw Error("INVALID_ARGUMENTS");
   return encodeURIComponent(value);
 }
 function cursorQuery(cursor: string | null): URLSearchParams {
