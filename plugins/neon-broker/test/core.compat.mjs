@@ -43,6 +43,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   schemaComparisonCases, schemaComparisonFixture, schemaComparisonScope,
   oauthProviderCases, oauthProviderFixture, oauthProviderScope, oauthProvider,
   objectDownloadCases, objectDownloadFixture, objectDownloadScope, binaryResponse,
+  snapshotUpdateFixture, snapshotUpdateArgs, snapshotUpdateScope, snapshotUpdateReceipt,
   sourceNames, snapshotDeleteFixture, snapshotDeleteArgs, snapshotDeleteScope, snapshotDeleteReceipt,
   fixture, scope, branch, operation, response } from './helpers.mjs';
 
@@ -111,6 +112,99 @@ function safeEnvelope(f, result) {
     assert(!serialized.includes(secret), `secret in output/audit/journal: ${secret}`);
   }
 }
+
+function renameBroker(value = snapshotUpdateReceipt, overrides = {}, config = snapshotUpdateScope) {
+  const provider = snapshotUpdateFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId, snapshot_id: config.snapshotId, name: config.name };
+  const common = providerFixture(overrides);
+  common.vector.policy.resources = [provider.operation('updateSnapshot').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.updateSnapshot', args, context, key);
+  } };
+}
+
+test('snapshot rename: exact agent AND rename grant precede transport; labels omitted from safe receipt', async () => {
+  for (const resource of ['neon/projects/project-a', 'neon/projects/project-a/snapshots',
+    'neon/projects/project-a/branches/br-a/snapshots/snap-a/delete',
+    'neon/projects/project-a/branches/br-b/snapshots/snap-a/rename']) {
+    const f = renameBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = renameBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = renameBroker({ snapshot: { ...snapshotUpdateReceipt.snapshot, password: credentialCanary, expires_at: derivedCanary } });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { id: 'snap-a', updated: true });
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('snapshot rename: scope/identity TOCTOU and caller expiry/authority refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = renameBroker(undefined, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = renameBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.updateSnapshot', snapshotUpdateArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ expires_at: null }, { approved: true }, { name: 'different' }]) {
+    const g = renameBroker();
+    assert.equal((await g.common.broker().call('neon.updateSnapshot', { ...snapshotUpdateArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('snapshot rename: permanent journal blocks complete/uncertain replay after restart', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = renameBroker((url, init, n) => {
+      if (init.method === 'PATCH') {
+        if (ambiguous) throw Error(credentialCanary);
+        return response(snapshotUpdateReceipt);
+      }
+      return response({ snapshots: [{ ...snapshotUpdateReceipt.snapshot, name: n === 1 ? 'before' : 'after' }] });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'PATCH').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('snapshot rename: malformed/reflected acknowledgement cannot clear uncertain journal', async () => {
+  const f = renameBroker({ snapshot: { ...snapshotUpdateReceipt.snapshot, name: credentialCanary } });
+  const result = await f.call();
+  assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+  assert.equal([...f.common.journal.values()][0].outcome, 'uncertain');
+  safeEnvelope(f, result);
+});
+
+test('snapshot rename: maximal copied target and labels fit common budgets', async () => {
+  const config = { projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), snapshotId: 's'.repeat(60), revision: 'r'.repeat(80),
+    expectedName: 'b'.repeat(80), name: 'a'.repeat(80) };
+  const f = renameBroker({ snapshot: { id: config.snapshotId, source_branch_id: config.branchId, name: config.name } }, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { id: config.snapshotId, updated: true });
+  safeEnvelope(f, result);
+});
 
 function deletionBroker(value = snapshotDeleteReceipt, overrides = {}, config = snapshotDeleteScope) {
   const provider = snapshotDeleteFixture(value, config);

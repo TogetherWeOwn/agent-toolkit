@@ -3412,7 +3412,7 @@
       "id": "updateSnapshot",
       "apiArea": "snapshot",
       "tool": "neon.updateSnapshot",
-      "scope": "project_id/snapshot_id",
+      "scope": "project_id/branch_id/snapshot_id/rename",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3420,12 +3420,15 @@
       "tier": "write",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/snapshot-update.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Name-only mocked source; expiry/retention changes unsupported. Exact copied target/expected-desired label and rename grant; bounded binding/label preflight, one PATCH with name only, HTTP200 exact-echo receipt. Preflight is not atomic CAS. Ambiguity remains uncertain after one bounded observation, never retried; permanent common journal and trusted host/policy/custody/effect/entitlement/native reviews remain unresolved. No live rename or enablement."
     },
     {
       "id": "restoreSnapshot",
