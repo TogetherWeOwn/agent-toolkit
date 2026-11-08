@@ -65,9 +65,9 @@ for (const [name, args, raw, expected] of cases) {
     }
     const providers = ids.map(id => ({ id, type: 'standard' }));
     assert.deepEqual(await fixture({ providers }, { ...scope, providerIds: ids }).run(name, args), { providers });
-    for (const providers of [[provider, provider], [...providers, provider], [provider, { id: 'google', type: 'future' }],
+    for (const invalidProviders of [[provider, provider], [...providers, provider], [provider, { id: 'google', type: 'future' }],
       [provider, { id: 'future', type: 'shared' }], [provider, { id: 'google', type: 'shared', project_id: 'other' }]]) {
-      await assert.rejects(fixture({ providers }).run(name, args));
+      await assert.rejects(fixture({ providers: invalidProviders }).run(name, args));
     }
   });
 
