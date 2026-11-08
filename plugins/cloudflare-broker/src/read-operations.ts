@@ -1,7 +1,9 @@
 import { jsonData, requireThat } from "../../../packages/core/src/index.js";
 import { canonicalHash, type Json, type Prepared, type ProviderOperation, type Tier } from "../../../packages/core/src/provider/index.js";
 import { currentContentDescriptor, type CurrentContentScope } from "./current-content.js";
-import { metadataDescriptors, type MetadataDescriptor, type MetadataScope, type PreparedMetadata } from "./metadata.js";
+import { durableObjectMetadataDescriptors, metadataDescriptors, pagesMetadataDescriptors, secretsStoreMetadataDescriptors,
+  zoneMetadataDescriptors, type DurableObjectMetadataScope, type MetadataDescriptor, type MetadataScope,
+  type PagesMetadataScope, type PreparedMetadata, type SecretsStoreMetadataScope, type ZoneMetadataScope } from "./metadata.js";
 import { currentContentTransport, metadataTransport } from "./metadata-transport.js";
 
 function json(value: unknown): Json {
@@ -49,9 +51,16 @@ function bind<A>(descriptor: {
   });
 }
 
+export interface CloudflareReadScope extends MetadataScope {
+  secretStores?: SecretsStoreMetadataScope["stores"];
+  durableNamespaces?: DurableObjectMetadataScope["namespaces"];
+  pagesProjects?: PagesMetadataScope["projects"];
+  zone?: Pick<ZoneMetadataScope, "zoneId" | "dnsRecordIds">;
+}
+
 // Internal operation registry only; no tool registration or host/policy/credential
 // defaults. Call solely through reviewed createProviderBroker with accepted adapters.
-export function cloudflareReadOperations(scope: MetadataScope, sourceScope: CurrentContentScope,
+export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope: CurrentContentScope,
   fetcher: typeof fetch = fetch): readonly ProviderOperation[] {
   requireThat(scope.accountId === sourceScope.accountId && scope.revision === sourceScope.revision, "scope");
   const descriptors = metadataDescriptors(scope);
@@ -59,6 +68,14 @@ export function cloudflareReadOperations(scope: MetadataScope, sourceScope: Curr
   function metadata<A, O>(descriptor: MetadataDescriptor<A, O>): ProviderOperation {
     return bind(descriptor, "read", (args, credential, signal) => read(descriptor, args, credential, signal));
   }
+  const { accountId, revision } = scope;
+  const stores = secretsStoreMetadataDescriptors({ accountId, revision, stores: scope.secretStores ?? [] });
+  const durable = durableObjectMetadataDescriptors({ accountId, revision, namespaces: scope.durableNamespaces ?? [] });
+  const pages = pagesMetadataDescriptors({ accountId, revision, projects: scope.pagesProjects ?? [] });
+  // Account/revision always come from the common snapshot, never nested scope.
+  // With no trusted zone relationship, omit DNS/zone operations altogether.
+  const zone = scope.zone === undefined ? undefined : zoneMetadataDescriptors({ accountId, revision,
+    zoneId: scope.zone.zoneId, dnsRecordIds: scope.zone.dnsRecordIds });
   const content = currentContentDescriptor(sourceScope);
   const readContent = currentContentTransport(fetcher);
   return Object.freeze([
@@ -71,6 +88,11 @@ export function cloudflareReadOperations(scope: MetadataScope, sourceScope: Curr
     metadata(descriptors.kvNamespacesList), metadata(descriptors.kvNamespaceGet),
     metadata(descriptors.queuesList), metadata(descriptors.queueGet),
     metadata(descriptors.workerSubdomainGet), metadata(descriptors.workerSettingsGet),
+    metadata(stores.storesList), metadata(stores.storeGet), metadata(stores.secretsList), metadata(stores.secretGet),
+    metadata(durable.durableNamespacesList), metadata(durable.durableObjectsList),
+    metadata(pages.pagesProjectsList), metadata(pages.pagesProjectGet),
+    metadata(pages.pagesDeploymentsList), metadata(pages.pagesDeploymentGet),
+    ...(zone === undefined ? [] : [metadata(zone.zoneGet), metadata(zone.dnsList), metadata(zone.dnsGet)]),
     // Source acquisition needs exact native authority, even for digest-only output.
     bind(content, "reserved", (args, credential, signal) => readContent(content, args, credential, signal)),
   ]);

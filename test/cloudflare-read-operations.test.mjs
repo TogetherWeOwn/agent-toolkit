@@ -42,10 +42,10 @@ function noEffects(f) {
   assert.equal(f.requests.length, 0);
 }
 
-test("Cloudflare read registry binds eighteen metadata operations and separately reserved content", () => {
+test("Cloudflare read registry binds account metadata with empty optional family scopes and reserved content", () => {
   const f = fixture();
-  assert.equal(f.operations.length, 19);
-  assert.equal(new Set(f.operations.map(op => op.name)).size, 19);
+  assert.equal(f.operations.length, 29);
+  assert.equal(new Set(f.operations.map(op => op.name)).size, 29);
   assert.ok(Object.isFrozen(f.operations));
   for (const operation of f.operations) {
     assert.ok(Object.isFrozen(operation));
