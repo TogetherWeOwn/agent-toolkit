@@ -78,8 +78,8 @@ function noEffects(f) {
 test("Cloudflare remaining thirteen metadata bindings execute exact paths with ID/name-only projection and replay refusal", async () => {
   for (const entry of cases) {
     const f = fixture(entry);
-    assert.equal(f.operations.length, 44);
-    assert.equal(new Set(f.operations.map(op => op.name)).size, 44);
+    assert.equal(f.operations.length, 46);
+    assert.equal(new Set(f.operations.map(op => op.name)).size, 46);
     assert.equal(f.operation.tier, "read");
     const result = await f.invoke();
     assert.equal(result.ok, true, entry[0]);

@@ -161,7 +161,7 @@ test("Cloudflare managed-domain EU header cannot escape exact path or retry anot
   const read = metadataTransport(async () => { calls++; throw new Error("must-not-call"); });
   const d = r2ManagedDomainDescriptor(scope());
   const p = d.prepare(args);
-  for (const path of [p.request.path + "?jurisdiction=eu", p.request.path + "/objects", p.request.path.replace("managed", "custom")]) {
+  for (const path of [p.request.path + "?jurisdiction=eu", p.request.path + "/objects", p.request.path.replace("managed", "custom/objects")]) {
     await assert.rejects(read({ ...d, prepare: () => ({ ...p, request: { ...p.request, path } }) }, args, credentialCanary, new AbortController().signal));
     assert.equal(calls, 0);
   }
