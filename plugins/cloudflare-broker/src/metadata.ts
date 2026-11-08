@@ -33,6 +33,7 @@ export interface MetadataScope {
   hyperdriveIds: readonly string[];
   hyperdriveConfigurationIds?: readonly string[];
   databaseIds?: readonly string[];
+  databaseConfigurationIds?: readonly string[];
   defaultBucketNames?: readonly string[];
   euBucketNames?: readonly string[];
   euBucketLocks?: readonly { bucketName: string; prefixes: readonly string[] }[];
@@ -75,6 +76,15 @@ interface HyperdriveDetailMetadata extends HyperdriveMetadata {
     staleWhileRevalidateSeconds: number | "unavailable";
     originConnectionLimit: number | "unavailable";
     effectiveCachingAndPooling: "not-established";
+  };
+}
+interface D1DetailMetadata {
+  id: string;
+  configuration?: {
+    subject: "configured-d1-replication-and-jurisdiction";
+    jurisdiction: "eu" | "fedramp" | "us" | null | "unavailable";
+    readReplicationMode: "auto" | "disabled" | "unavailable";
+    effectiveReplicationAndPlacement: "not-established";
   };
 }
 interface SecretMetadata { name: string; type: "secret_text" | "secret_key" }
@@ -182,6 +192,11 @@ export function metadataDescriptors(scope: MetadataScope) {
   const defaultBucketNames = scope.defaultBucketNames ?? [];
   requireThat(Array.isArray(databaseIds) && databaseIds.length <= 100 && Array.isArray(defaultBucketNames) && defaultBucketNames.length <= 100, "cap");
   const databases = new Set(databaseIds.map(value => databaseId.parse(value)));
+  const databaseConfigurationIds = scope.databaseConfigurationIds ?? [];
+  requireThat(Array.isArray(databaseConfigurationIds) && databaseConfigurationIds.length <= maxRows, "cap");
+  const configurationDatabases = new Set(databaseConfigurationIds.map(value => databaseId.parse(value)));
+  requireThat(configurationDatabases.size === databaseConfigurationIds.length, "schema");
+  for (const id of configurationDatabases) requireThat(databases.has(id), "scope");
   const buckets = new Set(defaultBucketNames.map(value => bucketName.parse(value)));
   const euBucketNames = scope.euBucketNames ?? [];
   requireThat(Array.isArray(euBucketNames) && euBucketNames.length <= maxRows, "cap");
@@ -338,19 +353,35 @@ export function metadataDescriptors(scope: MetadataScope) {
       return bounded({ items, complete: false as const });
     },
   });
-  const d1Get: MetadataDescriptor<ReturnType<typeof database.parse>, { id: string }> = Object.freeze({
+  const d1Get: MetadataDescriptor<ReturnType<typeof database.parse>, D1DetailMetadata> = Object.freeze({
     name: "cloudflare.d1.get", version: "1", tier: "read", providerOperationId: "d1-get-database",
     prepare(raw: unknown) {
       const args = database.parse(raw);
       databaseScope(args.databaseId);
-      return prepared(args, `d1:${args.databaseId}`, `${root}/d1/database/${args.databaseId}?fields=uuid`);
+      const fields = configurationDatabases.has(args.databaseId) ? "uuid,jurisdiction,read_replication" : "uuid";
+      return prepared(args, `d1:${args.databaseId}`, `${root}/d1/database/${args.databaseId}?fields=${fields}`);
     },
     project(raw: string, input: PreparedMetadata<ReturnType<typeof database.parse>>) {
       const args = database.parse(input.arguments);
       databaseScope(args.databaseId);
-      const row = object(envelope(raw).result);
+      const body = envelope(raw);
+      const row = object(body.result);
       requireThat(row.uuid === args.databaseId, "scope");
-      return bounded({ id: providerText(row.uuid, databaseId) });
+      requireThat(body.account_id === undefined || body.account_id === account, "scope");
+      requireThat(row.account_id === undefined || row.account_id === account, "scope");
+      const output: D1DetailMetadata = { id: providerText(row.uuid, databaseId) };
+      if (configurationDatabases.has(args.databaseId)) {
+        const jurisdiction = row.jurisdiction;
+        requireThat(jurisdiction === undefined || jurisdiction === null || jurisdiction === "eu" || jurisdiction === "fedramp" || jurisdiction === "us", "upstream");
+        const replication = row.read_replication === undefined ? undefined : object(row.read_replication);
+        const mode = replication?.mode;
+        requireThat(replication === undefined || mode === "auto" || mode === "disabled", "upstream");
+        output.configuration = { subject: "configured-d1-replication-and-jurisdiction",
+          jurisdiction: jurisdiction === undefined ? "unavailable" : jurisdiction as "eu" | "fedramp" | "us" | null,
+          readReplicationMode: mode === undefined ? "unavailable" : mode as "auto" | "disabled",
+          effectiveReplicationAndPlacement: "not-established" };
+      }
+      return bounded(output);
     },
   });
   const r2List: MetadataDescriptor<ReturnType<typeof bucketPage.parse>, PartialList<{ name: string }>> = Object.freeze({
