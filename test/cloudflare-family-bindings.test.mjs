@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFile } from "node:fs/promises";
 import { createProviderBroker } from "../dist/packages/core/src/provider/index.js";
 import { cloudflareReadOperations } from "../dist/plugins/cloudflare-broker/src/read-operations.js";
 import { providerFixture, credentialCanary, derivedCanary } from "../packages/core/testing/provider-fixture.mjs";
@@ -76,10 +77,13 @@ function noEffects(f) {
 }
 
 test("Cloudflare remaining thirteen metadata bindings execute exact paths with ID/name-only projection and replay refusal", async () => {
+  const rows = (await readFile(new URL("../plugins/cloudflare-broker/coverage/operations.jsonl", import.meta.url), "utf8"))
+    .trimEnd().split("\n").map(line => JSON.parse(line));
+  const expected = rows.filter(row => row.typedTool !== null && row.implementation !== "plan-descriptor-only").map(row => row.typedTool).sort();
   for (const entry of cases) {
     const f = fixture(entry);
-    assert.equal(f.operations.length, 46);
-    assert.equal(new Set(f.operations.map(op => op.name)).size, 46);
+    assert.deepEqual(f.operations.map(op => op.name).sort(), expected);
+    assert.equal(new Set(f.operations.map(op => op.name)).size, expected.length);
     assert.equal(f.operation.tier, "read");
     const result = await f.invoke();
     assert.equal(result.ok, true, entry[0]);

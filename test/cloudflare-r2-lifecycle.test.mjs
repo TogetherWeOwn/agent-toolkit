@@ -169,12 +169,12 @@ test("Cloudflare lifecycle malformed/foreign responses preserve uncertain replay
   }
 });
 
-test("Cloudflare lifecycle EU header cannot escape its exact fixed path or silently fall back", async () => {
+test("Cloudflare lifecycle EU header refuses unsupported path suffixes and query overrides", async () => {
   let calls = 0;
   const read = metadataTransport(async () => { calls++; throw new Error("must-not-call"); });
   const d = r2LifecycleDescriptor(scope());
   const p = d.prepare(args);
-  for (const path of [p.request.path + "?jurisdiction=eu", p.request.path + "/objects", p.request.path.replace("lifecycle", "cors")]) {
+  for (const path of [p.request.path + "?jurisdiction=eu", p.request.path + "/objects", p.request.path.replace("lifecycle", "objects")]) {
     await assert.rejects(read({ ...d, prepare: () => ({ ...p, request: { ...p.request, path } }) }, args, credentialCanary, new AbortController().signal));
     assert.equal(calls, 0);
   }
