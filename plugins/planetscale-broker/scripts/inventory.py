@@ -64,7 +64,19 @@ ADAPTERS = {
     "list_branch_resize_requests": "list-branch-resize-requests",
     "get_keyspace_resize_request": "get-keyspace-resize-request",
     "list_keyspace_resize_requests": "list-keyspace-resize-requests",
+    "get_branch_change_request": "get-branch-change-request",
+    "list_branch_change_requests": "list-branch-change-requests",
+    "get_branch_config_change_request": "get-branch-config-change-request",
+    "list_branch_config_change_requests": "list-branch-config-change-requests",
+    "get_keyspace_config_change_request": "get-keyspace-config-change-request",
+    "list_keyspace_config_change_requests": "list-keyspace-config-change-requests",
 }
+CHANGE_RECORDS = {
+    "get_branch_change_request", "list_branch_change_requests",
+    "get_branch_config_change_request", "list_branch_config_change_requests",
+    "get_keyspace_config_change_request", "list_keyspace_config_change_requests",
+}
+REDIRECT_ALIASES = {"get_admin_change_request", "list_admin_change_requests"}
 RESIZE_RECORDS = {
     "get_bouncer", "list_bouncers", "list_bouncer_resize_requests",
     "list_branch_bouncer_resize_requests", "get_branch_resize_request",
@@ -143,7 +155,8 @@ def policy_candidate(operation_id):
 
 def adapter_test(operation_id):
     for operations, name in [
-        (RESIZE_RECORDS, "resize-records"), (ORGANIZATION_RECORDS, "organization-records"),
+        (CHANGE_RECORDS, "change-records"), (RESIZE_RECORDS, "resize-records"),
+        (ORGANIZATION_RECORDS, "organization-records"),
         (TOPOLOGY, "topology"), (SECURITY_RECORDS, "security-records"),
         (DEPLOYMENT_DETAILS, "deployment-details"), (LIFECYCLE, "lifecycle"),
         (DISCOVERY, "discovery"),
@@ -217,7 +230,7 @@ def inventory(raw):
                 "implementation": "offline-adapter-only" if adapter else "missing",
                 "review": "not-reviewed",
                 "enablement": "disabled",
-                "prerequisites": ["operator-verified-scope-metadata", "reviewed-compatible-common-core", "exact-tier-security-crypto-qa-and-actions"] + ([] if adapter else ["typed-adapter-and-tier-tests"]),
+                "prerequisites": ["operator-verified-scope-metadata", "reviewed-compatible-common-core", "exact-tier-security-crypto-qa-and-actions"] + ([] if adapter else ["typed-adapter-and-tier-tests"]) + (["reviewed-fixed-redirect-alias-contract-no-automatic-follow"] if operation_id in REDIRECT_ALIASES else []),
             })
     operations.sort(key=lambda o: o["operationId"])
     operation_ids = {o["operationId"] for o in operations}
