@@ -2,8 +2,8 @@
 
 ## Implemented source, not accepted enablement
 
-- Seventy-five typed source operations: one reserved snapshot-deletion request adapter
-  and 74 reads, including bounded binary-object byte-count observations,
+- Seventy-six typed source operations: one name-only snapshot-label write, one reserved
+  snapshot-deletion request adapter and 74 reads, including bounded binary-object byte-count observations,
   selected OAuth-provider ID/type metadata,
   bounded log-query counts, current-head schema comparison and selected log-value observations,
   selected database-schema identities and database-bound advisor summaries,
@@ -13,7 +13,10 @@
   email-auth configuration, auth webhook status and organization VPC/configuration/member/invitation metadata plus organization-filtered region/project catalogs and project count,
   with strict arguments, exact trusted scope and parent-child binding, safe projections
   and fixed bounded injected transport.
-- Full 194-row management inventory; 119 operations still lack source. All rows remain
+- Full 194-row management inventory; 118 operations still lack source. Snapshot update
+  supports names only, not expiry/retention. Its preflight is not atomic CAS; runtime
+  concurrency/effects, durable uncertainty recovery and policy qualification remain gates.
+  All rows remain
   unqualified and disabled, with unknown entitlement. These adapters do not complete
   the package. Prior source merge,
   current source review, native qualification and runtime enablement are separate.

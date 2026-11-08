@@ -7,6 +7,34 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonSnapshotUpdateOperations(trustedScope, transport)` adds `updateSnapshot`
+as a **name-only** write descriptor. Copy exact project/source-branch/snapshot/revision,
+expected label and desired label; labels are nonempty ASCII tokens of at most 80
+characters and must differ. Require a distinct
+`neon/projects/<project>/branches/<branch>/snapshots/<snapshot>/rename` grant.
+Caller arguments must match the copied desired name; expiry/retention, caller
+authority, retries and arbitrary update fields refuse. The plan exposes the exact
+before/after name diff with expiry unchanged; it is not a provider dry-run.
+
+The bounded nonpaginated <=30-row snapshot preflight validates unique IDs and
+source-branch binding, then requires the selected snapshot's expected label.
+Exactly one fixed PATCH sends `{snapshot: {name}}`; no expiry field, conditional
+header or unsupported provider idempotency header is invented. **This is not atomic
+compare-and-swap:** another writer can change the label after preflight. Runtime
+qualification must accept or resolve this concurrency limitation before live use.
+Only HTTP200 JSON with exact ID/source branch/desired-label echo yields closed
+`{id, updated: true}` acknowledgement; labels, expiry, LSNs and arbitrary metadata
+are not emitted. This acknowledges that response, not a persistent state guarantee.
+
+A lost/invalid acknowledgement triggers at most one bounded snapshot observation,
+then remains uncertain even when the desired label is observed; observation does
+not prove causation. No automatic PATCH retry or recovery write exists. The common
+permanent journal blocks restart/replay of the same request, and runtime durable
+recovery must retain those tombstones. Expiry/retention updates are outside this
+adapter's supported subset, not silently covered. Host/policy/custody integration,
+provider effects/entitlement and independent review remain unresolved. No live
+rename, production authority or runtime enablement is supplied.
+
 `createNeonSnapshotDeleteOperations(trustedScope, transport)` adds the first
 reserved mutation source: `deleteSnapshot`. Copy one exact project, source branch,
 snapshot ID and revision; require the separate
