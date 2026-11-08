@@ -50,6 +50,16 @@ ADAPTERS = {
     "list_shards": "list-shards",
     "get_maintenance_event": "get-maintenance-event",
     "list_maintenance_events": "list-maintenance-events",
+    "get_organization_membership": "get-organization-membership",
+    "list_organization_members": "list-organization-members",
+    "get_organization_team": "get-organization-team",
+    "list_organization_teams": "list-organization-teams",
+    "get_organization_team_member": "get-organization-team-member",
+    "list_organization_team_members": "list-organization-team-members",
+}
+ORGANIZATION_RECORDS = {
+    "get_organization_membership", "list_organization_members", "get_organization_team",
+    "list_organization_teams", "get_organization_team_member", "list_organization_team_members",
 }
 TOPOLOGY = {
     "get_keyspace", "list_keyspaces", "get_shard", "list_shards",
@@ -120,6 +130,7 @@ def policy_candidate(operation_id):
 
 def adapter_test(operation_id):
     for operations, name in [
+        (ORGANIZATION_RECORDS, "organization-records"),
         (TOPOLOGY, "topology"), (SECURITY_RECORDS, "security-records"),
         (DEPLOYMENT_DETAILS, "deployment-details"), (LIFECYCLE, "lifecycle"),
         (DISCOVERY, "discovery"),

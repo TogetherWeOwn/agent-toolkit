@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The thirty-eight adapters are pure request builders and bounded output projections,
+The forty-four adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,14 +36,14 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 38 | Narrow projections; not full operation coverage |
-| Missing source adapters | 253 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 44 | Narrow projections; not full operation coverage |
+| Missing source adapters | 247 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-Thirty-eight adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 237
+Forty-four adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 231
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
@@ -76,6 +76,9 @@ area remain in the map even when access or implementation is missing.
 | `planetscale.list_keyspaces` / `planetscale.get_keyspace` | Bound ID/name and sharded/external/ready/resizing/default flags; no configuration maps, SKU or storage details |
 | `planetscale.list_shards` / `planetscale.get_shard` | Bound ID and ready/authoritative topology flags; no names, profiles or timestamps |
 | `planetscale.list_maintenance_events` / `planetscale.get_maintenance_event` | Bound event ID/branch ID/name, state enum and urgent flag; no description, impact text, timestamps or execution windows |
+| `planetscale.list_organization_members` / `planetscale.get_organization_membership` | Bound membership/user IDs and informational role enum; no contact details, profile or effective-authority claim |
+| `planetscale.list_organization_teams` / `planetscale.get_organization_team` | Bound team ID/slug and managed flag; no members, creator, database lists or authority claim |
+| `planetscale.list_organization_team_members` / `planetscale.get_organization_team_member` | Bound membership/user IDs only; no passwords, addresses, actors, contact details or effective grants |
 
 The five discovery lists require a broker-owned closed scope containing 1–32
 unique child ID/name pairs (region names are slugs). Any unknown or rebound child
@@ -135,6 +138,20 @@ ownership, independent parent-collection permission and non-waking evidence rema
 prerequisites. Optional search/profile and branch/state filters, topology counts,
 full configuration and maintenance scheduling capabilities remain incomplete.
 
+Organization membership/team/member reads snapshot exact broker-owned bindings.
+Collections require 1–32 unique IDs and unique user IDs or team slugs; unknown or
+rebound identities refuse the whole page. `admin`, `managed` and team membership
+are provider metadata, always paired with `effectiveAuthority: not-established`.
+Contact/profile fields, actors, descriptions, team database/member lists, nested
+passwords and connection addresses are omitted. Membership responses contain no
+parent identity; fixed paths and matching child IDs do not prove organization/team
+ownership. Trusted current parent bindings (including team ID/slug revalidation),
+parent-collection authorization and final reflection guarding remain integration
+prerequisites. Team-member responses are credential-bearing even on GET; future
+transport must keep raw bodies broker-side without logging/reflection, including
+errors. These pure projections do not authorize fetching them or prove custody.
+Optional member/team search and full membership/grant capability remain incomplete.
+
 Arguments are closed, scalar and bounded. Configured resource scope is separate
 from arguments and must eventually be resolved by the shared core from an
 authorized resource handle, not accepted from a model. Each request fixes HTTPS
@@ -182,7 +199,7 @@ No connector or replacement broker is introduced.
 ## Local mutation-plan artifacts — not executors
 
 `src/mutation-plans.ts` supplies three pure, bounded previews. They are **not API
-adapters**, do not consume authority and do not increase the 38-adapter count.
+adapters**, do not consume authority and do not increase the 44-adapter count.
 Each artifact labels itself `validated-local-plan-not-provider-dry-run`, with
 execution not implemented, remote preconditions not verified and provider dry-run
 not performed. No network executor, output projector or secret placement exists.
@@ -216,7 +233,7 @@ The candidates only document requirements; native routing, expiry, exact-target
 binding, atomic consumption, replay/concurrent-use refusal and approved placement
 are **not implemented or tested as authority enforcement here**. Credential routes
 remain incomplete until a broker-only sink and reconciliation are accepted. The
-other 237 tier classifications are unresolved, not automatically harmless reads or
+other 231 tier classifications are unresolved, not automatically harmless reads or
 ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.

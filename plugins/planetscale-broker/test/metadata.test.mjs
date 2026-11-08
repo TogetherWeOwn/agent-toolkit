@@ -124,7 +124,13 @@ test('complete official map distinguishes mapped, source-adapted, reviewed and e
   const lifecycle = ['list_backups', 'get_backup', 'list_backup_policies', 'get_backup_policy', 'list_deploy_requests', 'get_deploy_request'];
   const deploymentDetails = ['get_deployment', 'get_deploy_queue', 'list_deploy_operations', 'list_deploy_request_reviews', 'list_schema_recommendations', 'get_schema_recommendation'];
   const securityRecords = ['get_service_token', 'list_service_tokens', 'get_oauth_token', 'list_oauth_tokens', 'get_webhook', 'list_webhooks'];
-  assert.deepEqual(implemented.map(row => row.operationId).sort(), [...fixtures.map(([adapter]) => adapter.operationId), ...discovery, ...lifecycle, ...deploymentDetails, ...securityRecords].sort());
+  const topology = ['get_keyspace', 'list_keyspaces', 'get_shard', 'list_shards', 'get_maintenance_event', 'list_maintenance_events'];
+  const organizationRecords = ['get_organization_membership', 'list_organization_members', 'get_organization_team', 'list_organization_teams', 'get_organization_team_member', 'list_organization_team_members'];
+  const groups = [
+    [discovery, 'discovery'], [lifecycle, 'lifecycle'], [deploymentDetails, 'deployment-details'],
+    [securityRecords, 'security-records'], [topology, 'topology'], [organizationRecords, 'organization-records'],
+  ];
+  assert.deepEqual(implemented.map(row => row.operationId).sort(), [...fixtures.map(([adapter]) => adapter.operationId), ...groups.flatMap(([operations]) => operations)].sort());
   for (const row of map.operations) {
     assert.equal(row.credentialEntitlement, 'unknown-awaiting-operator-metadata');
     assert.equal(row.review, 'not-reviewed');
@@ -137,7 +143,8 @@ test('complete official map distinguishes mapped, source-adapted, reviewed and e
     if (row.adapter) {
       assert.equal(row.tier, 'read');
       assert.equal(row.method, 'GET');
-      assert.equal(row.test, securityRecords.includes(row.operationId) ? 'test/security-records.test.mjs' : (deploymentDetails.includes(row.operationId) ? 'test/deployment-details.test.mjs' : (lifecycle.includes(row.operationId) ? 'test/lifecycle.test.mjs' : (discovery.includes(row.operationId) ? 'test/discovery.test.mjs' : 'test/metadata.test.mjs'))));
+      const group = groups.find(([operations]) => operations.includes(row.operationId));
+      assert.equal(row.test, group ? `test/${group[1]}.test.mjs` : 'test/metadata.test.mjs');
       assert.equal(row.projectionCoverage, 'bounded-metadata-subset-not-full-operation');
       const adapter = await import('../../../dist/plugins/planetscale-broker/' + row.adapter.replace(/\.ts$/, '.js'));
       assert.equal(row.operationId, adapter.operationId);
