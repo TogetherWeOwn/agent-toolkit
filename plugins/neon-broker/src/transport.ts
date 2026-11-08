@@ -8,6 +8,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  listProjectBranchLogFields(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   listSharedProjects(cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
   listProjects(organization: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
   getNeonAuthEmailAndPasswordConfig(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -167,6 +168,8 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    listProjectBranchLogFields: (project: string, branch: string, options: MetadataRequestOptions) =>
+      get(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/logs/fields`, new URLSearchParams(), options),
     listSharedProjects: (cursor: string | null, options: MetadataRequestOptions) =>
       get("/projects/shared", cursorQuery(cursor), options),
     listProjects: (organization: string, cursor: string | null, options: MetadataRequestOptions) => {

@@ -19,6 +19,25 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
 
+## Selected branch log-field catalog delta
+
+`listProjectBranchLogFields` copies one project/branch/revision and explicit field
+selection, requiring the exact branch/logs/fields grant. The ID-less response is
+bound by the fixed authenticated path; optional ancestry must match that branch.
+Names are dynamically observed data, not a hardcoded provider enum. The closed
+projection exposes only selected printable ASCII names of at most 80 characters.
+The nonpaginated 30-row bound and duplicate/shape/ancestry/pagination checks apply
+before filtering; malformed unselected names still refuse. Empty observation and
+selection are valid, but non-200 never becomes empty success or a query fallback.
+
+No log entry, message, field-value discovery, download, mutation or lifecycle
+primitive is introduced. Unexpected content/diagnostics are not read or emitted.
+Source/common contracts cover copied scope, strict arguments, exact/sibling grants,
+accessors and malformed/poisoned output, transport bounds/cancellation, principal
+binding, replay/TOCTOU, reflected names and maximum JSON budgets. Private Beta
+availability, entitlement and provider effects remain unknown; mocks are not
+non-waking evidence or native runtime qualification.
+
 ## Auth-integration metadata delta
 
 | Tool | Exact boundary and refusal evidence |
