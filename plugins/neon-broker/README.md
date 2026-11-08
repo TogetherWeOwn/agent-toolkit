@@ -847,6 +847,32 @@ retry or discovery. This is not an atomic access snapshot or non-waking evidence
 credential custody, native integration, entitlement and provider-effect gates
 remain. No mutation, live call, secret retrieval or runtime enablement is added.
 
+## Exact-user API-key identities
+
+`createNeonUserKeyOperations` copies an exact user/revision and explicit selection
+of at most 30 unique nonnegative safe-integer API-key IDs. `neon.listApiKeys`
+requires exactly `{ user_id }` and the dedicated
+`neon/users/<user>/api_keys` collection grant; a user profile, individual key,
+organization or account grant does not authorize this request.
+
+The fixed `/users/me` identity proof must match the selected user before the same
+resolved credential calls `/api_keys`. Userless/wrong-user credentials refuse
+before the collection request. Closed output contains only selected numeric IDs
+under `api_keys`; those IDs are not tokens. Names, creator profiles, usage
+addresses, timestamps and unexpected token fields are neither read nor emitted.
+All rows are validated before filtering: duplicate, malformed, unsafe, fractional,
+negative or negative-zero IDs, contradictory optional user/org/project/branch
+ancestry, unexpected pagination and over-30 arrays refuse without partial success.
+Zero remains valid. An empty selection/output is not a complete key inventory.
+
+The pinned GET explicitly excludes tokens. This schema-backed metadata read moves
+one inventory row from reserved to read, not to enabled. Two bounded requests fit
+within the 3.5-second operation deadline; no retry, account-wide output/fallback,
+credential creation, rotation, reveal or revocation is introduced. Identity proof
+and collection are not an atomic permission snapshot. Credential custody, effective
+scope/ACL, expiry, entitlement, provider effects and native review remain separate
+unresolved obligations. No live provider or SQL calls are needed for the contracts.
+
 ## Shared contract and candidate compatibility
 
 Contract: `toolkit.provider-broker/v1`. Merged core: [PR #17](https://github.com/TogetherWeOwn/agent-toolkit/pull/17),
@@ -872,8 +898,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: sixty-five implemented
-source adapters, 129 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: sixty-six implemented
+source adapters, 128 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

@@ -507,6 +507,27 @@ one schema-backed inventory row moves reserved to read, not to enabled. Native
 provider effects, entitlement, placement and independent acceptance remain gates;
 mocked source success proves no effective access, custody, expiry or completeness.
 
+## Exact-user API-key identity delta
+
+`listApiKeys` copies the exact user/revision and an explicit bounded numeric-ID
+selection. The exact user/api_keys collection grant is distinct from profile,
+account, organization and individual-key authority. Before the fixed `/api_keys`
+GET, `/users/me` must prove this exact user under the same resolved credential;
+wrong-user/userless identities and cancellation refuse before collection. Output
+is only selected numeric IDs, not tokens or evidence of credential scope/custody.
+Names, creator profiles, usage addresses, dates and unexpected secret extras are
+never evaluated. The pinned GET explicitly excludes tokens; mint/revoke/rotate
+remain separate incomplete obligations, not source-enabled operations.
+
+All rows are validated before selection with a 30-row nonpaginated ceiling and
+safe-integer/negative-zero/duplicate/contradictory-ancestry refusal. No partial
+success, account-wide output/fallback, key retrieval or live effect is introduced.
+Detached projection rechecks the identity proof; execute rechecks exact arguments,
+resource and revision. Both requests remain bounded inside one operation deadline.
+An empty selection/output is not completeness, and the two GETs do not prove an
+atomic permission snapshot or non-waking safety. Provider effects, entitlement,
+credential placement and independent native acceptance remain unresolved.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.
