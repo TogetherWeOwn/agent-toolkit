@@ -773,6 +773,94 @@ export function accessApplicationMetadataDescriptors(scope: AccessApplicationMet
   return Object.freeze({ accessApplicationsList, accessApplicationGet });
 }
 
+export interface AccessPolicyMetadataScope {
+  accountId: string;
+  revision: string;
+  applications: readonly { applicationId: string; policyIds: readonly string[] }[];
+}
+const accessPolicyPage = closed({ applicationId: accessApplicationId, page: integer(1, 1000), perPage: integer(1, 100) });
+const accessPolicy = closed({ applicationId: accessApplicationId, policyId: accessApplicationId });
+interface AccessPolicyMetadata {
+  id: string;
+  decision: "allow" | "deny" | "non_identity" | "bypass";
+  precedence: { status: "configured"; value: number } | { status: "unavailable"; reason: "not-returned" };
+}
+const accessPolicyObservation = Object.freeze({ subject: "configured-access-policies" as const, effectiveProtection: "not-established" as const });
+
+// Policy decisions/order are configuration, not an evaluation of identity rules
+// or effective access. Scope is independent of application/domain visibility.
+export function accessPolicyMetadataDescriptors(scope: AccessPolicyMetadataScope) {
+  const account = accountId.parse(scope.accountId);
+  const revision = text(80, /^[A-Za-z0-9][A-Za-z0-9_.-]*$/).parse(scope.revision);
+  requireThat(Array.isArray(scope.applications) && scope.applications.length <= maxRows, "cap");
+  const applications = new Map<string, Set<string>>();
+  for (const entry of scope.applications) {
+    const id = accessApplicationId.parse(entry.applicationId);
+    requireThat(!applications.has(id), "schema");
+    requireThat(Array.isArray(entry.policyIds) && entry.policyIds.length <= maxRows, "cap");
+    const ids = entry.policyIds.map((value: unknown) => accessApplicationId.parse(value));
+    requireThat(new Set(ids).size === ids.length, "schema");
+    applications.set(id, new Set(ids));
+  }
+  function policyScope(application: string): Set<string> {
+    const ids = applications.get(application);
+    requireThat(ids !== undefined && ids.size > 0, "scope");
+    return ids;
+  }
+  function prepared<A>(args: A, application: string, id: string, suffix: string): PreparedMetadata<A> {
+    return Object.freeze({ arguments: args,
+      resource: Object.freeze({ id: `cloudflare:account:${account}:access-application:${application}:policies${id}`, revision }),
+      request: Object.freeze({ method: "GET", path: `/accounts/${account}/access/apps/${application}/policies${suffix}`,
+        maxResponseBytes, timeoutMs: 10000, maxRequests: 1, redirects: "deny" }),
+    });
+  }
+  function policyMetadata(row: Row, application: string): AccessPolicyMetadata {
+    const id = providerText(row.id, accessApplicationId);
+    requireThat(policyScope(application).has(id), "scope");
+    requireThat(row.account_id === undefined || row.account_id === account, "scope");
+    for (const key of ["app_id", "application_id"]) requireThat(row[key] === undefined || row[key] === application, "scope");
+    const decision = row.decision;
+    requireThat(decision === "allow" || decision === "deny" || decision === "non_identity" || decision === "bypass", "upstream");
+    const precedence = row.precedence;
+    requireThat(precedence === undefined || (typeof precedence === "number" && Number.isSafeInteger(precedence) && precedence >= 0), "upstream");
+    return { id, decision,
+      precedence: precedence === undefined ? { status: "unavailable", reason: "not-returned" } : { status: "configured", value: precedence as number } };
+  }
+  const accessPoliciesList: MetadataDescriptor<ReturnType<typeof accessPolicyPage.parse>, PartialList<AccessPolicyMetadata> & typeof accessPolicyObservation> = Object.freeze({
+    name: "cloudflare.access.policies.list", version: "1", tier: "read", providerOperationId: "access-policies-list-access-app-policies",
+    prepare(raw: unknown) {
+      const args = accessPolicyPage.parse(raw);
+      policyScope(args.applicationId);
+      return prepared(args, args.applicationId, "", `?page=${args.page}&per_page=${args.perPage}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof accessPolicyPage.parse>>) {
+      const args = accessPolicyPage.parse(input.arguments);
+      const allowed = policyScope(args.applicationId);
+      const result = rows(envelope(raw).result);
+      requireThat(result.length <= args.perPage, "cap");
+      const items = result.filter(row => typeof row.id === "string" && allowed.has(row.id)).map(row => policyMetadata(row, args.applicationId));
+      requireThat(new Set(items.map(row => row.id)).size === items.length, "upstream");
+      return bounded({ items, complete: false as const, ...accessPolicyObservation });
+    },
+  });
+  const accessPolicyGet: MetadataDescriptor<ReturnType<typeof accessPolicy.parse>, AccessPolicyMetadata & typeof accessPolicyObservation> = Object.freeze({
+    name: "cloudflare.access.policies.get", version: "1", tier: "read", providerOperationId: "access-policies-get-an-access-policy",
+    prepare(raw: unknown) {
+      const args = accessPolicy.parse(raw);
+      requireThat(policyScope(args.applicationId).has(args.policyId), "scope");
+      return prepared(args, args.applicationId, `:${args.policyId}`, `/${args.policyId}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof accessPolicy.parse>>) {
+      const args = accessPolicy.parse(input.arguments);
+      requireThat(policyScope(args.applicationId).has(args.policyId), "scope");
+      const row = object(envelope(raw).result);
+      requireThat(row.id === args.policyId, "scope");
+      return bounded({ ...policyMetadata(row, args.applicationId), ...accessPolicyObservation });
+    },
+  });
+  return Object.freeze({ accessPoliciesList, accessPolicyGet });
+}
+
 export interface SecretsStoreMetadataScope {
   accountId: string;
   revision: string;

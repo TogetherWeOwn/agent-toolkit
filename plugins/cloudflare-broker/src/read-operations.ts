@@ -1,7 +1,7 @@
 import { jsonData, requireThat } from "../../../packages/core/src/index.js";
 import { canonicalHash, type Json, type Prepared, type ProviderOperation, type Tier } from "../../../packages/core/src/provider/index.js";
 import { currentContentDescriptor, type CurrentContentScope } from "./current-content.js";
-import { accessApplicationMetadataDescriptors, type AccessApplicationMetadataScope, durableObjectMetadataDescriptors, metadataDescriptors, pagesMetadataDescriptors, secretsStoreMetadataDescriptors,
+import { accessApplicationMetadataDescriptors, accessPolicyMetadataDescriptors, type AccessApplicationMetadataScope, type AccessPolicyMetadataScope, durableObjectMetadataDescriptors, metadataDescriptors, pagesMetadataDescriptors, secretsStoreMetadataDescriptors,
   workerRouteMetadataDescriptors, zoneMetadataDescriptors, type DurableObjectMetadataScope, type MetadataDescriptor, type MetadataScope,
   type PagesMetadataScope, type PreparedMetadata, type SecretsStoreMetadataScope, type WorkerRouteMetadataScope, type ZoneMetadataScope } from "./metadata.js";
 import { currentContentTransport, metadataTransport } from "./metadata-transport.js";
@@ -56,6 +56,7 @@ export interface CloudflareReadScope extends MetadataScope {
   durableNamespaces?: DurableObjectMetadataScope["namespaces"];
   pagesProjects?: PagesMetadataScope["projects"];
   accessApplications?: AccessApplicationMetadataScope["applications"];
+  accessPolicies?: AccessPolicyMetadataScope["applications"];
   zone?: Pick<ZoneMetadataScope, "zoneId" | "dnsRecordIds"> & { workerRoutes?: WorkerRouteMetadataScope["routes"] };
 }
 
@@ -74,6 +75,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
   const durable = durableObjectMetadataDescriptors({ accountId, revision, namespaces: scope.durableNamespaces ?? [] });
   const pages = pagesMetadataDescriptors({ accountId, revision, projects: scope.pagesProjects ?? [] });
   const access = accessApplicationMetadataDescriptors({ accountId, revision, applications: scope.accessApplications ?? [] });
+  const accessPolicies = accessPolicyMetadataDescriptors({ accountId, revision, applications: scope.accessPolicies ?? [] });
   // Account/revision always come from the common snapshot, never nested scope.
   // With no trusted zone relationship, omit DNS/zone operations altogether.
   const zone = scope.zone === undefined ? undefined : zoneMetadataDescriptors({ accountId, revision,
@@ -97,6 +99,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(pages.pagesProjectsList), metadata(pages.pagesProjectGet),
     metadata(pages.pagesDeploymentsList), metadata(pages.pagesDeploymentGet),
     metadata(access.accessApplicationsList), metadata(access.accessApplicationGet),
+    metadata(accessPolicies.accessPoliciesList), metadata(accessPolicies.accessPolicyGet),
     ...(zone === undefined ? [] : [metadata(zone.zoneGet), metadata(zone.dnsList), metadata(zone.dnsGet)]),
     ...(routes === undefined ? [] : [metadata(routes.workerRoutesList), metadata(routes.workerRouteGet)]),
     // Source acquisition needs exact native authority, even for digest-only output.
