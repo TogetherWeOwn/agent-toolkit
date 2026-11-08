@@ -21,7 +21,8 @@ for (const [prepare, scope, operationId, path, effect, authorities] of fixtures)
     assert.equal(output.tool, 'planetscale.' + operationId);
     assert.equal(output.tier, 'reserved');
     assert.equal(output.effect, effect);
-    assert.deepEqual(output.target, scope);
+    assert.equal(Object.getPrototypeOf(output.target), null);
+    assert.deepEqual({ ...output.target }, scope);
     assert.deepEqual(output.arguments, {});
     assert.deepEqual(output.proposedRequest, { method: 'DELETE', origin: 'https://api.planetscale.com', path, body: null });
     assert.deepEqual(output.requiredAuthorities, authorities);
@@ -64,14 +65,16 @@ for (const [prepare, scope, operationId, path, effect, authorities] of fixtures)
     for (const key of Object.keys(mutable)) mutable[key] = 'foreign';
     args.force = true;
     assert.equal(output.proposedRequest.path, path);
-    assert.deepEqual(output.target, scope);
+    assert.equal(Object.getPrototypeOf(output.target), null);
+    assert.deepEqual({ ...output.target }, scope);
     assert.deepEqual(output.arguments, {});
     assert.deepEqual(output.requiredAuthorities, authorities);
   });
   test(`${operationId}: production scope cannot downgrade independent decider obligations`, () => {
     const production = operationId === 'delete_backup' ? { ...scope, production: true } : { ...scope, target: 'production' };
     const output = prepare(production, {});
-    assert.deepEqual(output.target, production);
+    assert.equal(Object.getPrototypeOf(output.target), null);
+    assert.deepEqual({ ...output.target }, production);
     assert.deepEqual(output.requiredAuthorities, authorities);
     assert.equal(output.execution, 'not-implemented');
     assert.equal(output.remotePreconditions, 'not-verified');

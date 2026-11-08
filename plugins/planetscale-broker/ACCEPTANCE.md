@@ -41,6 +41,22 @@ evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
 
+## Backup-deletion snapshot assertion repair
+
+Source head `a49cc311dc46170e122f3a42d3cfca1e373b3aab`
+[Actions test](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42477111495/job/128720836108)
+passed 949/955 PlanetScale tests and failed six new preview assertions. All six
+compared a closed-schema null-prototype target snapshot with an ordinary fixture
+object. The tests now explicitly require a null prototype and compare all own
+snapshot values, preserving immutable target, production obligations and all
+refusal assertions. No runtime/schema/tier or coverage change: 134/291 bounded
+subsets, 157 missing, five plan-only subsets; zero enabled/adopted.
+
+Root 181/181, helpers 122/122 and GitHub broker 219/219 passed at the source head;
+lint/typecheck/native-policy and all three CodeQL analyses passed. Aggregate
+correctly failed. Fresh repair-head Actions remains required; no local suite,
+build, typecheck or CI mirror ran. Independent review and live-use gates remain.
+
 ## Backup-deletion preview source increment
 
 `src/backup-deletion-plans.ts` adds two preview-only plans with 16 new synthetic
