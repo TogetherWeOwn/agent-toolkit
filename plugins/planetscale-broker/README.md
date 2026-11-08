@@ -42,13 +42,40 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-134 adapter rows have a provisional read tier; eighteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 139
+134 adapter rows have a provisional read tier; twenty protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 137
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
 backups/restore, schema/deploy, topology, maintenance and every other official
 area remain in the map even when access or implementation is missing.
+
+## Deployment-stop plan subsets
+
+`src/deployment-stop-plans.ts` supplies two pure previews, not API adapters or
+executors. Broker-owned snapshots bind database/request/source/destination IDs,
+parent and branch names, request number, revision, production and state flags.
+The official deploy-request response has no destination branch ID: intoBranchId
+requires a separate trusted binding. Both require open requests and a non-deleted
+source, and refuse equal source/destination IDs or names. Close supports only
+pending/ready/no_changes, preparing PATCH with fixed `{state: "closed"}`; cancel
+supports only queued, preparing a bodyless POST to the fixed cancel path. Caller
+arguments are empty. Started/cutover/revert/finished states, force and arbitrary
+state changes are unsupported, not a retry or rollback path.
+
+Both retain unreviewed Release Manager obligations; trusted spend/security/host
+side effects still need independent conjunctive classification. These lists do
+not obtain or consume authority. Plans freeze all fields and explicitly retain
+execution not-implemented, remote preconditions not-verified and provider dry-run
+not-performed. A hash or reported state proves neither freshness nor a native
+precondition. Real use needs reviewed identity/policy/approval binding, independent
+current destination identity, fresh state revalidation and uncertain-outcome
+recovery. Cancellation does not prove that deployment never began, that no schema
+changed, or that rollback/closure completed. No network or runtime is supplied.
+
+There are seven separately counted local plan subsets; these operations remain
+missing API adapters. Adapter coverage is unchanged at 134/291, 157 missing;
+zero integrated, reviewed, enabled or adopted operations.
 
 ## Backup-deletion plan subsets
 
@@ -72,7 +99,8 @@ state, ownership, protection, inventory completeness or safe recovery. Actual us
 requires reviewed native identity/policy/approval binding, fresh target/protection
 revalidation and uncertain-outcome recovery. Nothing is installed or enabled.
 
-There are now five local plan subsets total. Adapter coverage stays 134/291,
+Including the deployment-stop plans above, there are seven local plan subsets.
+Adapter coverage stays 134/291,
 with 157 missing adapters including these two. Remaining table/keyspace-table
 metric GETs have no documented success schema and remain missing; no projection
 or response identity is invented from the other metric endpoints.
@@ -775,8 +803,9 @@ ID/name/revision, protection, environment and plan, and enforce remote fencing.
 Missing native preconditions or fencing remain an owning prerequisite, never
 permission to use a stale preview.
 
-The operation map separately records eighteen unreviewed policy candidates: the
-three above, backup/backup-policy deletion, SSO/directory enforcement removal, billing payment-method changes,
+The operation map separately records twenty unreviewed policy candidates: the
+three above, backup/backup-policy deletion, deployment-stop previews,
+SSO/directory enforcement removal, billing payment-method changes,
 and nine credential creation/refresh/renewal/reset operations (including signed
 log access). These require their actual decider; provider permissions do not
 substitute. Conditional production/data/schema/deploy, new-spend, security-weakening
@@ -785,7 +814,7 @@ The candidates only document requirements; native routing, expiry, exact-target
 binding, atomic consumption, replay/concurrent-use refusal and approved placement
 are **not implemented or tested as authority enforcement here**. Credential routes
 remain incomplete until a broker-only sink and reconciliation are accepted. The
-other 139 tier classifications are unresolved, not automatically harmless reads or
+other 137 tier classifications are unresolved, not automatically harmless reads or
 ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.

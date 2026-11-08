@@ -41,6 +41,38 @@ evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
 
+## Deployment-stop preview source increment
+
+`src/deployment-stop-plans.ts` adds two preview-only subsets and 18 synthetic
+contracts. Immutable database/request/source/destination identities, number,
+revision and exact state are broker-bound; arguments are empty. Close is limited
+to open pending/ready/no_changes requests and fixed PATCH state=closed; cancel
+to open queued requests and bodyless POST cancel. Deleted sources, equal branch
+IDs/names, unknown fields, malformed identities/flags, closed requests and all
+other deployment states refuse. No force/cutover/revert/executor/authority
+consumption or provider dry-run. Destination ID is independently broker-bound,
+not supplied by the official response; fresh binding/state and uncertain-outcome
+recovery remain prerequisites. Reported queued state never proves deployment has
+not begun, safe rollback, schema integrity or native closure.
+
+Both retain unreviewed RM obligations, plus independently classified conjunctive
+effects. Updated all-plan inventory contracts retain strict source/test mapping,
+missing adapter status and disabled/unreviewed state. Coverage stays 134/291
+bounded metadata subsets, 157 missing (15 GETs, 142 mutations); seven plans are
+separate. Tiers are 134 provisional read / 20 unreviewed reserved / 137 unresolved;
+zero integrated/reviewed/enabled/adopted. New contracts require fresh exact-head
+Actions; no local suite/build/typecheck/CI mirror ran.
+
+The prior snapshot repair head `2d99797f6346e18ee57ee23010b1fc8c7dbd1dd2`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42478257901)
+passed test/lint/typecheck/native-policy/ci-ok, including
+[955/955 PlanetScale tests](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42478257901/job/128724363514),
+root 181/181, helpers 122/122 and GitHub broker 219/219, zero failures/skips.
+All three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42478231400)
+passed. This verifies the six snapshot assertion repairs, not live authority,
+full-package completeness or an earlier download/SDK recovery fix. Final
+fresh-context/Devin/native specialist/merge gates remain.
+
 ## Backup-deletion snapshot assertion repair
 
 Source head `a49cc311dc46170e122f3a42d3cfca1e373b3aab`
