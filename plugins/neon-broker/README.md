@@ -7,6 +7,23 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonProjectCountOperations(trustedScope, transport)` adds `countProjects`
+with mandatory closed `org_id` and the dedicated aggregate grant
+`neon/organizations/<org>/projects/count`. Construction copies one organization and
+revision. The fixed GET always sends `org_id`; unfiltered/account-wide fallback is
+unsupported. Parent, project-list, child-project and branch-count grants do not
+imply this aggregate authority. Output contains only a nonnegative safe-integer
+`count`, including zero; unsafe, fractional and negative-zero values refuse.
+
+The pinned beta endpoint counts active projects accessible in the organization,
+excluding projects being created/deleted. It is not a count of selected project
+IDs, a permission/entitlement inventory, or evidence of capacity to provision.
+Its ID-less response is bound by the exact authenticated organization-filtered
+request, not invented ancestry; optional org_id must agree. Project/branch identity,
+pagination and non-200 responses refuse without fabricated zero or another API
+fallback. Project records, names, owners and diagnostics are not read or emitted.
+No enumeration, provisioning, live qualification or mutation is supplied.
+
 `createNeonRegionOperations(trustedScope, transport)` adds `getActiveRegions`
 with mandatory closed `org_id` and exact collection grant
 `neon/organizations/<org>/regions`. Construction copies one organization/revision
@@ -500,7 +517,7 @@ passwords, credentials and connection strings are excluded. Unknown lifecycle
 states fail closed until explicitly supported. No error body/headers are surfaced.
 Common lease-reflection checks remain necessary even in these selected fields.
 
-`createNeonMetadataTransport(injectedFetch)` has forty-eight typed methods only. Its
+`createNeonMetadataTransport(injectedFetch)` has fifty typed methods only. Its
 internal request builder fixes origin `https://console.neon.tech`, `/api/v2`
 paths, GET, JSON content, no redirects and no retries. No global fetch fallback
 exists. Each response is bounded to 64 KiB and 1 s, including streamed body time;
@@ -540,8 +557,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: forty-nine implemented
-source adapters, 145 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: fifty implemented
+source adapters, 144 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

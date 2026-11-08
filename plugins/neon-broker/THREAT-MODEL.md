@@ -222,6 +222,25 @@ malformed/accessor/poisoned output, transport refusal, common identity/replay/TO
 credential reflection and maximum-scope configuration/output budgets. Entitlement,
 non-waking effects and native runtime qualification remain unknown.
 
+## Organization-filtered project count delta
+
+`countProjects` validates and copies one organization/revision and requires the
+exact aggregate resource `neon/organizations/<org>/projects/count`. Caller arguments
+contain only that org_id; the fixed GET always includes it, with no unfiltered
+fallback. Parent/list/project/branch-count grants do not imply this authority.
+Closed output is only a nonnegative safe integer, including zero; unsafe,
+fractional, negative and negative-zero numbers refuse rather than round/default.
+The provider excludes creating/deleting projects: this aggregate is not a selected
+project count, an access inventory or provisioning capacity evidence. The ID-less
+response is bound by its authenticated organization-filtered request; optional
+organization identity must agree, project/branch identity and pagination refuse.
+Project records, names, owners and diagnostics are not read or emitted. Non-200
+never becomes zero or another endpoint fallback. Source/common contracts cover
+canonical arguments, copied scope, exact grants, numeric/accessor/poisoned output,
+transport failure, principal binding, replay, TOCTOU and maximum JSON budgets.
+No enumeration or mutation is introduced; beta availability, native entitlement,
+provider effects and runtime qualification remain unknown.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.
