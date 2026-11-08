@@ -7,6 +7,27 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonEndpointStartOperations(trustedScope, transport)` adds reserved
+`startProjectEndpoint` source. Copy exact project/branch/endpoint/revision;
+require the distinct `neon/projects/<project>/branches/<branch>/endpoints/<endpoint>/start`
+grant and common-core native exact-target/plan authorization before credentials.
+Mandatory endpoint-detail GET binds immutable ID/project/branch before exactly
+one bodyless POST to `/start`. No restart, suspend, configuration or caller authority
+overrides are accepted. Compute start is an explicit provider effect; source mocks
+authorize no live start or additional spend.
+
+Only HTTP200 exact identity and bounded unique operation-ID/status observations
+yield closed `{id, acknowledged: true, operations}`. This is **not readiness**:
+the pinned provider contract requires successful completion of the last operation
+in the chain. The adapter does not poll or verify that chain, and even `finished`
+observations do not upgrade the acknowledgement. Hosts, states, settings, action/error
+text and dates are not evaluated or emitted. Ambiguity gets one bounded detail
+observation and stays uncertain even on `active`; no automatic retry or invented
+idempotency header. The common permanent journal blocks same-request restart/replay.
+Native host/policy/custody, durable recovery, entitlement/effects, applicable spend
+authority and independent reviews remain gates. No runtime, scheduler, cutover
+enforcement or enabled tool is supplied.
+
 `createNeonEndpointDeleteOperations(trustedScope, transport)` adds reserved
 `deleteProjectEndpoint` source. Copy exact project/branch/endpoint/revision;
 require a distinct `neon/projects/<project>/branches/<branch>/endpoints/<endpoint>/delete`
@@ -1236,8 +1257,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: eighty-one implemented
-source adapters, 113 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: eighty-two implemented
+source adapters, 112 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

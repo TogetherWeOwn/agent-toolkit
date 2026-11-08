@@ -780,6 +780,30 @@ this does not establish atomicity across live branch heads. Database comparison
 may wake compute; native effects, entitlement and independent acceptance remain
 unresolved. No runtime tool is enabled.
 
+## Reserved endpoint-start acknowledgement delta
+
+`startProjectEndpoint` binds one copied project/branch/endpoint/revision to a dedicated
+endpoint/start resource and reserved native exact-plan authority. Parent, rename,
+suspend, delete, sibling endpoint and cross-agent grants do not authorize it.
+Mandatory detail preflight requires immutable endpoint/project/branch identity before
+one bodyless POST /start; this is not atomic CAS or provider-effect qualification.
+No caller authority, action, configuration, credential or arbitrary URL is accepted.
+The start explicitly requests compute activation; mocks authorize neither live
+activation nor spend. Native custody, policy, entitlement/effects and any applicable
+spend authority remain prerequisites.
+
+Only bounded HTTP200 exact identity and unique operation-ID/known-status observations
+produce a closed acknowledgement. The pinned contract requires successful completion
+of the last operation in the chain for readiness; neither an empty list nor an
+individual finished status establishes that requirement. No chain polling, readiness,
+session or cutover-enforcement verdict is supplied. Unused host/settings/state and
+arbitrary action/error fields are never evaluated/emitted. Malformed or lost mutation
+responses get at most one bounded detail observation then remain uncertain, including
+an active endpoint. No automatic mutation retry, success inferred from observation,
+or invented provider idempotency header. The common permanent journal must survive
+native restart/replay; durable integration and independent acceptance remain unresolved.
+The separate metadata factory does not gain any mutation descriptor or fallback.
+
 ## Bounded binary object byte-count observation delta
 
 One copied project/branch/bucket/key/revision binds an exact object/download grant,

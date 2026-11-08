@@ -2744,20 +2744,23 @@
       "id": "startProjectEndpoint",
       "apiArea": "endpoint",
       "tool": "neon.startProjectEndpoint",
-      "scope": "project_id/endpoint_id",
+      "scope": "project_id/branch_id/endpoint_id/start",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-start-request"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/endpoint-start.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Mocked source only; reserved native exact-target/plan authority and dedicated start grant required. Exact endpoint/project/branch detail preflight then one bodyless POST; HTTP200 closed acknowledgement and operation observations only, not readiness or successful completion of the complete operation chain. Ambiguity remains uncertain after one observation including active state, never retried; permanent common journal blocks restart/replay. Compute start has explicit provider effects. Native host/policy/custody, durable recovery, entitlement/effects, applicable spend authority and independent reviews unresolved. No live start, cutover enforcement or enablement."
     },
     {
       "id": "suspendProjectEndpoint",
