@@ -113,12 +113,13 @@ test('endpoint restart: closed bounded operation observations refuse foreign tar
   }
   const observation = { ...receipt.operations[0] };
   for (const key of ['error', 'action', 'retry_at']) Object.defineProperty(observation, key, { get() { throw Error('unused'); }, enumerable: true });
-  assert.deepEqual(op.project({ endpoint: ignored, operations: [observation] }), expected);
+  const singleObservation = { ...expected, operations: [expected.operations[0]] };
+  assert.deepEqual(op.project({ endpoint: ignored, operations: [observation] }), singleObservation);
   const consumed = Object.defineProperty({ ...receipt.operations[0] }, 'status', { get() { throw Error('getter'); }, enumerable: true });
   assert.throws(() => op.project({ ...receipt, operations: [consumed] }));
   // Optional operation branch/endpoint ancestry can be absent, never contradictory.
   const { branch_id, endpoint_id, ...unscoped } = receipt.operations[0];
-  assert.deepEqual(op.project({ ...receipt, operations: [unscoped] }), expected);
+  assert.deepEqual(op.project({ ...receipt, operations: [unscoped] }), singleObservation);
 });
 
 test('endpoint restart: cancellation and ignored POST deadline bound the sole attempt', async () => {
