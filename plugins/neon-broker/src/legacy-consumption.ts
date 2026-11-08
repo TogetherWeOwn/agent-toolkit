@@ -1,5 +1,6 @@
 import { closed, identifier, integer, text } from "../../../packages/core/src/schema.js";
 import type { Json, Prepared, ProviderOperation } from "../../../packages/core/src/provider/contracts.js";
+import { billingTimestamp } from "./billing-timestamp.js";
 import { MAX_ITEMS, MAX_PAGES } from "./metadata.js";
 import { check, field, optional, rows } from "./projection.js";
 import { PAGE_SIZE, type NeonMetadataTransport } from "./transport.js";
@@ -17,15 +18,6 @@ const hour = { parse(raw: unknown): string {
   const value = text(20, /^\d{4}-\d{2}-\d{2}T\d{2}:00:00Z$/).parse(raw);
   check(Number.isFinite(Date.parse(value)) && new Date(value).toISOString() === value.replace("Z", ".000Z"));
   return value;
-} };
-const timestamp = { parse(raw: unknown): number {
-  const value = text(29, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/).parse(raw);
-  const local = value.replace(/(?:Z|[+-]\d{2}:\d{2})$/, "Z");
-  const localEpoch = Date.parse(local);
-  const epoch = Date.parse(value);
-  check(Number.isFinite(localEpoch) && Number.isFinite(epoch) &&
-    new Date(localEpoch).toISOString().slice(0, 19) === local.slice(0, 19));
-  return epoch;
 } };
 const uuid = text(36, /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/);
 const paginationSchema = closed({ cursor: text(256, /^[\x20-\x7e]+$/) });
@@ -67,9 +59,9 @@ export function createNeonLegacyConsumptionOperations(scope: NeonLegacyConsumpti
         const periodId = uuid.parse(field(period, "period_id"));
         check(!periods.has(periodId));
         periods.add(periodId);
-        const start = timestamp.parse(field(period, "period_start"));
+        const start = billingTimestamp.parse(field(period, "period_start"));
         const endRaw = optional(period, "period_end");
-        const end = endRaw === undefined ? undefined : timestamp.parse(endRaw);
+        const end = endRaw === undefined ? undefined : billingTimestamp.parse(endRaw);
         check(end === undefined || start < end);
         return rows(field(period, "consumption"), 24).map(frame => {
           identity(frame);

@@ -107,6 +107,42 @@ test('consumption: 24 hourly buckets, billing boundary and missing-data gaps rem
   await assert.rejects(fixture(withPeriods(periods.toReversed())).run(name, args));
 });
 
+test('consumption: billing boundaries accept non-hour timestamps, offsets and milliseconds without rounding', async () => {
+  const op = fixture(raw).operation(name);
+  for (const [period_start, period_end] of [
+    ['2026-11-01T00:15:00Z', '2026-11-07T01:15:00Z'],
+    ['2026-11-01T00:15:00.123Z', '2026-11-07T01:00:00.001Z'],
+    ['2026-11-07T01:00:00+01:00', '2026-11-07T02:00:00+01:00'],
+    ['2026-11-06T23:00:00-01:00', '2026-11-07T00:00:00-01:00'],
+  ]) {
+    const value = withPeriods([{ ...period, period_start, period_end }]);
+    assert.deepEqual(await fixture(value).run(name, args), expected);
+    assert.deepEqual(op.project(value), expected);
+  }
+  for (const change of [
+    { period_start: '2026-11-07T00:00:00.001Z' },
+    { period_end: '2026-11-07T00:59:59.999Z' },
+    { period_start: '2026-11-07T00:00:00-01:00' },
+    { period_end: '2026-11-07T01:00:00+01:00' },
+    { period_start: '2026-02-30T00:15:00Z' },
+    { period_start: '2026-11-01T24:00:00Z' },
+    { period_start: '2026-11-01T00:15:00+24:00' },
+    { period_start: '2026-11-01T00:15:00' },
+    { period_start: '2026-11-01T00:15:00.0001Z' },
+    { period_end: period.period_start },
+    { period_start: null },
+  ]) {
+    const value = withPeriods([{ ...period, ...change }]);
+    await assert.rejects(fixture(value).run(name, args));
+    assert.throws(() => op.project(value));
+  }
+  for (const change of [
+    { timeframe_start: '2026-11-07T00:00:00+00:00' },
+    { timeframe_end: '2026-11-07T01:00:00.001Z' },
+    { timeframe_start: '2026-11-07T00:15:00Z' },
+  ]) await assert.rejects(fixture(withFrames([{ ...frame, ...change }])).run(name, args));
+});
+
 test('consumption: cursor pagination is bounded and never returns partial success', async () => {
   const f = fixture((_url, _init, call) => response(call === 1 ? { ...raw, pagination: { cursor: 'a&b' } } : { projects: [] }));
   assert.deepEqual(await f.run(name, args), expected);

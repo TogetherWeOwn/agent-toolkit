@@ -1,5 +1,6 @@
 import { closed, identifier, integer, text } from "../../../packages/core/src/schema.js";
 import type { Json, Prepared, ProviderOperation } from "../../../packages/core/src/provider/contracts.js";
+import { billingTimestamp } from "./billing-timestamp.js";
 import { MAX_ITEMS, MAX_PAGES } from "./metadata.js";
 import { check, field, optional, rows } from "./projection.js";
 import { PAGE_SIZE, type NeonMetadataTransport } from "./transport.js";
@@ -58,16 +59,16 @@ export function createNeonConsumptionOperations(scope: NeonConsumptionScope, tra
         const periodId = uuid.parse(field(period, "period_id"));
         check(!periods.has(periodId));
         periods.add(periodId);
-        const start = hour.parse(field(period, "period_start"));
+        const start = billingTimestamp.parse(field(period, "period_start"));
         const endRaw = optional(period, "period_end");
-        const end = endRaw === undefined ? undefined : hour.parse(endRaw);
+        const end = endRaw === undefined ? undefined : billingTimestamp.parse(endRaw);
         check(end === undefined || start < end);
         return rows(field(period, "consumption"), 24).map(frame => {
           identity(frame);
           const frameStart = hour.parse(field(frame, "timeframe_start"));
           const frameEnd = hour.parse(field(frame, "timeframe_end"));
           check(++count <= 24 && frameStart >= previousEnd && frameEnd <= config.to &&
-            Date.parse(frameEnd) - Date.parse(frameStart) === 3_600_000 && frameStart >= start && (end === undefined || frameEnd <= end));
+            Date.parse(frameEnd) - Date.parse(frameStart) === 3_600_000 && Date.parse(frameStart) >= start && (end === undefined || Date.parse(frameEnd) <= end));
           previousEnd = frameEnd;
           const metrics = rows(field(frame, "metrics"), 1);
           check(metrics.length === 1);

@@ -43,7 +43,7 @@ history is not fabricated zero or entitlement evidence. Cursor pages cap at ten
 branches with a three-page ceiling; duplicate/foreign branches, conflicting
 ancestry, nested pagination, unsafe metrics, duplicate periods and unordered,
 overlapping or out-of-window frames refuse without partial success. The same
-conservative canonical-hour period/frame subset as project history applies.
+validated billing date-times and canonical-hour frames as project history apply.
 Pinned provider documentation describes this Beta endpoint as non-waking;
 native effects/entitlement qualification is still unresolved. No spend control,
 mutation or lifecycle enforcement is introduced.
@@ -61,9 +61,11 @@ Closed output contains project_id and observed hourly timeframe boundaries with
 nonnegative safe-integer compute_unit_seconds only. Billing period IDs, plans,
 period boundaries and arbitrary diagnostics are omitted. Missing history remains
 missing, never fabricated zero consumption or budget/entitlement evidence. This
-conservative subset requires canonical UTC hour boundaries in returned periods
-and frames, one requested metric per frame, at most 30 unique periods and 24 total
-hourly frames. Foreign/duplicate projects, duplicate periods, contradictory
+conservative subset requires canonical UTC hour boundaries in returned frames,
+one requested metric per frame, at most 30 unique periods and 24 total hourly
+frames. Billing-period boundaries share the legacy adapter's validated explicit-zone
+date-time parser through millisecond precision; exact epoch comparisons enforce
+containment without rounding. Finer precision refuses rather than truncating. Foreign/duplicate projects, duplicate periods, contradictory
 ancestry, out-of-window/overlapping/unordered frames, unsafe quantities and
 unexpected nested pagination refuse. Cursor pages are fixed at 10 projects with
 a three-page ceiling and cycle refusal; no partial success on failure. The pinned
