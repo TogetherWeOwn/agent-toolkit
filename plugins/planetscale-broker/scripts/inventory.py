@@ -44,6 +44,16 @@ ADAPTERS = {
     "list_oauth_tokens": "list-oauth-tokens",
     "get_webhook": "get-webhook",
     "list_webhooks": "list-webhooks",
+    "get_keyspace": "get-keyspace",
+    "list_keyspaces": "list-keyspaces",
+    "get_shard": "get-shard",
+    "list_shards": "list-shards",
+    "get_maintenance_event": "get-maintenance-event",
+    "list_maintenance_events": "list-maintenance-events",
+}
+TOPOLOGY = {
+    "get_keyspace", "list_keyspaces", "get_shard", "list_shards",
+    "get_maintenance_event", "list_maintenance_events",
 }
 SECURITY_RECORDS = {
     "get_service_token", "list_service_tokens", "get_oauth_token",
@@ -108,6 +118,17 @@ def policy_candidate(operation_id):
     }
 
 
+def adapter_test(operation_id):
+    for operations, name in [
+        (TOPOLOGY, "topology"), (SECURITY_RECORDS, "security-records"),
+        (DEPLOYMENT_DETAILS, "deployment-details"), (LIFECYCLE, "lifecycle"),
+        (DISCOVERY, "discovery"),
+    ]:
+        if operation_id in operations:
+            return f"test/{name}.test.mjs"
+    return "test/metadata.test.mjs"
+
+
 def canonical(value):
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
 
@@ -166,7 +187,7 @@ def inventory(raw):
                 } if operation_id in LOCAL_PLANS else None,
                 "credentialEntitlement": "unknown-awaiting-operator-metadata",
                 "adapter": "src/tools/" + adapter + ".ts" if adapter else None,
-                "test": ("test/security-records.test.mjs" if operation_id in SECURITY_RECORDS else ("test/deployment-details.test.mjs" if operation_id in DEPLOYMENT_DETAILS else ("test/lifecycle.test.mjs" if operation_id in LIFECYCLE else ("test/discovery.test.mjs" if operation_id in DISCOVERY else "test/metadata.test.mjs")))) if adapter else None,
+                "test": adapter_test(operation_id) if adapter else None,
                 "projectionCoverage": "bounded-metadata-subset-not-full-operation" if adapter else "missing",
                 "testExecution": "see-exact-head-actions-evidence" if adapter else "no-test-implemented",
                 "implementation": "offline-adapter-only" if adapter else "missing",

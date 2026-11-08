@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The thirty-two adapters are pure request builders and bounded output projections,
+The thirty-eight adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,14 +36,14 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 32 | Narrow projections; not full operation coverage |
-| Missing source adapters | 259 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 38 | Narrow projections; not full operation coverage |
+| Missing source adapters | 253 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-Thirty-two adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 243
+Thirty-eight adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 237
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
@@ -73,6 +73,9 @@ area remain in the map even when access or implementation is missing.
 | `planetscale.list_schema_recommendations` / `planetscale.get_schema_recommendation` | Bound recommendation ID/number and state/type enums; no title, table/keyspace names, DDL or actor |
 | `planetscale.list_service_tokens` / `planetscale.get_service_token` / `planetscale.list_oauth_tokens` / `planetscale.get_oauth_token` | Bound token-record ID and expiry/usage timestamp presence only; no token, refresh token, actors, grant bodies or effective authority |
 | `planetscale.list_webhooks` / `planetscale.get_webhook` | Bound webhook ID, enabled/header-configured flags and nullable last-send success; no secret, URL, event names or result text |
+| `planetscale.list_keyspaces` / `planetscale.get_keyspace` | Bound ID/name and sharded/external/ready/resizing/default flags; no configuration maps, SKU or storage details |
+| `planetscale.list_shards` / `planetscale.get_shard` | Bound ID and ready/authoritative topology flags; no names, profiles or timestamps |
+| `planetscale.list_maintenance_events` / `planetscale.get_maintenance_event` | Bound event ID/branch ID/name, state enum and urgent flag; no description, impact text, timestamps or execution windows |
 
 The five discovery lists require a broker-owned closed scope containing 1–32
 unique child ID/name pairs (region names are slugs). Any unknown or rebound child
@@ -119,6 +122,18 @@ parent binding and parent-collection authorization are separate prerequisites.
 The pinned webhook schema contains a secret even on reads. Future transport must
 keep raw bodies broker-side with no logging/reflection, including error paths;
 these offline projections neither authorize fetching such bodies nor prove custody.
+
+Keyspace reads require exact broker-owned ID/name bindings; shard reads require
+bound IDs and expose only ready/authoritative flags. `authoritative` describes
+provider topology, not agent authorization or effective rights. Maintenance-event
+bindings additionally match the response branch ID/name; state and urgency are
+informational, never reschedule/execute authority. Collections snapshot 1–32 unique
+child IDs and refuse the whole page on unknown or rebound identities. Keyspace
+configuration maps/storage/SKUs, shard names/profiles and maintenance descriptions,
+impact text, timestamps and available execution windows are omitted. Trusted parent
+ownership, independent parent-collection permission and non-waking evidence remain
+prerequisites. Optional search/profile and branch/state filters, topology counts,
+full configuration and maintenance scheduling capabilities remain incomplete.
 
 Arguments are closed, scalar and bounded. Configured resource scope is separate
 from arguments and must eventually be resolved by the shared core from an
@@ -167,7 +182,7 @@ No connector or replacement broker is introduced.
 ## Local mutation-plan artifacts — not executors
 
 `src/mutation-plans.ts` supplies three pure, bounded previews. They are **not API
-adapters**, do not consume authority and do not increase the 32-adapter count.
+adapters**, do not consume authority and do not increase the 38-adapter count.
 Each artifact labels itself `validated-local-plan-not-provider-dry-run`, with
 execution not implemented, remote preconditions not verified and provider dry-run
 not performed. No network executor, output projector or secret placement exists.
@@ -201,7 +216,7 @@ The candidates only document requirements; native routing, expiry, exact-target
 binding, atomic consumption, replay/concurrent-use refusal and approved placement
 are **not implemented or tested as authority enforcement here**. Credential routes
 remain incomplete until a broker-only sink and reconciliation are accepted. The
-other 243 tier classifications are unresolved, not automatically harmless reads or
+other 237 tier classifications are unresolved, not automatically harmless reads or
 ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.
