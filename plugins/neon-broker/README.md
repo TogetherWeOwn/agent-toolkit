@@ -7,6 +7,24 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonMaskingRuleOperations(trustedScope, transport)` adds `getMaskingRules`
+with a copied project/branch/revision and explicit database/schema/table/column
+selection. It requires the exact branch `masking_rules` collection grant; parent,
+sibling, schema and anonymization grants do not imply access. Fixed GET output is
+only the selected four-part column identities. All four provider fields are
+sensitive: only exact trusted tuples may leave the projection. Masking functions,
+literal replacement values and diagnostics are not read, evaluated or emitted.
+This conservative subset supports ASCII catalog identifiers up to 63 characters;
+other names refuse rather than normalize or truncate.
+
+The nonpaginated response caps at 30 rows before selection. Duplicate tuples,
+malformed names, contradictory optional project/branch ancestry and unexpected
+pagination refuse without partial success, including on unselected rows. A listed
+column is configuration metadata, not proof of successful/effective masking;
+missing rules remain missing, not an all-clear verdict. Beta availability and
+provider effects remain unqualified. No rule update, anonymization, schema/data
+query, SQL execution, credential action or runtime enablement is supplied.
+
 `createNeonLegacyConsumptionOperations(trustedScope, transport)` adds
 `getConsumptionHistoryPerProject` for legacy-plan history only. It copies one
 organization/project/revision and a canonical UTC hourly window of at most 24

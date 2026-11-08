@@ -8,6 +8,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  getMaskingRules(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   getConsumptionHistoryPerProject(organization: string, project: string, from: string, to: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
   getConsumptionHistoryPerBranchV2(organization: string, project: string, branch: string, from: string, to: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
   getConsumptionHistoryPerProjectV2(organization: string, project: string, from: string, to: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
@@ -172,6 +173,8 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    getMaskingRules: (project: string, branch: string, options: MetadataRequestOptions) =>
+      get(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/masking_rules`, new URLSearchParams(), options),
     getConsumptionHistoryPerProject: (organization: string, project: string, from: string, to: string, cursor: string | null, options: MetadataRequestOptions) => {
       for (const value of [from, to]) {
         if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:00:00Z$/.test(value) ||

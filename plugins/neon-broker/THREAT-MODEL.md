@@ -19,6 +19,25 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
 
+## Selected masking-rule identity delta
+
+`getMaskingRules` copies one exact project/branch/revision and bounded explicit
+four-part database/schema/table/column tuples. Its exact branch/masking_rules
+collection grant is distinct from parent, sibling, schema and anonymization
+resources. The fixed GET returns sensitive configuration: only exact selected
+identities are projected. Masking expressions, literal replacement data and
+arbitrary diagnostics are ignored without accessor evaluation; no expression,
+function, SQL or data query is executed. This is not an effective-masking verdict.
+
+Thirty rows cap the nonpaginated collection before filtering. Duplicate tuples,
+malformed catalog names, unexpected pagination and contradictory optional ancestry
+refuse even on unselected rows. Closed arguments reject caller selection/authority;
+construction copies nested tuples. Source and common-core contracts cover exact
+identity/resource policy, replay/TOCTOU, detached execution, redaction/reflection,
+maximum input/output budgets and unavailable or failed responses. Beta availability
+and non-waking/provider effects remain unresolved native gates. No rule mutation,
+anonymization trigger, schema read or lifecycle authority is introduced.
+
 ## Legacy project consumption delta
 
 `getConsumptionHistoryPerProject` uses a distinct legacy consumption target with

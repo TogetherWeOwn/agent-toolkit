@@ -30,6 +30,7 @@ import { createNeonBucketObjectOperations } from '../dist/plugins/neon-broker/sr
 import { createNeonConsumptionOperations } from '../dist/plugins/neon-broker/src/consumption.js';
 import { createNeonBranchConsumptionOperations } from '../dist/plugins/neon-broker/src/branch-consumption.js';
 import { createNeonLegacyConsumptionOperations } from '../dist/plugins/neon-broker/src/legacy-consumption.js';
+import { createNeonMaskingRuleOperations } from '../dist/plugins/neon-broker/src/masking-rules.js';
 
 export const scope = {
   projectId: 'project-a', revision: 'scope-v1', branchIds: ['br-a', 'br-b'],
@@ -333,7 +334,16 @@ export const legacyConsumptionCases = [
 export function legacyConsumptionFixture(value, config = consumptionScope) {
   return fixture(value, config, createNeonLegacyConsumptionOperations);
 }
-export const allCases = [...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
+export const maskingRule = { database_name: 'main', schema_name: 'public', table_name: 'users', column_name: 'email' };
+export const maskingRuleScope = { projectId: scope.projectId, branchId: 'br-a', revision: scope.revision, rules: [maskingRule] };
+export const maskingRuleCases = [
+  ['getMaskingRules', { project_id: 'project-a', branch_id: 'br-a' },
+    { masking_rules: [{ ...maskingRule, masking_function: 'anon.fake_email()', masking_value: 'redacted' }] }, { masking_rules: [maskingRule] }],
+];
+export function maskingRuleFixture(value, config = maskingRuleScope) {
+  return fixture(value, config, createNeonMaskingRuleOperations);
+}
+export const allCases = [...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });
