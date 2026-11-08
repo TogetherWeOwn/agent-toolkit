@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { accessPolicyMetadataDescriptors, accessApplicationMetadataDescriptors, metadataDescriptors, zoneMetadataDescriptors, workerRouteMetadataDescriptors, secretsStoreMetadataDescriptors, durableObjectMetadataDescriptors, pagesMetadataDescriptors } from "../dist/plugins/cloudflare-broker/src/metadata.js";
 import { currentContentDescriptor } from "../dist/plugins/cloudflare-broker/src/current-content.js";
+import { cloudflareReadOperations } from "../dist/plugins/cloudflare-broker/src/read-operations.js";
 import { versionAssetDescriptor } from "../dist/plugins/cloudflare-broker/src/version-assets.js";
 import { workerDomainMetadataDescriptors } from "../dist/plugins/cloudflare-broker/src/worker-domains.js";
 import { deletionPlanDescriptors } from "../dist/plugins/cloudflare-broker/src/deletion-plans.js";
@@ -923,11 +924,11 @@ test("Cloudflare full schema inventory is pinned, explicit about holes, and cons
       assert.equal(row.tier, descriptor.tier);
       assert.equal(row.implementation, descriptor === contentDescriptor ? "content-descriptor-only" : descriptor.tier === "reserved" ? "plan-descriptor-only" : "descriptor-only");
       if (descriptor === contentDescriptor) {
-        assert.equal(row.approvalRoute, "separate-source-agent-and-resource-policy");
+        assert.equal(row.approvalRoute, "exact-native-source-authorization-and-agent-resource-policy");
         assert.equal(row.sideEffects, "source-read-digest-only");
         for (const prerequisite of ["separate-source-authorization", "bounded-content-transport-and-success-media-contract", "trusted-capture-window-and-response-correlation", "module-attribution-and-library-projection"]) assert.ok(row.prerequisites.includes(prerequisite));
       }
-      if (descriptor.tier === "reserved") {
+      if (row.implementation === "plan-descriptor-only") {
         assert.equal(row.approvalRoute, "release-manager-and-conditional-owner-security");
         assert.equal(row.sideEffects, "destructive-production");
         for (const prerequisite of ["native-conjunctive-authority-and-security-impact", "provider-precondition-and-recovery-adapter", "execution-and-projection-adapter"]) assert.ok(row.prerequisites.includes(prerequisite));
@@ -935,8 +936,8 @@ test("Cloudflare full schema inventory is pinned, explicit about holes, and cons
     }
   }
   assert.equal(operations.filter(row => row.typedTool !== null).length, 47);
-  assert.equal(operations.filter(row => row.tier === "reserved").length, 5);
-  assert.equal(operations.filter(row => row.tier === "read").length, 42);
+  assert.equal(operations.filter(row => row.tier === "reserved").length, 6);
+  assert.equal(operations.filter(row => row.tier === "read").length, 41);
   assert.equal(operations.filter(row => row.implementation === "content-descriptor-only").length, 1);
   assert.equal(manifest.counts.contentDescriptors, 1);
   assert.equal(manifest.counts.descriptors, Object.keys(allDescriptors).length);
@@ -944,6 +945,26 @@ test("Cloudflare full schema inventory is pinned, explicit about holes, and cons
   assert.equal(manifest.complete, false);
   assert.deepEqual(manifest.supplementalSurfaces.map(surface => surface.status), ["documentary-inventory-only", "not-inventoried"]);
   assert.throws(() => inventory(Buffer.from("{}")), /schema source digest mismatch/);
+});
+
+test("Cloudflare descriptor, coverage and core-binding tiers agree for every source operation", async () => {
+  const bound = cloudflareReadOperations({ ...scope, zone: { zoneId: zone, dnsRecordIds: [own] } },
+    { accountId: account, revision: scope.revision });
+  const descriptorsByName = new Map(Object.values(allDescriptors).map(descriptor => [descriptor.name, descriptor]));
+  const rows = (await readFile(new URL("../plugins/cloudflare-broker/coverage/operations.jsonl", import.meta.url), "utf8"))
+    .trimEnd().split("\n").map(line => JSON.parse(line));
+  const rowsByName = new Map(rows.filter(row => row.typedTool !== null).map(row => [row.typedTool, row]));
+  assert.equal(bound.length, 42);
+  assert.equal(new Set(bound.map(operation => operation.name)).size, bound.length);
+  for (const operation of bound) {
+    assert.equal(operation.tier, descriptorsByName.get(operation.name)?.tier, operation.name);
+    assert.equal(operation.tier, rowsByName.get(operation.name)?.tier, operation.name);
+  }
+  for (const descriptor of Object.values(allDescriptors)) {
+    assert.equal(bound.some(operation => operation.name === descriptor.name),
+      rowsByName.get(descriptor.name).implementation !== "plan-descriptor-only", descriptor.name);
+  }
+  assert.equal(bound.find(operation => operation.name === contentDescriptor.name).tier, "reserved");
 });
 
 test("Cloudflare family workload summary assigns every operation once without upgrading coverage", async () => {

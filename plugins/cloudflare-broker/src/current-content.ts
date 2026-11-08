@@ -40,7 +40,7 @@ export function currentContentDescriptor(scope: CurrentContentScope) {
   return Object.freeze({
     name: "cloudflare.workers.current_content.digest",
     version: "1" as const,
-    tier: "read" as const,
+    tier: "reserved" as const,
     providerOperationId: "worker-script-get-content",
     prepare(raw: unknown): PreparedMetadata<Arguments> {
       const args = script.parse(raw);

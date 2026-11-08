@@ -16,9 +16,10 @@ function json(value: unknown): Json {
 function bind<A>(descriptor: {
   readonly name: string;
   readonly version: string;
+  readonly tier: Tier;
   readonly providerOperationId: string;
   prepare(raw: unknown): PreparedMetadata<A>;
-}, tier: Tier, read: (raw: unknown, credential: string, signal: AbortSignal) => Promise<unknown>): ProviderOperation {
+}, read: (raw: unknown, credential: string, signal: AbortSignal) => Promise<unknown>): ProviderOperation {
   // Core v1 project(raw) has no prepared argument. Keep each already-projected
   // response behind its own opaque receipt, never a shared last-request slot.
   const results = new WeakMap<object, Json>();
@@ -33,7 +34,7 @@ function bind<A>(descriptor: {
     };
   }
   return Object.freeze({
-    name: descriptor.name, version: descriptor.version, tier, timeoutMs: 10000, lifecycle: "none" as const,
+    name: descriptor.name, version: descriptor.version, tier: descriptor.tier, timeoutMs: 10000, lifecycle: "none" as const,
     prepare,
     async execute(prepared: Prepared, credential: string, signal: AbortSignal) {
       requireThat(canonicalHash(prepare(prepared.arguments)) === canonicalHash(prepared), "scope");
@@ -73,7 +74,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
   const descriptors = metadataDescriptors(scope);
   const read = metadataTransport(fetcher);
   function metadata<A, O>(descriptor: MetadataDescriptor<A, O>): ProviderOperation {
-    return bind(descriptor, "read", (args, credential, signal) => read(descriptor, args, credential, signal));
+    return bind(descriptor, (args, credential, signal) => read(descriptor, args, credential, signal));
   }
   const { accountId, revision } = scope;
   const stores = secretsStoreMetadataDescriptors({ accountId, revision, stores: scope.secretStores ?? [] });
@@ -112,6 +113,6 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     ...(zone === undefined ? [] : [metadata(zone.zoneGet), metadata(zone.dnsList), metadata(zone.dnsGet)]),
     ...(routes === undefined ? [] : [metadata(routes.workerRoutesList), metadata(routes.workerRouteGet)]),
     // Source acquisition needs exact native authority, even for digest-only output.
-    bind(content, "reserved", (args, credential, signal) => readContent(content, args, credential, signal)),
+    bind(content, (args, credential, signal) => readContent(content, args, credential, signal)),
   ]);
 }

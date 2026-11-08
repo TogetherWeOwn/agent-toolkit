@@ -13,6 +13,7 @@ test("Cloudflare current-content descriptor selects the supported current-only o
   const descriptor = currentContentDescriptor(scope);
   const input = descriptor.prepare(args);
   assert.equal(descriptor.providerOperationId, "worker-script-get-content");
+  assert.equal(descriptor.tier, "reserved");
   assert.deepEqual(input.request, {
     method: "GET", path: `/accounts/${account}/workers/scripts/safe-worker/content/v2`,
     maxResponseBytes: 131072, timeoutMs: 10000, maxRequests: 1, redirects: "deny",
