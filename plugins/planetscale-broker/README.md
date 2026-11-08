@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The fifty-eight adapters are pure request builders and bounded output projections,
+The sixty-two adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,14 +36,14 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 58 | Narrow projections; not full operation coverage |
-| Missing source adapters | 233 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 62 | Narrow projections; not full operation coverage |
+| Missing source adapters | 229 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-Fifty-eight adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 217
+Sixty-two adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 213
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
@@ -84,6 +84,10 @@ area remain in the map even when access or implementation is missing.
 | `planetscale.list_branch_resize_requests` / `planetscale.get_branch_resize_request` / `planetscale.list_keyspace_resize_requests` / `planetscale.get_keyspace_resize_request` | Bound resize ID and informational state enum only; no cluster names, capacity, actors, prices or timestamps |
 | `planetscale.list_branch_change_requests` / `planetscale.get_branch_change_request` | Bound PostgreSQL change ID and state enum only; no parameters, storage, version, SKU, actor or timestamps |
 | `planetscale.list_branch_config_change_requests` / `planetscale.get_branch_config_change_request` / `planetscale.list_keyspace_config_change_requests` / `planetscale.get_keyspace_config_change_request` | Bound config-change ID/type/keyspace and state enum; no option values, errors, actors or timestamps |
+
+Schedule tools: `planetscale.get_maintenance_schedule`,
+`planetscale.list_maintenance_schedules`, `planetscale.get_branch_maintenance_window`
+and `planetscale.list_maintenance_windows`; all are offline metadata subsets.
 
 The five discovery lists require a broker-owned closed scope containing 1–32
 unique child ID/name pairs (region names are slugs). Any unknown or rebound child
@@ -186,6 +190,17 @@ incomplete. The official admin-change list/get aliases document **308 only** and
 no success schema: both remain missing with an explicit reviewed-alias-contract
 prerequisite. No redirect following or substitution is implemented or counted.
 
+Maintenance schedule list/get and branch-window reads return only a bound schedule
+ID, enabled/required flags and frequency-unit enum. Window lists return bound IDs
+and start/finish timestamp presence, not timestamps or proof of successful execution
+or native session/resource closure. Display names, timing/duration, versions and
+free text are omitted. Scope snapshots constrain IDs (1–32 unique for collections);
+unknown IDs refuse the whole page. Response shapes contain no immutable parent
+identity: trusted current schedule/database/branch/window ownership and independent
+parent-collection permission remain prerequisites. A provider schedule is never an
+authorized use window; flags never grant execution, rescheduling or wake authority.
+Full scheduling details/mutations and non-waking semantics remain incomplete.
+
 Arguments are closed, scalar and bounded. Configured resource scope is separate
 from arguments and must eventually be resolved by the shared core from an
 authorized resource handle, not accepted from a model. Each request fixes HTTPS
@@ -233,7 +248,7 @@ No connector or replacement broker is introduced.
 ## Local mutation-plan artifacts — not executors
 
 `src/mutation-plans.ts` supplies three pure, bounded previews. They are **not API
-adapters**, do not consume authority and do not increase the 58-adapter count.
+adapters**, do not consume authority and do not increase the 62-adapter count.
 Each artifact labels itself `validated-local-plan-not-provider-dry-run`, with
 execution not implemented, remote preconditions not verified and provider dry-run
 not performed. No network executor, output projector or secret placement exists.
@@ -267,7 +282,7 @@ The candidates only document requirements; native routing, expiry, exact-target
 binding, atomic consumption, replay/concurrent-use refusal and approved placement
 are **not implemented or tested as authority enforcement here**. Credential routes
 remain incomplete until a broker-only sink and reconciliation are accepted. The
-other 217 tier classifications are unresolved, not automatically harmless reads or
+other 213 tier classifications are unresolved, not automatically harmless reads or
 ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.

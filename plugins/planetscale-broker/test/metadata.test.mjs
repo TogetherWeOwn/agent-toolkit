@@ -128,7 +128,9 @@ test('complete official map distinguishes mapped, source-adapted, reviewed and e
   const organizationRecords = ['get_organization_membership', 'list_organization_members', 'get_organization_team', 'list_organization_teams', 'get_organization_team_member', 'list_organization_team_members'];
   const resizeRecords = ['get_bouncer', 'list_bouncers', 'list_bouncer_resize_requests', 'list_branch_bouncer_resize_requests', 'get_branch_resize_request', 'list_branch_resize_requests', 'get_keyspace_resize_request', 'list_keyspace_resize_requests'];
   const changeRecords = ['get_branch_change_request', 'list_branch_change_requests', 'get_branch_config_change_request', 'list_branch_config_change_requests', 'get_keyspace_config_change_request', 'list_keyspace_config_change_requests'];
+  const maintenanceSchedules = ['get_maintenance_schedule', 'list_maintenance_schedules', 'get_branch_maintenance_window', 'list_maintenance_windows'];
   const groups = [
+    [maintenanceSchedules, 'maintenance-schedules'],
     [changeRecords, 'change-records'],
     [discovery, 'discovery'], [lifecycle, 'lifecycle'], [deploymentDetails, 'deployment-details'],
     [securityRecords, 'security-records'], [topology, 'topology'], [organizationRecords, 'organization-records'],

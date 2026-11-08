@@ -70,6 +70,14 @@ ADAPTERS = {
     "list_branch_config_change_requests": "list-branch-config-change-requests",
     "get_keyspace_config_change_request": "get-keyspace-config-change-request",
     "list_keyspace_config_change_requests": "list-keyspace-config-change-requests",
+    "get_maintenance_schedule": "get-maintenance-schedule",
+    "list_maintenance_schedules": "list-maintenance-schedules",
+    "get_branch_maintenance_window": "get-branch-maintenance-window",
+    "list_maintenance_windows": "list-maintenance-windows",
+}
+MAINTENANCE_SCHEDULES = {
+    "get_maintenance_schedule", "list_maintenance_schedules",
+    "get_branch_maintenance_window", "list_maintenance_windows",
 }
 CHANGE_RECORDS = {
     "get_branch_change_request", "list_branch_change_requests",
@@ -155,6 +163,7 @@ def policy_candidate(operation_id):
 
 def adapter_test(operation_id):
     for operations, name in [
+        (MAINTENANCE_SCHEDULES, "maintenance-schedules"),
         (CHANGE_RECORDS, "change-records"), (RESIZE_RECORDS, "resize-records"),
         (ORGANIZATION_RECORDS, "organization-records"),
         (TOPOLOGY, "topology"), (SECURITY_RECORDS, "security-records"),

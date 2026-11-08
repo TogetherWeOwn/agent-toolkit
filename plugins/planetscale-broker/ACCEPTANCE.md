@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 239 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 229 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -126,6 +126,18 @@ configuration, optional completion-time filters, price/capacity and mutations ar
 not implemented. Source coverage is **52/291 bounded metadata subsets, 239 missing**;
 zero integrated/reviewed/enabled/adopted operations. Fresh exact-head Actions is
 required for this increment; no local suite or native authority test is claimed.
+
+`test/maintenance-schedules.test.mjs` adds 25 synthetic contracts for four
+schedule/window metadata reads. Tests cover pinned paths/schema, whole-page ID
+refusal, closed scopes/arguments, immutable snapshots, wire/page limits, malformed
+selected fields and dropped name/timing/version canaries. Enabled/required and
+start/finish presence are informational, never execution authority or native
+closure. Trusted parent ownership and independent collection permission remain
+required; full scheduling and non-waking semantics are incomplete. Source coverage
+is now **62/291 bounded metadata subsets, 229 missing**; zero integrated/reviewed/
+enabled/adopted operations. Prior `80ff2ba` [Actions test](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42435353232/job/128592914327)
+passed 342/342 package tests, not these new fixtures. Fresh exact-head Actions is
+required; no local suite or native authority enforcement is claimed.
 
 ## Metrics preregistration — required before enablement
 

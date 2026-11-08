@@ -23,7 +23,7 @@ function matchedId(body: Record<string, unknown>, allowed: readonly string[]): s
 }
 
 const timestamp = text(40, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/);
-function timestampPresent(value: unknown): boolean {
+export function timestampPresent(value: unknown): boolean {
   if (value === null) return false;
   requireThat(Number.isFinite(Date.parse(timestamp.parse(value))), "upstream");
   return true;

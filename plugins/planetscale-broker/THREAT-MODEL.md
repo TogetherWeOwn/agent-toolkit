@@ -51,6 +51,34 @@ Outputs are fixed projections with enum/boolean/bounded-identifier validation.
 The eventual common-core secret guard must also reject reflected credential values
 in selected fields; dropping known secret fields alone cannot prove no disclosure.
 
+## Maintenance schedule/window metadata — offline only
+
+- `get_maintenance_schedule`: fixed database schedule path and broker-bound ID;
+  returns only ID, enabled/required flags and frequency-unit enum.
+- `list_maintenance_schedules`: fixed database collection, explicit bounded page
+  arguments and 1–32 unique broker-owned schedule IDs; same output projection.
+  Unknown IDs refuse the whole page, not a partial sanitized result.
+- `get_branch_maintenance_window`: fixed branch path; the official response is a
+  schedule, not a window. Require its exact broker-bound schedule ID and return
+  the same schedule projection. Never infer a branch ownership proof from it.
+- `list_maintenance_windows`: fixed schedule child path, explicit bounded pages
+  and 1–32 unique window IDs; return ID and validated timestamp presence only.
+  Presence never establishes successful maintenance or native session closure.
+
+All four snapshot closed broker-owned scopes before preparation and reject caller
+schedule, timing, approval, destination or credential overrides. Names, raw times,
+durations, pending versions and arbitrary text are dropped. Response shapes supply
+no immutable parent identity; current trusted database/branch/schedule/window
+bindings and independent parent-collection permission remain prerequisites. A
+provider schedule, enabled flag or required flag cannot authorize a compute wake,
+maintenance execution, cancellation or rescheduling. GET non-waking semantics are
+unverified. No resources are created, so creator TTL/spend/teardown is inapplicable
+to these pure builders; future calls retain transport/rate/time/byte caps and any
+authorized use-window/closure requirements. No credential resolution, outbound
+calls, logging or state mutation occurs. `test/maintenance-schedules.test.mjs`
+covers exact schema paths, scope/identity refusal, immutability, bounds, malformed
+fields and ignored canaries; native policy/custody/approval tests remain missing.
+
 ## Transport, pagination and errors
 
 All current request descriptions fix HTTPS `api.planetscale.com`, GET and endpoint
