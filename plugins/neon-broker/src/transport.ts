@@ -3,6 +3,7 @@ import { downloadBucketName, downloadObjectKey } from "./object-key.js";
 import { snapshotLabel } from "./snapshot-update.js";
 import { branchLabel } from "./branch-update.js";
 import { projectLabel } from "./project-update.js";
+import { endpointLabel } from "./endpoint-update.js";
 
 export const NEON_ORIGIN = "https://console.neon.tech";
 export const RESPONSE_BYTES = 65_536;
@@ -14,6 +15,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  updateProjectEndpoint(project: string, endpoint: string, name: string, options: MetadataRequestOptions): Promise<unknown>;
   updateProject(project: string, name: string, options: MetadataRequestOptions): Promise<unknown>;
   updateProjectBranch(project: string, branch: string, name: string, options: MetadataRequestOptions): Promise<unknown>;
   updateSnapshot(project: string, snapshot: string, name: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -204,6 +206,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    updateProjectEndpoint: (project: string, endpoint: string, name: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/endpoints/${authPathId(endpoint)}`, new URLSearchParams(), options,
+        JSON.stringify({ endpoint: { name: endpointLabel.parse(name) } }), false, false, true),
     updateProject: (project: string, name: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}`, new URLSearchParams(), options,
         JSON.stringify({ project: { name: projectLabel.parse(name) } }), false, false, true),

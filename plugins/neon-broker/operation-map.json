@@ -2718,7 +2718,7 @@
       "id": "updateProjectEndpoint",
       "apiArea": "endpoint",
       "tool": "neon.updateProjectEndpoint",
-      "scope": "project_id/endpoint_id",
+      "scope": "project_id/branch_id/endpoint_id/rename",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -2726,12 +2726,15 @@
       "tier": "write",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/endpoint-update.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Name-only source subset; unnamed endpoints and compute sizing, suspend timeout, connection/security, settings, pooling and branch changes unsupported. Exact endpoint/project/branch/expected-label preflight is not atomic CAS. Provider endpoint updates may activate idle compute. One PATCH, closed exact-echo acknowledgement only, not readiness; one ambiguity observation without retry. Permanent core journal blocks restart/replay. Native effects, entitlement, custody, durable recovery, host/policy integration and independent reviews unresolved; no live rename or enablement."
     },
     {
       "id": "startProjectEndpoint",
