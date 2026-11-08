@@ -13,6 +13,7 @@ import { scriptSettingsDescriptors } from "../dist/plugins/cloudflare-broker/src
 import { environmentSettingsDescriptor } from "../dist/plugins/cloudflare-broker/src/environment-settings.js";
 import { workerAccountDescriptors } from "../dist/plugins/cloudflare-broker/src/worker-account.js";
 import { workerIdentityDescriptors } from "../dist/plugins/cloudflare-broker/src/worker-identities.js";
+import { dispatchNamespaceDescriptors } from "../dist/plugins/cloudflare-broker/src/dispatch-namespaces.js";
 import { workerVersionListDescriptor } from "../dist/plugins/cloudflare-broker/src/worker-version-list.js";
 import { workerSecretDescriptor } from "../dist/plugins/cloudflare-broker/src/worker-secret.js";
 import { workerBuildDescriptor } from "../dist/plugins/cloudflare-broker/src/worker-builds.js";
@@ -101,6 +102,7 @@ const allDescriptors = { ...metadataOnly, ...deletionDescriptors, contentDescrip
   environmentSettings: environmentSettingsDescriptor({ accountId: account, revision: "policy-1" }),
   ...workerAccountDescriptors({ accountId: account, revision: "policy-1" }),
   ...workerIdentityDescriptors({ accountId: account, revision: "policy-1" }),
+  ...dispatchNamespaceDescriptors({ accountId: account, revision: "policy-1" }),
   workerVersionList: workerVersionListDescriptor({ accountId: account, revision: "policy-1" }),
   workerSecret: workerSecretDescriptor({ accountId: account, revision: "policy-1" }),
   workerBuild: workerBuildDescriptor({ accountId: account, revision: "policy-1" }),

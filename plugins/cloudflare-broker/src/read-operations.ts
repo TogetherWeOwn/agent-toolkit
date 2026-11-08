@@ -7,6 +7,7 @@ import { scriptSettingsDescriptors, type ScriptSettingsScope } from "./script-se
 import { environmentSettingsDescriptor, type EnvironmentSettingsScope } from "./environment-settings.js";
 import { workerAccountDescriptors, type WorkerAccountScope } from "./worker-account.js";
 import { workerIdentityDescriptors, type WorkerIdentityScope } from "./worker-identities.js";
+import { dispatchNamespaceDescriptors, type DispatchNamespaceScope } from "./dispatch-namespaces.js";
 import { workerVersionListDescriptor, type WorkerVersionListScope } from "./worker-version-list.js";
 import { workerSecretDescriptor, type WorkerSecretScope } from "./worker-secret.js";
 import { workerBuildDescriptor, type WorkerBuildScope } from "./worker-builds.js";
@@ -87,6 +88,8 @@ export interface CloudflareReadScope extends MetadataScope {
   workerSecrets?: WorkerSecretScope["workers"];
   workerIdentityList?: WorkerIdentityScope["listWorkers"];
   workerIdentityDetails?: WorkerIdentityScope["workers"];
+  dispatchNamespaceList?: DispatchNamespaceScope["listNamespaces"];
+  dispatchNamespaceDetails?: DispatchNamespaceScope["namespaces"];
   workerVersionLists?: WorkerVersionListScope["workers"];
   workerAccountSettingsReadAllowed?: WorkerAccountScope["settingsReadAllowed"];
   workerAccountExpectedSubdomain?: WorkerAccountScope["expectedSubdomain"];
@@ -151,6 +154,8 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     ...(scope.workerAccountExpectedSubdomain === undefined ? {} : { expectedSubdomain: scope.workerAccountExpectedSubdomain }) });
   const identities = workerIdentityDescriptors({ accountId, revision,
     listWorkers: scope.workerIdentityList ?? [], workers: scope.workerIdentityDetails ?? [] });
+  const dispatch = dispatchNamespaceDescriptors({ accountId, revision,
+    listNamespaces: scope.dispatchNamespaceList ?? [], namespaces: scope.dispatchNamespaceDetails ?? [] });
   const consumers = queueConsumerDescriptors({ accountId, revision, queues: scope.queueConsumers ?? [],
     configurationConsumers: scope.queueConsumerConfigurations ?? [] });
   const events = eventSubscriptionDescriptors({ accountId, revision, subscriptions: scope.eventSubscriptions ?? [] });
@@ -185,6 +190,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(environmentSettingsDescriptor({ accountId, revision, environments: scope.workerEnvironmentSettings ?? [] })),
     metadata(workerAccount.accountSettingsGet), metadata(workerAccount.accountSubdomainGet),
     metadata(identities.identitiesList), metadata(identities.identityGet),
+    metadata(dispatch.dispatchNamespacesList), metadata(dispatch.dispatchNamespaceGet),
     metadata(workerVersionListDescriptor({ accountId, revision, workers: scope.workerVersionLists ?? [] })),
     metadata(workerSecretDescriptor({ accountId, revision, workers: scope.workerSecrets ?? [] })),
     metadata(workerBuildDescriptor({ accountId, revision, workers: scope.workerBuildConfigurations ?? [] })),
