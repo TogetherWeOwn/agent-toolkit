@@ -222,11 +222,17 @@ DISCOVERY = {
     "list_regions_for_organization", "list_public_regions", "get_default_role",
 }
 METHODS = {"get", "post", "put", "patch", "delete", "head", "options"}
-LOCAL_PLANS = {"delete_branch", "create_backup", "disable_safe_migrations"}
+LOCAL_PLANS = {
+    "delete_branch": "mutation-plans", "create_backup": "mutation-plans",
+    "disable_safe_migrations": "mutation-plans",
+    "delete_backup": "backup-deletion-plans", "delete_backup_policy": "backup-deletion-plans",
+}
 # Explicit candidates, not a runtime authority registry. Missing classifications
 # stay unresolved; method, prefix or a documented provider scope grants nothing.
 POLICY_CANDIDATES = {
     "delete_branch": (["release-manager"], "destructive-data-change"),
+    "delete_backup": (["release-manager"], "destructive-backup-removal"),
+    "delete_backup_policy": (["release-manager", "owner-security"], "backup-policy-removal"),
     "create_backup": (["release-manager", "owner-money"], "backup-data-copy-and-potential-spend"),
     "disable_safe_migrations": (["release-manager", "owner-security"], "migration-safety-removal"),
     "disable_organization_sso": (["owner-security"], "sso-enforcement-removal"),
@@ -360,7 +366,7 @@ def inventory(raw):
                 "approvalRoute": "per-agent-and-resource-policy; production read classification pending" if adapter else ("unreviewed candidate: see policyCandidate; no runtime authority" if candidate else "unresolved: classify RM, owner, Operator and any conjunctive routes before implementation"),
                 "policyCandidate": candidate,
                 "localPlan": {
-                    "source": "src/mutation-plans.ts", "test": "test/mutation-plans.test.mjs",
+                    "source": f"src/{LOCAL_PLANS[operation_id]}.ts", "test": f"test/{LOCAL_PLANS[operation_id]}.test.mjs",
                     "execution": "not-implemented", "providerDryRun": "not-performed",
                     "coverage": "bounded-subset-not-full-operation",
                 } if operation_id in LOCAL_PLANS else None,
@@ -378,7 +384,7 @@ def inventory(raw):
     operation_ids = {o["operationId"] for o in operations}
     if len(operations) != 291 or len(operation_ids) != 291:
         raise ValueError("unexpected operation coverage")
-    if not set(POLICY_CANDIDATES) <= operation_ids or not LOCAL_PLANS <= set(POLICY_CANDIDATES):
+    if not set(POLICY_CANDIDATES) <= operation_ids or not set(LOCAL_PLANS) <= set(POLICY_CANDIDATES):
         raise ValueError("unknown candidate or local-plan operation")
     return {
         "schemaVersion": "planetscale-operation-map/1",

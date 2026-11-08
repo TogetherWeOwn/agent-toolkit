@@ -41,6 +41,37 @@ evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
 
+## Backup-deletion preview source increment
+
+`src/backup-deletion-plans.ts` adds two preview-only plans with 16 new synthetic
+contracts in `test/backup-deletion-plans.test.mjs`. Exact broker-owned
+parent/database/branch/backup/policy IDs and revision snapshots, empty arguments,
+strict flags and fixed bodyless DELETE paths; refuse protected/required or
+non-success backups and required policies. No force or unprotect path. Backup
+removal retains RM, policy removal retains RM plus owner-security. These are
+unreviewed candidate obligations, not issuance/consumption of native authority.
+All plans explicitly retain execution not-implemented, remote preconditions
+not-verified and provider dry-run not-performed. Tests cover input/refusal,
+immutability, canary/accessor non-reflection, production non-downgrade, pinned
+schema and missing/disabled inventory status. Existing plan invariants now cover
+all five local plan subsets and preserve separate source/test mapping.
+
+Coverage is unchanged: **134/291 offline bounded metadata subsets; 157 missing**
+(15 GETs, 142 mutations). There are five plan-only subsets, separately counted,
+18 unreviewed reserved-tier candidates and 139 unresolved tiers; zero integrated,
+reviewed, enabled or adopted operations. New plans remain missing API adapters.
+Table/keyspace-table metric endpoints have no documented successful response
+schema and remain missing rather than borrowing another endpoint's contract.
+
+Prior exact `61b0cd8de60898823644d1cdbc2a62da2029ce4c`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42475590553)
+passed test/lint/typecheck/native-policy/ci-ok, including
+[939/939 PlanetScale contracts](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42475590553/job/128716139264),
+root 181/181, helpers 122/122 and GitHub broker 219/219. All three CodeQL analyses
+passed. New contracts require fresh exact-head Actions; no local suite/build,
+typecheck, CI mirror, authority enforcement or live provider operation ran.
+Complete-package/tier specialist, fresh-context, Devin and merge gates remain.
+
 ## MoveTables map-contract regression repair
 
 Source head `b41e164406d75eae2e47c948510bad3e3955d759`

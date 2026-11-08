@@ -11,6 +11,10 @@ const binding = {
   production: false, deletionProtected: false, safeMigrations: true,
 };
 const base = '/v1/organizations/example-org/databases/example-db/branches/staging';
+const backupDeletionPlans = {
+  delete_backup: ['release-manager'],
+  delete_backup_policy: ['release-manager', 'owner-security'],
+};
 const fixtures = [
   [prepareDeleteBranch, {}, 'delete_branch', 'DELETE', `${base}?delete_descendants=false`, null, ['release-manager']],
   [prepareCreateBackup, { name: 'bounded-backup', retentionHours: 6 }, 'create_backup', 'POST', `${base}/backups`, { name: 'bounded-backup', retention_unit: 'hour', retention_value: 6, emergency: false }, ['release-manager', 'owner-money']],
@@ -108,7 +112,7 @@ test('protected operation candidates preserve separate exact-decider obligations
   const credentials = ['create_branch_log_signature', 'create_oauth_token', 'create_password', 'create_role', 'create_service_token', 'renew_password', 'renew_role', 'reset_default_role', 'reset_role'];
   const money = ['update_payment_method', 'delete_organization_billing_payment_method'];
   const security = ['disable_organization_sso', 'disable_organization_sso_directory'];
-  const expected = [...credentials, ...money, ...security, ...fixtures.map(row => row[2])].sort();
+  const expected = [...credentials, ...money, ...security, ...fixtures.map(row => row[2]), ...Object.keys(backupDeletionPlans)].sort();
   assert.deepEqual(map.operations.filter(row => row.policyCandidate).map(row => row.operationId).sort(), expected);
   for (const row of map.operations.filter(row => row.policyCandidate)) {
     const candidate = row.policyCandidate;
@@ -163,18 +167,19 @@ test('offline read classification never implies reviewed policy or runtime enabl
 test('plan-only artifacts never count as implemented API adapters', async () => {
   const map = JSON.parse(await readFile(new URL('../api/operation-map.json', import.meta.url), 'utf8'));
   const planned = map.operations.filter(row => row.localPlan !== null);
-  assert.deepEqual(planned.map(row => row.operationId).sort(), fixtures.map(row => row[2]).sort());
+  assert.deepEqual(planned.map(row => row.operationId).sort(), [...fixtures.map(row => row[2]), ...Object.keys(backupDeletionPlans)].sort());
   for (const row of planned) {
     assert.equal(row.adapter, null);
     assert.equal(row.implementation, 'missing');
     assert.equal(row.projectionCoverage, 'missing');
     assert.equal(row.enablement, 'disabled');
     assert.equal(row.tier, 'reserved');
-    assert.equal(row.localPlan.source, 'src/mutation-plans.ts');
-    assert.equal(row.localPlan.test, 'test/mutation-plans.test.mjs');
+    const group = Object.hasOwn(backupDeletionPlans, row.operationId) ? 'backup-deletion-plans' : 'mutation-plans';
+    assert.equal(row.localPlan.source, `src/${group}.ts`);
+    assert.equal(row.localPlan.test, `test/${group}.test.mjs`);
     assert.equal(row.localPlan.providerDryRun, 'not-performed');
     assert.equal(row.localPlan.execution, 'not-implemented');
     assert.equal(row.policyCandidate.status, 'unreviewed-not-runtime-policy');
-    assert.deepEqual(row.policyCandidate.always, fixtures.find(fixture => fixture[2] === row.operationId)[6]);
+    assert.deepEqual(row.policyCandidate.always, backupDeletionPlans[row.operationId] ?? fixtures.find(fixture => fixture[2] === row.operationId)[6]);
   }
 });
