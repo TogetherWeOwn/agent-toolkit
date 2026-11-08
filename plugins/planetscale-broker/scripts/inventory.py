@@ -230,6 +230,7 @@ LOCAL_PLANS = {
     "cancel_branch_config_change_request": "configuration-cancel-plans",
     "cancel_keyspace_config_change_request": "configuration-cancel-plans",
     "cancel_change_request": "change-cancel-plan",
+    "delete_query_patterns_report": "query-report-deletion-plan",
 }
 # Explicit candidates, not a runtime authority registry. Missing classifications
 # stay unresolved; method, prefix or a documented provider scope grants nothing.
@@ -242,6 +243,7 @@ POLICY_CANDIDATES = {
     "cancel_branch_config_change_request": (["release-manager"], "cancel-unapplied-branch-configuration"),
     "cancel_keyspace_config_change_request": (["release-manager"], "cancel-unapplied-keyspace-configuration"),
     "cancel_change_request": (["release-manager"], "cancel-individual-unapplied-change-request"),
+    "delete_query_patterns_report": (["release-manager"], "destructive-query-report-removal-despite-read-entitlement"),
     "create_backup": (["release-manager", "owner-money"], "backup-data-copy-and-potential-spend"),
     "disable_safe_migrations": (["release-manager", "owner-security"], "migration-safety-removal"),
     "disable_organization_sso": (["owner-security"], "sso-enforcement-removal"),

@@ -41,6 +41,35 @@ evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
 
+## Query-report deletion preview source increment
+
+`src/query-report-deletion-plan.ts` adds one preview-only subset and ten synthetic
+contracts. Closed immutable database/branch/report identity and revision snapshots,
+empty arguments and fixed bodyless DELETE by report ID; completed/failed only.
+Pending/unknown states refuse as broker-narrow rules, not official guarantees of
+remote preconditions. Parent IDs are not in the report response; independent trusted
+bindings remain required. No URL/download, SQL/report data, executor, authority
+consumption or provider dry-run is supplied.
+
+The official endpoint lists `read_branch` entitlement despite destructive behavior.
+A dedicated contract preserves reserved classification and RM plus conjunctive
+security/spend/host obligations, never read authority. Report removal does not prove
+query-data deletion, download revocation or closure. Native policy/approval binding,
+current independent identity/state revalidation and uncertain-outcome recovery remain
+missing. Eleven local plans stay separate from **134/291 bounded offline adapters;
+157 missing** (15 GETs, 142 mutations). Tiers: 134 provisional read / 24 unreviewed
+reserved / 133 unresolved; zero integrated/reviewed/enabled/adopted. New contracts
+require exact-head Actions; no local suite/build/typecheck/CI mirror ran.
+
+Prior exact `ee759faf807d550d6d906c4ae6a6336b8dfd602e`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42482850289)
+passed test/lint/typecheck/native-policy/ci-ok, including
+[1001/1001 PlanetScale tests](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42482850289/job/128738394476),
+root 181/181, helpers 122/122 and GitHub broker 219/219, zero failures/skips.
+All three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42482809734)
+passed. Historical evidence is not the new-head result. No earlier SDK/download
+repair claim, native approval or runtime enablement is inferred.
+
 ## Individual change-request cancellation preview source increment
 
 `src/change-cancel-plan.ts` adds one preview-only subset and ten synthetic

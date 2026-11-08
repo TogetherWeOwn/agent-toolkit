@@ -42,13 +42,34 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-134 adapter rows have a provisional read tier; twenty-three protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 134
+134 adapter rows have a provisional read tier; twenty-four protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 133
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
 backups/restore, schema/deploy, topology, maintenance and every other official
 area remain in the map even when access or implementation is missing.
+
+## Query-report deletion plan subset
+
+`src/query-report-deletion-plan.ts` adds one pure preview, not an API adapter or
+executor. Closed immutable snapshots bind database/branch/report IDs, parent names,
+revision, production and a broker-narrow completed/failed state. Pending and unknown
+states refuse locally; this is not a documented remote precondition. Empty arguments
+and a fixed bodyless DELETE by report ID prevent caller URL, download, SQL, force or
+report-content selectors. Parent IDs are absent from the official report response
+and need independently trusted bindings, not an inference from report state.
+
+The official destructive endpoint lists `read_branch` service-token entitlement.
+That entitlement is not read policy, deletion authority or a safety guarantee.
+RM and independently classified conjunctive security/spend/host effects remain
+unreviewed candidates. Deleting a report never proves underlying query-data deletion,
+download revocation or native closure. No executor, provider dry-run, freshness check
+or approval consumption is supplied. Native policy/approval binding, independent
+current identity/state revalidation and uncertain-outcome recovery remain missing.
+
+There are eleven local plan subsets, separate from 134/291 bounded offline adapters
+and 157 missing adapters. Zero operations are integrated, reviewed, enabled or adopted.
 
 ## Individual change-request cancellation plan subset
 
