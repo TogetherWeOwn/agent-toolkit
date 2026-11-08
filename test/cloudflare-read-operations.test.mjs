@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFile } from "node:fs/promises";
 import { createProviderBroker, canonicalHash } from "../dist/packages/core/src/provider/index.js";
 import { cloudflareReadOperations } from "../dist/plugins/cloudflare-broker/src/read-operations.js";
 import { providerFixture, credentialCanary, derivedCanary } from "../packages/core/testing/provider-fixture.mjs";
@@ -42,10 +43,14 @@ function noEffects(f) {
   assert.equal(f.requests.length, 0);
 }
 
-test("Cloudflare read registry binds account metadata with empty optional family scopes and reserved content", () => {
+test("Cloudflare read registry binds account metadata with empty optional family scopes and reserved content", async () => {
   const f = fixture();
-  assert.equal(f.operations.length, 39);
-  assert.equal(new Set(f.operations.map(op => op.name)).size, 39);
+  const rows = (await readFile(new URL("../plugins/cloudflare-broker/coverage/operations.jsonl", import.meta.url), "utf8"))
+    .trimEnd().split("\n").map(line => JSON.parse(line));
+  const expected = rows.filter(row => ["descriptor-only", "content-descriptor-only"].includes(row.implementation) && !row.resourceParameters.includes("zone_id"))
+    .map(row => row.typedTool).sort();
+  assert.deepEqual(f.operations.map(op => op.name).sort(), expected);
+  assert.equal(new Set(f.operations.map(op => op.name)).size, f.operations.length);
   assert.ok(Object.isFrozen(f.operations));
   for (const operation of f.operations) {
     assert.ok(Object.isFrozen(operation));
