@@ -2,11 +2,11 @@
 
 ## Implemented source, not accepted enablement
 
-- Fifty-one typed source operations, including project security/access, auth webhook
-  status and organization VPC/configuration/member/invitation metadata plus organization-filtered region catalog/project count,
+- Fifty-two typed source operations, including exact-user profile, project security/access,
+  auth webhook status and organization VPC/configuration/member/invitation metadata plus organization-filtered region catalog/project count,
   with strict arguments, exact trusted scope and parent-child binding, safe projections
   and fixed bounded injected transport.
-- Full 194-row management inventory; 143 operations still lack source. All rows remain
+- Full 194-row management inventory; 142 operations still lack source. All rows remain
   unqualified and disabled, with unknown entitlement. These adapters do not complete
   the package. Prior source merge,
   current source review, native qualification and runtime enablement are separate.

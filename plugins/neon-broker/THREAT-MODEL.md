@@ -258,6 +258,27 @@ accessors/duplicates/enums/bounds, reflected material, replay/TOCTOU and maximum
 JSON budgets. Native entitlement, provider effects and runtime qualification stay
 unknown; no non-waking claim follows from mocks.
 
+## Exact-user profile delta
+
+`getCurrentUserInfo` copies a trusted user ID/revision and requires its dedicated
+user/profile resource. Arguments must name that user, but are never forwarded as
+a query override: the fixed `/users/me` request is credential-bound. The returned
+ID must match exactly, preventing silent cross-account response rebinding. Parent,
+sibling, project and organization grants do not imply this profile authority.
+Closed output includes only the ID and project/branch limits as nonnegative safe
+integers. Unsupported IDs, unsafe limits, missing fields and pagination refuse;
+non-200 never becomes zero capacity or an alternate enumeration request.
+
+Names, email/login, avatars, linked authentication accounts, billing/plan details,
+compute/autoscaling quotas and diagnostics are neither projected nor followed.
+Reported limits do not prove available capacity, current entitlements or authority
+to provision. Source/common contracts cover copied identity, canonical arguments,
+exact grants, wrong-credential identity, malformed/accessor/poisoned output,
+transport failure, reflected material, replay/TOCTOU and maximum JSON budgets.
+No profile mutation, opaque authentication-details/credential read or live runtime
+integration is supplied. Entitlement and effects remain unknown; GET/mocks are
+not evidence of non-waking behavior.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.

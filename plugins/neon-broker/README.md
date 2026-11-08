@@ -537,7 +537,7 @@ passwords, credentials and connection strings are excluded. Unknown lifecycle
 states fail closed until explicitly supported. No error body/headers are surfaced.
 Common lease-reflection checks remain necessary even in these selected fields.
 
-`createNeonMetadataTransport(injectedFetch)` has fifty typed methods only. Its
+`createNeonMetadataTransport(injectedFetch)` has fifty-two typed methods only. Its
 internal request builder fixes origin `https://console.neon.tech`, `/api/v2`
 paths, GET, JSON content, no redirects and no retries. No global fetch fallback
 exists. Each response is bounded to 64 KiB and 1 s, including streamed body time;
@@ -551,6 +551,25 @@ Endpoint/database/role lists have no pagination in the pinned API and cap at 30 
 unexpected pagination refuses. No request wakes/starts/resumes/suspends/restarts compute or
 fetches connection metadata/secrets as a fallback. This describes requests we
 construct, **not provider non-wake evidence**.
+
+## Exact-user profile read
+
+`createNeonUserProfileOperations` copies one trusted user ID and scope revision.
+`getCurrentUserInfo` requires exactly `{ user_id }` matching that copied user and
+an exact `neon/users/<user>/profile` grant. Parent/user, sibling profile, project
+and organization grants are not substitutes. The provider request has no user
+parameter: it always reads `/users/me`, so its returned `id` must prove that the
+credential resolved to the selected user. A mismatch refuses, never rebinds the
+selection or falls back to account enumeration.
+
+Closed output contains only the bound ID and nonnegative safe-integer
+`projects_limit` and `branches_limit`; zero is preserved, unsafe values refuse.
+Names, email/login, avatar URL, linked auth accounts, billing/plan information,
+compute/autoscaling quotas and diagnostics are omitted without being followed or
+interpreted. These provider-reported limits are not current capacity, entitlement
+or permission to provision. Pagination is unsupported and refuses. No profile
+mutation, authentication-details lookup, key retrieval or live qualification is
+introduced. Runtime entitlement and provider effects remain unknown.
 
 ## Shared contract and candidate compatibility
 
@@ -577,8 +596,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: fifty-one implemented
-source adapters, 143 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: fifty-two implemented
+source adapters, 142 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

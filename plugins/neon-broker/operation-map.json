@@ -3219,7 +3219,7 @@
       "id": "getCurrentUserInfo",
       "apiArea": "users",
       "tool": "neon.getCurrentUserInfo",
-      "scope": "trusted-account",
+      "scope": "user_id/exact-profile",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3227,12 +3227,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/user-profile.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed exact-user profile source and mocked contracts authored; entitlement, provider effects, independent native review and runtime integration remain unresolved. No account enumeration, credential authority, live qualification or enablement."
     },
     {
       "id": "getCurrentUserOrganizations",
