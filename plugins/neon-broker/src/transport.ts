@@ -8,6 +8,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  getProjectAdvisorSecurityIssues(project: string, branch: string, database: string, options: MetadataRequestOptions): Promise<unknown>;
   listApiKeys(options: MetadataRequestOptions): Promise<unknown>;
   listOrgApiKeys(organization: string, options: MetadataRequestOptions): Promise<unknown>;
   listCredentials(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -177,6 +178,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    getProjectAdvisorSecurityIssues: (project: string, branch: string, database: string, options: MetadataRequestOptions) =>
+      get(`/projects/${authPathId(project)}/advisors`, new URLSearchParams({ branch_id: authPathId(branch),
+        database_name: catalogName(database), category: "SECURITY", min_severity: "INFO" }), options),
     listApiKeys: (options: MetadataRequestOptions) => get("/api_keys", new URLSearchParams(), options),
     listOrgApiKeys: (organization: string, options: MetadataRequestOptions) =>
       get(`/organizations/${authPathId(organization)}/api_keys`, new URLSearchParams(), options),

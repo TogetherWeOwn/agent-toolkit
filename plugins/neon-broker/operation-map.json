@@ -208,20 +208,24 @@
       "id": "getProjectAdvisorSecurityIssues",
       "apiArea": "project",
       "tool": "neon.getProjectAdvisorSecurityIssues",
-      "scope": "project_id",
+      "scope": "project_id/branch_id/database_name/advisors/security",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "database-analysis"
       ],
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/advisor.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source and refusal contracts only; exact database-bound SECURITY/INFO analysis and closed severity observation counts. Provider analyzes the database and may wake compute. Native entitlement/effects, reviews and runtime integration remain unresolved; no live analysis or security verdict."
     },
     {
       "id": "listApiKeys",

@@ -7,6 +7,28 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonAdvisorOperations(trustedScope, transport)` adds
+`getProjectAdvisorSecurityIssues` for a single copied project/branch/database and
+revision. Its distinct exact database `advisors/security` grant is not implied by
+project, branch, catalog or Data API configuration access. Every fixed GET to
+`/projects/<project>/advisors` sends branch_id, database_name, category=SECURITY and
+min_severity=INFO. No default branch/database, PERFORMANCE-only or unfiltered
+fallback exists. The provider explicitly analyzes the database: this is not a
+pure catalog read or qualified non-waking operation. Source and mocked contracts
+introduce no live analysis, SQL client, runtime worker or enabled tool.
+
+Closed output is ERROR/WARN/INFO observation counts only. Names, titles, facing,
+issue details, metadata, remediation URLs and other content are never evaluated
+or emitted. Bounded cache keys are evaluated only to reject duplicate instances;
+they never leave projection. The nonpaginated response caps at 30 rows and refuses
+malformed severities/categories, absent SECURITY category, duplicate cache keys,
+contradictory optional project/branch/database ancestry or unexpected pagination.
+Unknown levels fail closed, never silently disappear from counts. An empty result
+is zero observed rows, not an all-clear, effective-ACL or completeness verdict.
+Alpha availability requires project read access and Data API enabled according to
+the pinned schema; native entitlement, effects and runtime qualification remain
+unresolved. No repairs, configuration mutation or enablement authority is supplied.
+
 `createNeonOrganizationKeyOperations(trustedScope, transport)` adds `listOrgApiKeys`
 for one copied organization/revision and explicit numeric key-ID selection. The
 fixed organization `/api_keys` GET requires its dedicated collection grant; no

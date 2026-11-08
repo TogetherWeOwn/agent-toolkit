@@ -36,6 +36,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   credentialMetadataCases, credentialMetadataFixture, credentialMetadataScope, credentialMetadata,
   organizationKeyCases, organizationKeyFixture, organizationKeyScope,
   userKeyCases, userKeyFixture, userKeyScope,
+  advisorCases, advisorFixture, advisorScope, advisorIssue,
   fixture, scope, branch, operation, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
@@ -46,7 +47,8 @@ const { providerFixture, credentialCanary, derivedCanary } = await import(pathTo
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
 function brokerFixture(name, args, raw, overrides = {}, config) {
-  const factory = userKeyCases.some(([operation]) => operation === name) ? userKeyFixture :
+  const factory = advisorCases.some(([operation]) => operation === name) ? advisorFixture :
+    userKeyCases.some(([operation]) => operation === name) ? userKeyFixture :
     organizationKeyCases.some(([operation]) => operation === name) ? organizationKeyFixture :
     credentialMetadataCases.some(([operation]) => operation === name) ? credentialMetadataFixture :
     authDetailsCases.some(([operation]) => operation === name) ? authDetailsFixture :
@@ -96,6 +98,39 @@ function safeEnvelope(f, result) {
     assert(!serialized.includes(secret), `secret in output/audit/journal: ${secret}`);
   }
 }
+
+test('advisor: exact database analysis grant is separate from catalog, parent and sibling authority', async () => {
+  const [name, args, raw] = advisorCases[0];
+  for (const resource of ['neon/projects/project-a', 'neon/projects/project-a/branches/br-a',
+    'neon/projects/project-a/branches/br-a/databases/main', 'neon/projects/project-a/branches/br-a/data-api/main',
+    'neon/projects/project-a/branches/br-a/databases/other/advisors/security',
+    'neon/projects/project-a/branches/br-b/databases/main/advisors/security']) {
+    const f = brokerFixture(name, args, raw);
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.provider.requests.length, 0);
+    assert.equal(f.common.calls.secret, 0);
+  }
+  for (const invalid of [{ issues: [advisorIssue, advisorIssue] }, { issues: [{ ...advisorIssue, categories: ['PERFORMANCE'] }] },
+    { ...raw, database_name: 'other' }, { ...raw, pagination: {} }]) {
+    const f = brokerFixture(name, args, invalid);
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    safeEnvelope(f, result);
+  }
+});
+
+test('advisor: maximum scope/row bounds fit common budgets and omit sensitive analysis payloads', async () => {
+  const config = { ...advisorScope, projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), databaseName: 'd'.repeat(63), revision: 'r'.repeat(80) };
+  const args = { project_id: config.projectId, branch_id: config.branchId, database_name: config.databaseName };
+  const raw = { issues: Array.from({ length: 30 }, (_, i) => ({ ...advisorIssue, cache_key: `issue-${i}`,
+    name: credentialCanary, detail: credentialCanary, metadata: { secret: derivedCanary }, remediation: credentialCanary })) };
+  const f = brokerFixture('getProjectAdvisorSecurityIssues', args, raw, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { counts: { ERROR: 30, WARN: 0, INFO: 0 } });
+  safeEnvelope(f, result);
+});
 
 function compareDeclarations(source, local) {
   for (const name of ['Json', 'Tier']) {
@@ -255,7 +290,7 @@ test('reflected lease material in selected safe-looking fields is refused by the
   assert.equal((await f.call()).code, 'OUTPUT_REFUSED');
 });
 
-for (const [name, args, raw] of [...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases, ...regionCases, ...projectCountCases, ...authWebhookCases, ...userProfileCases, ...authEmailCases, ...projectCases, ...userOrganizationCases, ...sharedProjectCases]) {
+for (const [name, args, raw] of [...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases, ...regionCases, ...projectCountCases, ...authWebhookCases, ...userProfileCases, ...authEmailCases, ...projectCases, ...userOrganizationCases, ...sharedProjectCases]) {
   test(`${name}: replay and TOCTOU policy/resource changes refuse without a second request`, async () => {
     const replay = brokerFixture(name, args, raw);
     assert.equal((await replay.call()).ok, true);

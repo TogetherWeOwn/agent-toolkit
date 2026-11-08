@@ -19,6 +19,26 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
 
+## Database-bound advisor summary delta
+
+`getProjectAdvisorSecurityIssues` is database analysis, not passive catalog
+metadata. The fixed GET always pins the copied project, branch and database,
+SECURITY category and INFO minimum severity; no default target or analysis
+fallback exists. A dedicated exact database/advisors/security grant is required.
+GET and mocks do not establish non-waking safety, and actual entitlement/effects,
+Data API availability, independent native reviews and runtime integration remain
+unqualified. No live analysis or SQL connection is performed by source delivery.
+
+Only severity observation counts are returned. Names, detail, descriptions,
+metadata and remediation links are ignored without accessor evaluation. Cache
+keys are bounded and used solely for duplicate-instance refusal; no key leaves
+projection. Unknown severity, malformed/missing SECURITY categories, over-limit
+rows, duplicate instances, contradictory optional ancestry or pagination refuse
+without partial counts or invented empty success. Repeated issue types may be
+separate instances and are not deduplicated by name. Zero observations is not a
+security verdict or proof of effective protections. No repair, mutation, runtime
+registration, credential action or lifecycle enforcement is introduced.
+
 ## Selected branch credential identity delta
 
 `listCredentials` copies an exact project/branch/revision and explicit opaque-ID

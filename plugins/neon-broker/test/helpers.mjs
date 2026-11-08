@@ -35,6 +35,7 @@ import { createNeonAuthDetailsOperations } from '../dist/plugins/neon-broker/src
 import { createNeonCredentialMetadataOperations } from '../dist/plugins/neon-broker/src/credential-metadata.js';
 import { createNeonOrganizationKeyOperations } from '../dist/plugins/neon-broker/src/organization-keys.js';
 import { createNeonUserKeyOperations } from '../dist/plugins/neon-broker/src/user-keys.js';
+import { createNeonAdvisorOperations } from '../dist/plugins/neon-broker/src/advisor.js';
 
 export const scope = {
   projectId: 'project-a', revision: 'scope-v1', branchIds: ['br-a', 'br-b'],
@@ -380,7 +381,16 @@ export const userKeyCases = [
 export function userKeyFixture(value, config = userKeyScope) {
   return fixture(typeof value === 'function' ? value : (url, init, n) => response(n === 1 ? value.user : value.keys), config, createNeonUserKeyOperations);
 }
-export const allCases = [...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
+export const advisorScope = { projectId: scope.projectId, branchId: 'br-a', databaseName: 'main', revision: scope.revision };
+export const advisorIssue = { cache_key: 'issue-a', level: 'ERROR', categories: ['SECURITY'] };
+export const advisorCases = [
+  ['getProjectAdvisorSecurityIssues', { project_id: 'project-a', branch_id: 'br-a', database_name: 'main' },
+    { issues: [advisorIssue] }, { counts: { ERROR: 1, WARN: 0, INFO: 0 } }],
+];
+export function advisorFixture(value, config = advisorScope) {
+  return fixture(value, config, createNeonAdvisorOperations);
+}
+export const allCases = [...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });
