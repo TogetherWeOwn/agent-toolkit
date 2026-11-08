@@ -6,6 +6,7 @@ import { workerScheduleDescriptor, type WorkerScheduleScope } from "./worker-sch
 import { scriptSettingsDescriptors, type ScriptSettingsScope } from "./script-settings.js";
 import { workerAccountDescriptors, type WorkerAccountScope } from "./worker-account.js";
 import { workerIdentityDescriptors, type WorkerIdentityScope } from "./worker-identities.js";
+import { workerVersionListDescriptor, type WorkerVersionListScope } from "./worker-version-list.js";
 import { workerSecretDescriptor, type WorkerSecretScope } from "./worker-secret.js";
 import { workerBuildDescriptor, type WorkerBuildScope } from "./worker-builds.js";
 import { deployHookDescriptor, type DeployHookScope } from "./deploy-hooks.js";
@@ -85,6 +86,7 @@ export interface CloudflareReadScope extends MetadataScope {
   workerSecrets?: WorkerSecretScope["workers"];
   workerIdentityList?: WorkerIdentityScope["listWorkers"];
   workerIdentityDetails?: WorkerIdentityScope["workers"];
+  workerVersionLists?: WorkerVersionListScope["workers"];
   workerAccountSettingsReadAllowed?: WorkerAccountScope["settingsReadAllowed"];
   workerAccountExpectedSubdomain?: WorkerAccountScope["expectedSubdomain"];
   workerObservabilityScriptNames?: ScriptSettingsScope["observabilityScriptNames"];
@@ -180,6 +182,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(scriptSettings.scriptSettingsGet), metadata(scriptSettings.usageModelGet),
     metadata(workerAccount.accountSettingsGet), metadata(workerAccount.accountSubdomainGet),
     metadata(identities.identitiesList), metadata(identities.identityGet),
+    metadata(workerVersionListDescriptor({ accountId, revision, workers: scope.workerVersionLists ?? [] })),
     metadata(workerSecretDescriptor({ accountId, revision, workers: scope.workerSecrets ?? [] })),
     metadata(workerBuildDescriptor({ accountId, revision, workers: scope.workerBuildConfigurations ?? [] })),
     metadata(deployHookDescriptor({ accountId, revision, workers: scope.workerDeployHooks ?? [] })),
