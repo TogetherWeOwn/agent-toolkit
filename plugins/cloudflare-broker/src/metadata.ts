@@ -1222,6 +1222,7 @@ export interface PagesMetadataScope {
     repositoryName: string; productionBranch: string; deploymentBranches: readonly string[] }[];
   pagination?: { projects: boolean; deploymentProjects: readonly string[] };
   projectInventoryReadAllowed?: boolean;
+  deploymentInventoryProjects?: readonly string[];
 }
 type PagesUnavailable = { status: "unavailable"; reason: "not-returned" };
 type PagesConfigured<T> = { status: "configured"; value: T } | PagesUnavailable;
@@ -1244,13 +1245,22 @@ interface PagesProjectInventory {
   productionBranch: PagesConfigured<string>;
   effectiveProduction: "not-established";
 }
+interface PagesDeploymentInventory {
+  subject: "provider-pages-deployment-inventory";
+  projectName: string;
+  projectId: string;
+  environment: PagesReported<"production" | "preview">;
+  trigger: PagesTrigger;
+  servingDeployment: "not-established";
+  historicalSourceBinding: "not-established";
+}
 interface PagesMetadata {
   id: string;
   provenance?: PagesProvenance;
-  inventory?: PagesProjectInventory;
+  inventory?: PagesProjectInventory | PagesDeploymentInventory;
 }
 interface PagesList extends PartialList<PagesMetadata> {
-  selection?: "all-returned-projects";
+  selection?: "all-returned-projects" | "all-returned-deployments";
   pagination?: PagesUnavailable | { status: "provider-reported"; page: number; perPage: number;
     totalPages: PagesReported<number>; enumeration: "not-established"; snapshotConsistency: "not-established" };
 }
@@ -1290,6 +1300,14 @@ export function pagesMetadataDescriptors(scope: PagesMetadataScope) {
     const name = pagesProjectName.parse(value);
     requireThat(projects.has(name) && !deploymentPagination.has(name), "scope");
     deploymentPagination.add(name);
+  }
+  const deploymentInventory = new Set<string>();
+  requireThat(Array.isArray(scope.deploymentInventoryProjects ?? []) && (scope.deploymentInventoryProjects?.length ?? 0) <= maxRows, "cap");
+  requireThat(scope.deploymentInventoryProjects !== null, "schema");
+  for (const value of scope.deploymentInventoryProjects ?? []) {
+    const name = pagesProjectName.parse(value);
+    requireThat(projects.has(name) && deploymentPagination.has(name) && !deploymentInventory.has(name), "scope");
+    deploymentInventory.add(name);
   }
   const provenance = new Map<string, { sourceType: "github" | "gitlab"; owner: string; repository: string;
     productionBranch: string; branches: Set<string> }>();
@@ -1395,6 +1413,27 @@ export function pagesMetadataDescriptors(scope: PagesMetadataScope) {
     return { id, inventory: { subject: "configured-pages-project-inventory", projectName: name, source,
       productionBranch: branch(row.production_branch), effectiveProduction: "not-established" } };
   }
+  function deploymentInventoryMetadata(row: Row, name: string): PagesMetadata {
+    const project = projectScope(name);
+    accountScope(row);
+    requireThat(row.project_name === name && row.project_id === project.id, "scope");
+    const id = providerText(row.id, text(36, /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$(?![\s\S])/));
+    requireThat(row.environment === undefined || row.environment === "production" || row.environment === "preview", "upstream");
+    let trigger: PagesTrigger = unavailable();
+    if (row.deployment_trigger !== undefined) {
+      const value = object(row.deployment_trigger);
+      requireThat(value.type === "github:push" || value.type === "ad_hoc" || value.type === "deploy_hook", "upstream");
+      const metadata = value.metadata === undefined ? undefined : object(value.metadata);
+      trigger = { status: "provider-reported", type: value.type,
+        branch: metadata?.branch === undefined ? unavailable() : { status: "provider-reported",
+          value: providerText(metadata.branch, text(200, /^[A-Za-z0-9][A-Za-z0-9_./-]*$(?![\s\S])/)) },
+        commitHash: metadata?.commit_hash === undefined ? unavailable() : { status: "provider-reported",
+          value: providerText(metadata.commit_hash, text(64, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$(?![\s\S])/)) } };
+    }
+    return { id, inventory: { subject: "provider-pages-deployment-inventory", projectName: name, projectId: project.id,
+      environment: row.environment === undefined ? unavailable() : { status: "provider-reported", value: row.environment },
+      trigger, servingDeployment: "not-established", historicalSourceBinding: "not-established" } };
+  }
   function deploymentMetadata(row: Row, name: string): PagesMetadata {
     const project = projectScope(name);
     accountScope(row);
@@ -1460,7 +1499,8 @@ export function pagesMetadataDescriptors(scope: PagesMetadataScope) {
     prepare(raw: unknown) {
       const args = pagesDeploymentsPage.parse(raw);
       const project = projectScope(args.projectName);
-      return prepared(args, `:project:${project.id}:deployments`, `${root}/${args.projectName}/deployments?page=${args.page}&per_page=${args.perPage}`);
+      return prepared(args, `:project:${project.id}:deployments${deploymentInventory.has(args.projectName) ? ":inventory" : ""}`,
+        `${root}/${args.projectName}/deployments?page=${args.page}&per_page=${args.perPage}`);
     },
     project(raw: string, input: PreparedMetadata<ReturnType<typeof pagesDeploymentsPage.parse>>) {
       const args = pagesDeploymentsPage.parse(input.arguments);
@@ -1468,6 +1508,15 @@ export function pagesMetadataDescriptors(scope: PagesMetadataScope) {
       const body = envelope(raw);
       const result = rows(body.result);
       requireThat(result.length <= args.perPage, "cap");
+      if (deploymentInventory.has(args.projectName)) {
+        requireThat(input.resource.id === `cloudflare:account:${account}:pages:project:${project.id}:deployments:inventory`
+          && input.resource.revision === revision, "scope");
+        accountScope(body);
+        const items = result.map(row => deploymentInventoryMetadata(row, args.projectName));
+        requireThat(new Set(items.map(item => item.id)).size === items.length, "scope");
+        return bounded({ items, complete: false as const, selection: "all-returned-deployments" as const,
+          ...pageEvidence(body, args, result.length, true) });
+      }
       const items = result.filter(row => typeof row.id === "string" && project.deployments.has(row.id)).map(row => deploymentMetadata(row, args.projectName));
       return bounded({ items, complete: false as const, ...pageEvidence(body, args, result.length, deploymentPagination.has(args.projectName)) });
     },
