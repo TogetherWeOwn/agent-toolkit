@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 162 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 161 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -40,6 +40,35 @@ read-only transactions, statement/lock/row/byte/page/time caps and native closur
 evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
+
+## Keyspace VSchema availability source increment
+
+`test/keyspace-vschema.test.mjs` adds 12 synthetic contracts for one fixed
+keyspace VSchema read. Reuses snapshotted keyspace ID/name scope, closed empty
+arguments and shared 64 KiB wire cap. Required raw text is bounded at 32,768
+UTF-16 code units; only nonempty presence and requestKeyspaceId survive, with
+provenance/executionAuthority not-established. No raw schema/table/vindex text,
+validation/execution, routing health, completeness or authority claim. Invalid
+nonempty text remains presence only. No response identity is documented, so
+trusted response/request transport binding and fresh parent/keyspace ownership
+remain prerequisites, along with raw-body custody and non-waking proof. Full
+VSchema content/validation/mutation capability remains incomplete.
+
+Coverage: **130/291 bounded metadata subsets; 161 missing** (19 GETs, 142
+mutations). Tiers 130 provisional read / 16 unreviewed reserved / 145 unresolved;
+zero integrated/reviewed/enabled/adopted. New contracts require fresh exact-head
+Actions; no local suite/build/typecheck or CI mirror ran.
+
+Prior exact `0f81ae152b476d05156106582e2d5ddb57c08cd3`
+[Actions CI attempt 2](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42468883755/attempts/2)
+passed test/lint/typecheck/native-policy/ci-ok. The previous
+[test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42468883755/job/128694751123)
+passed 874/874 package tests, root 181/181, helpers 122/122 and GitHub broker
+219/219, zero failures/skips. Exact-head CodeQL actions/JS/TS/Python passed.
+Attempt 1's four bounded actionlint download HTTP 504 failures remain history;
+retry success is not a new source repair or proof of all future downloads.
+No inline review findings returned; final fresh-context/Devin/native specialist
+review and merge gates remain outstanding. Earlier SDK recovery cause unresolved.
 
 ## Historical-metric availability source increment
 

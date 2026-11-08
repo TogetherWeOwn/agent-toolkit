@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The 129 adapters are pure request builders and bounded output projections,
+The 130 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,19 +36,36 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 129 | Narrow projections; not full operation coverage |
-| Missing source adapters | 162 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 130 | Narrow projections; not full operation coverage |
+| Missing source adapters | 161 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-129 adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 146
+130 adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 145
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
 backups/restore, schema/deploy, topology, maintenance and every other official
 area remain in the map even when access or implementation is missing.
+
+## Keyspace VSchema availability metadata
+
+`planetscale.get_keyspace_vschema` reuses the broker-owned immutable keyspace
+ID/name binding and fixed parent path, with no caller arguments. The required
+`raw` field must be a string of at most 32,768 UTF-16 code units within the
+shared 64 KiB wire cap. Only requestKeyspaceId, rawReported (nonempty text) and
+explicit provenance/executionAuthority not-established flags survive. Raw
+schema, table/vindex names and other response fields are never returned or
+executed. Empty text is distinct from nonempty invalid schema: neither proves
+validity, safe routing, completeness, effective configuration or native authority.
+
+The official response has no target identity. The request-bound ID is not an
+independently verified response identity; fresh parent/keyspace ID/name ownership,
+trusted transport-to-request binding, raw-body custody and non-waking semantics
+remain required. This availability subset does not deliver full VSchema content,
+validation, mutation or routing capability.
 
 ## Historical-metric availability metadata
 

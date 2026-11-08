@@ -12,6 +12,7 @@ import sys
 
 SOURCE_SHA256 = "ae45866599cb5d248fadb9d7f0ed30fd6aed440a17ec0950c4e9e0d58da4cb73"
 ADAPTERS = {
+    "get_keyspace_vschema": "get-keyspace-vschema",
     "get_branch_metrics": "get-branch-metrics",
     "get_tablet_metrics": "get-tablet-metrics",
     "get_instant_branch_metrics": "get-instant-branch-metrics",
@@ -265,6 +266,7 @@ def policy_candidate(operation_id):
 
 def adapter_test(operation_id):
     for operations, name in [
+        ({"get_keyspace_vschema"}, "keyspace-vschema"),
         ({"get_branch_metrics", "get_tablet_metrics"}, "historical-metrics"),
         ({"get_instant_branch_metrics", "get_instant_tablet_metrics"}, "instant-metrics"),
         ({"list_traffic_budgets_for_query"}, "query-traffic-budgets"),
