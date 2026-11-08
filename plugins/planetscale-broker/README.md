@@ -177,8 +177,25 @@ approval, non-waking behavior, backup restorability or safe deployment. Trusted
 transport/current identity and parent/destination revalidation remain required.
 `test/core-lifecycle-read-preparation.test.mjs` covers deep immutable captures,
 every-field hashes, nested ID/number refusals, projection limits and closed caller
-arguments. Eighteen total pure preparations still mean zero runtime-integrated
-operations; adapter coverage stays 134/291 with 157 missing.
+arguments. These eighteen pure preparations remain separate from integration.
+
+Three topology detail seams additionally bind existing keyspace, shard and
+maintenance-event GETs. Closed host snapshots retain organization/database/branch
+IDs and names, nested child IDs/names where supplied, and revision. Resources use
+`planetscale/keyspace/<id>`, `planetscale/shard/<id>` and
+`planetscale/maintenance-event/<id>`; every host field enters the full plan hash,
+including IDs not present in request paths. Keyspaces route by name while shards
+and events route by ID. Empty caller arguments cannot retarget the snapshot.
+Keyspace/shard projections authenticate child identity, not parent IDs; maintenance
+projections also match branch ID/name but still cannot authenticate the database
+parent. Plans explicitly retain these limits and unverified non-waking semantics.
+`test/core-topology-read-preparation.test.mjs` covers fixed requests, nested
+capture/refusal, every-field hash sensitivity, namespace separation and projection
+limits. Provider ready/authoritative/state/urgent flags never grant topology,
+maintenance, wake or spend authority or prove completion/closure. Current trusted
+parent/child mapping, policy, transport/custody and non-waking proof remain required.
+Twenty-one total pure preparations still mean zero runtime-integrated operations;
+adapter coverage stays 134/291 with 157 missing.
 
 All 291 entries remain `incomplete`, `implemented=false`, `reviewed=false`,
 `enabled=false`, and entitlement `unknown`. Existing offline read/preview test

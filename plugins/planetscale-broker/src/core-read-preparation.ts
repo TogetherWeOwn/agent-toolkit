@@ -8,6 +8,9 @@ import { prepare as prepareBackup } from "./tools/get-backup.js";
 import { prepare as prepareBackupPolicy } from "./tools/get-backup-policy.js";
 import { prepare as prepareDeployRequest } from "./tools/get-deploy-request.js";
 import { deployBinding } from "./lifecycle.js";
+import { prepare as prepareKeyspace } from "./tools/get-keyspace.js";
+import { prepare as prepareShard } from "./tools/get-shard.js";
+import { prepare as prepareMaintenanceEvent } from "./tools/get-maintenance-event.js";
 
 const organizationFields = { organization: slug, organizationId: identifier, revision: digest };
 const databaseFields = { ...organizationFields, database: slug, databaseId: identifier };
@@ -18,14 +21,21 @@ const branchTarget = closed(branchFields);
 const backupTarget = closed({ ...branchFields, backupId: identifier });
 const backupPolicyTarget = closed({ ...databaseFields, policyId: identifier });
 const deployRequestTarget = closed({ ...databaseFields, request: deployBinding, intoBranchId: identifier });
+const keyspaceTarget = closed({ ...branchFields, keyspace: closed({ id: identifier, name: slug }) });
+const shardTarget = closed({ ...branchFields, shard: closed({ id: identifier }) });
+const maintenanceEventTarget = closed({ ...databaseFields,
+  event: closed({ id: identifier, branchId: identifier, branch: slug }) });
 
 type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeof databaseTarget.parse> |
   ReturnType<typeof branchTarget.parse> | ReturnType<typeof backupTarget.parse> |
-  ReturnType<typeof backupPolicyTarget.parse> | ReturnType<typeof deployRequestTarget.parse>;
+  ReturnType<typeof backupPolicyTarget.parse> | ReturnType<typeof deployRequestTarget.parse> |
+  ReturnType<typeof keyspaceTarget.parse> | ReturnType<typeof shardTarget.parse> |
+  ReturnType<typeof maintenanceEventTarget.parse>;
 type ReadOperation = "get_organization" | "get_database" | "get_branch" |
-  "get_backup" | "get_backup_policy" | "get_deploy_request";
+  "get_backup" | "get_backup_policy" | "get_deploy_request" |
+  "get_keyspace" | "get_shard" | "get_maintenance_event";
 type ResponseIdentity = "name-only-not-immutable" | "record-id-only-parent-not-verified" |
-  "record-and-source-ids-destination-not-verified";
+  "record-and-source-ids-destination-not-verified" | "record-and-branch-ids-parent-not-verified";
 
 // Pure preparation only. Host IDs/revisions bind a snapshot, not permission;
 // response projections still cannot authenticate every parent/destination ID.
@@ -92,4 +102,28 @@ export function bindGetDeployRequestPreparation(rawTarget: unknown): (raw: unkno
     request: target.request }, {});
   return bindRead(`planetscale/deploy-request/${target.request.id}`, target, "get_deploy_request", read.request,
     "record-and-source-ids-destination-not-verified");
+}
+
+export function bindGetKeyspacePreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = keyspaceTarget.parse(rawTarget);
+  const read = prepareKeyspace({ organization: target.organization, database: target.database,
+    branch: target.branch, keyspace: target.keyspace }, {});
+  return bindRead(`planetscale/keyspace/${target.keyspace.id}`, target, "get_keyspace", read.request,
+    "record-id-only-parent-not-verified");
+}
+
+export function bindGetShardPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = shardTarget.parse(rawTarget);
+  const read = prepareShard({ organization: target.organization, database: target.database,
+    branch: target.branch, shard: target.shard }, {});
+  return bindRead(`planetscale/shard/${target.shard.id}`, target, "get_shard", read.request,
+    "record-id-only-parent-not-verified");
+}
+
+export function bindGetMaintenanceEventPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = maintenanceEventTarget.parse(rawTarget);
+  const read = prepareMaintenanceEvent({ organization: target.organization, database: target.database,
+    event: target.event }, {});
+  return bindRead(`planetscale/maintenance-event/${target.event.id}`, target, "get_maintenance_event", read.request,
+    "record-and-branch-ids-parent-not-verified");
 }

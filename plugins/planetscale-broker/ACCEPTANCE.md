@@ -1161,6 +1161,34 @@ and [CodeQL](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/4250195
 passed. This is prior-head evidence, not execution of the 23 new contracts.
 Earlier unchanged SDK recovery-test uncertainty remains unresolved.
 
+## Topology detail core preparation — source increment
+
+`test/core-topology-read-preparation.test.mjs` adds 22 synthetic contracts for
+three pure preparations of existing keyspace/shard/maintenance-event detail reads.
+Closed immutable snapshots retain organization/database/branch parent identities,
+nested child bindings and revision; all fields affect the complete plan/core hashes.
+Requests reuse existing fixed GET builders, with keyspaces addressed by name and
+shards/events by ID. Caller arguments are empty, accessors refuse without invocation,
+and missing/extra/unsafe nested host fields refuse. Cross-kind ID collisions retain
+separate resource namespaces. Existing response projections still refuse mismatched
+child IDs/names and event branch identity, but do not authenticate every parent ID;
+plans explicitly retain those exact limits and unverified non-waking semantics.
+No executor, project hook, registration, credential resolution or authority consumption
+is supplied. Topology flags and event state never prove native permission or closure.
+Coverage stays 134/291 bounded offline adapters, 157 missing, twelve previews and
+21 pure preparations; zero runtime-integrated/reviewed/enabled/adopted operations.
+These 22 new contracts need exact-head Actions; no local suite/build/typecheck ran.
+
+Previous exact `e8e58260851dbff66ff3fbe0ce608f6d2a87d1f8`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42503561316)
+passed [tests](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42503561316/job/128801297767):
+1178/1178 PlanetScale, root 317/317, helpers 122/122, GitHub 219/219 and Neon 37/37,
+zero failures/skips/cancellations. Lint/typecheck/native-policy/ci-ok,
+[Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42503560899)
+and [CodeQL](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42503558011)
+passed. This verifies the previous 23 lifecycle detail contracts, not the new topology
+contracts. Earlier unchanged SDK recovery-test uncertainty remains unresolved.
+
 ## Metrics preregistration — required before enablement
 
 Baseline and matched post-window measurements are **not yet collected or approved**.
