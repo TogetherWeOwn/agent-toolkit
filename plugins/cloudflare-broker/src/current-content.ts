@@ -32,7 +32,7 @@ export function currentContentDescriptor(scope: CurrentContentScope) {
     const name = scriptName.parse(entry.scriptName);
     requireThat(scripts.has(name) && !modules.has(name), "scope");
     requireThat(Array.isArray(entry.moduleNames) && entry.moduleNames.length <= 16, "cap");
-    const selected = new Set(entry.moduleNames.map((value: unknown) => moduleName(value)));
+    const selected = new Set<string>(entry.moduleNames.map((value: unknown) => moduleName(value)));
     requireThat(selected.size === entry.moduleNames.length, "schema");
     modules.set(name, selected);
   }
