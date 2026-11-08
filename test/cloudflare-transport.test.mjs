@@ -46,6 +46,28 @@ test("Cloudflare transport accepts the exact zone-detail root without exposing a
   assert.equal(calls.length, 1);
 });
 
+test("Cloudflare transport admits only the exact D1 configuration comma-separated field selection", async () => {
+  const databaseId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+  const d1 = metadataDescriptors({ accountId: account, revision: "resource-1", scriptNames: [], hyperdriveIds: [],
+    databaseIds: [databaseId], databaseConfigurationIds: [databaseId] }).d1Get;
+  const input = { databaseId };
+  const path = d1.prepare(input).request.path;
+  const calls = [];
+  const read = metadataTransport(async (url, init) => {
+    calls.push({ url, init });
+    return response(JSON.stringify({ success: true, errors: [], result: { uuid: databaseId } }));
+  });
+  assert.equal((await read(d1, input, credential, signal())).configuration.readReplicationMode, "unavailable");
+  assert.equal(calls[0].url, `https://api.cloudflare.com/client/v4${path}`);
+  for (const invalid of [path.replace("uuid,jurisdiction", "uuid,name"), `${path},name`, `${path}&extra=1`,
+    path.replace("read_replication", "read%5freplication"), path.replace("/d1/database/", "/workers/scripts/"),
+    `/accounts/${account}/workers/scripts?fields=uuid,jurisdiction,read_replication`]) {
+    const altered = { ...d1, prepare(raw) { const p = d1.prepare(raw); return { ...p, request: { ...p.request, path: invalid } }; } };
+    await assert.rejects(read(altered, input, credential, signal()));
+  }
+  assert.equal(calls.length, 1);
+});
+
 test("Cloudflare transport validates model scope and trusted request constraints before fetch", async () => {
   let calls = 0;
   const read = metadataTransport(async () => { ++calls; return response(); });
