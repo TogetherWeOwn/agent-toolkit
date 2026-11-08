@@ -10,6 +10,8 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  listNeonAuthOauthProviders(project: string, options: MetadataRequestOptions): Promise<unknown>;
+  listBranchNeonAuthOauthProviders(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   queryProjectBranchLogs(project: string, branch: string, query: { readonly start_time: string; readonly end_time: string; readonly source: string }, options: MetadataRequestOptions): Promise<unknown>;
   getProjectBranchSchemaComparison(project: string, branch: string, baseBranch: string, database: string, options: MetadataRequestOptions): Promise<unknown>;
   getProjectBranchSchema(project: string, branch: string, database: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -187,6 +189,10 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    listNeonAuthOauthProviders: (project: string, options: MetadataRequestOptions) =>
+      get(`/projects/${authPathId(project)}/auth/oauth_providers`, new URLSearchParams(), options),
+    listBranchNeonAuthOauthProviders: (project: string, branch: string, options: MetadataRequestOptions) =>
+      get(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/oauth_providers`, new URLSearchParams(), options),
     queryProjectBranchLogs: (project: string, branch: string, raw: { readonly start_time: string; readonly end_time: string; readonly source: string }, options: MetadataRequestOptions) => {
       const query = parseLogWindow(raw);
       return request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/logs/query`, new URLSearchParams(), options,

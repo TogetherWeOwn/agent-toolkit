@@ -41,6 +41,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   advisorCases, advisorFixture, advisorScope, advisorIssue,
   branchSchemaCases, branchSchemaFixture, branchSchemaScope, schemaColumn, schemaTable,
   schemaComparisonCases, schemaComparisonFixture, schemaComparisonScope,
+  oauthProviderCases, oauthProviderFixture, oauthProviderScope, oauthProvider,
   fixture, scope, branch, operation, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
@@ -51,7 +52,8 @@ const { providerFixture, credentialCanary, derivedCanary } = await import(pathTo
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
 function brokerFixture(name, args, raw, overrides = {}, config) {
-  const factory = logQueryCases.some(([operation]) => operation === name) ? logQueryFixture :
+  const factory = oauthProviderCases.some(([operation]) => operation === name) ? oauthProviderFixture :
+    logQueryCases.some(([operation]) => operation === name) ? logQueryFixture :
     schemaComparisonCases.some(([operation]) => operation === name) ? schemaComparisonFixture :
     logValueCases.some(([operation]) => operation === name) ? logValueFixture :
     branchSchemaCases.some(([operation]) => operation === name) ? branchSchemaFixture :
@@ -105,6 +107,46 @@ function safeEnvelope(f, result) {
   for (const secret of [credentialCanary, derivedCanary, 'postgres://user:password-canary@example.invalid/db', 'password-canary']) {
     assert(!serialized.includes(secret), `secret in output/audit/journal: ${secret}`);
   }
+}
+
+for (const [name, args, raw, expected] of oauthProviderCases) {
+  test(`${name}: exact collection authority separates legacy and branch metadata without exposing OAuth material`, async () => {
+    const f = brokerFixture(name, args, { ...raw, client_secret: credentialCanary, providers: [
+      { ...oauthProvider, client_secret: credentialCanary, client_id: derivedCanary, microsoft_tenant_id: credentialCanary,
+        apple_team_id: derivedCanary, apple_key_id: credentialCanary }, { id: 'google', type: 'shared' }] });
+    const result = await f.call();
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.value, expected);
+    safeEnvelope(f, result);
+    const correct = f.provider.operation(name).prepare(args).resource.id;
+    for (const resource of ['neon/projects/project-a', 'neon/projects/project-a/auth',
+      'neon/projects/project-a/auth/oauth_providers', 'neon/projects/project-a/branches/br-a/auth/oauth_providers',
+      'neon/projects/project-a/branches/br-b/auth/oauth_providers', 'neon/projects/project-a/branches/br-a/auth/plugins/oauth-provider']) {
+      if (resource === correct) continue;
+      const denied = brokerFixture(name, args, raw);
+      denied.common.vector.policy.resources = [resource];
+      assert.equal((await denied.call()).code, 'POLICY_DENIED');
+      assert.equal(denied.common.calls.secret, 0);
+      assert.equal(denied.provider.requests.length, 0);
+    }
+    for (const invalid of [{ ...raw, pagination: {} }, { ...raw, project_id: 'other' }, { ...raw, branch_id: 'br-b' },
+      { providers: [oauthProvider, oauthProvider] }, { providers: [oauthProvider, { id: 'google', type: 'future' }] }]) {
+      const refused = brokerFixture(name, args, invalid);
+      assert.equal((await refused.call()).code, 'UPSTREAM_UNAVAILABLE');
+    }
+  });
+
+  test(`${name}: maximal fixed scope and every selected provider fit common budgets`, async () => {
+    const config = { ...oauthProviderScope, projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), revision: 'r'.repeat(80),
+      providerIds: ['google', 'github', 'microsoft', 'vercel', 'apple'] };
+    const input = { project_id: config.projectId, ...('branch_id' in args ? { branch_id: config.branchId } : {}) };
+    const providers = config.providerIds.map(id => ({ id, type: 'standard' }));
+    const f = brokerFixture(name, input, { providers }, {}, config);
+    const result = await f.call();
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.value, { providers });
+    safeEnvelope(f, result);
+  });
 }
 
 test('log query: only the dedicated query grant authorizes the bounded count, never content output', async () => {

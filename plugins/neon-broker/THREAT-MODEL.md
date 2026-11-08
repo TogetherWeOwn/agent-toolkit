@@ -19,6 +19,27 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
 
+## Selected OAuth-provider metadata delta
+
+Legacy project and branch OAuth-provider lists have distinct exact collection
+grants, copied project/branch/revision and a fixed nonempty known-provider selection.
+Parent, sibling, plugin and cross-project authority cannot substitute. Strict args
+reject caller identity, selection, credentials, endpoint and update overrides.
+Closed output includes only selected provider ID/standard-or-shared type; all
+<=5 rows are validated before filtering. Unknown enums, duplicates, malformed rows,
+contradictory optional ancestry and pagination refuse without partial output.
+
+The pinned GET schema explicitly calls client_secret masked (Apple uses a masked
+private-key fingerprint). Even masked material, client IDs, tenant/team/key IDs
+and arbitrary diagnostics are not evaluated or emitted. This is not a general
+secret scrubber or authority to fetch an email/aggregate response that may include
+stored passwords. Those reads and binary object downloads remain incomplete.
+Legacy sunset and branch Beta availability, entitlement, provider effects and
+native qualification remain unresolved. A failed request never becomes an empty
+list or another endpoint. Fixed errors and common credential-reflection/audit
+boundaries remain mandatory. No OAuth flow, credential action, mutation, live call,
+runtime registration or lifecycle enforcement is added.
+
 ## Bounded log-query count delta
 
 `queryProjectBranchLogs` has a dedicated exact branch/logs/query grant and copied

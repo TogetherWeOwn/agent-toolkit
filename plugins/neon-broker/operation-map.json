@@ -1172,7 +1172,7 @@
       "id": "listNeonAuthOauthProviders",
       "apiArea": "auth-legacy",
       "tool": "neon.listNeonAuthOauthProviders",
-      "scope": "project_id",
+      "scope": "project_id/auth/oauth_providers",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -1180,12 +1180,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/oauth-providers.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source and refusal contracts only; exact legacy collection grant, copied known provider-ID selection and closed ID/type-only output. Pinned GET schema documents masked secrets; client IDs, masked fingerprints and tenant/key metadata are not evaluated. Deprecated/sunset availability, native effects/entitlement, reviews and runtime integration remain unresolved. No OAuth flow or credential action."
     },
     {
       "id": "addNeonAuthOauthProvider",
@@ -1210,7 +1213,7 @@
       "id": "listBranchNeonAuthOauthProviders",
       "apiArea": "auth",
       "tool": "neon.listBranchNeonAuthOauthProviders",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/auth/oauth_providers",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -1218,12 +1221,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/oauth-providers.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source and refusal contracts only; exact branch collection grant, copied known provider-ID selection and closed ID/type-only output. Pinned GET schema documents masked secrets; client IDs, masked fingerprints and tenant/key metadata are not evaluated. Beta availability, native effects/entitlement, reviews and runtime integration remain unresolved. No OAuth flow or credential action."
     },
     {
       "id": "addBranchNeonAuthOauthProvider",

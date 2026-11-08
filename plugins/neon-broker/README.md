@@ -7,6 +7,33 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonOAuthProviderOperations(trustedScope, transport)` adds
+`listNeonAuthOauthProviders` and `listBranchNeonAuthOauthProviders`. One copied
+project/branch/revision and nonempty unique selection from google, github,
+microsoft, vercel and apple binds two distinct collection resources:
+`neon/projects/<project>/auth/oauth_providers` and
+`neon/projects/<project>/branches/<branch>/auth/oauth_providers`. Neither parent,
+sibling nor OAuth-provider plugin grants substitute. Closed arguments contain
+only project_id (legacy) or project_id/branch_id; selection cannot be widened by
+callers. Each fixed GET has no query, pagination, discovery or alternate endpoint.
+
+Closed output contains selected provider `id` and `type` (standard/shared) only.
+Validate the entire nonpaginated list of at most five known unique provider IDs,
+required types and contradictory optional project/branch ancestry before filtering.
+Client IDs, masked secrets/fingerprints, Microsoft tenant IDs, Apple team/key IDs
+and arbitrary extras are never evaluated or emitted. This narrows the earlier
+OAuth-provider exclusion because the pinned NeonAuthOauthProvider GET schema
+explicitly documents masked client_secret, including masked Apple fingerprints;
+it does not extend to email/aggregate endpoints whose schema can return stored
+passwords. Those reads and binary object downloads remain incomplete.
+
+Legacy project OAuth listing is deprecated with a schema sunset of 2026-03-01;
+branch listing is Beta. Availability, entitlement and provider effects remain
+unknown; 403/404/410 refuse, never empty-success or project/branch fallback.
+Listing metadata is not an OAuth flow, credential-completeness or production-safe
+provider verdict. No live calls, credential actions, mutation or runtime enablement
+are supplied. GET and mocks are not proof of non-waking behavior.
+
 `createNeonLogQueryOperations(trustedScope, transport)` adds
 `queryProjectBranchLogs` with copied exact project/branch/revision, one source
 (function, storage or pg_endpoint) and explicit UTC-second start/end window <=1h.
@@ -1001,8 +1028,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: seventy-one implemented
-source adapters, 123 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: seventy-three implemented
+source adapters, 121 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

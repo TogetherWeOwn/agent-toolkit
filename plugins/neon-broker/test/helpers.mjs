@@ -40,6 +40,7 @@ import { createNeonAdvisorOperations } from '../dist/plugins/neon-broker/src/adv
 import { createNeonBranchSchemaOperations } from '../dist/plugins/neon-broker/src/branch-schema.js';
 import { createNeonSchemaComparisonOperations } from '../dist/plugins/neon-broker/src/schema-comparison.js';
 import { createNeonLogQueryOperations } from '../dist/plugins/neon-broker/src/log-query.js';
+import { createNeonOAuthProviderOperations } from '../dist/plugins/neon-broker/src/oauth-providers.js';
 
 export const scope = {
   projectId: 'project-a', revision: 'scope-v1', branchIds: ['br-a', 'br-b'],
@@ -432,7 +433,16 @@ export const logQueryCases = [
 export function logQueryFixture(value, config = logQueryScope) {
   return fixture(value, config, createNeonLogQueryOperations);
 }
-export const allCases = [...logQueryCases, ...schemaComparisonCases, ...logValueCases, ...branchSchemaCases, ...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
+export const oauthProviderScope = { projectId: scope.projectId, branchId: 'br-a', revision: scope.revision, providerIds: ['github', 'apple'] };
+export const oauthProvider = { id: 'github', type: 'standard' };
+export const oauthProviderCases = [
+  ['listNeonAuthOauthProviders', { project_id: 'project-a' }, { providers: [oauthProvider] }, { providers: [oauthProvider] }],
+  ['listBranchNeonAuthOauthProviders', { project_id: 'project-a', branch_id: 'br-a' }, { providers: [oauthProvider] }, { providers: [oauthProvider] }],
+];
+export function oauthProviderFixture(value, config = oauthProviderScope) {
+  return fixture(value, config, createNeonOAuthProviderOperations);
+}
+export const allCases = [...oauthProviderCases, ...logQueryCases, ...schemaComparisonCases, ...logValueCases, ...branchSchemaCases, ...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });
