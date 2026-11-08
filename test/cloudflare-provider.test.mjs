@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { metadataDescriptors, zoneMetadataDescriptors, secretsStoreMetadataDescriptors, durableObjectMetadataDescriptors, pagesMetadataDescriptors } from "../dist/plugins/cloudflare-broker/src/metadata.js";
+import { currentContentDescriptor } from "../dist/plugins/cloudflare-broker/src/current-content.js";
 import { deletionPlanDescriptors } from "../dist/plugins/cloudflare-broker/src/deletion-plans.js";
 import { inventory, source } from "../plugins/cloudflare-broker/scripts/inventory.mjs";
 import { familySummary } from "../plugins/cloudflare-broker/scripts/families.mjs";
@@ -59,7 +60,8 @@ const pagesCases = [
   ["pagesDeploymentGet", { projectName: "safe-project", deploymentId: db }, `/safe-project/deployments/${db}`, `:project:${own}:deployment:${db}`],
 ];
 const metadataOnly = { ...descriptors, ...zoneDescriptors, ...secretsStoreDescriptors, ...durableDescriptors, ...pagesDescriptors };
-const allDescriptors = { ...metadataOnly, ...deletionDescriptors };
+const contentDescriptor = currentContentDescriptor({ accountId: account, revision: "source-policy-1", sourceDigestScriptNames: ["safe-worker"] });
+const allDescriptors = { ...metadataOnly, ...deletionDescriptors, contentDescriptor };
 const deletionCases = [
   ["workerDelete", { scriptName: "safe-worker" }, `/accounts/${account}/workers/scripts/safe-worker?force=false`, `cloudflare:account:${account}:worker:safe-worker`],
   ["hyperdriveDelete", { hyperdriveId: own }, `/accounts/${account}/hyperdrive/configs/${own}`, `cloudflare:account:${account}:hyperdrive:${own}`],
@@ -911,7 +913,12 @@ test("Cloudflare full schema inventory is pinned, explicit about holes, and cons
       assert.ok(descriptor);
       assert.equal(row.operationId, descriptor.providerOperationId);
       assert.equal(row.tier, descriptor.tier);
-      assert.equal(row.implementation, descriptor.tier === "reserved" ? "plan-descriptor-only" : "descriptor-only");
+      assert.equal(row.implementation, descriptor === contentDescriptor ? "content-descriptor-only" : descriptor.tier === "reserved" ? "plan-descriptor-only" : "descriptor-only");
+      if (descriptor === contentDescriptor) {
+        assert.equal(row.approvalRoute, "separate-source-agent-and-resource-policy");
+        assert.equal(row.sideEffects, "source-read-digest-only");
+        for (const prerequisite of ["separate-source-authorization", "bounded-content-transport-and-success-media-contract", "trusted-capture-window-and-response-correlation", "module-attribution-and-library-projection"]) assert.ok(row.prerequisites.includes(prerequisite));
+      }
       if (descriptor.tier === "reserved") {
         assert.equal(row.approvalRoute, "release-manager-and-conditional-owner-security");
         assert.equal(row.sideEffects, "destructive-production");
@@ -919,9 +926,11 @@ test("Cloudflare full schema inventory is pinned, explicit about holes, and cons
       }
     }
   }
-  assert.equal(operations.filter(row => row.typedTool !== null).length, 36);
+  assert.equal(operations.filter(row => row.typedTool !== null).length, 37);
   assert.equal(operations.filter(row => row.tier === "reserved").length, 5);
-  assert.equal(operations.filter(row => row.tier === "read").length, 31);
+  assert.equal(operations.filter(row => row.tier === "read").length, 32);
+  assert.equal(operations.filter(row => row.implementation === "content-descriptor-only").length, 1);
+  assert.equal(manifest.counts.contentDescriptors, 1);
   assert.equal(manifest.counts.descriptors, Object.keys(allDescriptors).length);
   assert.equal(manifest.credentialScope.status, "operation-entitlements-unresolved");
   assert.equal(manifest.complete, false);
@@ -945,12 +954,13 @@ test("Cloudflare family workload summary assigns every operation once without up
     assert.equal(family.operations, members.length);
     assert.equal(Object.values(family.methods).reduce((sum, count) => sum + count, 0), members.length);
     assert.equal(family.coverage.metadataDescriptors, members.filter(row => row.implementation === "descriptor-only").length);
+    assert.equal(family.coverage.contentDescriptors, members.filter(row => row.implementation === "content-descriptor-only").length);
     assert.equal(family.coverage.planDescriptors, members.filter(row => row.implementation === "plan-descriptor-only").length);
     assert.equal(family.coverage.missing, members.filter(row => row.implementation === "missing").length);
     assert.equal(family.coverage.unclassified, members.filter(row => row.tier === "unclassified").length);
     assert.equal(family.coverage.unknownEntitlement, members.length);
     for (const key of ["integrated", "reviewed", "enabled"]) assert.equal(family.coverage[key], 0);
-    assert.equal(family.coverage.metadataDescriptors + family.coverage.planDescriptors + family.coverage.missing, members.length);
+    assert.equal(family.coverage.metadataDescriptors + family.coverage.contentDescriptors + family.coverage.planDescriptors + family.coverage.missing, members.length);
   }
   for (const limitation of ["method-is-not-policy-tier", "not-effort-or-delivery-estimate", "not-credential-intersection", "supplemental-protocols-excluded"]) assert.ok(saved.limitations.includes(limitation));
 });

@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const compare = (a, b) => a < b ? -1 : a > b ? 1 : 0;
 const unique = values => [...new Set(values)].sort(compare);
-const states = new Set(["missing", "descriptor-only", "plan-descriptor-only"]);
+const states = new Set(["missing", "descriptor-only", "content-descriptor-only", "plan-descriptor-only"]);
 
 // This summarizes source workload, not credential entitlement, policy or effort.
 export function familySummary(bytes) {
@@ -33,6 +33,7 @@ export function familySummary(bytes) {
     },
     coverage: {
       metadataDescriptors: operations.filter(row => row.implementation === "descriptor-only").length,
+      contentDescriptors: operations.filter(row => row.implementation === "content-descriptor-only").length,
       planDescriptors: operations.filter(row => row.implementation === "plan-descriptor-only").length,
       missing: operations.filter(row => row.implementation === "missing").length,
       unclassified: operations.filter(row => row.tier === "unclassified").length,

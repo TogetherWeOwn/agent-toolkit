@@ -44,6 +44,9 @@ const descriptors = new Map([
   ["GET /zones/{zone_id}/dns_records", "cloudflare.dns.list"],
   ["GET /zones/{zone_id}/dns_records/{dns_record_id}", "cloudflare.dns.get"],
 ]);
+const contentDescriptors = new Map([
+  ["GET /accounts/{account_id}/workers/scripts/{script_name}/content/v2", "cloudflare.workers.current_content.digest"],
+]);
 const deletionPlans = new Map([
   ["DELETE /accounts/{account_id}/workers/scripts/{script_name}", "cloudflare.workers.delete"],
   ["DELETE /accounts/{account_id}/hyperdrive/configs/{hyperdrive_id}", "cloudflare.hyperdrive.delete"],
@@ -64,7 +67,8 @@ export function inventory(bytes) {
       if (typeof operation.operationId !== "string" || !Array.isArray(operation.tags)) throw new Error("unmapped schema operation");
       const key = `${method.toUpperCase()} ${path}`;
       const deletionPlan = deletionPlans.has(key);
-      const typedTool = descriptors.get(key) ?? deletionPlans.get(key) ?? null;
+      const contentDescriptor = contentDescriptors.has(key);
+      const typedTool = descriptors.get(key) ?? contentDescriptors.get(key) ?? deletionPlans.get(key) ?? null;
       operations.push({
         key, operationId: operation.operationId, areas: operation.tags,
         typedTool,
@@ -79,18 +83,18 @@ export function inventory(bytes) {
         responseShapeSha256: digest(JSON.stringify(operation.responses)),
         credentialScope: "unknown",
         tier: deletionPlan ? "reserved" : typedTool ? "read" : "unclassified",
-        sideEffects: deletionPlan ? "destructive-production" : typedTool ? "metadata-read-only" : "unclassified",
-        approvalRoute: deletionPlan ? "release-manager-and-conditional-owner-security" : typedTool ? "agent-and-resource-policy" : "unresolved",
-        implementation: deletionPlan ? "plan-descriptor-only" : typedTool ? "descriptor-only" : "missing",
+        sideEffects: deletionPlan ? "destructive-production" : contentDescriptor ? "source-read-digest-only" : typedTool ? "metadata-read-only" : "unclassified",
+        approvalRoute: deletionPlan ? "release-manager-and-conditional-owner-security" : contentDescriptor ? "separate-source-agent-and-resource-policy" : typedTool ? "agent-and-resource-policy" : "unresolved",
+        implementation: deletionPlan ? "plan-descriptor-only" : contentDescriptor ? "content-descriptor-only" : typedTool ? "descriptor-only" : "missing",
         review: "not-reviewed", enablement: "disabled",
-        tests: typedTool ? ["test/cloudflare-provider.test.mjs"] : [],
-        prerequisites: deletionPlan ? ["credential-scope-attestation", "compatible-reviewed-core", "native-conjunctive-authority-and-security-impact", "provider-precondition-and-recovery-adapter", "execution-and-projection-adapter", "native-integration-and-tier-review"] : typedTool ? ["credential-scope-attestation", "compatible-reviewed-core", "native-integration-and-tier-review"] : ["credential-scope-attestation", "typed-adapter-and-tier-classification", "native-integration-and-tier-review"],
+        tests: contentDescriptor ? ["test/cloudflare-current-content.test.mjs", "test/cloudflare-provider.test.mjs"] : typedTool ? ["test/cloudflare-provider.test.mjs"] : [],
+        prerequisites: deletionPlan ? ["credential-scope-attestation", "compatible-reviewed-core", "native-conjunctive-authority-and-security-impact", "provider-precondition-and-recovery-adapter", "execution-and-projection-adapter", "native-integration-and-tier-review"] : contentDescriptor ? ["credential-scope-attestation", "compatible-reviewed-core", "separate-source-authorization", "bounded-content-transport-and-success-media-contract", "trusted-capture-window-and-response-correlation", "module-attribution-and-library-projection", "native-integration-and-tier-review"] : typedTool ? ["credential-scope-attestation", "compatible-reviewed-core", "native-integration-and-tier-review"] : ["credential-scope-attestation", "typed-adapter-and-tier-classification", "native-integration-and-tier-review"],
       });
     }
   }
   operations.sort((a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0);
   const keys = new Set(operations.map(operation => operation.key));
-  if (keys.size !== operations.length || [...descriptors.keys(), ...deletionPlans.keys()].some(key => !keys.has(key))) throw new Error("inventory identity mismatch");
+  if (keys.size !== operations.length || [...descriptors.keys(), ...contentDescriptors.keys(), ...deletionPlans.keys()].some(key => !keys.has(key))) throw new Error("inventory identity mismatch");
   return operations;
 }
 
