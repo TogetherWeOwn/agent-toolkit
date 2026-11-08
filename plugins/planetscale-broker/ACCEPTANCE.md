@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 177 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 176 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -40,6 +40,28 @@ read-only transactions, statement/lock/row/byte/page/time caps and native closur
 evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
+
+## Vitess parameter metadata source increment
+
+`test/vitess-parameters.test.mjs` adds 16 synthetic contracts for one fixed branch
+read: immutable broker-owned component/name/keyspace bindings, strict documented
+type and override flag, whole-result refusal, duplicate/collection/wire caps,
+closed arguments/scopes and pinned official schema agreement. VTGate and keyspace
+VTTablet/MySQL components stay separate; the official description specifies the
+same parameter format. Values/defaults/options/titles/descriptions are omitted.
+Empty scopes/results do not prove completeness. Names are not immutable resource
+IDs; `configurationAuthority: not-established` never grants configuration,
+restart, effective enforcement, wake or spend authority. Current parent/engine
+ownership, independent collection permission, raw-body custody and operation-specific
+non-waking evidence remain integration prerequisites. Full capability remains missing.
+
+Coverage is 115/291 bounded subsets, 176 missing; tiers 115 provisional read /
+16 unreviewed reserved / 160 unresolved. Zero integrated/reviewed/enabled/adopted.
+Fresh exact-head Actions is required; no local suite/build/typecheck ran. Prior
+anomaly head `dca230d7f8f0586d9b34109a01e4a92348d5f014` passed
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42455187585),
+including [tests](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42455187585/job/128652591516),
+lint/typecheck, native-policy and ci-ok. That does not execute these new fixtures.
 
 ## Anomaly metadata source increment
 

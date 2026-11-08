@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The 114 adapters are pure request builders and bounded output projections,
+The 115 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,19 +36,36 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 114 | Narrow projections; not full operation coverage |
-| Missing source adapters | 177 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 115 | Narrow projections; not full operation coverage |
+| Missing source adapters | 176 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-114 adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 161
+115 adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 160
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
 backups/restore, schema/deploy, topology, maintenance and every other official
 area remain in the map even when access or implementation is missing.
+
+## Vitess parameter metadata
+
+`planetscale.list_branch_vitess_parameters` is a fixed branch read returning only
+broker-bound definition names, documented component/type and strict override flag.
+The scope snapshots separate VTGate names and keyspace → VTTablet/MySQL names;
+unknown keyspaces/names, component mismatches, duplicate names within a component
+and malformed rows refuse the whole response. Each collection is capped at 32;
+empty scopes and results are allowed but never establish completeness. Names are
+not immutable resource IDs. Current/default values, options, titles, descriptions
+and other free text are omitted. The official description specifies the same
+parameter format for keyspace components as VTGate; no opaque objects are exposed.
+`configurationAuthority: not-established` means an override flag never grants
+configuration, restart, enforcement, wake or spend authority. Current parent/engine
+bindings, independent collection permission, broker-side raw-body custody and
+operation-specific non-waking evidence remain prerequisites. Full configuration
+capability and all mutations remain incomplete; no live read is implemented.
 
 ## Anomaly metadata
 
