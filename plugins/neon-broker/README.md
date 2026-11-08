@@ -7,6 +7,23 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonRegionOperations(trustedScope, transport)` adds `getActiveRegions`
+with mandatory closed `org_id` and exact collection grant
+`neon/organizations/<org>/regions`. Construction copies one organization/revision
+and up to 30 unique selected AWS/Azure region IDs (conservative 80-character ASCII
+subset). The fixed GET always sends `org_id`; the provider's optional unfiltered
+catalog is deliberately unsupported, with no retry or fallback to it.
+
+The nonpaginated response is capped at 30 rows before filtering to the trusted
+selection. Output is only `regions: [{ region_id, default }]`; descriptive names,
+coordinates and arbitrary diagnostics are omitted. All rows, including unselected
+ones, must have valid IDs/default booleans, no duplicates or contradictory ancestry.
+Missing selected regions are not fabricated. Empty output is not an entitlement,
+permission or capacity verdict. The provider's default flag is descriptive, not
+permission to provision a project; catalog presence is not current native evidence.
+No account discovery, geographic lookup, provisioning or configuration mutation is
+introduced. Non-200 and unexpected pagination refuse without partial success.
+
 `createNeonDataAPIOperations(trustedScope, transport)` adds `getProjectBranchDataAPI`
 with closed `project_id`, `branch_id`, `database_name` arguments and exact resource
 `neon/projects/<project>/branches/<branch>/data-api/<database>`. Scope copies up to
@@ -523,8 +540,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: forty-eight implemented
-source adapters, 146 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: forty-nine implemented
+source adapters, 145 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

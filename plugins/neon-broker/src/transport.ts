@@ -8,6 +8,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  getActiveRegions(organization: string, options: MetadataRequestOptions): Promise<unknown>;
   getProjectBranchDataAPI(project: string, branch: string, database: string, options: MetadataRequestOptions): Promise<unknown>;
   getOrganizationInvitations(organization: string, options: MetadataRequestOptions): Promise<unknown>;
   getOrganizationMembers(organization: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
@@ -159,6 +160,8 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    getActiveRegions: (organization: string, options: MetadataRequestOptions) =>
+      get("/regions", new URLSearchParams({ org_id: authPathId(organization) }), options),
     getProjectBranchDataAPI: (project: string, branch: string, database: string, options: MetadataRequestOptions) =>
       get(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/data-api/${catalogName(database)}`, new URLSearchParams(), options),
     getOrganizationInvitations: (organization: string, options: MetadataRequestOptions) =>

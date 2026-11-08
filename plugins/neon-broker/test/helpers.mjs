@@ -17,6 +17,7 @@ import { createNeonOrganizationMemberOperations } from '../dist/plugins/neon-bro
 import { createNeonOrganizationOperations } from '../dist/plugins/neon-broker/src/organization.js';
 import { createNeonMetadataTransport } from '../dist/plugins/neon-broker/src/transport.js';
 import { createNeonDataAPIOperations } from '../dist/plugins/neon-broker/src/data-api.js';
+import { createNeonRegionOperations } from '../dist/plugins/neon-broker/src/regions.js';
 
 export const scope = {
   projectId: 'project-a', revision: 'scope-v1', branchIds: ['br-a', 'br-b'],
@@ -202,7 +203,15 @@ export const dataAPICases = [
 export function dataAPIFixture(value, config = dataAPIScope) {
   return fixture(value, config, createNeonDataAPIOperations);
 }
-export const allCases = [...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
+export const regionScope = { ...organizationScope, regionIds: ['aws-us-east-1', 'azure-eastus2'] };
+export const region = { region_id: 'aws-us-east-1', default: true };
+export const regionCases = [
+  ['getActiveRegions', { org_id: 'org-a' }, { regions: [region] }, { regions: [region] }],
+];
+export function regionFixture(value, config = regionScope) {
+  return fixture(value, config, createNeonRegionOperations);
+}
+export const allCases = [...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });

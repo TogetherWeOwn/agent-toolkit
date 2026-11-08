@@ -18,6 +18,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   organizationMemberCases, organizationMemberFixture, organizationMemberScope, organizationMember,
   organizationInvitationCases, organizationInvitationFixture, organizationInvitationScope, organizationInvitation,
   dataAPICases, dataAPIFixture, dataAPIScope,
+  regionCases, regionFixture, regionScope, region,
   fixture, scope, branch, operation, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
@@ -28,7 +29,8 @@ const { providerFixture, credentialCanary, derivedCanary } = await import(pathTo
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
 function brokerFixture(name, args, raw, overrides = {}, config) {
-  const factory = dataAPICases.some(([operation]) => operation === name) ? dataAPIFixture :
+  const factory = regionCases.some(([operation]) => operation === name) ? regionFixture :
+    dataAPICases.some(([operation]) => operation === name) ? dataAPIFixture :
     organizationInvitationCases.some(([operation]) => operation === name) ? organizationInvitationFixture :
     organizationMemberCases.some(([operation]) => operation === name) ? organizationMemberFixture :
     organizationCases.some(([operation]) => operation === name) ? organizationFixture :
@@ -219,7 +221,7 @@ test('reflected lease material in selected safe-looking fields is refused by the
   assert.equal((await f.call()).code, 'OUTPUT_REFUSED');
 });
 
-for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases]) {
+for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases, ...regionCases]) {
   test(`${name}: replay and TOCTOU policy/resource changes refuse without a second request`, async () => {
     const replay = brokerFixture(name, args, raw);
     assert.equal((await replay.call()).ok, true);
@@ -959,11 +961,47 @@ test('maximum Data API binding scope and resource lengths fit common configurati
   safeEnvelope(f, result);
 });
 
+test('organization-filtered region catalog drops names/coordinates and requires its exact collection grant', async () => {
+  const [name, args, raw, expected] = regionCases[0];
+  const f = brokerFixture(name, args, { regions: [{ ...region, name: credentialCanary, geo_lat: derivedCanary, geo_long: credentialCanary }] });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, expected);
+  safeEnvelope(f, result);
+  for (const resource of ['neon/regions', 'neon/organizations/org-a', 'neon/organizations/org-b/regions',
+    'neon/organizations/org-a/regions/aws-us-east-1', 'neon/projects/project-a']) {
+    const denied = brokerFixture(name, args, raw);
+    denied.common.vector.policy.resources = [resource];
+    assert.equal((await denied.call()).code, 'POLICY_DENIED');
+    assert.equal(denied.common.calls.secret, 0);
+    assert.equal(denied.provider.requests.length, 0);
+  }
+  const reflected = brokerFixture(name, args, raw, {
+    credentials: { async resolve() { return { value: region.region_id, redactions: [], async close() {} }; } },
+  });
+  assert.equal((await reflected.call()).code, 'OUTPUT_REFUSED');
+});
+
+test('maximum region selection and output fit common budgets without filtering away invalid rows', async () => {
+  const config = { ...regionScope, organizationId: 'o'.repeat(60), revision: 'r'.repeat(80),
+    regionIds: Array.from({ length: 30 }, (_, n) => `aws-${String(n).padStart(76, '0')}`) };
+  const args = { org_id: config.organizationId };
+  const raw = { regions: config.regionIds.map(region_id => ({ region_id, default: false })) };
+  const f = brokerFixture('getActiveRegions', args, raw, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, raw);
+  assert.equal(f.provider.requests.length, 1);
+  safeEnvelope(f, result);
+  const invalid = brokerFixture('getActiveRegions', args, { regions: [...raw.regions, { region_id: 'aws-unselected', default: false }] }, {}, config);
+  assert.equal((await invalid.call()).code, 'UPSTREAM_UNAVAILABLE');
+});
+
 test('common operation-map validator confirms incomplete status for all unknown entitlements', () => {
   const map = JSON.parse(readFileSync(new URL('../operation-map.json', import.meta.url)));
   const result = validateOperationMap(map);
   assert.equal(result.complete, false);
   assert.equal(result.incomplete.length, 194);
-  assert.equal(map.operations.filter(operation => operation.implemented).length, 48);
+  assert.equal(map.operations.filter(operation => operation.implemented).length, 49);
   assert.equal(map.operations.filter(operation => operation.enabled).length, 0);
 });
