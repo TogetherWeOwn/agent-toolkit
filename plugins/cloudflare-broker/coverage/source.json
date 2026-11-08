@@ -10,7 +10,7 @@
     "openapi": "3.0.3",
     "version": "4.0.0"
   },
-  "inventorySha256": "afd3772b4f01de1558f8790e940e89dd65b391fa10cfe0af10970fb83bfaa632",
+  "inventorySha256": "618555db0044ffd087c792d05cf0492d45f0456aa7a7d43d4f9fc8cd282e95f5",
   "counts": { "paths": 2352, "operations": 3777, "apiTags": 599, "descriptors": 82, "metadataDescriptors": 76, "contentDescriptors": 1, "planDescriptors": 5, "implementedTools": 0, "reviewedTools": 0, "enabledTools": 0 },
   "familySummary": { "file": "families.json", "grouping": "first-provider-tag-exclusive", "primaryFamilies": 596, "note": "Additive source-workload counts only, not credential intersection, policy classification or effort estimates; six operations have additional tags." },
   "credentialScope": {

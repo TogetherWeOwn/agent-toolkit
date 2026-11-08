@@ -39,6 +39,7 @@ export interface MetadataScope {
   euBucketLocks?: readonly { bucketName: string; prefixes: readonly string[] }[];
   kvNamespaceIds?: readonly string[];
   queueIds?: readonly string[];
+  queueConfigurationIds?: readonly string[];
   workerDeployments?: readonly { scriptName: string; deploymentIds: readonly string[] }[];
   workerVersions?: readonly { scriptName: string; versionIds: readonly string[] }[];
   workerControlScriptNames?: readonly string[];
@@ -85,6 +86,16 @@ interface D1DetailMetadata {
     jurisdiction: "eu" | "fedramp" | "us" | null | "unavailable";
     readReplicationMode: "auto" | "disabled" | "unavailable";
     effectiveReplicationAndPlacement: "not-established";
+  };
+}
+interface QueueDetailMetadata {
+  id: string;
+  configuration?: {
+    subject: "configured-queue-delivery-and-retention";
+    deliveryDelaySeconds: number | "unavailable";
+    deliveryPaused: boolean | "unavailable";
+    messageRetentionSeconds: number | "unavailable";
+    effectiveDeliveryAndRetention: "not-established";
   };
 }
 interface SecretMetadata { name: string; type: "secret_text" | "secret_key" }
@@ -221,6 +232,11 @@ export function metadataDescriptors(scope: MetadataScope) {
   requireThat(Array.isArray(kvNamespaceIds) && kvNamespaceIds.length <= maxRows && Array.isArray(queueIds) && queueIds.length <= maxRows, "cap");
   const namespaces = new Set(kvNamespaceIds.map(value => resourceId.parse(value)));
   const queues = new Set(queueIds.map(value => resourceId.parse(value)));
+  const queueConfigurationIds = scope.queueConfigurationIds ?? [];
+  requireThat(Array.isArray(queueConfigurationIds) && queueConfigurationIds.length <= maxRows, "cap");
+  const configurationQueues = new Set(queueConfigurationIds.map(value => resourceId.parse(value)));
+  requireThat(configurationQueues.size === queueConfigurationIds.length, "schema");
+  for (const id of configurationQueues) requireThat(queues.has(id), "scope");
   const workerDeployments = scope.workerDeployments ?? [];
   requireThat(Array.isArray(workerDeployments) && workerDeployments.length <= maxRows, "cap");
   const deployments = new Map<string, Set<string>>();
@@ -637,7 +653,12 @@ export function metadataDescriptors(scope: MetadataScope) {
       return bounded({ items, complete: false as const });
     },
   });
-  const queueGet: MetadataDescriptor<ReturnType<typeof queue.parse>, { id: string }> = Object.freeze({
+  function queueSeconds(value: unknown): number | "unavailable" {
+    if (value === undefined) return "unavailable";
+    requireThat(typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= Number.MAX_SAFE_INTEGER, "upstream");
+    return value;
+  }
+  const queueGet: MetadataDescriptor<ReturnType<typeof queue.parse>, QueueDetailMetadata> = Object.freeze({
     name: "cloudflare.queues.get", version: "1", tier: "read", providerOperationId: "queues-get",
     prepare(raw: unknown) {
       const args = queue.parse(raw);
@@ -647,9 +668,24 @@ export function metadataDescriptors(scope: MetadataScope) {
     project(raw: string, input: PreparedMetadata<ReturnType<typeof queue.parse>>) {
       const args = queue.parse(input.arguments);
       queueScope(args.queueId);
-      const row = object(envelope(raw).result);
+      const body = envelope(raw);
+      requireThat(body.account_id === undefined || body.account_id === account, "scope");
+      const row = object(body.result);
       requireThat(row.queue_id === args.queueId, "scope");
-      return bounded(queueMetadata(row));
+      const output: QueueDetailMetadata = queueMetadata(row);
+      if (configurationQueues.has(args.queueId)) {
+        const settings = row.settings === undefined ? undefined : object(row.settings);
+        const paused = settings?.delivery_paused;
+        requireThat(paused === undefined || typeof paused === "boolean", "upstream");
+        output.configuration = {
+          subject: "configured-queue-delivery-and-retention",
+          deliveryDelaySeconds: queueSeconds(settings?.delivery_delay),
+          deliveryPaused: paused === undefined ? "unavailable" : paused as boolean,
+          messageRetentionSeconds: queueSeconds(settings?.message_retention_period),
+          effectiveDeliveryAndRetention: "not-established",
+        };
+      }
+      return bounded(output);
     },
   });
   function controlScope(name: string) {
