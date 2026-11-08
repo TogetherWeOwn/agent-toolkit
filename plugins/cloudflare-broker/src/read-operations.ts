@@ -4,6 +4,7 @@ import { currentContentDescriptor, type CurrentContentScope } from "./current-co
 import { subscriptionDescriptors, type SubscriptionScope } from "./subscriptions.js";
 import { workerScheduleDescriptor, type WorkerScheduleScope } from "./worker-schedules.js";
 import { queueConsumerDescriptors, type QueueConsumerScope } from "./queue-consumers.js";
+import { eventSubscriptionDescriptors, type EventSubscriptionScope } from "./event-subscriptions.js";
 import { versionAssetDescriptor, type VersionAssetScope } from "./version-assets.js";
 import { workerDomainMetadataDescriptors, type WorkerDomainScope } from "./worker-domains.js";
 import { r2CorsDescriptor, type R2CorsScope } from "./r2-cors.js";
@@ -66,6 +67,7 @@ export interface CloudflareReadScope extends MetadataScope {
   subscriptions?: SubscriptionScope["subscriptions"];
   workerSchedules?: WorkerScheduleScope["workers"];
   queueConsumers?: QueueConsumerScope["queues"];
+  eventSubscriptions?: EventSubscriptionScope["subscriptions"];
   secretStores?: SecretsStoreMetadataScope["stores"];
   durableNamespaces?: DurableObjectMetadataScope["namespaces"];
   pagesProjects?: PagesMetadataScope["projects"];
@@ -95,6 +97,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
   const { accountId, revision } = scope;
   const subscriptions = subscriptionDescriptors({ accountId, revision, subscriptions: scope.subscriptions ?? [] });
   const consumers = queueConsumerDescriptors({ accountId, revision, queues: scope.queueConsumers ?? [] });
+  const events = eventSubscriptionDescriptors({ accountId, revision, subscriptions: scope.eventSubscriptions ?? [] });
   const stores = secretsStoreMetadataDescriptors({ accountId, revision, stores: scope.secretStores ?? [] });
   const durable = durableObjectMetadataDescriptors({ accountId, revision, namespaces: scope.durableNamespaces ?? [] });
   const pages = pagesMetadataDescriptors({ accountId, revision, projects: scope.pagesProjects ?? [] });
@@ -128,6 +131,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(descriptors.kvNamespacesList), metadata(descriptors.kvNamespaceGet),
     metadata(descriptors.queuesList), metadata(descriptors.queueGet),
     metadata(consumers.consumersList), metadata(consumers.consumerGet),
+    metadata(events.eventSubscriptionsList), metadata(events.eventSubscriptionGet),
     metadata(descriptors.workerSubdomainGet), metadata(descriptors.workerSettingsGet),
     metadata(versionAssetDescriptor({ accountId, revision, workers: scope.workerAssetVersions ?? [],
       packageVersions: scope.workerPackageVersions ?? [] })),

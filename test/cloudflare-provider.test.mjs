@@ -10,6 +10,7 @@ import { workerDomainMetadataDescriptors } from "../dist/plugins/cloudflare-brok
 import { subscriptionDescriptors } from "../dist/plugins/cloudflare-broker/src/subscriptions.js";
 import { workerScheduleDescriptor } from "../dist/plugins/cloudflare-broker/src/worker-schedules.js";
 import { queueConsumerDescriptors } from "../dist/plugins/cloudflare-broker/src/queue-consumers.js";
+import { eventSubscriptionDescriptors } from "../dist/plugins/cloudflare-broker/src/event-subscriptions.js";
 import { r2CorsDescriptor } from "../dist/plugins/cloudflare-broker/src/r2-cors.js";
 import { r2NotificationDescriptors } from "../dist/plugins/cloudflare-broker/src/r2-notifications.js";
 import { r2LifecycleDescriptor } from "../dist/plugins/cloudflare-broker/src/r2-lifecycle.js";
@@ -79,6 +80,7 @@ const allDescriptors = { ...metadataOnly, ...deletionDescriptors, contentDescrip
   ...subscriptionDescriptors({ accountId: account, revision: "policy-1" }),
   workerSchedules: workerScheduleDescriptor({ accountId: account, revision: "policy-1" }),
   ...queueConsumerDescriptors({ accountId: account, revision: "policy-1" }),
+  ...eventSubscriptionDescriptors({ accountId: account, revision: "policy-1" }),
   ...workerDomainMetadataDescriptors({ accountId: account, revision: "policy-1" }),
   r2Cors: r2CorsDescriptor({ accountId: account, revision: "policy-1" }),
   ...r2NotificationDescriptors({ accountId: account, revision: "policy-1" }),
