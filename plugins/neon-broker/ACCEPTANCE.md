@@ -32,7 +32,8 @@
 7. Applicable exact-head production/release approval if a production path is
    introduced. Source merge is not installation, adoption or full package completion.
 
-All operations remain disabled. Remaining operations need their own typed source,
-per-operation tests, entitlement/effect evidence and applicable native authority;
-they are not authorized by this slice. Rollback removes this additive source
-package/compatibility job; do not remove real durable tombstones or recovery state.
+All operations remain disabled. Remaining operations need typed source and
+per-operation tests in cohesive follow-on tiers; their live use additionally needs
+entitlement/effect evidence and applicable native authority. This continuation does
+not stop at the eight catalog adapters. Rollback removes the additive source delta;
+do not remove real durable tombstones or recovery state.

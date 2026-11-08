@@ -8,6 +8,13 @@ export const CATALOG_OPERATIONS = ["getProjectOperation", "listProjectOperations
   "listProjectEndpoints", "listProjectBranchDatabases", "getProjectBranchDatabase",
   "listProjectBranchRoles", "getProjectBranchRole"] as const;
 type CatalogOperation = typeof CATALOG_OPERATIONS[number];
+interface CatalogArguments {
+  readonly project_id: string;
+  readonly branch_id?: string;
+  readonly operation_id?: string;
+  readonly database_name?: string;
+  readonly role_name?: string;
+}
 export interface NeonCatalogScope extends NeonMetadataScope {
   readonly operations: readonly { readonly id: string; readonly branchId: string | null; readonly endpointId: string | null }[];
   readonly databases: readonly { readonly id: number; readonly name: string; readonly branchId: string }[];
@@ -59,15 +66,15 @@ export function createNeonCatalogOperations(scope: NeonCatalogScope, transport: 
   const projectId = config.projectId;
   const root = `neon/projects/${projectId}`;
 
-  function parse(name: CatalogOperation, raw: unknown): { project_id: string; branch_id?: string; operation_id?: string; database_name?: string; role_name?: string } {
-    const args = name === "getProjectOperation" ? operationArguments.parse(raw) :
+  function parse(name: CatalogOperation, raw: unknown): CatalogArguments {
+    const args: CatalogArguments = name === "getProjectOperation" ? operationArguments.parse(raw) :
       name === "getProjectBranchDatabase" ? databaseArguments.parse(raw) :
       name === "getProjectBranchRole" ? roleArguments.parse(raw) :
       name === "listProjectBranchDatabases" || name === "listProjectBranchRoles" ? branchArguments.parse(raw) : projectArguments.parse(raw);
-    if (args.project_id !== projectId || ("branch_id" in args && !branches.has(args.branch_id)) ||
-      ("operation_id" in args && !operations.has(args.operation_id)) ||
-      ("database_name" in args && !databases.has(key(args.branch_id, args.database_name))) ||
-      ("role_name" in args && !roles.has(key(args.branch_id, args.role_name)))) throw Error("INVALID_ARGUMENTS");
+    if (args.project_id !== projectId || (args.branch_id !== undefined && !branches.has(args.branch_id)) ||
+      (args.operation_id !== undefined && !operations.has(args.operation_id)) ||
+      (args.database_name !== undefined && !databases.has(key(args.branch_id!, args.database_name))) ||
+      (args.role_name !== undefined && !roles.has(key(args.branch_id!, args.role_name)))) throw Error("INVALID_ARGUMENTS");
     return args;
   }
   function operation(raw: unknown): Json {
