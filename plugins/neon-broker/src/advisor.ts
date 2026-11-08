@@ -34,7 +34,7 @@ export function createNeonAdvisorOperations(scope: NeonAdvisorScope, transport: 
   }
   function ancestry(raw: unknown) {
     check(optional(raw, "pagination") === undefined);
-    for (const [key, expected] of [["project_id", config.projectId], ["branch_id", config.branchId], ["database_name", config.databaseName]]) {
+    for (const [key, expected] of [["project_id", config.projectId], ["branch_id", config.branchId], ["database_name", config.databaseName]] as const) {
       const value = optional(raw, key);
       check(value === undefined || value === expected);
     }
