@@ -41,6 +41,8 @@ export interface NeonMetadataTransport {
   getProjectBranchTrigger(project: string, branch: string, trigger: string, options: MetadataRequestOptions): Promise<unknown>;
   listNeonAuthOAuthClients(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   getNeonAuthOAuthClient(project: string, branch: string, client: string, options: MetadataRequestOptions): Promise<unknown>;
+  listProjectBranchBuckets(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
+  listProjectBranchCustomDomains(project: string, branch: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
 }
 export type MetadataFetch = (url: string, init: RequestInit) => Promise<Response>;
 
@@ -210,5 +212,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       get(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/oauth-provider/clients`, new URLSearchParams(), options),
     getNeonAuthOAuthClient: (project: string, branch: string, client: string, options: MetadataRequestOptions) =>
       get(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/oauth-provider/clients/${authClientId(client)}`, new URLSearchParams(), options),
+    listProjectBranchBuckets: (project: string, branch: string, options: MetadataRequestOptions) =>
+      get(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/buckets`, new URLSearchParams(), options),
+    listProjectBranchCustomDomains: (project: string, branch: string, cursor: string | null, options: MetadataRequestOptions) =>
+      get(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/custom-domains`, cursorQuery(cursor), options),
   });
 }

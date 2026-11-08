@@ -251,6 +251,38 @@ or disabled success or another endpoint fallback. No OAuth flow, client mutation
 secret reveal/rotation, runtime grant or lifecycle enforcement is supplied. Beta
 availability, entitlement and provider effects remain unverified.
 
+`createNeonBranchResourceOperations(trustedScope, transport)` adds two beta resource lists:
+
+| Tool | Closed arguments | Authorization resource suffix (under project) |
+|---|---|---|
+| `neon.listProjectBranchBuckets` | `project_id`, `branch_id` | `branches/<branch>/buckets` |
+| `neon.listProjectBranchCustomDomains` | `project_id`, `branch_id` | `branches/<branch>/custom-domains` |
+
+Scope copies up to 12 branch IDs, 12 bucket-name/branch pairs and 12 domain/branch/
+function-slug bindings. Selection is explicit on each effective branch, including
+inherited buckets. Collection grants stay distinct from parent, sibling, function
+and object grants. Project/branch paths use the pinned lowercase alphanumeric/hyphen
+1–60 character subset. Selected bucket names use bounded lowercase ASCII letters,
+digits, dots, underscores and hyphens, max 255, starting alphanumeric. Unsupported
+selected names refuse; unselected bounded printable names can be filtered. Domains
+must be normalized lowercase ASCII hostnames with at least two labels, max 253 total
+and 63 per label, no wildcard/trailing dot/URL/port. No normalization or DNS request
+occurs. Selected entity_type must be function and entity_id the trusted 1–20 lowercase
+alphanumeric function slug; future unselected entity types are filtered.
+
+Output contains bucket name/access_level (private/public_read), or domain/entity_type/
+entity_id plus optional status. Known pending/active/error statuses are preserved;
+a bounded future status becomes the literal unknown, and absent status stays absent.
+Timestamps, CNAME activation targets, DNS/binding diagnostics, reasons, object keys,
+content and credentials are neither selected nor followed. Request context binds
+branch ancestry; optional returned project/branch identities must agree. Buckets
+are nonpaginated, capped at 30 rows before filtering. Domains use fixed 10-row pages,
+response pagination.next, encoded cursors and a three-page ceiling. Duplicate names/
+domains, invalid ancestry, cursor cycles and unfinished pagination refuse without
+partial output. Maximum scope/output fits common budgets. Beta entitlement/effects
+remain unknown; non-200 never becomes empty success or another API fallback. No
+bucket/domain mutation, DNS activation, invocation or object-data access is provided.
+
 Trusted metadata scope contains one project, a revision, explicit branch IDs and endpoint
 parent bindings. Construction validates and copies it. Caller IDs only select
 already-configured resources; no caller identity, authority, origin, credential,
@@ -269,7 +301,7 @@ passwords, credentials and connection strings are excluded. Unknown lifecycle
 states fail closed until explicitly supported. No error body/headers are surfaced.
 Common lease-reflection checks remain necessary even in these selected fields.
 
-`createNeonMetadataTransport(injectedFetch)` has thirty-three typed methods only. Its
+`createNeonMetadataTransport(injectedFetch)` has thirty-five typed methods only. Its
 internal request builder fixes origin `https://console.neon.tech`, `/api/v2`
 paths, GET, JSON content, no redirects and no retries. No global fetch fallback
 exists. Each response is bounded to 64 KiB and 1 s, including streamed body time;
@@ -309,8 +341,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: thirty-three implemented
-source adapters, 161 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: thirty-five implemented
+source adapters, 159 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

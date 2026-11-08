@@ -8,6 +8,7 @@ import { createNeonAuthIntegrationOperations } from '../dist/plugins/neon-broker
 import { createNeonFunctionOperations } from '../dist/plugins/neon-broker/src/functions.js';
 import { createNeonTriggerOperations } from '../dist/plugins/neon-broker/src/triggers.js';
 import { createNeonAuthClientOperations } from '../dist/plugins/neon-broker/src/auth-clients.js';
+import { createNeonBranchResourceOperations } from '../dist/plugins/neon-broker/src/branch-resources.js';
 import { createNeonMetadataTransport } from '../dist/plugins/neon-broker/src/transport.js';
 
 export const scope = {
@@ -116,7 +117,17 @@ export const authClientCases = [
   ['listNeonAuthOAuthClients', { project_id: 'project-a', branch_id: 'br-a' }, { clients: [authClient] }, { clients: [authClient] }],
   ['getNeonAuthOAuthClient', { project_id: 'project-a', branch_id: 'br-a', client_id: 'ClientA' }, authClient, authClient],
 ];
-export const allCases = [...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases];
+export const branchResourceScope = { projectId: scope.projectId, revision: scope.revision, branchIds: scope.branchIds,
+  buckets: [{ name: 'assets', branchId: 'br-a' }, { name: 'other', branchId: 'br-b' }],
+  domains: [{ domain: 'app.example.invalid', branchId: 'br-a', functionSlug: 'hello' },
+    { domain: 'other.example.invalid', branchId: 'br-b', functionSlug: 'other' }] };
+export const bucket = { name: 'assets', access_level: 'private' };
+export const customDomain = { domain: 'app.example.invalid', entity_type: 'function', entity_id: 'hello', status: 'pending' };
+export const branchResourceCases = [
+  ['listProjectBranchBuckets', { project_id: 'project-a', branch_id: 'br-a' }, { buckets: [bucket] }, { buckets: [bucket] }],
+  ['listProjectBranchCustomDomains', { project_id: 'project-a', branch_id: 'br-a' }, { custom_domains: [customDomain] }, { custom_domains: [customDomain] }],
+];
+export const allCases = [...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });
@@ -147,6 +158,9 @@ export function triggerFixture(value, config = triggerScope) {
 }
 export function authClientFixture(value, config = authClientScope) {
   return fixture(value, config, createNeonAuthClientOperations);
+}
+export function branchResourceFixture(value, config = branchResourceScope) {
+  return fixture(value, config, createNeonBranchResourceOperations);
 }
 export function fixture(value, config = scope, factory = createNeonMetadataOperations) {
   const requests = [];

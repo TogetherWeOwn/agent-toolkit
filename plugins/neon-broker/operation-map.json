@@ -3405,7 +3405,7 @@
       "id": "listProjectBranchBuckets",
       "apiArea": "buckets",
       "tool": "neon.listProjectBranchBuckets",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/buckets",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3413,12 +3413,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/branch-resources.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed source with mocked contracts only; credential entitlement, provider effects, beta availability, compatible native integration and independent review remain unresolved. No live enablement."
     },
     {
       "id": "deleteProjectBranchBucket",
@@ -3955,7 +3958,7 @@
       "id": "listProjectBranchCustomDomains",
       "apiArea": "functions",
       "tool": "neon.listProjectBranchCustomDomains",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/custom-domains",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3963,12 +3966,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/branch-resources.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed source with mocked contracts only; credential entitlement, provider effects, beta availability, compatible native integration and independent review remain unresolved. No live enablement."
     },
     {
       "id": "deleteProjectBranchCustomDomain",

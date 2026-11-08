@@ -10,6 +10,7 @@ import { allCases as cases, catalogCases, catalogFixture, catalogScopeAt, capabi
   functionCases, functionFixture, functionScope, neonFunction,
   triggerCases, triggerFixture, triggerScope, neonTrigger,
   authClientCases, authClientFixture, authClientScope, authClient,
+  branchResourceCases, branchResourceFixture, branchResourceScope, bucket, customDomain,
   fixture, scope, branch, operation, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
@@ -20,7 +21,8 @@ const { providerFixture, credentialCanary, derivedCanary } = await import(pathTo
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
 function brokerFixture(name, args, raw, overrides = {}, config) {
-  const factory = authClientCases.some(([operation]) => operation === name) ? authClientFixture :
+  const factory = branchResourceCases.some(([operation]) => operation === name) ? branchResourceFixture :
+    authClientCases.some(([operation]) => operation === name) ? authClientFixture :
     triggerCases.some(([operation]) => operation === name) ? triggerFixture :
     functionCases.some(([operation]) => operation === name) ? functionFixture :
     authIntegrationCases.some(([operation]) => operation === name) ? authIntegrationFixture :
@@ -203,7 +205,7 @@ test('reflected lease material in selected safe-looking fields is refused by the
   assert.equal((await f.call()).code, 'OUTPUT_REFUSED');
 });
 
-for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases]) {
+for (const [name, args, raw] of [...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases]) {
   test(`${name}: replay and TOCTOU policy/resource changes refuse without a second request`, async () => {
     const replay = brokerFixture(name, args, raw);
     assert.equal((await replay.call()).ok, true);
@@ -585,11 +587,59 @@ test('maximum OAuth-client scope/output fits common budgets with pinned path-len
   }
 });
 
+test('branch resource metadata drops activation/diagnostic fields and common policy separates sibling collections', async () => {
+  for (const [name, args, raw, expected] of branchResourceCases) {
+    const collection = name === 'listProjectBranchBuckets' ? 'buckets' : 'custom_domains';
+    const poisoned = { [collection]: raw[collection].map(value => ({ ...value, created_at: credentialCanary,
+      cname_target: derivedCanary, status_reason: credentialCanary, dns_status: derivedCanary, binding_status: credentialCanary })) };
+    const f = brokerFixture(name, args, poisoned);
+    const result = await f.call();
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.value, expected);
+    safeEnvelope(f, result);
+    const own = f.provider.operation(name).prepare(args).resource.id;
+    for (const resource of ['neon/projects/project-a/branches/br-a/buckets', 'neon/projects/project-a/branches/br-a/custom-domains',
+      'neon/projects/project-a/branches/br-b/buckets', 'neon/projects/project-a/branches/br-b/custom-domains',
+      'neon/projects/project-a/branches/br-a/functions/hello'].filter(id => id !== own)) {
+      const other = brokerFixture(name, args, raw);
+      other.common.vector.policy.resources = [resource];
+      assert.equal((await other.call()).code, 'POLICY_DENIED');
+      assert.equal(other.common.calls.secret, 0);
+      assert.equal(other.provider.requests.length, 0);
+    }
+    const reflected = brokerFixture(name, args, raw,
+      { credentials: { async resolve() { return { value: collection === 'buckets' ? 'private' : 'pending', redactions: [], async close() {} }; } } });
+    assert.equal((await reflected.call()).code, 'OUTPUT_REFUSED');
+  }
+});
+
+test('maximum branch resource scope/output fits common budgets including paginated domain output', async () => {
+  const branchIds = Array.from({ length: 12 }, (_, n) => `br-${n}-${'a'.repeat(54)}`);
+  const buckets = Array.from({ length: 12 }, (_, n) => ({ name: `bucket-${n}-${'b'.repeat(245)}`, branchId: branchIds[0] }));
+  const domains = Array.from({ length: 12 }, (_, n) => ({ domain: `${String(n).padStart(2, '0')}${'a'.repeat(60)}.${'b'.repeat(63)}.${'c'.repeat(63)}.${'d'.repeat(62)}`,
+    branchId: branchIds[0], functionSlug: 'a'.repeat(20) }));
+  const config = { ...branchResourceScope, branchIds, buckets, domains };
+  for (const [name] of branchResourceCases) {
+    const args = { project_id: 'project-a', branch_id: branchIds[0] };
+    const values = name === 'listProjectBranchBuckets' ? buckets.map(({ name }) => ({ ...bucket, name })) :
+      domains.map(({ domain, functionSlug }) => ({ ...customDomain, domain, entity_id: functionSlug }));
+    const expected = name === 'listProjectBranchBuckets' ? { buckets: values } : { custom_domains: values };
+    const f = brokerFixture(name, args, name === 'listProjectBranchBuckets' ? expected :
+      (url, init, n) => response(n === 1 ? { custom_domains: values.slice(0, 10), pagination: { next: 'next' } } :
+        { custom_domains: values.slice(10), pagination: {} }), {}, config);
+    const result = await f.call();
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.value, expected);
+    assert.equal(f.provider.requests.length, name === 'listProjectBranchBuckets' ? 1 : 2);
+    safeEnvelope(f, result);
+  }
+});
+
 test('common operation-map validator confirms incomplete status for all unknown entitlements', () => {
   const map = JSON.parse(readFileSync(new URL('../operation-map.json', import.meta.url)));
   const result = validateOperationMap(map);
   assert.equal(result.complete, false);
   assert.equal(result.incomplete.length, 194);
-  assert.equal(map.operations.filter(operation => operation.implemented).length, 33);
+  assert.equal(map.operations.filter(operation => operation.implemented).length, 35);
   assert.equal(map.operations.filter(operation => operation.enabled).length, 0);
 });
