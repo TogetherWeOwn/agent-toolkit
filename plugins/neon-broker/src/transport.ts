@@ -17,6 +17,7 @@ export interface MetadataRequestOptions {
 export interface NeonMetadataTransport {
   deleteProjectEndpoint(project: string, endpoint: string, options: MetadataRequestOptions): Promise<unknown>;
   startProjectEndpoint(project: string, endpoint: string, options: MetadataRequestOptions): Promise<unknown>;
+  restartProjectEndpoint(project: string, endpoint: string, options: MetadataRequestOptions): Promise<unknown>;
   suspendProjectEndpoint(project: string, endpoint: string, options: MetadataRequestOptions): Promise<unknown>;
   updateProjectEndpoint(project: string, endpoint: string, name: string, options: MetadataRequestOptions): Promise<unknown>;
   updateProject(project: string, name: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -213,6 +214,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       request(`/projects/${authPathId(project)}/endpoints/${authPathId(endpoint)}`, new URLSearchParams(), options, undefined, false, 200),
     startProjectEndpoint: (project: string, endpoint: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/endpoints/${authPathId(endpoint)}/start`, new URLSearchParams(), options,
+        undefined, false, false, false, true),
+    restartProjectEndpoint: (project: string, endpoint: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/endpoints/${authPathId(endpoint)}/restart`, new URLSearchParams(), options,
         undefined, false, false, false, true),
     suspendProjectEndpoint: (project: string, endpoint: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/endpoints/${authPathId(endpoint)}/suspend`, new URLSearchParams(), options,

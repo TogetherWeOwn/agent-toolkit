@@ -780,6 +780,29 @@ this does not establish atomicity across live branch heads. Database comparison
 may wake compute; native effects, entitlement and independent acceptance remain
 unresolved. No runtime tool is enabled.
 
+## Reserved endpoint-restart acknowledgement delta
+
+`restartProjectEndpoint` binds one copied project/branch/endpoint/revision to a
+dedicated endpoint/restart resource and reserved native exact-plan authority.
+Parent, start, rename, suspend, delete, sibling endpoint and cross-agent grants
+do not authorize it. Mandatory detail preflight requires immutable endpoint/project/
+branch identity before one bodyless POST /restart. The provider immediately suspends
+then starts compute; preflight is not atomic CAS or provider-effect qualification.
+No caller authority, action, configuration, credential or arbitrary URL is accepted.
+Mocks authorize no live disruption, activation or spend; native production and spend
+authority remain prerequisites where applicable.
+
+Only bounded HTTP200 exact identity and unique operation-ID/known-status observations
+produce a closed acknowledgement, not readiness or successful complete-chain evidence.
+Empty operations and individual finished states do not establish a successful restart,
+connection fence, session closure or cutover-enforcement verdict. Unused host/settings/
+state and arbitrary action/error fields are never evaluated/emitted. Malformed or lost
+mutation responses get at most one bounded detail observation then remain uncertain,
+including an active endpoint. No automatic mutation retry, success inferred from
+observation or invented provider idempotency header. The common permanent journal must
+survive native restart/replay; durable integration and independent acceptance remain
+unresolved. The separate metadata factory gains no mutation descriptor or fallback.
+
 ## Reserved endpoint-start acknowledgement delta
 
 `startProjectEndpoint` binds one copied project/branch/endpoint/revision to a dedicated

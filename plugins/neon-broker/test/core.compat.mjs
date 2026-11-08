@@ -45,6 +45,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   objectDownloadCases, objectDownloadFixture, objectDownloadScope, binaryResponse,
   endpointDeleteFixture, endpointDeleteArgs, endpointDeleteScope, endpointDeleteReceipt,
   endpointStartFixture, endpointStartArgs, endpointStartScope, endpointStartReceipt,
+  endpointRestartFixture, endpointRestartArgs, endpointRestartScope, endpointRestartReceipt,
   endpointSuspendFixture, endpointSuspendArgs, endpointSuspendScope, endpointSuspendReceipt,
   endpointUpdateFixture, endpointUpdateArgs, endpointUpdateScope, endpointUpdateReceipt,
   projectUpdateFixture, projectUpdateArgs, projectUpdateScope, projectUpdateReceipt,
@@ -365,6 +366,132 @@ test('endpoint start: maximum copied target and bounded operation observations f
   const operations = Array.from({ length: 30 }, (_, n) => ({ id: `00000000-0000-0000-0000-${n.toString(16).padStart(12, '0')}`,
     project_id: config.projectId, branch_id: config.branchId, endpoint_id: config.endpointId, status: 'running' }));
   const f = startBroker({ endpoint: { id: config.endpointId, project_id: config.projectId, branch_id: config.branchId }, operations }, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { id: config.endpointId, acknowledged: true, operations: operations.map(({ id, status }) => ({ id, status })) });
+  safeEnvelope(f, result);
+});
+
+function restartBroker(value = endpointRestartReceipt, overrides = {}, config = endpointRestartScope) {
+  const provider = endpointRestartFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId, endpoint_id: config.endpointId };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('restartProjectEndpoint').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.restartProjectEndpoint', args, context, key);
+  } };
+}
+
+test('endpoint restart: reserved authority and exact agent AND restart grant precede credentials and transport', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = restartBroker(undefined, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  for (const resource of ['neon/projects/project-a', 'neon/projects/project-a/endpoints/ep-a',
+    'neon/projects/project-a/branches/br-a/endpoints/ep-a/rename', 'neon/projects/project-a/branches/br-a/endpoints/ep-a/suspend', 'neon/projects/project-a/branches/br-a/endpoints/ep-a/delete', 'neon/projects/project-a/branches/br-a/endpoints/ep-a/start', 'neon/projects/project-a/branches/br-b/endpoints/ep-a/restart',
+    'neon/projects/project-a/branches/br-a/endpoints/ep-b/restart']) {
+    const f = restartBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = restartBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = restartBroker({ ...endpointRestartReceipt, endpoint: { ...endpointRestartReceipt.endpoint, host: credentialCanary, settings: derivedCanary } });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { id: 'ep-a', acknowledged: true, operations: endpointRestartReceipt.operations.map(({ id, status }) => ({ id, status })) });
+  assert.equal(f.common.calls.consumed, 1);
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('endpoint restart: native authorization rejects wrong target, stale or unconsumable evidence', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = restartBroker();
+    const base = f.common.authority;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { return false; } };
+    const result = await f.common.broker().call('neon.restartProjectEndpoint', endpointRestartArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('endpoint restart: identity/resource TOCTOU and caller configuration or authority refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = restartBroker(undefined, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = restartBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.restartProjectEndpoint', endpointRestartArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { disabled: true }, { action: 'suspend' }, { settings: {} }, { branch_id: 'br-b' }]) {
+    const g = restartBroker();
+    assert.equal((await g.common.broker().call('neon.restartProjectEndpoint', { ...endpointRestartArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('endpoint restart: permanent journal blocks complete and uncertain replay after restart', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = restartBroker((url, init) => {
+      if (init.method === 'POST') {
+        if (ambiguous) throw Error(credentialCanary);
+        return response(endpointRestartReceipt);
+      }
+      return response({ endpoint: endpointRestartReceipt.endpoint });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'POST').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('endpoint restart: malformed/reflected observations retain uncertainty and omit unused secret fields', async () => {
+  for (const raw of [{ ...endpointRestartReceipt, operations: [{ ...endpointRestartReceipt.operations[0], status: credentialCanary }] },
+    { ...endpointRestartReceipt, endpoint: { ...endpointRestartReceipt.endpoint, branch_id: 'br-b' } }]) {
+    const f = restartBroker(raw);
+    const result = await f.call();
+    assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, 'uncertain');
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'POST').length, 1);
+    safeEnvelope(f, result);
+  }
+  const f = restartBroker({ ...endpointRestartReceipt, password: credentialCanary,
+    operations: endpointRestartReceipt.operations.map(op => ({ ...op, error: credentialCanary, action: derivedCanary })) });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
+test('endpoint restart: maximum copied target and bounded operation observations fit common budgets', async () => {
+  const config = { projectId: 'p'.repeat(60), branchId: `br-${'b'.repeat(57)}`, endpointId: `ep-${'e'.repeat(57)}`, revision: 'r'.repeat(80) };
+  const operations = Array.from({ length: 30 }, (_, n) => ({ id: `00000000-0000-0000-0000-${n.toString(16).padStart(12, '0')}`,
+    project_id: config.projectId, branch_id: config.branchId, endpoint_id: config.endpointId, status: 'running' }));
+  const f = restartBroker({ endpoint: { id: config.endpointId, project_id: config.projectId, branch_id: config.branchId }, operations }, {}, config);
   const result = await f.call();
   assert.equal(result.ok, true);
   assert.deepEqual(result.value, { id: config.endpointId, acknowledged: true, operations: operations.map(({ id, status }) => ({ id, status })) });

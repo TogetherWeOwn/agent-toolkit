@@ -2789,20 +2789,23 @@
       "id": "restartProjectEndpoint",
       "apiArea": "endpoint",
       "tool": "neon.restartProjectEndpoint",
-      "scope": "project_id/endpoint_id",
+      "scope": "project_id/branch_id/endpoint_id/restart",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-restart-request"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/endpoint-restart.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Mocked source only; reserved native exact-target/plan authority and dedicated restart grant required. Exact endpoint/project/branch detail preflight then one bodyless POST; HTTP200 closed acknowledgement and operation observations only, not readiness, successful completion of the complete operation chain, fencing or session closure. Provider immediately suspends then starts compute. Ambiguity remains uncertain after one observation including active state, never retried; permanent common journal blocks restart/replay. Native host/policy/custody, durable recovery, entitlement/effects, applicable production/spend authority and independent reviews unresolved. No live restart, cutover enforcement or enablement."
     },
     {
       "id": "getConsumptionHistoryPerProject",
