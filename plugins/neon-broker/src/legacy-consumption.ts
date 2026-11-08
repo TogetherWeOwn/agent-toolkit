@@ -18,6 +18,15 @@ const hour = { parse(raw: unknown): string {
   check(Number.isFinite(Date.parse(value)) && new Date(value).toISOString() === value.replace("Z", ".000Z"));
   return value;
 } };
+const timestamp = { parse(raw: unknown): number {
+  const value = text(29, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/).parse(raw);
+  const local = value.replace(/(?:Z|[+-]\d{2}:\d{2})$/, "Z");
+  const localEpoch = Date.parse(local);
+  const epoch = Date.parse(value);
+  check(Number.isFinite(localEpoch) && Number.isFinite(epoch) &&
+    new Date(localEpoch).toISOString().slice(0, 19) === local.slice(0, 19));
+  return epoch;
+} };
 const uuid = text(36, /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/);
 const paginationSchema = closed({ cursor: text(256, /^[\x20-\x7e]+$/) });
 const argumentsSchema = closed({ org_id: pathId, project_id: pathId, from: hour, to: hour });
@@ -58,16 +67,16 @@ export function createNeonLegacyConsumptionOperations(scope: NeonLegacyConsumpti
         const periodId = uuid.parse(field(period, "period_id"));
         check(!periods.has(periodId));
         periods.add(periodId);
-        const start = hour.parse(field(period, "period_start"));
+        const start = timestamp.parse(field(period, "period_start"));
         const endRaw = optional(period, "period_end");
-        const end = endRaw === undefined ? undefined : hour.parse(endRaw);
+        const end = endRaw === undefined ? undefined : timestamp.parse(endRaw);
         check(end === undefined || start < end);
         return rows(field(period, "consumption"), 24).map(frame => {
           identity(frame);
           const frameStart = hour.parse(field(frame, "timeframe_start"));
           const frameEnd = hour.parse(field(frame, "timeframe_end"));
           check(++count <= 24 && frameStart >= previousEnd && frameEnd <= config.to &&
-            Date.parse(frameEnd) - Date.parse(frameStart) === 3_600_000 && frameStart >= start && (end === undefined || frameEnd <= end));
+            Date.parse(frameEnd) - Date.parse(frameStart) === 3_600_000 && Date.parse(frameStart) >= start && (end === undefined || Date.parse(frameEnd) <= end));
           previousEnd = frameEnd;
           return { timeframe_start: frameStart, timeframe_end: frameEnd,
             compute_time_seconds: integer(0, Number.MAX_SAFE_INTEGER).parse(field(frame, "compute_time_seconds")) };

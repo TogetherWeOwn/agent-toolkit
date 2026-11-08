@@ -22,8 +22,10 @@ omitted. Absent history remains absent rather than fabricated zero usage.
 Ten-row cursor pages, a three-page ceiling, 30 unique periods and 24 total hourly
 frames bound the response. Foreign/duplicate projects, contradictory ancestry,
 nested pagination, duplicate periods, unsafe quantities and unordered, overlapping
-or out-of-window frames refuse without partial output. Canonical UTC-hour period
-boundaries are a conservative subset. Legacy-plan availability and provider effects
+or out-of-window frames refuse without partial output. Billing-period boundaries
+accept validated date-times with explicit UTC offsets and millisecond precision;
+containment uses epochs without rounding. Finer precision refuses rather than
+silently truncating. Legacy-plan availability and provider effects
 remain unqualified; 403/404/406 refuse without V2 or unfiltered fallback. The
 public non-waking description is not native qualification. No plan upgrade,
 mutation, spend enforcement or runtime authority is supplied.
