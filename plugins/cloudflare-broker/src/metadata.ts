@@ -20,6 +20,8 @@ const deploymentPage = closed({ scriptName, page: integer(1, 1000), perPage: int
 const versionId = databaseId;
 const workerVersion = closed({ scriptName, versionId });
 const versionPage = closed({ scriptName, page: integer(1, 1000), perPage: integer(1, 100) });
+const kvNamespace = closed({ namespaceId: resourceId });
+const queue = closed({ queueId: resourceId });
 const maxResponseBytes = 131072;
 const maxOutputBytes = 32768;
 const maxRows = 100;
@@ -31,6 +33,8 @@ export interface MetadataScope {
   hyperdriveIds: readonly string[];
   databaseIds?: readonly string[];
   defaultBucketNames?: readonly string[];
+  kvNamespaceIds?: readonly string[];
+  queueIds?: readonly string[];
   workerDeployments?: readonly { scriptName: string; deploymentIds: readonly string[] }[];
   workerVersions?: readonly { scriptName: string; versionIds: readonly string[] }[];
 }
@@ -97,6 +101,11 @@ export function metadataDescriptors(scope: MetadataScope) {
   requireThat(Array.isArray(databaseIds) && databaseIds.length <= 100 && Array.isArray(defaultBucketNames) && defaultBucketNames.length <= 100, "cap");
   const databases = new Set(databaseIds.map(value => databaseId.parse(value)));
   const buckets = new Set(defaultBucketNames.map(value => bucketName.parse(value)));
+  const kvNamespaceIds = scope.kvNamespaceIds ?? [];
+  const queueIds = scope.queueIds ?? [];
+  requireThat(Array.isArray(kvNamespaceIds) && kvNamespaceIds.length <= maxRows && Array.isArray(queueIds) && queueIds.length <= maxRows, "cap");
+  const namespaces = new Set(kvNamespaceIds.map(value => resourceId.parse(value)));
+  const queues = new Set(queueIds.map(value => resourceId.parse(value)));
   const workerDeployments = scope.workerDeployments ?? [];
   requireThat(Array.isArray(workerDeployments) && workerDeployments.length <= maxRows, "cap");
   const deployments = new Map<string, Set<string>>();
@@ -326,7 +335,73 @@ export function metadataDescriptors(scope: MetadataScope) {
       return bounded({ id: providerText(row.id, versionId) });
     },
   });
-  return Object.freeze({ workersList, secretNames, hyperdriveList, hyperdriveGet, d1List, d1Get, r2List, r2Get, deploymentsList, deploymentGet, versionsList, versionGet });
+  function namespaceScope(id: string) { requireThat(namespaces.has(id), "scope"); }
+  function queueScope(id: string) { requireThat(queues.has(id), "scope"); }
+  function namespaceMetadata(row: Row): { id: string } {
+    const id = providerText(row.id, resourceId);
+    namespaceScope(id);
+    requireThat(row.account_id === undefined || row.account_id === account, "scope");
+    return { id };
+  }
+  function queueMetadata(row: Row): { id: string } {
+    const id = providerText(row.queue_id, resourceId);
+    queueScope(id);
+    requireThat(row.account_id === undefined || row.account_id === account, "scope");
+    return { id };
+  }
+  const kvNamespacesList: MetadataDescriptor<ReturnType<typeof page.parse>, PartialList<{ id: string }>> = Object.freeze({
+    name: "cloudflare.kv.namespaces.list", version: "1", tier: "read", providerOperationId: "workers-kv-namespace-list-namespaces",
+    prepare(raw: unknown) {
+      const args = page.parse(raw);
+      return prepared(args, "kv:namespaces", `${root}/storage/kv/namespaces?page=${args.page}&per_page=${args.perPage}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof page.parse>>) {
+      const args = page.parse(input.arguments);
+      const result = rows(envelope(raw).result);
+      requireThat(result.length <= args.perPage, "cap");
+      const items = result.filter(row => typeof row.id === "string" && namespaces.has(row.id)).map(namespaceMetadata);
+      return bounded({ items, complete: false as const });
+    },
+  });
+  const kvNamespaceGet: MetadataDescriptor<ReturnType<typeof kvNamespace.parse>, { id: string }> = Object.freeze({
+    name: "cloudflare.kv.namespaces.get", version: "1", tier: "read", providerOperationId: "workers-kv-namespace-get-a-namespace",
+    prepare(raw: unknown) {
+      const args = kvNamespace.parse(raw);
+      namespaceScope(args.namespaceId);
+      return prepared(args, `kv:namespace:${args.namespaceId}`, `${root}/storage/kv/namespaces/${args.namespaceId}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof kvNamespace.parse>>) {
+      const args = kvNamespace.parse(input.arguments);
+      namespaceScope(args.namespaceId);
+      const row = object(envelope(raw).result);
+      requireThat(row.id === args.namespaceId, "scope");
+      return bounded(namespaceMetadata(row));
+    },
+  });
+  const queuesList: MetadataDescriptor<ReturnType<typeof empty.parse>, PartialList<{ id: string }>> = Object.freeze({
+    name: "cloudflare.queues.list", version: "1", tier: "read", providerOperationId: "queues-list",
+    prepare(raw: unknown) { return prepared(empty.parse(raw), "queues", `${root}/queues`); },
+    project(raw: string) {
+      const items = rows(envelope(raw).result).filter(row => typeof row.queue_id === "string" && queues.has(row.queue_id)).map(queueMetadata);
+      return bounded({ items, complete: false as const });
+    },
+  });
+  const queueGet: MetadataDescriptor<ReturnType<typeof queue.parse>, { id: string }> = Object.freeze({
+    name: "cloudflare.queues.get", version: "1", tier: "read", providerOperationId: "queues-get",
+    prepare(raw: unknown) {
+      const args = queue.parse(raw);
+      queueScope(args.queueId);
+      return prepared(args, `queue:${args.queueId}`, `${root}/queues/${args.queueId}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof queue.parse>>) {
+      const args = queue.parse(input.arguments);
+      queueScope(args.queueId);
+      const row = object(envelope(raw).result);
+      requireThat(row.queue_id === args.queueId, "scope");
+      return bounded(queueMetadata(row));
+    },
+  });
+  return Object.freeze({ workersList, secretNames, hyperdriveList, hyperdriveGet, d1List, d1Get, r2List, r2Get, deploymentsList, deploymentGet, versionsList, versionGet, kvNamespacesList, kvNamespaceGet, queuesList, queueGet });
 }
 
 export interface ZoneMetadataScope {

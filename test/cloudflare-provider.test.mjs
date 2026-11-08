@@ -14,7 +14,15 @@ const other = "c".repeat(32);
 const db = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
 const otherDb = "cccccccc-cccc-cccc-cccc-cccccccccccc";
 const scope = { accountId: account, revision: "policy-1", scriptNames: ["safe-worker"], hyperdriveIds: [own], databaseIds: [db], defaultBucketNames: ["safe-bucket"], workerDeployments: [{ scriptName: "safe-worker", deploymentIds: [db] }], workerVersions: [{ scriptName: "safe-worker", versionIds: [db] }] };
+scope.kvNamespaceIds = [own];
+scope.queueIds = [other];
 const descriptors = metadataDescriptors(scope);
+const kvQueueCases = [
+  ["kvNamespacesList", { page: 2, perPage: 10 }, "storage/kv/namespaces?page=2&per_page=10", "kv:namespaces"],
+  ["kvNamespaceGet", { namespaceId: own }, `storage/kv/namespaces/${own}`, `kv:namespace:${own}`],
+  ["queuesList", {}, "queues", "queues"],
+  ["queueGet", { queueId: other }, `queues/${other}`, `queue:${other}`],
+];
 const zone = "d".repeat(32);
 const zoneScope = { accountId: account, zoneId: zone, revision: "policy-1", dnsRecordIds: [own] };
 const zoneDescriptors = zoneMetadataDescriptors(zoneScope);
@@ -571,6 +579,94 @@ test("Cloudflare destructive allowlists are separate from reads, default empty a
   refuses(() => deletionPlanDescriptors({ ...deletionScope, zoneId: undefined }), "schema");
 });
 
+test("Cloudflare KV and Queue metadata bind separate resources and exact request shapes", () => {
+  for (const [name, args, path, resource] of kvQueueCases) {
+    const descriptor = descriptors[name];
+    const input = descriptor.prepare(args);
+    assert.equal(input.request.path, `/accounts/${account}/${path}`);
+    assert.deepEqual(input.resource, { id: `cloudflare:account:${account}:${resource}`, revision: "policy-1" });
+    assert.deepEqual(input.request, { method: "GET", path: input.request.path, maxResponseBytes: 131072, timeoutMs: 10000, maxRequests: 1, redirects: "deny" });
+    for (const value of [descriptor, input, input.arguments, input.resource, input.request]) assert.ok(Object.isFrozen(value));
+    for (const key of ["accountId", "agentId", "approval", "url", "headers", "credential", "key", "value", "messages", "consumer", "jurisdiction", "order", "direction"]) refuses(() => descriptor.prepare({ ...args, [key]: "forged" }), "schema");
+  }
+  refuses(() => descriptors.kvNamespaceGet.prepare({ namespaceId: other }), "scope");
+  refuses(() => descriptors.queueGet.prepare({ queueId: own }), "scope");
+  refuses(() => descriptors.queuesList.prepare({ page: 1 }), "schema");
+  for (const id of [own.toUpperCase(), "../resource", `${own}?x=1`, "a".repeat(33), `${own}\n`]) {
+    refuses(() => descriptors.kvNamespaceGet.prepare({ namespaceId: id }), "schema");
+    refuses(() => descriptors.queueGet.prepare({ queueId: id }), "schema");
+  }
+});
+
+test("Cloudflare KV and Queue projections omit contents and reject foreign resource identities", () => {
+  const canary = "private-resource-content";
+  const namespace = { id: own, title: canary, keys: [canary], value: canary, jurisdiction: "eu", mode: canary };
+  const queue = { queue_id: other, queue_name: canary, consumers: [canary], producers: [canary], settings: { secret: canary }, messages: [canary] };
+  const outputs = [
+    descriptors.kvNamespacesList.project(success([namespace, { ...namespace, id: other }]), descriptors.kvNamespacesList.prepare({ page: 1, perPage: 10 })),
+    descriptors.kvNamespaceGet.project(success(namespace), descriptors.kvNamespaceGet.prepare({ namespaceId: own })),
+    descriptors.queuesList.project(success([queue, { ...queue, queue_id: own }]), descriptors.queuesList.prepare({})),
+    descriptors.queueGet.project(success(queue), descriptors.queueGet.prepare({ queueId: other })),
+  ];
+  assert.deepEqual(outputs, [{ items: [{ id: own }], complete: false }, { id: own }, { items: [{ id: other }], complete: false }, { id: other }]);
+  assert.ok(!JSON.stringify(outputs).includes(canary));
+  const namespaceInput = descriptors.kvNamespaceGet.prepare({ namespaceId: own });
+  const queueInput = descriptors.queueGet.prepare({ queueId: other });
+  refuses(() => descriptors.kvNamespaceGet.project(success({ ...namespace, id: other }), namespaceInput), "scope");
+  refuses(() => descriptors.queueGet.project(success({ ...queue, queue_id: own }), queueInput), "scope");
+  refuses(() => descriptors.queueGet.project(success({ id: other }), queueInput), "scope");
+  refuses(() => descriptors.kvNamespaceGet.project(success({ ...namespace, account_id: other }), namespaceInput), "scope");
+  refuses(() => descriptors.queueGet.project(success({ ...queue, account_id: other }), queueInput), "scope");
+  refuses(() => descriptors.kvNamespacesList.project(success([{ ...namespace, account_id: other }]), descriptors.kvNamespacesList.prepare({ page: 1, perPage: 10 })), "scope");
+  refuses(() => descriptors.queuesList.project(success([{ ...queue, account_id: other }]), descriptors.queuesList.prepare({})), "scope");
+});
+
+test("Cloudflare KV and Queue allowlists are copied, independently empty and bounded", () => {
+  const input = { ...scope, kvNamespaceIds: [own], queueIds: [other] };
+  const snapshot = metadataDescriptors(input);
+  input.kvNamespaceIds[0] = other;
+  input.queueIds[0] = own;
+  snapshot.kvNamespaceGet.prepare({ namespaceId: own });
+  snapshot.queueGet.prepare({ queueId: other });
+  refuses(() => snapshot.kvNamespaceGet.prepare({ namespaceId: other }), "scope");
+  refuses(() => snapshot.queueGet.prepare({ queueId: own }), "scope");
+  for (const change of [{ kvNamespaceIds: [] }, { kvNamespaceIds: undefined }]) {
+    const empty = metadataDescriptors({ ...scope, ...change });
+    refuses(() => empty.kvNamespaceGet.prepare({ namespaceId: own }), "scope");
+    assert.deepEqual(empty.kvNamespacesList.project(success([{ id: own }]), empty.kvNamespacesList.prepare({ page: 1, perPage: 10 })), { items: [], complete: false });
+    empty.queueGet.prepare({ queueId: other });
+  }
+  for (const change of [{ queueIds: [] }, { queueIds: undefined }]) {
+    const empty = metadataDescriptors({ ...scope, ...change });
+    refuses(() => empty.queueGet.prepare({ queueId: other }), "scope");
+    assert.deepEqual(empty.queuesList.project(success([{ queue_id: other }]), empty.queuesList.prepare({})), { items: [], complete: false });
+    empty.kvNamespaceGet.prepare({ namespaceId: own });
+  }
+  for (const field of ["kvNamespaceIds", "queueIds"]) {
+    refuses(() => metadataDescriptors({ ...scope, [field]: Array(101).fill(own) }), "cap");
+    refuses(() => metadataDescriptors({ ...scope, [field]: ["invalid"] }), "schema");
+    refuses(() => metadataDescriptors({ ...scope, [field]: {} }), "cap");
+  }
+});
+
+test("Cloudflare KV and Queue metadata refuse invalid envelopes and oversized pages", () => {
+  for (const [name, args] of kvQueueCases) {
+    const descriptor = descriptors[name];
+    const input = descriptor.prepare(args);
+    refuses(() => descriptor.project("x".repeat(131073), input), "cap");
+    for (const raw of ["null", "not-json", JSON.stringify({ success: false, errors: [{ message: "private-value" }], result: {} }), JSON.stringify({ success: true, result: {} })]) refuses(() => descriptor.project(raw, input), "upstream");
+  }
+  for (const page of [0, 1001, 1.5, "1"]) refuses(() => descriptors.kvNamespacesList.prepare({ page, perPage: 10 }), "schema");
+  for (const perPage of [0, 101, 1.5, "10"]) refuses(() => descriptors.kvNamespacesList.prepare({ page: 1, perPage }), "schema");
+  refuses(() => descriptors.kvNamespacesList.project(success([{ id: own }, { id: other }]), descriptors.kvNamespacesList.prepare({ page: 1, perPage: 1 })), "cap");
+  for (const [name, args] of [["kvNamespacesList", { page: 1, perPage: 100 }], ["queuesList", {}]]) {
+    const input = descriptors[name].prepare(args);
+    refuses(() => descriptors[name].project(success(Array(101).fill({ id: own, queue_id: other })), input), "cap");
+    refuses(() => descriptors[name].project(success({}), input), "cap");
+    refuses(() => descriptors[name].project(success([null]), input), "upstream");
+  }
+});
+
 test("Cloudflare full schema inventory is pinned, explicit about holes, and consistent with descriptors", async () => {
   const bytes = await readFile(new URL("../plugins/cloudflare-broker/coverage/operations.jsonl", import.meta.url));
   const manifest = JSON.parse(await readFile(new URL("../plugins/cloudflare-broker/coverage/source.json", import.meta.url)));
@@ -606,9 +702,9 @@ test("Cloudflare full schema inventory is pinned, explicit about holes, and cons
       }
     }
   }
-  assert.equal(operations.filter(row => row.typedTool !== null).length, 24);
+  assert.equal(operations.filter(row => row.typedTool !== null).length, 28);
   assert.equal(operations.filter(row => row.tier === "reserved").length, 5);
-  assert.equal(operations.filter(row => row.tier === "read").length, 19);
+  assert.equal(operations.filter(row => row.tier === "read").length, 23);
   assert.equal(manifest.counts.descriptors, Object.keys(allDescriptors).length);
   assert.equal(manifest.credentialScope.status, "operation-entitlements-unresolved");
   assert.equal(manifest.complete, false);
