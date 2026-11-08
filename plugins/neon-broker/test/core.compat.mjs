@@ -43,6 +43,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   schemaComparisonCases, schemaComparisonFixture, schemaComparisonScope,
   oauthProviderCases, oauthProviderFixture, oauthProviderScope, oauthProvider,
   objectDownloadCases, objectDownloadFixture, objectDownloadScope, binaryResponse,
+  sourceNames, snapshotDeleteFixture, snapshotDeleteArgs, snapshotDeleteScope, snapshotDeleteReceipt,
   fixture, scope, branch, operation, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
@@ -110,6 +111,125 @@ function safeEnvelope(f, result) {
     assert(!serialized.includes(secret), `secret in output/audit/journal: ${secret}`);
   }
 }
+
+function deletionBroker(value = snapshotDeleteReceipt, overrides = {}, config = snapshotDeleteScope) {
+  const provider = snapshotDeleteFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId, snapshot_id: config.snapshotId };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('deleteSnapshot').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.deleteSnapshot', args, context, key);
+  } };
+}
+
+test('snapshot deletion: reserved native authority and exact deletion resource precede credentials and transport', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = deletionBroker(undefined, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  for (const resource of ['neon/projects/project-a', 'neon/projects/project-a/snapshots',
+    'neon/projects/project-a/branches/br-a/snapshots/snap-a', 'neon/projects/project-a/branches/br-b/snapshots/snap-a/delete',
+    'neon/projects/project-a/branches/br-a/snapshots/snap-b/delete']) {
+    const f = deletionBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = deletionBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { accepted: true, operations: snapshotDeleteReceipt.operations.map(({ id, status }) => ({ id, status })) });
+  assert.equal(f.common.calls.consumed, 1);
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('snapshot deletion: native target binds plan/revision and rejects stale, wrong-target or unconsumable evidence', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = deletionBroker();
+    const base = f.common.authority;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { return false; } };
+    const broker = f.common.broker();
+    const result = await broker.call('neon.deleteSnapshot', snapshotDeleteArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('snapshot deletion: identity/resource TOCTOU and caller authority refuse without mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } },
+    { host: { async authenticate() { return null; } } }]) {
+    const f = deletionBroker(undefined, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = deletionBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  const broker = f.common.broker();
+  assert.equal((await broker.call('neon.deleteSnapshot', snapshotDeleteArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  const invalid = deletionBroker();
+  assert.equal((await invalid.common.broker().call('neon.deleteSnapshot', { ...snapshotDeleteArgs, approved: true }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+  assert.equal(invalid.common.calls.secret, 0);
+});
+
+test('snapshot deletion: permanent journal blocks successful and uncertain replay across restarted runs', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = deletionBroker((url, init, n) => {
+      if (init.method === 'DELETE') {
+        if (ambiguous) throw Error(credentialCanary);
+        return response(snapshotDeleteReceipt, { status: 202 });
+      }
+      return response({ snapshots: n === 1 ? [snapshot] : [] });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('snapshot deletion: malformed acknowledgement or reflected secret keeps an uncertain tombstone', async () => {
+  for (const raw of [{ operations: [{ ...snapshotDeleteReceipt.operations[0], status: credentialCanary }] },
+    { operations: [{ ...snapshotDeleteReceipt.operations[0], project_id: 'other' }] }]) {
+    const f = deletionBroker(raw);
+    const result = await f.call();
+    assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, 'uncertain');
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 1);
+    safeEnvelope(f, result);
+  }
+  const f = deletionBroker({ ...snapshotDeleteReceipt, secret: credentialCanary,
+    operations: snapshotDeleteReceipt.operations.map(op => ({ ...op, error: credentialCanary, action: derivedCanary })) });
+  assert.equal((await f.call()).ok, true);
+});
+
+test('snapshot deletion: maximum exact binding fits common budgets', async () => {
+  const config = { projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), snapshotId: 's'.repeat(60), revision: 'r'.repeat(80) };
+  const f = deletionBroker({ operations: [] }, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { accepted: true, operations: [] });
+  safeEnvelope(f, result);
+});
 
 test('object byte observation: exact download grant, closed count and stream contents never escape', async () => {
   const [name, args] = objectDownloadCases[0];
@@ -1949,6 +2069,6 @@ test('common operation-map validator confirms incomplete status for all unknown 
   const result = validateOperationMap(map);
   assert.equal(result.complete, false);
   assert.equal(result.incomplete.length, 194);
-  assert.deepEqual(map.operations.filter(operation => operation.implemented).map(operation => operation.id).sort(), cases.map(([name]) => name).sort());
+  assert.deepEqual(map.operations.filter(operation => operation.implemented).map(operation => operation.id).sort(), sourceNames.toSorted());
   assert.equal(map.operations.filter(operation => operation.enabled).length, 0);
 });
