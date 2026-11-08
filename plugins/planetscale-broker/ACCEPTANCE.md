@@ -111,6 +111,20 @@ coverage increase. Hashes do not authenticate current ownership, request
 ID/number mapping, independent destination binding, freshness, remote
 preconditions, rollback or closure. Exact-head Actions evidence remains required.
 
+Three more pure bindings retain individual change cancellation, query-report
+deletion and schema-recommendation dismissal previews. Resource namespaces use
+immutable change/report/recommendation IDs; full hashes also bind parent and
+target identity, revision/classification, operation and fixed request. Recommendation
+paths address a sequence number, not that immutable ID; both remain bound without
+claiming the mapping is current. The 25 synthetic contracts in
+`test/core-record-mutation-preparation.test.mjs` cover deep snapshots, empty
+arguments, host/caller injection and accessor refusal, hash sensitivity, documented
+type pairs, local state restrictions, ID/number separation and cross-kind refusal.
+RM obligations remain unconsumed. Destructive report deletion stays reserved despite
+its documented read entitlement. No executor, provider precondition, approval
+consumption, registry, source-adapter coverage or runtime integration is added.
+Exact-head Actions must execute these contracts before any passing result is claimed.
+
 The actual PR merge conflict required consuming current main, including the
 already-merged provider core and Neon package. The lock resolution retains both
 Neon and PlanetScale workspace records; no external version, integrity, install

@@ -64,9 +64,10 @@ incomplete. Negative contracts reject missing/duplicate inventory, unknown field
 claim inflation and destructive-tier downgrades. Execution evidence comes only
 from exact-head Actions; this source declaration is not a passing result.
 
-`src/core-preparation.ts` supplies seven pure `Prepared` seams for branch,
-backup and backup-policy deletion, deploy-request close/cancel and branch/keyspace
-configuration-cancellation previews. Trusted host-owned closed snapshots bind
+`src/core-preparation.ts` supplies ten pure `Prepared` seams for branch,
+backup and backup-policy deletion, deploy-request close/cancel, branch/keyspace
+configuration cancellation, individual change cancellation, query-report deletion
+and schema-recommendation dismissal previews. Trusted host-owned closed snapshots bind
 `planetscale/branch/<immutable-id>`, `planetscale/backup/<immutable-id>` or
 `planetscale/backup-policy/<immutable-id>` and revision. Parent IDs/names,
 production/protection classifications, the fixed request and all obligations
@@ -106,6 +107,22 @@ Both keep RM obligations unconsumed; independent conjunctive effect classificati
 and current identity/state checks remain prerequisites. These seams neither
 prove remote cancellability, unchanged settings or rollback nor register an
 executor, consume approval or increase adapter coverage.
+
+Individual change cancellation, query-report deletion and recommendation dismissal
+use distinct `planetscale/change-request/<immutable-id>`,
+`planetscale/query-patterns-report/<immutable-id>` and
+`planetscale/schema-recommendation/<immutable-id>` resources. The complete preview
+hash retains all parent/target identities, revision, classification and fixed
+request; recommendation sequence numbers do not replace immutable IDs. Change
+cancellation requires matching documented types, draft/pending and canDelete=true;
+reports require completed/failed; recommendations require open. These local
+restrictions never prove remote preconditions, freshness or native authority.
+`test/core-record-mutation-preparation.test.mjs` covers retained RM obligations,
+deep snapshots, caller/host refusal, hash and cross-kind separation, and independent
+recommendation ID/number binding. Report deletion remains reserved despite the
+provider's read entitlement. No executor, approval consumption, runtime registration
+or adapter-coverage increase is supplied; current parent/target mapping and
+independent conjunctive effect classification remain prerequisites.
 
 All 291 entries remain `incomplete`, `implemented=false`, `reviewed=false`,
 `enabled=false`, and entitlement `unknown`. Existing offline read/preview test

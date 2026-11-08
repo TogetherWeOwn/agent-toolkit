@@ -5,7 +5,11 @@ import { prepareDeleteBranch, type MutationPlan } from "./mutation-plans.js";
 import { prepareCloseDeployRequest, prepareCancelDeployRequest, type DeploymentStopPlan } from "./deployment-stop-plans.js";
 import { prepareCancelBranchConfigChange, prepareCancelKeyspaceConfigChange, type ConfigurationCancelPlan } from "./configuration-cancel-plans.js";
 
-function preparedPreview(id: string, preview: MutationPlan | BackupDeletionPlan | DeploymentStopPlan | ConfigurationCancelPlan): Prepared {
+import { prepareCancelChangeRequest, type ChangeCancelPlan } from "./change-cancel-plan.js";
+import { prepareDeleteQueryPatternsReport, type QueryReportDeletionPlan } from "./query-report-deletion-plan.js";
+import { prepareDismissSchemaRecommendation, type RecommendationDismissalPlan } from "./recommendation-dismissal-plan.js";
+
+function preparedPreview(id: string, preview: MutationPlan | BackupDeletionPlan | DeploymentStopPlan | ConfigurationCancelPlan | ChangeCancelPlan | QueryReportDeletionPlan | RecommendationDismissalPlan): Prepared {
   const prepared = Object.freeze({
     resource: Object.freeze({ id, revision: preview.target.revision }),
     arguments: preview.arguments,
@@ -64,5 +68,26 @@ export function bindCancelKeyspaceConfigChangePreparation(rawTarget: unknown): (
   const target = prepareCancelKeyspaceConfigChange(rawTarget, {}).target;
   return (raw: unknown): Prepared => preparedPreview(
     `planetscale/keyspace-config-change/${target.changeId}`, prepareCancelKeyspaceConfigChange(target, raw),
+  );
+}
+
+export function bindCancelChangeRequestPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = prepareCancelChangeRequest(rawTarget, {}).target;
+  return (raw: unknown): Prepared => preparedPreview(
+    `planetscale/change-request/${target.changeId}`, prepareCancelChangeRequest(target, raw),
+  );
+}
+
+export function bindDeleteQueryPatternsReportPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = prepareDeleteQueryPatternsReport(rawTarget, {}).target;
+  return (raw: unknown): Prepared => preparedPreview(
+    `planetscale/query-patterns-report/${target.reportId}`, prepareDeleteQueryPatternsReport(target, raw),
+  );
+}
+
+export function bindDismissSchemaRecommendationPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = prepareDismissSchemaRecommendation(rawTarget, {}).target;
+  return (raw: unknown): Prepared => preparedPreview(
+    `planetscale/schema-recommendation/${target.recommendationId}`, prepareDismissSchemaRecommendation(target, raw),
   );
 }
