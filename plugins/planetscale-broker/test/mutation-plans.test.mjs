@@ -16,6 +16,8 @@ const additionalPlans = {
   delete_backup_policy: { group: 'backup-deletion-plans', authorities: ['release-manager', 'owner-security'] },
   close_deploy_request: { group: 'deployment-stop-plans', authorities: ['release-manager'] },
   cancel_deploy_request: { group: 'deployment-stop-plans', authorities: ['release-manager'] },
+  cancel_branch_config_change_request: { group: 'configuration-cancel-plans', authorities: ['release-manager'] },
+  cancel_keyspace_config_change_request: { group: 'configuration-cancel-plans', authorities: ['release-manager'] },
 };
 const fixtures = [
   [prepareDeleteBranch, {}, 'delete_branch', 'DELETE', `${base}?delete_descendants=false`, null, ['release-manager']],

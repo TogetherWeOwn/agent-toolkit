@@ -42,13 +42,38 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-134 adapter rows have a provisional read tier; twenty protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 137
+134 adapter rows have a provisional read tier; twenty-two protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 135
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
 backups/restore, schema/deploy, topology, maintenance and every other official
 area remain in the map even when access or implementation is missing.
+
+## Configuration-cancellation plan subsets
+
+`src/configuration-cancel-plans.ts` adds two pure previews, not API adapters or
+executors. Both accept empty arguments and closed immutable broker snapshots of
+database/branch/change IDs, parent names, revision and production/state flags.
+Branch cancellation supports vtgate only; keyspace cancellation independently
+binds keyspace ID/name and supports mysqld/vttablet only. Parent/keyspace IDs are
+not supplied by the official change-request response and require trusted bindings.
+Both official summaries limit cancellation to draft/pending. Queued, applying and
+terminal states refuse; no force, new/previous option values or rollback path is
+supplied. Each prepares a fixed bodyless DELETE, with no query or caller selectors.
+
+Release Manager obligations and conjunctive security/spend/host effects remain
+unreviewed candidates, not obtained or consumed authority. A cancellation could
+remove a planned security improvement: trusted effect classification must not
+infer safety from the cancel verb. No executor, native precondition, provider
+dry-run or authority mechanism is supplied. Revision/state snapshots cannot
+prove freshness, unchanged settings, successful rollback or closure. Actual use
+requires reviewed native identity/policy/approval binding, fresh parent/keyspace
+identity and state revalidation plus uncertain-outcome recovery.
+
+There are nine separately counted local plan subsets. All remain missing API
+adapters: coverage is 134/291 bounded metadata subsets, 157 missing, zero
+integrated/reviewed/enabled/adopted operations.
 
 ## Deployment-stop plan subsets
 
@@ -73,7 +98,7 @@ current destination identity, fresh state revalidation and uncertain-outcome
 recovery. Cancellation does not prove that deployment never began, that no schema
 changed, or that rollback/closure completed. No network or runtime is supplied.
 
-There are seven separately counted local plan subsets; these operations remain
+Including configuration cancellation, there are nine local plan subsets; these operations remain
 missing API adapters. Adapter coverage is unchanged at 134/291, 157 missing;
 zero integrated, reviewed, enabled or adopted operations.
 
@@ -99,7 +124,7 @@ state, ownership, protection, inventory completeness or safe recovery. Actual us
 requires reviewed native identity/policy/approval binding, fresh target/protection
 revalidation and uncertain-outcome recovery. Nothing is installed or enabled.
 
-Including the deployment-stop plans above, there are seven local plan subsets.
+Including deployment-stop and configuration cancellation, there are nine local plan subsets.
 Adapter coverage stays 134/291,
 with 157 missing adapters including these two. Remaining table/keyspace-table
 metric GETs have no documented success schema and remain missing; no projection

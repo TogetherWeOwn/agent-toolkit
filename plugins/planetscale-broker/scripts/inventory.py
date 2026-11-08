@@ -227,6 +227,8 @@ LOCAL_PLANS = {
     "disable_safe_migrations": "mutation-plans",
     "delete_backup": "backup-deletion-plans", "delete_backup_policy": "backup-deletion-plans",
     "close_deploy_request": "deployment-stop-plans", "cancel_deploy_request": "deployment-stop-plans",
+    "cancel_branch_config_change_request": "configuration-cancel-plans",
+    "cancel_keyspace_config_change_request": "configuration-cancel-plans",
 }
 # Explicit candidates, not a runtime authority registry. Missing classifications
 # stay unresolved; method, prefix or a documented provider scope grants nothing.
@@ -236,6 +238,8 @@ POLICY_CANDIDATES = {
     "delete_backup_policy": (["release-manager", "owner-security"], "backup-policy-removal"),
     "close_deploy_request": (["release-manager"], "close-undeployed-schema-request"),
     "cancel_deploy_request": (["release-manager"], "cancel-queued-schema-deployment"),
+    "cancel_branch_config_change_request": (["release-manager"], "cancel-unapplied-branch-configuration"),
+    "cancel_keyspace_config_change_request": (["release-manager"], "cancel-unapplied-keyspace-configuration"),
     "create_backup": (["release-manager", "owner-money"], "backup-data-copy-and-potential-spend"),
     "disable_safe_migrations": (["release-manager", "owner-security"], "migration-safety-removal"),
     "disable_organization_sso": (["owner-security"], "sso-enforcement-removal"),

@@ -41,6 +41,38 @@ evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
 
+## Configuration-cancellation preview source increment
+
+`src/configuration-cancel-plans.ts` adds two preview-only subsets and 18 synthetic
+contracts. Closed immutable snapshots bind database/branch/change IDs, parent
+names, revision, state and production; keyspace cancellation independently binds
+keyspace ID/name. Branch supports vtgate only and keyspace supports mysqld/vttablet
+only. Official summaries allow draft/pending only; queued/applying/terminal states,
+malformed IDs/flags/revision, accessors, extra fields and all caller selectors
+refuse. Fixed bodyless DELETE paths have no force, config values or rollback path.
+Parent/keyspace IDs require trusted independent binding, absent from the official
+change-request response. No executor, approval consumption or provider dry-run.
+
+Both retain unreviewed RM candidates plus independently classified conjunctive
+security/spend/host effects. Cancelling a planned security improvement is not
+inherently safe. Fresh identities/state, native policy/approval binding and
+uncertain-outcome recovery remain prerequisites; snapshots never prove unchanged
+configuration, rollback or closure. All-plan invariants preserve missing adapter
+status and disabled/unreviewed state. Coverage remains 134/291 bounded metadata
+subsets, 157 missing (15 GETs, 142 mutations); nine plans are separate. Tiers are
+134 provisional read / 22 unreviewed reserved / 135 unresolved; zero integrated,
+reviewed, enabled or adopted. New contracts require exact-head Actions; no local
+suite/build/typecheck/CI mirror ran.
+
+Prior deployment-stop head `880a061e11cc437da0afb3332c88b9a883f24811`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42479850171)
+passed test/lint/typecheck/native-policy/ci-ok, including
+[973/973 PlanetScale tests](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42479850171/job/128729240129),
+root 181/181, helpers 122/122 and GitHub broker 219/219, zero failures/skips.
+All three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42479836248)
+passed. Historical evidence does not verify this new increment. Final
+fresh-context/Devin/native specialist/merge gates remain.
+
 ## Deployment-stop preview source increment
 
 `src/deployment-stop-plans.ts` adds two preview-only subsets and 18 synthetic
