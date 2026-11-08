@@ -64,14 +64,23 @@ incomplete. Negative contracts reject missing/duplicate inventory, unknown field
 claim inflation and destructive-tier downgrades. Execution evidence comes only
 from exact-head Actions; this source declaration is not a passing result.
 
-`src/core-preparation.ts` adds one pure `Prepared` seam for branch deletion. A
-trusted host-owned closed snapshot binds `planetscale/branch/<immutable-id>` and
-revision; names, production/protection flags, fixed request and RM obligation
-remain in the hashed preview. Empty caller arguments cannot replace the target or
-supply authority. No artifact bytes are executed (`artifactDigest=null`). The seam
-has no execute/project hook or registration and is not a complete adapter. Host
-ownership/revision revalidation and provider preconditions are still required;
-a digest snapshot alone does not prove freshness or safe deletion.
+`src/core-preparation.ts` supplies three pure `Prepared` seams for branch,
+backup and backup-policy deletion. Trusted host-owned closed snapshots bind
+`planetscale/branch/<immutable-id>`, `planetscale/backup/<immutable-id>` or
+`planetscale/backup-policy/<immutable-id>` and revision. Parent IDs/names,
+production/protection classifications, the fixed request and all obligations
+remain in the hashed preview. Backup-policy removal retains **both** RM and
+owner-security obligations, including development policies; neither is obtained
+or consumed here. Required policies and protected/required/non-success backups
+refuse at binding time. Empty caller arguments cannot replace the target or
+supply authority. No artifact bytes are executed (`artifactDigest=null`). These
+seams have no execute/project hook or registration and are not complete adapters.
+Host ownership/revision revalidation and provider preconditions are still required;
+a digest snapshot alone does not prove freshness or safe deletion. Distinct
+resource namespaces prevent a backup/policy ID collision, but do not establish
+provider-global ID uniqueness or parent ownership. Core backup contracts live in
+`test/core-backup-preparation.test.mjs`; previews remain separately tested and
+counted as missing adapters.
 
 All 291 entries remain `incomplete`, `implemented=false`, `reviewed=false`,
 `enabled=false`, and entitlement `unknown`. Existing offline read/preview test

@@ -33,10 +33,10 @@ export interface BackupDeletionPlan {
   readonly providerDryRun: "not-performed";
 }
 
-function plan(
-  target: BackupDeletionPlan["target"], operationId: BackupDeletionPlan["operationId"],
+function plan<T extends BackupDeletionPlan["target"]>(
+  target: T, operationId: BackupDeletionPlan["operationId"],
   path: string, effect: BackupDeletionPlan["effect"], authorities: readonly PlanAuthority[],
-): BackupDeletionPlan {
+): BackupDeletionPlan & { readonly target: T } {
   return Object.freeze({
     kind: "validated-local-plan-not-provider-dry-run" as const,
     operationId, tool: `planetscale.${operationId}`, tier: "reserved" as const,
@@ -48,7 +48,7 @@ function plan(
   });
 }
 
-export function prepareDeleteBackup(rawScope: unknown, rawArguments: unknown): BackupDeletionPlan {
+export function prepareDeleteBackup(rawScope: unknown, rawArguments: unknown): BackupDeletionPlan & { readonly target: BackupTarget } {
   const scope = backupTarget.parse(rawScope);
   emptyArguments.parse(rawArguments);
   requireThat(!scope.protected && !scope.required, "scope");
@@ -56,7 +56,7 @@ export function prepareDeleteBackup(rawScope: unknown, rawArguments: unknown): B
     "delete-one-backup", ["release-manager"]);
 }
 
-export function prepareDeleteBackupPolicy(rawScope: unknown, rawArguments: unknown): BackupDeletionPlan {
+export function prepareDeleteBackupPolicy(rawScope: unknown, rawArguments: unknown): BackupDeletionPlan & { readonly target: PolicyTarget } {
   const scope = policyTarget.parse(rawScope);
   emptyArguments.parse(rawArguments);
   requireThat(!scope.required, "scope");

@@ -69,9 +69,22 @@ snapshot into `Prepared`, retaining the full fixed preview and RM obligation.
 Six contracts cover fixed request, deep immutability, caller injection/accessors,
 protection/invalid targets, core hash sensitivity and determinism. This has no
 execute/project hook, registry, approval consumption or freshness guarantee and
-does not increase adapter coverage. Additional per-operation preparation and
-accepted host/provider revalidation remain incomplete. Complete-package and live
-gates remain above.
+does not increase adapter coverage. Two additional pure preparation bindings now cover the existing backup and
+backup-policy deletion previews. Their distinct immutable-ID resource namespaces
+and revision bind the complete preview, including parent IDs/names and production
+classification. All RM and owner-security obligations remain conjunctive and
+unconsumed. Binding refuses required policies and protected/required/non-success
+backups; caller arguments remain empty. `test/core-backup-preparation.test.mjs`
+adds fifteen synthetic contracts for exact previews, deep immutable snapshots,
+caller injection, complete host identity/revision, non-invoked accessors, core
+hash sensitivity, determinism, production obligations and cross-operation
+collision/refusal. Existing branch preparation uses the same JSON-checked wrapper
+without changing its contract; backup preview return types retain specific target
+identity types without runtime changes. These are source contracts, not an
+executed test result until exact-head Actions qualifies them. They add no executor,
+registration, credential, approval consumption or adapter coverage. Additional
+per-operation preparation and accepted host/provider revalidation remain
+incomplete. Complete-package and live gates remain above.
 
 The actual PR merge conflict required consuming current main, including the
 already-merged provider core and Neon package. The lock resolution retains both
