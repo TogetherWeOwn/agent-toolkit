@@ -31,7 +31,7 @@ export interface MutationPlan {
   readonly providerDryRun: "not-performed";
 }
 
-function target(raw: unknown): BranchPlanTarget {
+export function parseBranchPlanTarget(raw: unknown): BranchPlanTarget {
   return targetSchema.parse(raw);
 }
 function path(scope: BranchPlanTarget): string {
@@ -53,7 +53,7 @@ function plan(
 }
 
 export function prepareDeleteBranch(rawScope: unknown, rawArguments: unknown): MutationPlan {
-  const scope = target(rawScope);
+  const scope = parseBranchPlanTarget(rawScope);
   emptyArguments.parse(rawArguments);
   requireThat(!scope.deletionProtected, "scope");
   return plan(scope, "delete_branch", {}, {
@@ -64,7 +64,7 @@ export function prepareDeleteBranch(rawScope: unknown, rawArguments: unknown): M
 
 const backupArguments = closed({ name: slug, retentionHours: integer(1, 24) });
 export function prepareCreateBackup(rawScope: unknown, rawArguments: unknown): MutationPlan {
-  const scope = target(rawScope);
+  const scope = parseBranchPlanTarget(rawScope);
   const args = backupArguments.parse(rawArguments);
   return plan(scope, "create_backup", args, {
     method: "POST", origin: "https://api.planetscale.com", path: `${path(scope)}/backups`,
@@ -73,7 +73,7 @@ export function prepareCreateBackup(rawScope: unknown, rawArguments: unknown): M
 }
 
 export function prepareDisableSafeMigrations(rawScope: unknown, rawArguments: unknown): MutationPlan {
-  const scope = target(rawScope);
+  const scope = parseBranchPlanTarget(rawScope);
   emptyArguments.parse(rawArguments);
   requireThat(scope.safeMigrations, "scope");
   return plan(scope, "disable_safe_migrations", {}, {

@@ -64,6 +64,19 @@ conjunctive obligations; 134 provisional read / 25 unreviewed reserved / 132
 unresolved is unchanged. Twelve pure previews stay separate from 134/291 bounded
 offline adapters and 157 missing adapters. Zero integrated/reviewed/enabled/adopted.
 No host, credential, authority, journal, audit, transport or executor was added.
+Two additional pure Prepared bindings capture bounded backup creation and
+migration-safety removal, completing preparation seams for the twelve existing
+previews only. The shared closed branch parser captures target/revision without
+a dummy request or deletion-only restrictions. Backup arguments retain name and
+1–24 integer retention hours with a fixed non-emergency request; safety removal
+requires safeMigrations=true and empty arguments. RM + owner-money and RM +
+owner-security obligations remain conjunctive and unconsumed, including development
+branches. Seventeen synthetic contracts in `test/core-branch-effect-preparation.test.mjs`
+cover deep host/caller snapshots, complete previews, fixed requests, closed
+injection/accessor refusal, required identities/revisions, target/argument hash
+sensitivity, retention bounds, state refusal and shared-resource cross-operation
+hash separation. This is not a cost estimate, approval, provider precondition,
+executor or runtime integration; exact-head Actions execution remains required.
 Two additional pure configuration-cancellation bindings retain closed captured
 change/revision snapshots in distinct branch/keyspace resource namespaces and the
 complete fixed bodyless DELETE preview. Sixteen synthetic contracts in

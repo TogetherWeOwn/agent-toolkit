@@ -1,7 +1,7 @@
 import type { Prepared } from "../../../packages/core/src/provider/contracts.js";
 import { jsonData } from "../../../packages/core/src/schema.js";
 import { prepareDeleteBackup, prepareDeleteBackupPolicy, type BackupDeletionPlan } from "./backup-deletion-plans.js";
-import { prepareDeleteBranch, type MutationPlan } from "./mutation-plans.js";
+import { parseBranchPlanTarget, prepareCreateBackup, prepareDeleteBranch, prepareDisableSafeMigrations, type MutationPlan } from "./mutation-plans.js";
 import { prepareCloseDeployRequest, prepareCancelDeployRequest, type DeploymentStopPlan } from "./deployment-stop-plans.js";
 import { prepareCancelBranchConfigChange, prepareCancelKeyspaceConfigChange, type ConfigurationCancelPlan } from "./configuration-cancel-plans.js";
 
@@ -26,6 +26,20 @@ export function bindDeleteBranchPreparation(rawTarget: unknown): (raw: unknown) 
   const target = prepareDeleteBranch(rawTarget, {}).target;
   return (raw: unknown): Prepared => preparedPreview(
     `planetscale/branch/${target.branchId}`, prepareDeleteBranch(target, raw),
+  );
+}
+
+export function bindCreateBackupPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = parseBranchPlanTarget(rawTarget);
+  return (raw: unknown): Prepared => preparedPreview(
+    `planetscale/branch/${target.branchId}`, prepareCreateBackup(target, raw),
+  );
+}
+
+export function bindDisableSafeMigrationsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = prepareDisableSafeMigrations(rawTarget, {}).target;
+  return (raw: unknown): Prepared => preparedPreview(
+    `planetscale/branch/${target.branchId}`, prepareDisableSafeMigrations(target, raw),
   );
 }
 

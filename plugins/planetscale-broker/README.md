@@ -64,18 +64,19 @@ incomplete. Negative contracts reject missing/duplicate inventory, unknown field
 claim inflation and destructive-tier downgrades. Execution evidence comes only
 from exact-head Actions; this source declaration is not a passing result.
 
-`src/core-preparation.ts` supplies ten pure `Prepared` seams for branch,
+`src/core-preparation.ts` supplies twelve pure `Prepared` seams for branch,
 backup and backup-policy deletion, deploy-request close/cancel, branch/keyspace
-configuration cancellation, individual change cancellation, query-report deletion
-and schema-recommendation dismissal previews. Trusted host-owned closed snapshots bind
+configuration cancellation, individual change cancellation, query-report deletion,
+schema-recommendation dismissal, bounded backup creation and migration-safety
+removal previews. Trusted host-owned closed snapshots bind
 `planetscale/branch/<immutable-id>`, `planetscale/backup/<immutable-id>` or
 `planetscale/backup-policy/<immutable-id>` and revision. Parent IDs/names,
 production/protection classifications, the fixed request and all obligations
 remain in the hashed preview. Backup-policy removal retains **both** RM and
 owner-security obligations, including development policies; neither is obtained
 or consumed here. Required policies and protected/required/non-success backups
-refuse at binding time. Empty caller arguments cannot replace the target or
-supply authority. No artifact bytes are executed (`artifactDigest=null`). These
+refuse at binding time. Operation-specific closed caller arguments cannot replace
+the target or supply authority. No artifact bytes are executed (`artifactDigest=null`). These
 seams have no execute/project hook or registration and are not complete adapters.
 Host ownership/revision revalidation and provider preconditions are still required;
 a digest snapshot alone does not prove freshness or safe deletion. Distinct
@@ -123,6 +124,20 @@ recommendation ID/number binding. Report deletion remains reserved despite the
 provider's read entitlement. No executor, approval consumption, runtime registration
 or adapter-coverage increase is supplied; current parent/target mapping and
 independent conjunctive effect classification remain prerequisites.
+
+Backup creation and migration-safety removal share the branch resource with branch
+deletion; operation/request/argument/obligation hashes keep their previews distinct.
+The backup target is captured through the same closed branch parser as the preview,
+without imposing deletion protection on backup creation. Caller backup arguments
+remain exactly `name` and integer `retentionHours` from 1 through 24, deeply frozen
+and bound to the fixed non-emergency request. RM **and** owner-money obligations
+remain; a bounded retention is not a cost estimate or spend approval. Migration-safety
+removal requires safeMigrations=true at binding time, accepts empty arguments and
+retains RM **and** owner-security even for a development branch. Neither approval
+is obtained or consumed here. `test/core-branch-effect-preparation.test.mjs` covers
+snapshots, refusal, argument/target hash sensitivity and shared-resource separation.
+These bindings prove neither current settings, remote preconditions, backup success
+nor rollback/closure, and do not add an executor or increase adapter coverage.
 
 All 291 entries remain `incomplete`, `implemented=false`, `reviewed=false`,
 `enabled=false`, and entitlement `unknown`. Existing offline read/preview test
