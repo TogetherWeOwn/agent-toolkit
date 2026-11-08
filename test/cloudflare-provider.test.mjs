@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { metadataDescriptors, zoneMetadataDescriptors, secretsStoreMetadataDescriptors, durableObjectMetadataDescriptors, pagesMetadataDescriptors } from "../dist/plugins/cloudflare-broker/src/metadata.js";
+import { metadataDescriptors, zoneMetadataDescriptors, workerRouteMetadataDescriptors, secretsStoreMetadataDescriptors, durableObjectMetadataDescriptors, pagesMetadataDescriptors } from "../dist/plugins/cloudflare-broker/src/metadata.js";
 import { currentContentDescriptor } from "../dist/plugins/cloudflare-broker/src/current-content.js";
 import { deletionPlanDescriptors } from "../dist/plugins/cloudflare-broker/src/deletion-plans.js";
 import { inventory, source } from "../plugins/cloudflare-broker/scripts/inventory.mjs";
@@ -59,7 +59,8 @@ const pagesCases = [
   ["pagesDeploymentsList", { projectName: "safe-project", page: 2, perPage: 10 }, "/safe-project/deployments?page=2&per_page=10", `:project:${own}:deployments`],
   ["pagesDeploymentGet", { projectName: "safe-project", deploymentId: db }, `/safe-project/deployments/${db}`, `:project:${own}:deployment:${db}`],
 ];
-const metadataOnly = { ...descriptors, ...zoneDescriptors, ...secretsStoreDescriptors, ...durableDescriptors, ...pagesDescriptors };
+const routeDescriptors = workerRouteMetadataDescriptors({ accountId: account, zoneId: zone, revision: "policy-1", routes: [{ routeId: own, scriptName: "safe-worker" }] });
+const metadataOnly = { ...descriptors, ...zoneDescriptors, ...routeDescriptors, ...secretsStoreDescriptors, ...durableDescriptors, ...pagesDescriptors };
 const contentDescriptor = currentContentDescriptor({ accountId: account, revision: "source-policy-1", sourceDigestScriptNames: ["safe-worker"] });
 const allDescriptors = { ...metadataOnly, ...deletionDescriptors, contentDescriptor };
 const deletionCases = [
@@ -926,9 +927,9 @@ test("Cloudflare full schema inventory is pinned, explicit about holes, and cons
       }
     }
   }
-  assert.equal(operations.filter(row => row.typedTool !== null).length, 37);
+  assert.equal(operations.filter(row => row.typedTool !== null).length, 39);
   assert.equal(operations.filter(row => row.tier === "reserved").length, 5);
-  assert.equal(operations.filter(row => row.tier === "read").length, 32);
+  assert.equal(operations.filter(row => row.tier === "read").length, 34);
   assert.equal(operations.filter(row => row.implementation === "content-descriptor-only").length, 1);
   assert.equal(manifest.counts.contentDescriptors, 1);
   assert.equal(manifest.counts.descriptors, Object.keys(allDescriptors).length);

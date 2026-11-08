@@ -43,6 +43,8 @@ const descriptors = new Map([
   ["GET /zones/{zone_id}", "cloudflare.zones.get"],
   ["GET /zones/{zone_id}/dns_records", "cloudflare.dns.list"],
   ["GET /zones/{zone_id}/dns_records/{dns_record_id}", "cloudflare.dns.get"],
+  ["GET /zones/{zone_id}/workers/routes", "cloudflare.workers.routes.list"],
+  ["GET /zones/{zone_id}/workers/routes/{route_id}", "cloudflare.workers.routes.get"],
 ]);
 const contentDescriptors = new Map([
   ["GET /accounts/{account_id}/workers/scripts/{script_name}/content/v2", "cloudflare.workers.current_content.digest"],
@@ -87,7 +89,7 @@ export function inventory(bytes) {
         approvalRoute: deletionPlan ? "release-manager-and-conditional-owner-security" : contentDescriptor ? "separate-source-agent-and-resource-policy" : typedTool ? "agent-and-resource-policy" : "unresolved",
         implementation: deletionPlan ? "plan-descriptor-only" : contentDescriptor ? "content-descriptor-only" : typedTool ? "descriptor-only" : "missing",
         review: "not-reviewed", enablement: "disabled",
-        tests: contentDescriptor ? ["test/cloudflare-current-content.test.mjs", "test/cloudflare-provider.test.mjs"] : typedTool ? ["test/cloudflare-provider.test.mjs"] : [],
+        tests: contentDescriptor ? ["test/cloudflare-current-content.test.mjs", "test/cloudflare-provider.test.mjs"] : typedTool?.startsWith("cloudflare.workers.routes.") ? ["test/cloudflare-provider.test.mjs", "test/cloudflare-routes.test.mjs"] : typedTool ? ["test/cloudflare-provider.test.mjs"] : [],
         prerequisites: deletionPlan ? ["credential-scope-attestation", "compatible-reviewed-core", "native-conjunctive-authority-and-security-impact", "provider-precondition-and-recovery-adapter", "execution-and-projection-adapter", "native-integration-and-tier-review"] : contentDescriptor ? ["credential-scope-attestation", "compatible-reviewed-core", "separate-source-authorization", "bounded-content-transport-and-success-media-contract", "trusted-capture-window-and-response-correlation", "module-attribution-and-library-projection", "native-integration-and-tier-review"] : typedTool ? ["credential-scope-attestation", "compatible-reviewed-core", "native-integration-and-tier-review"] : ["credential-scope-attestation", "typed-adapter-and-tier-classification", "native-integration-and-tier-review"],
       });
     }

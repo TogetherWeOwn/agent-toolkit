@@ -600,6 +600,76 @@ export function zoneMetadataDescriptors(scope: ZoneMetadataScope) {
   return Object.freeze({ zoneGet, dnsList, dnsGet });
 }
 
+export interface WorkerRouteMetadataScope {
+  accountId: string;
+  zoneId: string;
+  revision: string;
+  routes: readonly { routeId: string; scriptName: string }[];
+}
+const workerRoute = closed({ routeId: resourceId });
+const routePattern = text(1024, /^(?:https?:\/\/)?[A-Za-z0-9*][A-Za-z0-9.*-]*(?:\/[A-Za-z0-9/._~!$&'()+,;=:%*@-]*)?$/);
+interface WorkerRouteMetadata { id: string; pattern: string; scriptName: string }
+const routeObservation = Object.freeze({ subject: "configured-worker-routes" as const, effectiveMatching: "not-established" as const });
+
+// This independent scope exposes only explicitly bound route/script pairs.
+// Account/zone association and current route authority remain native host duties.
+export function workerRouteMetadataDescriptors(scope: WorkerRouteMetadataScope) {
+  const account = accountId.parse(scope.accountId);
+  const zone = resourceId.parse(scope.zoneId);
+  const revision = text(80, /^[A-Za-z0-9][A-Za-z0-9_.-]*$/).parse(scope.revision);
+  requireThat(Array.isArray(scope.routes) && scope.routes.length <= maxRows, "cap");
+  const routes = new Map<string, string>();
+  for (const entry of scope.routes) {
+    const id = resourceId.parse(entry.routeId);
+    requireThat(!routes.has(id), "schema");
+    routes.set(id, scriptName.parse(entry.scriptName));
+  }
+  const root = `/zones/${zone}/workers/routes`;
+  function prepared<A>(args: A, id: string, path: string): PreparedMetadata<A> {
+    return Object.freeze({ arguments: args,
+      resource: Object.freeze({ id: `cloudflare:account:${account}:zone:${zone}:worker-routes${id}`, revision }),
+      request: Object.freeze({ method: "GET", path, maxResponseBytes, timeoutMs: 10000, maxRequests: 1, redirects: "deny" }),
+    });
+  }
+  function routeMetadata(row: Row): WorkerRouteMetadata {
+    const id = providerText(row.id, resourceId);
+    requireThat(routes.has(id) && row.script === routes.get(id), "scope");
+    requireThat(row.account_id === undefined || row.account_id === account, "scope");
+    requireThat(row.zone_id === undefined || row.zone_id === zone, "scope");
+    return { id, pattern: providerText(row.pattern, routePattern), scriptName: routes.get(id)! };
+  }
+  const workerRoutesList: MetadataDescriptor<ReturnType<typeof empty.parse>, PartialList<WorkerRouteMetadata> & typeof routeObservation> = Object.freeze({
+    name: "cloudflare.workers.routes.list", version: "1", tier: "read", providerOperationId: "worker-routes-list-routes",
+    prepare(raw: unknown) {
+      const args = empty.parse(raw);
+      requireThat(routes.size > 0, "scope");
+      return prepared(args, "", root);
+    },
+    project(raw: string) {
+      requireThat(routes.size > 0, "scope");
+      const items = rows(envelope(raw).result).filter(row => typeof row.id === "string" && routes.has(row.id)).map(routeMetadata);
+      requireThat(new Set(items.map(row => row.id)).size === items.length, "upstream");
+      return bounded({ items, complete: false as const, ...routeObservation });
+    },
+  });
+  const workerRouteGet: MetadataDescriptor<ReturnType<typeof workerRoute.parse>, WorkerRouteMetadata & typeof routeObservation> = Object.freeze({
+    name: "cloudflare.workers.routes.get", version: "1", tier: "read", providerOperationId: "worker-routes-get-route",
+    prepare(raw: unknown) {
+      const args = workerRoute.parse(raw);
+      requireThat(routes.has(args.routeId), "scope");
+      return prepared(args, `:${args.routeId}`, `${root}/${args.routeId}`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof workerRoute.parse>>) {
+      const args = workerRoute.parse(input.arguments);
+      requireThat(routes.has(args.routeId), "scope");
+      const row = object(envelope(raw).result);
+      requireThat(row.id === args.routeId, "scope");
+      return bounded({ ...routeMetadata(row), ...routeObservation });
+    },
+  });
+  return Object.freeze({ workerRoutesList, workerRouteGet });
+}
+
 export interface SecretsStoreMetadataScope {
   accountId: string;
   revision: string;

@@ -2,8 +2,8 @@ import { jsonData, requireThat } from "../../../packages/core/src/index.js";
 import { canonicalHash, type Json, type Prepared, type ProviderOperation, type Tier } from "../../../packages/core/src/provider/index.js";
 import { currentContentDescriptor, type CurrentContentScope } from "./current-content.js";
 import { durableObjectMetadataDescriptors, metadataDescriptors, pagesMetadataDescriptors, secretsStoreMetadataDescriptors,
-  zoneMetadataDescriptors, type DurableObjectMetadataScope, type MetadataDescriptor, type MetadataScope,
-  type PagesMetadataScope, type PreparedMetadata, type SecretsStoreMetadataScope, type ZoneMetadataScope } from "./metadata.js";
+  workerRouteMetadataDescriptors, zoneMetadataDescriptors, type DurableObjectMetadataScope, type MetadataDescriptor, type MetadataScope,
+  type PagesMetadataScope, type PreparedMetadata, type SecretsStoreMetadataScope, type WorkerRouteMetadataScope, type ZoneMetadataScope } from "./metadata.js";
 import { currentContentTransport, metadataTransport } from "./metadata-transport.js";
 
 function json(value: unknown): Json {
@@ -55,7 +55,7 @@ export interface CloudflareReadScope extends MetadataScope {
   secretStores?: SecretsStoreMetadataScope["stores"];
   durableNamespaces?: DurableObjectMetadataScope["namespaces"];
   pagesProjects?: PagesMetadataScope["projects"];
-  zone?: Pick<ZoneMetadataScope, "zoneId" | "dnsRecordIds">;
+  zone?: Pick<ZoneMetadataScope, "zoneId" | "dnsRecordIds"> & { workerRoutes?: WorkerRouteMetadataScope["routes"] };
 }
 
 // Internal operation registry only; no tool registration or host/policy/credential
@@ -76,6 +76,8 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
   // With no trusted zone relationship, omit DNS/zone operations altogether.
   const zone = scope.zone === undefined ? undefined : zoneMetadataDescriptors({ accountId, revision,
     zoneId: scope.zone.zoneId, dnsRecordIds: scope.zone.dnsRecordIds });
+  const routes = scope.zone === undefined ? undefined : workerRouteMetadataDescriptors({ accountId, revision,
+    zoneId: scope.zone.zoneId, routes: scope.zone.workerRoutes ?? [] });
   const content = currentContentDescriptor(sourceScope);
   const readContent = currentContentTransport(fetcher);
   return Object.freeze([
@@ -93,6 +95,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(pages.pagesProjectsList), metadata(pages.pagesProjectGet),
     metadata(pages.pagesDeploymentsList), metadata(pages.pagesDeploymentGet),
     ...(zone === undefined ? [] : [metadata(zone.zoneGet), metadata(zone.dnsList), metadata(zone.dnsGet)]),
+    ...(routes === undefined ? [] : [metadata(routes.workerRoutesList), metadata(routes.workerRouteGet)]),
     // Source acquisition needs exact native authority, even for digest-only output.
     bind(content, "reserved", (args, credential, signal) => readContent(content, args, credential, signal)),
   ]);
