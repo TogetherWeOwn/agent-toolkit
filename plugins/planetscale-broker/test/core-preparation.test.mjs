@@ -49,8 +49,11 @@ test('caller cannot inject a target, approval, artifact, URL or recursive deleti
 
 test('host target must be closed and deletion protection cannot be overridden', () => {
   for (const input of [null, {}, { ...target(), deletionProtected: true }, { ...target(), branchId: '../other' },
-    { ...target(), revision: 'latest' }, { ...target(), credential: 'synthetic-canary' },
-    { ...target(), production: 'false' }]) refused(() => bindDeleteBranchPreparation(input));
+    { ...target(), revision: 'latest' }, { ...target(), credential: 'synthetic-canary' }]) {
+    refused(() => bindDeleteBranchPreparation(input));
+  }
+  // The existing shared flag validator uses the fixed upstream refusal code.
+  assert.throws(() => bindDeleteBranchPreparation({ ...target(), production: 'false' }), { code: 'upstream' });
 });
 
 test('core hash binds resource identity, revision and every name or safety classification', () => {

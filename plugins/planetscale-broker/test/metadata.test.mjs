@@ -119,8 +119,8 @@ test('complete official map distinguishes mapped, source-adapted, reviewed and e
   assert.equal(new Set(map.operations.map(row => row.method + ' ' + row.path)).size, 291);
   assert.equal(map.credentialScopeReceipt, null);
   assert.equal(map.commonCoreContract.contract, 'toolkit.provider-broker/v1');
-  assert.equal(map.commonCoreContract.status, 'schema-mapping-candidate-not-runtime-integration');
-  assert.equal(map.commonCoreContract.validatorExecution, 'not-performed');
+  assert.equal(map.commonCoreContract.status, 'validator-consumer-source-not-runtime-integration');
+  assert.equal(map.commonCoreContract.validatorContract, 'test/core-operation-map.test.mjs');
   assert.equal(map.commonCoreContract.runtimeIntegrated, false);
   const implemented = map.operations.filter(row => row.implementation === 'offline-adapter-only');
   const discovery = ['list_databases', 'list_branches', 'list_database_regions', 'list_regions_for_organization', 'list_public_regions', 'get_default_role'];
