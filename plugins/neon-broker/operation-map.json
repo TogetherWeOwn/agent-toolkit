@@ -420,7 +420,7 @@
       "id": "updateProject",
       "apiArea": "project",
       "tool": "neon.updateProject",
-      "scope": "project_id",
+      "scope": "project_id/rename",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -428,12 +428,15 @@
       "tier": "write",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/project-update.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Name-only source subset and refusal contracts; settings/IP allowlist/quota, default compute and history retention unsupported. Exact project/expected-label preflight is not atomic CAS. One PATCH, closed exact-echo acknowledgement, bounded observation on ambiguity without retry; permanent core journal blocks restart/replay. Native concurrency/effects, entitlement, custody, durable recovery, host/policy integration and independent reviews unresolved; no live rename or enablement."
     },
     {
       "id": "deleteProject",

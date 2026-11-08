@@ -43,6 +43,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   schemaComparisonCases, schemaComparisonFixture, schemaComparisonScope,
   oauthProviderCases, oauthProviderFixture, oauthProviderScope, oauthProvider,
   objectDownloadCases, objectDownloadFixture, objectDownloadScope, binaryResponse,
+  projectUpdateFixture, projectUpdateArgs, projectUpdateScope, projectUpdateReceipt,
   branchUpdateFixture, branchUpdateArgs, branchUpdateScope, branchUpdateReceipt,
   snapshotUpdateFixture, snapshotUpdateArgs, snapshotUpdateScope, snapshotUpdateReceipt,
   sourceNames, snapshotDeleteFixture, snapshotDeleteArgs, snapshotDeleteScope, snapshotDeleteReceipt,
@@ -113,6 +114,97 @@ function safeEnvelope(f, result) {
     assert(!serialized.includes(secret), `secret in output/audit/journal: ${secret}`);
   }
 }
+
+function projectRenameBroker(value = projectUpdateReceipt, overrides = {}, config = projectUpdateScope) {
+  const provider = projectUpdateFixture(value, config);
+  const args = { project_id: config.projectId, name: config.name };
+  const common = providerFixture(overrides);
+  common.vector.policy.resources = [provider.operation('updateProject').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.updateProject', args, context, key);
+  } };
+}
+
+test('project rename: exact agent AND rename grant precede transport; safe receipt omits provider metadata', async () => {
+  for (const resource of ['neon/projects/project-a', 'neon/projects/project-a/branches/br-a/rename',
+    'neon/projects/project-a/delete', 'neon/projects/project-b/rename']) {
+    const f = projectRenameBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = projectRenameBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = projectRenameBroker({ ...projectUpdateReceipt, project: { ...projectUpdateReceipt.project, password: credentialCanary, settings: derivedCanary } });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { id: 'project-a', updated: true });
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('project rename: scope/identity TOCTOU and caller settings/compute/retention/authority refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = projectRenameBroker(undefined, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = projectRenameBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.updateProject', projectUpdateArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ settings: {} }, { default_endpoint_settings: {} }, { history_retention_seconds: 0 }, { approved: true }, { name: 'different' }]) {
+    const g = projectRenameBroker();
+    assert.equal((await g.common.broker().call('neon.updateProject', { ...projectUpdateArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('project rename: permanent journal blocks complete/uncertain replay after restart', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = projectRenameBroker((url, init, n) => {
+      if (init.method === 'PATCH') {
+        if (ambiguous) throw Error(credentialCanary);
+        return response(projectUpdateReceipt);
+      }
+      return response({ project: { ...projectUpdateReceipt.project, name: n === 1 ? 'before' : 'after' } });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'PATCH').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('project rename: reflected acknowledgement retains uncertain journal', async () => {
+  const f = projectRenameBroker({ project: { ...projectUpdateReceipt.project, name: credentialCanary } });
+  const result = await f.call();
+  assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+  assert.equal([...f.common.journal.values()][0].outcome, 'uncertain');
+  safeEnvelope(f, result);
+});
+
+test('project rename: maximal copied target and labels fit common budgets', async () => {
+  const config = { projectId: 'p'.repeat(60), revision: 'r'.repeat(80), expectedName: 'b'.repeat(80), name: 'a'.repeat(80) };
+  const f = projectRenameBroker({ project: { id: config.projectId, name: config.name } }, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { id: config.projectId, updated: true });
+  safeEnvelope(f, result);
+});
 
 function branchRenameBroker(value = branchUpdateReceipt, overrides = {}, config = branchUpdateScope) {
   const provider = branchUpdateFixture(value, config);

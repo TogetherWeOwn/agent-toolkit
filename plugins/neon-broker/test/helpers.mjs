@@ -43,6 +43,7 @@ import { createNeonLogQueryOperations } from '../dist/plugins/neon-broker/src/lo
 import { createNeonOAuthProviderOperations } from '../dist/plugins/neon-broker/src/oauth-providers.js';
 import { createNeonObjectDownloadOperations } from '../dist/plugins/neon-broker/src/object-download.js';
 import { createNeonBranchUpdateOperations } from '../dist/plugins/neon-broker/src/branch-update.js';
+import { createNeonProjectUpdateOperations } from '../dist/plugins/neon-broker/src/project-update.js';
 import { createNeonSnapshotUpdateOperations } from '../dist/plugins/neon-broker/src/snapshot-update.js';
 import { createNeonSnapshotDeleteOperations } from '../dist/plugins/neon-broker/src/snapshot-delete.js';
 
@@ -460,7 +461,15 @@ export function objectDownloadFixture(value, config = objectDownloadScope) {
   return fixture(typeof value === 'function' ? value : () => binaryResponse(value.bytes), config, createNeonObjectDownloadOperations);
 }
 export const allCases = [...objectDownloadCases, ...oauthProviderCases, ...logQueryCases, ...schemaComparisonCases, ...logValueCases, ...branchSchemaCases, ...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
-export const sourceNames = [...allCases.map(([name]) => name), 'deleteSnapshot', 'updateSnapshot', 'updateProjectBranch'];
+export const sourceNames = [...allCases.map(([name]) => name), 'deleteSnapshot', 'updateSnapshot', 'updateProjectBranch', 'updateProject'];
+export const projectUpdateScope = { projectId: 'project-a', revision: 'scope-v1', expectedName: 'before', name: 'after' };
+export const projectUpdateArgs = { project_id: 'project-a', name: 'after' };
+export const projectUpdateReceipt = { project: { id: 'project-a', name: 'after' }, operations: [] };
+export function projectUpdateFixture(value = projectUpdateReceipt, config = projectUpdateScope) {
+  return fixture((url, init, n) => typeof value === 'function' ? value(url, init, n) :
+    init.method === 'PATCH' ? response(value) : response({ project: { id: config.projectId, name: config.expectedName } }),
+  config, createNeonProjectUpdateOperations);
+}
 export const branchUpdateScope = { projectId: 'project-a', branchId: 'br-a', revision: 'scope-v1', expectedName: 'before', name: 'after' };
 export const branchUpdateArgs = { project_id: 'project-a', branch_id: 'br-a', name: 'after' };
 export const branchUpdateReceipt = { branch: { id: 'br-a', project_id: 'project-a', name: 'after' }, operations: [] };
