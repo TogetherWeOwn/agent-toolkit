@@ -94,6 +94,14 @@ ADAPTERS = {
     "get_invoice_line_items": "get-invoice-line-items",
     "get_organization_billing_payment_method": "get-organization-billing-payment-method",
     "get_payment_method_setup": "get-payment-method-setup",
+    "get_shard_configuration_profile": "get-shard-configuration-profile",
+    "list_shard_configuration_profiles": "list-shard-configuration-profiles",
+    "get_shard_configuration_profile_shard": "get-shard-configuration-profile-shard",
+    "list_shard_configuration_profile_shards": "list-shard-configuration-profile-shards",
+}
+CONFIGURATION_PROFILES = {
+    "get_shard_configuration_profile", "list_shard_configuration_profiles",
+    "get_shard_configuration_profile_shard", "list_shard_configuration_profile_shards",
 }
 BILLING_RECORDS = {
     "get_invoice", "list_invoices", "get_invoice_line_items",
@@ -122,6 +130,7 @@ CHANGE_RECORDS = {
 REDIRECT_ALIASES = {
     "get_admin_change_request", "list_admin_change_requests", "get_neki_change_request",
     "list_neki_change_requests", "get_router_change_request", "list_router_change_requests",
+    "get_default_shard_configuration_profile",
 }
 RESIZE_RECORDS = {
     "get_bouncer", "list_bouncers", "list_bouncer_resize_requests",
@@ -201,6 +210,7 @@ def policy_candidate(operation_id):
 
 def adapter_test(operation_id):
     for operations, name in [
+        (CONFIGURATION_PROFILES, "configuration-profiles"),
         (BILLING_RECORDS, "billing-records"),
         (ORGANIZATION_SECURITY, "organization-security"),
         (UNIFIED_CHANGE_RECORDS, "unified-change-records"),

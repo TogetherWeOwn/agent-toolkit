@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 209 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 205 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -196,6 +196,26 @@ and non-waking semantics remain prerequisites. Coverage is **82/291 bounded
 metadata subsets, 209 missing**; tiers 82 provisional read / 16 unreviewed reserved
 / 193 unresolved. Zero integrated/reviewed/enabled/adopted. Fresh exact-head Actions
 is required; no local suite or native authority test is claimed.
+
+At `d414cbdbc0f0bd6149df53e662641f36868c1b1f`, [Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42442355032)
+passed [tests](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42442355032/job/128614092916),
+lint/typecheck, native-policy and ci-ok. That is historical evidence for 82
+adapters, not execution of the newer configuration-profile fixtures.
+
+`test/configuration-profiles.test.mjs` adds 25 synthetic contracts for four profile
+and profile-shard list/get reads. They cover pinned paths/response shapes, exact
+ID/name and profile-parent matching, immutable nested scope snapshots, whole-page/
+array refusal, duplicate ID/name bindings, closed inputs, wire/row/page caps,
+selected flags/enums and excluded storage/SKU/version/count/free-text canaries.
+State/default/metal/ready/authoritative are metadata, never configuration, spend,
+assignment or wake authority. The official default-profile GET is 302-only with
+no success response schema; it remains missing with a reviewed-alias-contract
+prerequisite, never automatic redirect following. Trusted parent ownership and
+independent collection authority, optional shard search, full details and non-
+waking semantics remain prerequisites. Coverage is **86/291 bounded metadata
+subsets, 205 missing**; tiers 86 provisional read / 16 unreviewed reserved / 189
+unresolved. Zero integrated/reviewed/enabled/adopted. Fresh exact-head Actions is
+required; no local suite or native authority enforcement is claimed.
 
 ## Metrics preregistration — required before enablement
 
