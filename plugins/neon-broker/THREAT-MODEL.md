@@ -12,7 +12,7 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Cross-agent/resource access | Common agent AND exact-resource policy; separate collection targets; copied trusted scope; exact response project/child binding. No broad list inferred from project access. |
 | Provider scope drift | Bound scope revision enters canonical target and is revalidated by host/core before transport; exact provider IDs/parent relations checked. Actual current binding adapter remains required. |
 | Secrets in response/error/audit | Allowlist projection excludes settings/hosts/owners/credentials/passwords/URIs and arbitrary errors/timestamps. Database/role names are emitted only when exact trusted bindings match; other arbitrary names stay excluded. Fixed errors discard raw bodies. Common reflected-lease checks and safe audit envelopes remain mandatory. Arbitrary secret DLP is not claimed. |
-| Redirect/SSRF/path injection | Twenty-seven fixed GET methods, constrained identifiers/catalog names, encoded cursor, fixed origin, redirect:error, no arbitrary URL/header arguments, no default fetch. Auth-status reads omit OAuth login/consent URLs, MCP resources and audiences; no secondary fetch. |
+| Redirect/SSRF/path injection | Twenty-nine fixed GET methods, constrained identifiers/catalog names, encoded cursor, fixed origin, redirect:error, no arbitrary URL/header arguments, no default fetch. Auth-status reads omit OAuth login/consent URLs, MCP resources and audiences; no secondary fetch. |
 | Pagination/response/time amplification | 64 KiB per response; 1 s request including streamed body; 3.5 s operation; 10 branches/operations per page, three pages, duplicate/cycle checks; branch next/sort and operation cursor shapes are distinct; 30-row cap for other lists. No retries/partial success. |
 | Aggregate disclosure | Project-wide endpoint/operation collections and total branch counts have distinct exact-resource targets. Child/project grants never imply aggregate authority; response filtering is not request authorization. |
 | Read waking compute | No compute mutation/SQL/connection/secret fallback exists. GET is NOT proof; independent provider evidence and accepted enablement gates remain unsatisfied. |
@@ -36,6 +36,32 @@ lease-material tests. Read source creates no integration, session, user, key or
 billing resource: provisioning TTL/spend/cleanup are not applicable. Transport
 rate/time/size limits and common replay/audit remain applicable; actual provider
 non-waking effects, entitlement and native custody/host integration remain unknown.
+
+## Function metadata delta
+
+The beta branch function collection and slug detail have separate exact grants;
+project/branch grants are insufficient. Trusted ID/slug/branch bindings are copied,
+unique and capped at 16. Detail identity and optional ancestry match the exact
+request. A changed ID at a trusted slug or a selected ID returned for the wrong
+branch refuses; unrelated DNS-label functions are filtered after collection access
+is authorized. The pinned detail parameter is narrower than the response's slug
+description: selected slugs are lowercase alphanumeric 1–20, never normalized.
+
+Output is ID/slug and optional deployment ID/status only. Invocation URLs, names,
+environment names, errors, runtime/memory/source and timestamps are dropped without
+following any location. Current deployment may still be building/failed; active
+must be completed. Missing deployments do not imply deployed or disabled. Tests in
+`functions.test.mjs` cover these boundaries, injected accessors, strict arguments,
+request identity, bounded pagination/cycles/duplicates/overflows and unavailable
+responses. Common compatibility tests cover each operation's identity, exact agent
+AND resource policy, stale/replayed requests, TOCTOU changes, poisoned diagnostics,
+reflected lease material and maximum selection/output JSON budgets.
+
+Fixed 10-row pages, at most three, use encoded opaque cursors; no incomplete page
+sequence returns success. No create/deploy/invoke/delete or secret/SQL fallback is
+provided. Source mocks establish no beta entitlement, non-waking behavior, custody
+or native integration; these remain qualification gates. No resources are created,
+so provisioning TTL/spend/teardown is not applicable to this read-only source tier.
 
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into

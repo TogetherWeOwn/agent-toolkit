@@ -5,6 +5,7 @@ import { createNeonBranchFeatureOperations } from '../dist/plugins/neon-broker/s
 import { createNeonAuthStatusOperations } from '../dist/plugins/neon-broker/src/auth-status.js';
 import { createNeonAuthDomainOperations } from '../dist/plugins/neon-broker/src/auth-domains.js';
 import { createNeonAuthIntegrationOperations } from '../dist/plugins/neon-broker/src/auth-integrations.js';
+import { createNeonFunctionOperations } from '../dist/plugins/neon-broker/src/functions.js';
 import { createNeonMetadataTransport } from '../dist/plugins/neon-broker/src/transport.js';
 
 export const scope = {
@@ -90,7 +91,15 @@ export const authIntegrationCases = [
   ['getNeonAuth', { project_id: 'project-a', branch_id: 'br-a' }, authIntegration, authIntegration],
   ['listNeonAuthIntegrations', { project_id: 'project-a' }, { data: [authIntegration] }, { data: [authIntegration] }],
 ];
-export const allCases = [...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases];
+export const functionScope = { projectId: scope.projectId, revision: scope.revision, branchIds: scope.branchIds,
+  functions: [{ id: 'fn-a', slug: 'hello', branchId: 'br-a' }, { id: 'fn-b', slug: 'other', branchId: 'br-b' }] };
+export const neonFunction = { id: 'fn-a', slug: 'hello', current_deployment: { id: 2, status: 'building' },
+  active_deployment: { id: 1, status: 'completed' } };
+export const functionCases = [
+  ['listProjectBranchFunctions', { project_id: 'project-a', branch_id: 'br-a' }, { functions: [neonFunction] }, { functions: [neonFunction] }],
+  ['getProjectBranchFunction', { project_id: 'project-a', branch_id: 'br-a', slug: 'hello' }, { function: neonFunction }, { function: neonFunction }],
+];
+export const allCases = [...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });
@@ -112,6 +121,9 @@ export function authDomainFixture(value, config = authDomainScope) {
 }
 export function authIntegrationFixture(value, config = authIntegrationScope) {
   return fixture(value, config, createNeonAuthIntegrationOperations);
+}
+export function functionFixture(value, config = functionScope) {
+  return fixture(value, config, createNeonFunctionOperations);
 }
 export function fixture(value, config = scope, factory = createNeonMetadataOperations) {
   const requests = [];

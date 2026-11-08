@@ -3728,7 +3728,7 @@
       "id": "listProjectBranchFunctions",
       "apiArea": "functions",
       "tool": "neon.listProjectBranchFunctions",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/functions",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3736,18 +3736,21 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/functions.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. Beta availability unknown. No live grant or enablement."
     },
     {
       "id": "getProjectBranchFunction",
       "apiArea": "functions",
       "tool": "neon.getProjectBranchFunction",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/functions/slug",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3755,12 +3758,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/functions.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. Beta availability unknown. No live grant or enablement."
     },
     {
       "id": "updateProjectBranchFunction",

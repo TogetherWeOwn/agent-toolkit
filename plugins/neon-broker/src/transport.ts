@@ -35,6 +35,8 @@ export interface NeonMetadataTransport {
   listBranchNeonAuthTrustedDomains(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   getNeonAuth(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   listNeonAuthIntegrations(project: string, options: MetadataRequestOptions): Promise<unknown>;
+  listProjectBranchFunctions(project: string, branch: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
+  getProjectBranchFunction(project: string, branch: string, slug: string, options: MetadataRequestOptions): Promise<unknown>;
 }
 export type MetadataFetch = (url: string, init: RequestInit) => Promise<Response>;
 
@@ -45,6 +47,10 @@ function id(value: string): string {
 function catalogName(value: string): string {
   if (typeof value !== "string" || !/^[A-Za-z_][A-Za-z0-9_-]{0,62}$/.test(value) || /[^A-Za-z0-9_-]/.test(value)) throw Error("INVALID_ARGUMENTS");
   return encodeURIComponent(value);
+}
+function functionSlug(value: string): string {
+  if (typeof value !== "string" || value.length > 20 || !/^[a-z0-9]+$/.test(value) || /[^a-z0-9]/.test(value)) throw Error("INVALID_ARGUMENTS");
+  return value;
 }
 function cursorQuery(cursor: string | null): URLSearchParams {
   const query = new URLSearchParams({ limit: String(PAGE_SIZE) });
@@ -180,5 +186,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       get(`/projects/${id(project)}/branches/${id(branch)}/auth`, new URLSearchParams(), options),
     listNeonAuthIntegrations: (project: string, options: MetadataRequestOptions) =>
       get(`/projects/${id(project)}/auth/integrations`, new URLSearchParams(), options),
+    listProjectBranchFunctions: (project: string, branch: string, cursor: string | null, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/branches/${id(branch)}/functions`, cursorQuery(cursor), options),
+    getProjectBranchFunction: (project: string, branch: string, slug: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/branches/${id(branch)}/functions/${functionSlug(slug)}`, new URLSearchParams(), options),
   });
 }

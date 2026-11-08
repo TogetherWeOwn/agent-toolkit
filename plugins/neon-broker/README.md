@@ -160,6 +160,34 @@ source support does not establish availability. A 404/410 stays unavailable, not
 empty list, unconfigured status or fallback to another endpoint. These projections
 do not retrieve credentials, prove provider effects or authorize integration mutation.
 
+`createNeonFunctionOperations(trustedScope, transport)` adds two beta function metadata reads:
+
+| Tool | Closed arguments | Authorization resource suffix (under project) |
+|---|---|---|
+| `neon.listProjectBranchFunctions` | `project_id`, `branch_id` | `branches/<branch>/functions` |
+| `neon.getProjectBranchFunction` | `project_id`, `branch_id`, `slug` | `branches/<branch>/functions/<slug>` |
+
+Function scope copies up to 16 branch IDs and 16 exact ID/slug/branch bindings,
+unique by ID and by branch/slug. This ceiling fits common configuration and output
+budgets even with both deployment fields. Selected slugs use the pinned detail
+path's narrower lowercase alphanumeric 1–20 character pattern, not the broader
+DNS-label response description. Unsupported selected slugs refuse without rewriting;
+unselected DNS-label rows may be filtered. Detail ID/slug and all optional ancestry
+must match the exact request. A list also refuses a selected ID from another branch
+or a changed ID behind a trusted slug. Collection grants never imply detail grants,
+or vice versa. Filtering is additional projection, not request authorization.
+
+Closed output is ID/slug plus optional current/active deployment ID and known build
+status. Absent deployments remain absent; active deployment must be completed, and
+current pending/building/completed/failed remains distinct from active. Names,
+invocation URLs, source, environment names, runtime, memory, errors and timestamps
+are omitted and never followed. Pagination uses fixed 10-row pages and bounded
+encoded `pagination.cursor` for at most three pages. Duplicated IDs/slugs, oversized
+pages, cursor cycles and an unfinished third page refuse rather than silently
+truncate. Beta availability, provider side effects and runtime qualification remain
+unknown; 404 never becomes an empty list, a fabricated status or a deployment/invoke
+fallback. These reads create, deploy, invoke and delete nothing.
+
 Trusted metadata scope contains one project, a revision, explicit branch IDs and endpoint
 parent bindings. Construction validates and copies it. Caller IDs only select
 already-configured resources; no caller identity, authority, origin, credential,
@@ -178,7 +206,7 @@ passwords, credentials and connection strings are excluded. Unknown lifecycle
 states fail closed until explicitly supported. No error body/headers are surfaced.
 Common lease-reflection checks remain necessary even in these selected fields.
 
-`createNeonMetadataTransport(injectedFetch)` has twenty-seven typed methods only. Its
+`createNeonMetadataTransport(injectedFetch)` has twenty-nine typed methods only. Its
 internal request builder fixes origin `https://console.neon.tech`, `/api/v2`
 paths, GET, JSON content, no redirects and no retries. No global fetch fallback
 exists. Each response is bounded to 64 KiB and 1 s, including streamed body time;
@@ -218,8 +246,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: twenty-seven implemented
-source adapters, 167 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: twenty-nine implemented
+source adapters, 165 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable
