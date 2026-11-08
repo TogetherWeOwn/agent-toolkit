@@ -34,6 +34,7 @@ import { createNeonMaskingRuleOperations } from '../dist/plugins/neon-broker/src
 import { createNeonAuthDetailsOperations } from '../dist/plugins/neon-broker/src/auth-details.js';
 import { createNeonCredentialMetadataOperations } from '../dist/plugins/neon-broker/src/credential-metadata.js';
 import { createNeonOrganizationKeyOperations } from '../dist/plugins/neon-broker/src/organization-keys.js';
+import { createNeonUserKeyOperations } from '../dist/plugins/neon-broker/src/user-keys.js';
 
 export const scope = {
   projectId: 'project-a', revision: 'scope-v1', branchIds: ['br-a', 'br-b'],
@@ -372,7 +373,14 @@ export const organizationKeyCases = [
 export function organizationKeyFixture(value, config = organizationKeyScope) {
   return fixture(value, config, createNeonOrganizationKeyOperations);
 }
-export const allCases = [...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
+export const userKeyScope = { userId: 'user-a', revision: scope.revision, keyIds: [165432] };
+export const userKeyCases = [
+  ['listApiKeys', { user_id: 'user-a' }, { user: { id: 'user-a' }, keys: [{ id: 165432 }] }, { api_keys: [{ id: 165432 }] }],
+];
+export function userKeyFixture(value, config = userKeyScope) {
+  return fixture(typeof value === 'function' ? value : (url, init, n) => response(n === 1 ? value.user : value.keys), config, createNeonUserKeyOperations);
+}
+export const allCases = [...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });

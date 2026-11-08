@@ -35,6 +35,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   authDetailsCases, authDetailsFixture, authDetailsScope, authDetails,
   credentialMetadataCases, credentialMetadataFixture, credentialMetadataScope, credentialMetadata,
   organizationKeyCases, organizationKeyFixture, organizationKeyScope,
+  userKeyCases, userKeyFixture, userKeyScope,
   fixture, scope, branch, operation, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
@@ -45,7 +46,8 @@ const { providerFixture, credentialCanary, derivedCanary } = await import(pathTo
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
 function brokerFixture(name, args, raw, overrides = {}, config) {
-  const factory = organizationKeyCases.some(([operation]) => operation === name) ? organizationKeyFixture :
+  const factory = userKeyCases.some(([operation]) => operation === name) ? userKeyFixture :
+    organizationKeyCases.some(([operation]) => operation === name) ? organizationKeyFixture :
     credentialMetadataCases.some(([operation]) => operation === name) ? credentialMetadataFixture :
     authDetailsCases.some(([operation]) => operation === name) ? authDetailsFixture :
     maskingRuleCases.some(([operation]) => operation === name) ? maskingRuleFixture :
@@ -136,7 +138,7 @@ for (const [name, args, raw, expected] of cases) {
     const result = await f.call();
     assert.equal(result.ok, true);
     assert.deepEqual(result.value, expected);
-    assert.equal(f.provider.requests.length, ['getCurrentUserOrganizations', 'listSharedProjects'].includes(name) ? 2 : 1);
+    assert.equal(f.provider.requests.length, ['getCurrentUserOrganizations', 'listSharedProjects', 'listApiKeys'].includes(name) ? 2 : 1);
     assert.equal(f.common.calls.secret, 1);
     assert.equal(f.common.calls.close, 1);
     assert.equal(f.common.audit.filter(record => record.phase === 'intent').length, 1);
@@ -183,7 +185,7 @@ for (const [name, args, raw, expected] of cases) {
       const result = await f.call();
       assert.equal(result.ok, mode === 'success');
       if (mode === 'error') assert.equal(result.code, 'UPSTREAM_UNAVAILABLE');
-      assert.equal(f.provider.requests.length, ['getCurrentUserOrganizations', 'listSharedProjects'].includes(name) && mode === 'success' ? 2 : 1);
+      assert.equal(f.provider.requests.length, ['getCurrentUserOrganizations', 'listSharedProjects', 'listApiKeys'].includes(name) && mode === 'success' ? 2 : 1);
       safeEnvelope(f, result);
     }
   });
@@ -253,12 +255,12 @@ test('reflected lease material in selected safe-looking fields is refused by the
   assert.equal((await f.call()).code, 'OUTPUT_REFUSED');
 });
 
-for (const [name, args, raw] of [...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases, ...regionCases, ...projectCountCases, ...authWebhookCases, ...userProfileCases, ...authEmailCases, ...projectCases, ...userOrganizationCases, ...sharedProjectCases]) {
+for (const [name, args, raw] of [...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases, ...regionCases, ...projectCountCases, ...authWebhookCases, ...userProfileCases, ...authEmailCases, ...projectCases, ...userOrganizationCases, ...sharedProjectCases]) {
   test(`${name}: replay and TOCTOU policy/resource changes refuse without a second request`, async () => {
     const replay = brokerFixture(name, args, raw);
     assert.equal((await replay.call()).ok, true);
     assert.equal((await replay.call()).code, 'REPLAY_CONFLICT');
-    assert.equal(replay.provider.requests.length, ['getCurrentUserOrganizations', 'listSharedProjects'].includes(name) ? 2 : 1);
+    assert.equal(replay.provider.requests.length, ['getCurrentUserOrganizations', 'listSharedProjects', 'listApiKeys'].includes(name) ? 2 : 1);
     for (const mode of ['resource', 'policy-revoked', 'policy-revision']) {
       const f = brokerFixture(name, args, raw);
       const resolve = f.common.dependencies.credentials.resolve;
@@ -1282,6 +1284,49 @@ test('shared projects require exact-user collection grant, selected output and s
   safeEnvelope(maximum, maxResult);
   const reflected = brokerFixture(name, args, raw, {
     credentials: { async resolve() { return { value: 'project-a', redactions: [], async close() {} }; } },
+  });
+  assert.equal((await reflected.call()).code, 'OUTPUT_REFUSED');
+  assert.equal(reflected.provider.requests.length, 2);
+});
+
+test('user key identities require exact user collection authority and same-credential proof without tokens', async () => {
+  const [name, args, raw, expected] = userKeyCases[0];
+  const f = brokerFixture(name, args, { ...raw, keys: [{ ...raw.keys[0], key: credentialCanary,
+    created_by: derivedCanary, name: 'password-canary', last_used_from_addr: credentialCanary }, { id: 123 }] });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, expected);
+  assert.equal(f.common.calls.secret, 1);
+  assert.equal(f.provider.requests.length, 2);
+  safeEnvelope(f, result);
+  for (const resource of ['neon/users/user-a', 'neon/users/user-a/profile', 'neon/users/other/api_keys',
+    'neon/users/user-a/api_keys/165432', 'neon/accounts/user-a/api_keys', 'neon/organizations/org-a/api_keys']) {
+    const denied = brokerFixture(name, args, raw);
+    denied.common.vector.policy.resources = [resource];
+    assert.equal((await denied.call()).code, 'POLICY_DENIED');
+    assert.equal(denied.common.calls.secret, 0);
+    assert.equal(denied.provider.requests.length, 0);
+  }
+  for (const invalid of [{ ...raw, user: {} }, { ...raw, user: { id: 'other' } },
+    { ...raw, keys: { api_keys: raw.keys } }, { ...raw, keys: [...raw.keys, ...raw.keys] },
+    { ...raw, keys: [{ id: 123, user_id: 'other' }] }, { ...raw, keys: [{ id: Number.MAX_SAFE_INTEGER + 1 }] },
+    { ...raw, keys: Array.from({ length: 31 }, (_, id) => ({ id })) }]) {
+    const refused = brokerFixture(name, args, invalid);
+    const refusal = await refused.call();
+    assert.equal(refusal.code, 'UPSTREAM_UNAVAILABLE');
+    assert.equal(refused.provider.requests.length, invalid.user.id === 'user-a' ? 2 : 1);
+    safeEnvelope(refused, refusal);
+  }
+  const apiKeys = Array.from({ length: 30 }, (_, n) => ({ id: Number.MAX_SAFE_INTEGER - n }));
+  const config = { ...userKeyScope, userId: 'u'.repeat(80), revision: 'r'.repeat(80), keyIds: apiKeys.map(k => k.id) };
+  const maximum = brokerFixture(name, { user_id: config.userId }, { user: { id: config.userId }, keys: apiKeys }, {}, config);
+  const maxResult = await maximum.call();
+  assert.equal(maxResult.ok, true);
+  assert.deepEqual(maxResult.value, { api_keys: apiKeys });
+  assert.equal(maximum.provider.requests.length, 2);
+  safeEnvelope(maximum, maxResult);
+  const reflected = brokerFixture(name, args, raw, {
+    credentials: { async resolve() { return { value: String(raw.keys[0].id), redactions: [], async close() {} }; } },
   });
   assert.equal((await reflected.call()).code, 'OUTPUT_REFUSED');
   assert.equal(reflected.provider.requests.length, 2);

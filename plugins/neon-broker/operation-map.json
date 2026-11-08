@@ -227,20 +227,23 @@
       "id": "listApiKeys",
       "apiArea": "api-key",
       "tool": "neon.listApiKeys",
-      "scope": "trusted-account",
+      "scope": "user_id",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
-      "tier": "reserved",
-      "authorization": "native",
+      "tier": "read",
+      "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/user-keys.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source and refusal contracts only; same-credential exact-user proof before collection and selected numeric-ID-only output. Entitlement, provider side effects, native reviews and runtime integration remain unresolved; no token access or credential authority."
     },
     {
       "id": "createApiKey",
