@@ -37,6 +37,7 @@ export interface MetadataScope {
   queueIds?: readonly string[];
   workerDeployments?: readonly { scriptName: string; deploymentIds: readonly string[] }[];
   workerVersions?: readonly { scriptName: string; versionIds: readonly string[] }[];
+  workerControlScriptNames?: readonly string[];
 }
 export interface MetadataRequest {
   readonly method: "GET";
@@ -63,6 +64,13 @@ type Row = Record<string, unknown>;
 interface HyperdriveMetadata { id: string; cachingDisabled: boolean }
 interface SecretMetadata { name: string; type: "secret_text" | "secret_key" }
 interface PartialList<T> { items: T[]; complete: false }
+interface UnavailableControl { status: "unavailable"; reason: "not-in-response-schema" }
+interface WorkerBudgetMetadata {
+  cpuMs: { status: "configured"; value: number } | { status: "unavailable"; reason: "not-returned" };
+  bodyBytes: UnavailableControl;
+  memoryBytes: UnavailableControl;
+  workerFirst: UnavailableControl;
+}
 
 function object(value: unknown): Row {
   requireThat(value !== null && typeof value === "object" && !Array.isArray(value), "upstream");
@@ -96,6 +104,10 @@ export function metadataDescriptors(scope: MetadataScope) {
   requireThat(Array.isArray(scope.scriptNames) && scope.scriptNames.length <= 100 && Array.isArray(scope.hyperdriveIds) && scope.hyperdriveIds.length <= 100, "cap");
   const scripts = new Set(scope.scriptNames.map(value => scriptName.parse(value)));
   const hyperdrives = new Set(scope.hyperdriveIds.map(value => resourceId.parse(value)));
+  const workerControlScriptNames = scope.workerControlScriptNames ?? [];
+  requireThat(Array.isArray(workerControlScriptNames) && workerControlScriptNames.length <= maxRows, "cap");
+  const controlScripts = new Set(workerControlScriptNames.map(value => scriptName.parse(value)));
+  for (const name of controlScripts) requireThat(scripts.has(name), "scope");
   const databaseIds = scope.databaseIds ?? [];
   const defaultBucketNames = scope.defaultBucketNames ?? [];
   requireThat(Array.isArray(databaseIds) && databaseIds.length <= 100 && Array.isArray(defaultBucketNames) && defaultBucketNames.length <= 100, "cap");
@@ -401,7 +413,52 @@ export function metadataDescriptors(scope: MetadataScope) {
       return bounded(queueMetadata(row));
     },
   });
-  return Object.freeze({ workersList, secretNames, hyperdriveList, hyperdriveGet, d1List, d1Get, r2List, r2Get, deploymentsList, deploymentGet, versionsList, versionGet, kvNamespacesList, kvNamespaceGet, queuesList, queueGet });
+  function controlScope(name: string) {
+    scriptScope(name);
+    requireThat(controlScripts.has(name), "scope");
+  }
+  function controlResponse(raw: string, input: PreparedMetadata<ReturnType<typeof script.parse>>): Row {
+    const args = script.parse(input.arguments);
+    controlScope(args.scriptName);
+    const row = object(envelope(raw).result);
+    requireThat(row.account_id === undefined || row.account_id === account, "scope");
+    requireThat(row.script_name === undefined || row.script_name === args.scriptName, "scope");
+    return row;
+  }
+  const workerSubdomainGet: MetadataDescriptor<ReturnType<typeof script.parse>, { enabled: boolean; previewsEnabled: boolean }> = Object.freeze({
+    name: "cloudflare.workers.subdomain.get", version: "1", tier: "read", providerOperationId: "worker-script-get-subdomain",
+    prepare(raw: unknown) {
+      const args = script.parse(raw);
+      controlScope(args.scriptName);
+      return prepared(args, `worker:${args.scriptName}:controls`, `${root}/workers/scripts/${encodeURIComponent(args.scriptName)}/subdomain`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof script.parse>>) {
+      const row = controlResponse(raw, input);
+      requireThat(typeof row.enabled === "boolean" && typeof row.previews_enabled === "boolean", "upstream");
+      return bounded({ enabled: row.enabled, previewsEnabled: row.previews_enabled });
+    },
+  });
+  const workerSettingsGet: MetadataDescriptor<ReturnType<typeof script.parse>, WorkerBudgetMetadata> = Object.freeze({
+    name: "cloudflare.workers.settings.get", version: "1", tier: "read", providerOperationId: "worker-script-get-settings",
+    prepare(raw: unknown) {
+      const args = script.parse(raw);
+      controlScope(args.scriptName);
+      return prepared(args, `worker:${args.scriptName}:controls`, `${root}/workers/scripts/${encodeURIComponent(args.scriptName)}/settings`);
+    },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof script.parse>>) {
+      const row = controlResponse(raw, input);
+      const limits = row.limits === undefined ? undefined : object(row.limits);
+      const cpu = limits?.cpu_ms;
+      requireThat(cpu === undefined || (typeof cpu === "number" && Number.isSafeInteger(cpu) && cpu >= 0), "upstream");
+      return bounded<WorkerBudgetMetadata>({
+        cpuMs: cpu === undefined ? { status: "unavailable", reason: "not-returned" } : { status: "configured", value: cpu as number },
+        bodyBytes: { status: "unavailable", reason: "not-in-response-schema" },
+        memoryBytes: { status: "unavailable", reason: "not-in-response-schema" },
+        workerFirst: { status: "unavailable", reason: "not-in-response-schema" },
+      });
+    },
+  });
+  return Object.freeze({ workersList, secretNames, hyperdriveList, hyperdriveGet, d1List, d1Get, r2List, r2Get, deploymentsList, deploymentGet, versionsList, versionGet, kvNamespacesList, kvNamespaceGet, queuesList, queueGet, workerSubdomainGet, workerSettingsGet });
 }
 
 export interface ZoneMetadataScope {

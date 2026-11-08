@@ -16,6 +16,7 @@ const otherDb = "cccccccc-cccc-cccc-cccc-cccccccccccc";
 const scope = { accountId: account, revision: "policy-1", scriptNames: ["safe-worker"], hyperdriveIds: [own], databaseIds: [db], defaultBucketNames: ["safe-bucket"], workerDeployments: [{ scriptName: "safe-worker", deploymentIds: [db] }], workerVersions: [{ scriptName: "safe-worker", versionIds: [db] }] };
 scope.kvNamespaceIds = [own];
 scope.queueIds = [other];
+scope.workerControlScriptNames = ["safe-worker"];
 const descriptors = metadataDescriptors(scope);
 const kvQueueCases = [
   ["kvNamespacesList", { page: 2, perPage: 10 }, "storage/kv/namespaces?page=2&per_page=10", "kv:namespaces"],
@@ -824,6 +825,65 @@ test("Cloudflare Pages metadata refuses malformed responses and unbounded pagina
   }
 });
 
+test("Cloudflare Worker control reads require separate copied scope and exact bounded requests", () => {
+  const inputScope = { ...scope, scriptNames: ["safe-worker", "other-worker"], workerControlScriptNames: ["safe-worker"] };
+  const controls = metadataDescriptors(inputScope);
+  inputScope.workerControlScriptNames.push("other-worker");
+  for (const [key, suffix] of [["workerSettingsGet", "settings"], ["workerSubdomainGet", "subdomain"]]) {
+    const descriptor = controls[key];
+    const prepared = descriptor.prepare({ scriptName: "safe-worker" });
+    assert.deepEqual(prepared.request, { method: "GET", path: `/accounts/${account}/workers/scripts/safe-worker/${suffix}`, maxResponseBytes: 131072, timeoutMs: 10000, maxRequests: 1, redirects: "deny" });
+    assert.equal(prepared.resource.id, `cloudflare:account:${account}:worker:safe-worker:controls`);
+    assert.equal(prepared.resource.revision, "policy-1");
+    assert.ok(Object.isFrozen(prepared) && Object.isFrozen(prepared.arguments) && Object.isFrozen(prepared.request));
+    refuses(() => descriptor.prepare({ scriptName: "other-worker" }), "scope");
+    refuses(() => metadataDescriptors({ ...scope, workerControlScriptNames: undefined })[key].prepare({ scriptName: "safe-worker" }), "scope");
+    for (const field of ["accountId", "agentId", "approval", "credential", "url", "headers", "source", "effective", "versionId"]) refuses(() => descriptor.prepare({ scriptName: "safe-worker", [field]: "forged" }), "schema");
+    for (const scriptName of ["../safe-worker", "safe-worker?source=true", "safe-worker\n"]) refuses(() => descriptor.prepare({ scriptName }), "schema");
+  }
+  refuses(() => metadataDescriptors({ ...scope, workerControlScriptNames: ["foreign-worker"] }), "scope");
+  refuses(() => metadataDescriptors({ ...scope, workerControlScriptNames: Array(101).fill("safe-worker") }), "cap");
+});
+
+test("Cloudflare Worker control projections omit secrets and distinguish configured from unavailable", () => {
+  const canary = "never-return-binding-or-source";
+  const settings = descriptors.workerSettingsGet;
+  const input = settings.prepare({ scriptName: "safe-worker" });
+  const unavailable = { status: "unavailable", reason: "not-in-response-schema" };
+  const row = { limits: { cpu_ms: 50, memory_mb: 128, body_bytes: 1048576 }, assets: { config: { run_worker_first: true }, jwt: canary }, bindings: [{ type: "plain_text", text: canary }], annotations: { message: canary }, source: canary, token: canary };
+  const result = settings.project(success(row), input);
+  assert.deepEqual(result, { cpuMs: { status: "configured", value: 50 }, bodyBytes: unavailable, memoryBytes: unavailable, workerFirst: unavailable });
+  for (const missing of [{}, { limits: {} }]) assert.deepEqual(settings.project(success(missing), input), { ...result, cpuMs: { status: "unavailable", reason: "not-returned" } });
+  assert.deepEqual(settings.project(success({ limits: { cpu_ms: 0 } }), input).cpuMs, { status: "configured", value: 0 });
+  const subdomain = descriptors.workerSubdomainGet;
+  const subdomainInput = subdomain.prepare({ scriptName: "safe-worker" });
+  assert.deepEqual(subdomain.project(success({ enabled: false, previews_enabled: true, url: canary, token: canary }), subdomainInput), { enabled: false, previewsEnabled: true });
+  assert.deepEqual(subdomain.project(success({ enabled: true, previews_enabled: false }), subdomainInput), { enabled: true, previewsEnabled: false });
+  assert.ok(!JSON.stringify(result).includes(canary));
+});
+
+test("Cloudflare Worker control projections refuse malformed fields without inventing defaults", () => {
+  const settings = descriptors.workerSettingsGet;
+  const input = settings.prepare({ scriptName: "safe-worker" });
+  for (const cpu_ms of [null, -1, 1.5, "50", true, Number.MAX_SAFE_INTEGER + 1, "never-return-secret"]) refuses(() => settings.project(success({ limits: { cpu_ms } }), input), "upstream");
+  for (const limits of [null, [], 50, "never-return-secret"]) refuses(() => settings.project(success({ limits }), input), "upstream");
+  const subdomain = descriptors.workerSubdomainGet;
+  const subdomainInput = subdomain.prepare({ scriptName: "safe-worker" });
+  for (const row of [{}, { enabled: false }, { previews_enabled: true }, { enabled: "false", previews_enabled: false }, { enabled: true, previews_enabled: null }]) refuses(() => subdomain.project(success(row), subdomainInput), "upstream");
+});
+
+test("Cloudflare Worker control responses reject explicit foreign context, malformed envelopes and oversize", () => {
+  for (const descriptor of [descriptors.workerSettingsGet, descriptors.workerSubdomainGet]) {
+    const input = descriptor.prepare({ scriptName: "safe-worker" });
+    const row = { limits: { cpu_ms: 50 }, enabled: false, previews_enabled: false };
+    for (const foreign of [{ account_id: other }, { script_name: "other-worker" }]) refuses(() => descriptor.project(success({ ...row, ...foreign }), input), "scope");
+    const otherPrepared = { ...input, arguments: { scriptName: "other-worker" } };
+    refuses(() => descriptor.project(success(row), otherPrepared), "scope");
+    for (const raw of ["null", "not-json", success([]), JSON.stringify({ success: false, errors: [{ message: "never-return-secret" }], result: row })]) refuses(() => descriptor.project(raw, input), "upstream");
+    refuses(() => descriptor.project(success({ ...row, source: "s".repeat(131072) }), input), "cap");
+  }
+});
+
 test("Cloudflare full schema inventory is pinned, explicit about holes, and consistent with descriptors", async () => {
   const bytes = await readFile(new URL("../plugins/cloudflare-broker/coverage/operations.jsonl", import.meta.url));
   const manifest = JSON.parse(await readFile(new URL("../plugins/cloudflare-broker/coverage/source.json", import.meta.url)));
@@ -859,9 +919,9 @@ test("Cloudflare full schema inventory is pinned, explicit about holes, and cons
       }
     }
   }
-  assert.equal(operations.filter(row => row.typedTool !== null).length, 34);
+  assert.equal(operations.filter(row => row.typedTool !== null).length, 36);
   assert.equal(operations.filter(row => row.tier === "reserved").length, 5);
-  assert.equal(operations.filter(row => row.tier === "read").length, 29);
+  assert.equal(operations.filter(row => row.tier === "read").length, 31);
   assert.equal(manifest.counts.descriptors, Object.keys(allDescriptors).length);
   assert.equal(manifest.credentialScope.status, "operation-entitlements-unresolved");
   assert.equal(manifest.complete, false);
