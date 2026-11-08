@@ -32,6 +32,7 @@ import { createNeonBranchConsumptionOperations } from '../dist/plugins/neon-brok
 import { createNeonLegacyConsumptionOperations } from '../dist/plugins/neon-broker/src/legacy-consumption.js';
 import { createNeonMaskingRuleOperations } from '../dist/plugins/neon-broker/src/masking-rules.js';
 import { createNeonAuthDetailsOperations } from '../dist/plugins/neon-broker/src/auth-details.js';
+import { createNeonCredentialMetadataOperations } from '../dist/plugins/neon-broker/src/credential-metadata.js';
 
 export const scope = {
   projectId: 'project-a', revision: 'scope-v1', branchIds: ['br-a', 'br-b'],
@@ -352,7 +353,17 @@ export const authDetailsCases = [
 export function authDetailsFixture(value, config = authDetailsScope) {
   return fixture(value, config, createNeonAuthDetailsOperations);
 }
-export const allCases = [...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
+export const credentialMetadata = { token_id: 'nak_live_0123456789abcdef0123456789abcdef', branch_id: 'br-a' };
+export const credentialMetadataScope = { projectId: scope.projectId, branchId: 'br-a', revision: scope.revision,
+  tokenIds: [credentialMetadata.token_id] };
+export const credentialMetadataCases = [
+  ['listCredentials', { project_id: 'project-a', branch_id: 'br-a' },
+    { credentials: [{ ...credentialMetadata, scopes: ['storage:read'], principal_type: 'user' }] }, { credentials: [credentialMetadata] }],
+];
+export function credentialMetadataFixture(value, config = credentialMetadataScope) {
+  return fixture(value, config, createNeonCredentialMetadataOperations);
+}
+export const allCases = [...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
 export const canary = 'synthetic-neon-credential-canary';
 export function response(value, init = {}) {
   return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' }, ...init });

@@ -33,6 +33,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   legacyConsumptionCases, legacyConsumptionFixture, legacyConsumptionFrame, legacyConsumptionPeriod,
   maskingRuleCases, maskingRuleFixture, maskingRuleScope, maskingRule,
   authDetailsCases, authDetailsFixture, authDetailsScope, authDetails,
+  credentialMetadataCases, credentialMetadataFixture, credentialMetadataScope, credentialMetadata,
   fixture, scope, branch, operation, response } from './helpers.mjs';
 
 // CI supplies an isolated, commit-pinned candidate checkout. No runtime/network
@@ -43,7 +44,8 @@ const { providerFixture, credentialCanary, derivedCanary } = await import(pathTo
 const { validateOperationMap } = await import(pathToFileURL(resolve(root, 'dist/packages/core/src/provider/index.js')));
 
 function brokerFixture(name, args, raw, overrides = {}, config) {
-  const factory = authDetailsCases.some(([operation]) => operation === name) ? authDetailsFixture :
+  const factory = credentialMetadataCases.some(([operation]) => operation === name) ? credentialMetadataFixture :
+    authDetailsCases.some(([operation]) => operation === name) ? authDetailsFixture :
     maskingRuleCases.some(([operation]) => operation === name) ? maskingRuleFixture :
     legacyConsumptionCases.some(([operation]) => operation === name) ? legacyConsumptionFixture :
     branchConsumptionCases.some(([operation]) => operation === name) ? branchConsumptionFixture :
@@ -249,7 +251,7 @@ test('reflected lease material in selected safe-looking fields is refused by the
   assert.equal((await f.call()).code, 'OUTPUT_REFUSED');
 });
 
-for (const [name, args, raw] of [...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases, ...regionCases, ...projectCountCases, ...authWebhookCases, ...userProfileCases, ...authEmailCases, ...projectCases, ...userOrganizationCases, ...sharedProjectCases]) {
+for (const [name, args, raw] of [...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases, ...organizationVPCCases, ...organizationCases, ...organizationMemberCases, ...organizationInvitationCases, ...dataAPICases, ...regionCases, ...projectCountCases, ...authWebhookCases, ...userProfileCases, ...authEmailCases, ...projectCases, ...userOrganizationCases, ...sharedProjectCases]) {
   test(`${name}: replay and TOCTOU policy/resource changes refuse without a second request`, async () => {
     const replay = brokerFixture(name, args, raw);
     assert.equal((await replay.call()).ok, true);
@@ -1281,6 +1283,44 @@ test('shared projects require exact-user collection grant, selected output and s
   });
   assert.equal((await reflected.call()).code, 'OUTPUT_REFUSED');
   assert.equal(reflected.provider.requests.length, 2);
+});
+
+test('credential metadata requires exact collection authority and exposes no credential payload or scope inference', async () => {
+  const [name, args, raw, expected] = credentialMetadataCases[0];
+  const f = brokerFixture(name, args, { credentials: [{ ...raw.credentials[0], token: credentialCanary,
+    secret: derivedCanary, name: 'password-canary', scopes: ['unknown:future'] }, { token_id: 'unselected' }] });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, expected);
+  safeEnvelope(f, result);
+  for (const resource of ['neon/projects/project-a', 'neon/projects/project-a/branches/br-a',
+    'neon/projects/project-a/branches/br-b/credentials', `neon/projects/project-a/branches/br-a/credentials/${credentialMetadata.token_id}`]) {
+    const denied = brokerFixture(name, args, raw);
+    denied.common.vector.policy.resources = [resource];
+    assert.equal((await denied.call()).code, 'POLICY_DENIED');
+    assert.equal(denied.common.calls.secret, 0);
+    assert.equal(denied.provider.requests.length, 0);
+  }
+  for (const invalid of [{ ...raw, pagination: {} }, { credentials: [credentialMetadata, credentialMetadata] },
+    { credentials: [{ token_id: 'unselected', branch_id: 'br-b' }] },
+    { credentials: Array.from({ length: 31 }, (_, i) => ({ token_id: `id-${i}` })) }]) {
+    const refused = brokerFixture(name, args, invalid);
+    const refusal = await refused.call();
+    assert.equal(refusal.code, 'UPSTREAM_UNAVAILABLE');
+    safeEnvelope(refused, refusal);
+  }
+  const credentials = Array.from({ length: 30 }, (_, n) => ({ token_id: `id-${String(n).padStart(77, '0')}`, branch_id: 'b'.repeat(60) }));
+  const config = { ...credentialMetadataScope, projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), revision: 'r'.repeat(80),
+    tokenIds: credentials.map(value => value.token_id) };
+  const maximum = brokerFixture(name, { project_id: config.projectId, branch_id: config.branchId }, { credentials }, {}, config);
+  const maxResult = await maximum.call();
+  assert.equal(maxResult.ok, true);
+  assert.deepEqual(maxResult.value, { credentials });
+  safeEnvelope(maximum, maxResult);
+  const reflected = brokerFixture(name, args, raw, {
+    credentials: { async resolve() { return { value: credentialMetadata.token_id, redactions: [], async close() {} }; } },
+  });
+  assert.equal((await reflected.call()).code, 'OUTPUT_REFUSED');
 });
 
 test('auth details require exact account authority without exposing opaque authentication data or implying user access', async () => {
