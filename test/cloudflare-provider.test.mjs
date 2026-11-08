@@ -5,6 +5,7 @@ import test from "node:test";
 import { accessPolicyMetadataDescriptors, accessApplicationMetadataDescriptors, metadataDescriptors, zoneMetadataDescriptors, workerRouteMetadataDescriptors, secretsStoreMetadataDescriptors, durableObjectMetadataDescriptors, pagesMetadataDescriptors } from "../dist/plugins/cloudflare-broker/src/metadata.js";
 import { currentContentDescriptor } from "../dist/plugins/cloudflare-broker/src/current-content.js";
 import { versionAssetDescriptor } from "../dist/plugins/cloudflare-broker/src/version-assets.js";
+import { workerDomainMetadataDescriptors } from "../dist/plugins/cloudflare-broker/src/worker-domains.js";
 import { deletionPlanDescriptors } from "../dist/plugins/cloudflare-broker/src/deletion-plans.js";
 import { inventory, source } from "../plugins/cloudflare-broker/scripts/inventory.mjs";
 import { familySummary } from "../plugins/cloudflare-broker/scripts/families.mjs";
@@ -66,6 +67,7 @@ const accessPolicyDescriptors = accessPolicyMetadataDescriptors({ accountId: acc
 const metadataOnly = { ...descriptors, ...zoneDescriptors, ...routeDescriptors, ...accessDescriptors, ...accessPolicyDescriptors, ...secretsStoreDescriptors, ...durableDescriptors, ...pagesDescriptors };
 const contentDescriptor = currentContentDescriptor({ accountId: account, revision: "source-policy-1", sourceDigestScriptNames: ["safe-worker"] });
 const allDescriptors = { ...metadataOnly, ...deletionDescriptors, contentDescriptor,
+  ...workerDomainMetadataDescriptors({ accountId: account, revision: "policy-1" }),
   versionAssets: versionAssetDescriptor({ accountId: account, revision: "policy-1", workers: [{ scriptName: "safe-worker", versionIds: [db] }] }),
 };
 const deletionCases = [
@@ -932,9 +934,9 @@ test("Cloudflare full schema inventory is pinned, explicit about holes, and cons
       }
     }
   }
-  assert.equal(operations.filter(row => row.typedTool !== null).length, 45);
+  assert.equal(operations.filter(row => row.typedTool !== null).length, 47);
   assert.equal(operations.filter(row => row.tier === "reserved").length, 5);
-  assert.equal(operations.filter(row => row.tier === "read").length, 40);
+  assert.equal(operations.filter(row => row.tier === "read").length, 42);
   assert.equal(operations.filter(row => row.implementation === "content-descriptor-only").length, 1);
   assert.equal(manifest.counts.contentDescriptors, 1);
   assert.equal(manifest.counts.descriptors, Object.keys(allDescriptors).length);
