@@ -4,6 +4,7 @@ import { currentContentDescriptor, type CurrentContentScope } from "./current-co
 import { subscriptionDescriptors, type SubscriptionScope } from "./subscriptions.js";
 import { workerScheduleDescriptor, type WorkerScheduleScope } from "./worker-schedules.js";
 import { workerBuildDescriptor, type WorkerBuildScope } from "./worker-builds.js";
+import { deployHookDescriptor, type DeployHookScope } from "./deploy-hooks.js";
 import { buildTriggerDescriptor, type BuildTriggerScope } from "./build-triggers.js";
 import { buildRecordDescriptors, type BuildRecordScope } from "./build-records.js";
 import { queueConsumerDescriptors, type QueueConsumerScope } from "./queue-consumers.js";
@@ -78,6 +79,7 @@ export interface CloudflareReadScope extends MetadataScope {
   subscriptions?: SubscriptionScope["subscriptions"];
   workerSchedules?: WorkerScheduleScope["workers"];
   workerBuildConfigurations?: WorkerBuildScope["workers"];
+  workerDeployHooks?: DeployHookScope["workers"];
   workerBuildTriggers?: BuildTriggerScope["workers"];
   workerBuildRecords?: BuildRecordScope["workers"];
   queueConsumers?: QueueConsumerScope["queues"];
@@ -152,6 +154,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(subscriptions.subscriptionsList), metadata(subscriptions.subscriptionGet),
     metadata(workerScheduleDescriptor({ accountId, revision, workers: scope.workerSchedules ?? [] })),
     metadata(workerBuildDescriptor({ accountId, revision, workers: scope.workerBuildConfigurations ?? [] })),
+    metadata(deployHookDescriptor({ accountId, revision, workers: scope.workerDeployHooks ?? [] })),
     metadata(buildTriggerDescriptor({ accountId, revision, workers: scope.workerBuildTriggers ?? [] })),
     metadata(builds.buildsList), metadata(builds.buildGet),
     metadata(descriptors.workersList), metadata(descriptors.secretNames),
