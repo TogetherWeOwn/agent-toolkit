@@ -156,7 +156,7 @@ test("Cloudflare malformed and credential-reflecting content never reaches the e
 
 test("Cloudflare ordinary metadata reads do not write source evidence or need source authority", async () => {
   const f = fixture({ authority: false, sink: async () => { throw Error("unavailable"); },
-    fetcher: async () => new Response(JSON.stringify({ success: true, result: [{ id: "safe-worker" }] }),
+    fetcher: async () => new Response(JSON.stringify({ success: true, errors: [], result: [{ id: "safe-worker" }] }),
       { headers: { "content-type": "application/json" } }) });
   const result = await f.invoke(list, {});
   assert.equal(result.ok, true);
