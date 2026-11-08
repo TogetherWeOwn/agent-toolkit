@@ -1,0 +1,3909 @@
+{
+  "contract": "toolkit.provider-broker/v1",
+  "provider": "neon",
+  "version": "0.1.0",
+  "reference": {
+    "url": "https://neon.com/api_spec/release/v2.json",
+    "version": "v2",
+    "sha256": "bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa"
+  },
+  "inventory": [
+    "getProjectAdvisorSecurityIssues",
+    "listApiKeys",
+    "createApiKey",
+    "revokeApiKey",
+    "getProjectOperation",
+    "listProjects",
+    "createProject",
+    "countProjects",
+    "listSharedProjects",
+    "getProject",
+    "updateProject",
+    "deleteProject",
+    "recoverProject",
+    "listProjectOperations",
+    "listProjectPermissions",
+    "grantPermissionToProject",
+    "listProjectMembers",
+    "setProjectMemberRole",
+    "removeProjectMemberRole",
+    "revokePermissionFromProject",
+    "getAvailablePreloadLibraries",
+    "createProjectTransferRequest",
+    "acceptProjectTransferRequest",
+    "getProjectJWKS",
+    "addProjectJWKS",
+    "deleteProjectJWKS",
+    "createProjectBranchDataAPI",
+    "updateProjectBranchDataAPI",
+    "deleteProjectBranchDataAPI",
+    "getProjectBranchDataAPI",
+    "createNeonAuthIntegration",
+    "getNeonAuth",
+    "createNeonAuth",
+    "disableNeonAuth",
+    "listNeonAuthRedirectURIWhitelistDomains",
+    "addNeonAuthDomainToRedirectURIWhitelist",
+    "deleteNeonAuthDomainFromRedirectURIWhitelist",
+    "listBranchNeonAuthTrustedDomains",
+    "addBranchNeonAuthTrustedDomain",
+    "deleteBranchNeonAuthTrustedDomain",
+    "createNeonAuthProviderSDKKeys",
+    "createNeonAuthNewUser",
+    "createBranchNeonAuthNewUser",
+    "deleteBranchNeonAuthUser",
+    "updateNeonAuthUserRole",
+    "deleteNeonAuthUser",
+    "transferNeonAuthProviderProject",
+    "listNeonAuthIntegrations",
+    "listNeonAuthOauthProviders",
+    "addNeonAuthOauthProvider",
+    "listBranchNeonAuthOauthProviders",
+    "addBranchNeonAuthOauthProvider",
+    "updateNeonAuthOauthProvider",
+    "deleteNeonAuthOauthProvider",
+    "updateBranchNeonAuthOauthProvider",
+    "deleteBranchNeonAuthOauthProvider",
+    "getNeonAuthEmailServer",
+    "updateNeonAuthEmailServer",
+    "sendNeonAuthTestEmail",
+    "sendNeonAuthEmailProviderTest",
+    "getNeonAuthEmailAndPasswordConfig",
+    "updateNeonAuthEmailAndPasswordConfig",
+    "getNeonAuthEmailProvider",
+    "updateNeonAuthEmailProvider",
+    "deleteNeonAuthIntegration",
+    "getConnectionURI",
+    "getNeonAuthAllowLocalhost",
+    "updateNeonAuthAllowLocalhost",
+    "updateNeonAuthLogsExport",
+    "getNeonAuthPluginConfigs",
+    "updateNeonAuthOrganizationPlugin",
+    "updateNeonAuthConfig",
+    "updateNeonAuthMagicLinkPlugin",
+    "getNeonAuthPhoneNumberPlugin",
+    "updateNeonAuthPhoneNumberPlugin",
+    "getNeonAuthOAuthProviderPlugin",
+    "updateNeonAuthOAuthProviderPlugin",
+    "listNeonAuthOAuthClients",
+    "createNeonAuthOAuthClient",
+    "getNeonAuthOAuthClient",
+    "updateNeonAuthOAuthClient",
+    "deleteNeonAuthOAuthClient",
+    "rotateNeonAuthOAuthClientSecret",
+    "getNeonAuthWebhookConfig",
+    "updateNeonAuthWebhookConfig",
+    "createProjectBranch",
+    "listProjectBranches",
+    "createProjectBranchAnonymized",
+    "countProjectBranches",
+    "getProjectBranch",
+    "deleteProjectBranch",
+    "updateProjectBranch",
+    "restoreProjectBranch",
+    "getProjectBranchSchema",
+    "getProjectBranchSchemaComparison",
+    "getMaskingRules",
+    "updateMaskingRules",
+    "getAnonymizedBranchStatus",
+    "startAnonymization",
+    "setDefaultProjectBranch",
+    "finalizeRestoreBranch",
+    "listProjectBranchEndpoints",
+    "listProjectBranchDatabases",
+    "createProjectBranchDatabase",
+    "getProjectBranchDatabase",
+    "updateProjectBranchDatabase",
+    "deleteProjectBranchDatabase",
+    "listProjectBranchRoles",
+    "createProjectBranchRole",
+    "getProjectBranchRole",
+    "deleteProjectBranchRole",
+    "getProjectBranchRolePassword",
+    "getProjectBranchRealtime",
+    "enableProjectBranchRealtime",
+    "disableProjectBranchRealtime",
+    "getProjectBranchRealtimeSecret",
+    "rotateProjectBranchRealtimeSecret",
+    "resetProjectBranchRolePassword",
+    "listProjectVPCEndpoints",
+    "assignProjectVPCEndpoint",
+    "deleteProjectVPCEndpoint",
+    "createProjectEndpoint",
+    "listProjectEndpoints",
+    "getProjectEndpoint",
+    "deleteProjectEndpoint",
+    "updateProjectEndpoint",
+    "startProjectEndpoint",
+    "suspendProjectEndpoint",
+    "restartProjectEndpoint",
+    "getConsumptionHistoryPerProject",
+    "getConsumptionHistoryPerProjectV2",
+    "getConsumptionHistoryPerBranchV2",
+    "getOrganization",
+    "listOrgApiKeys",
+    "createOrgApiKey",
+    "revokeOrgApiKey",
+    "getOrganizationSpendingLimit",
+    "setOrganizationSpendingLimit",
+    "deleteOrganizationSpendingLimit",
+    "getOrganizationMembers",
+    "getOrganizationMember",
+    "updateOrganizationMember",
+    "removeOrganizationMember",
+    "getOrganizationInvitations",
+    "createOrganizationInvitations",
+    "transferProjectsFromOrgToOrg",
+    "listOrganizationVPCEndpointsAllRegions",
+    "listOrganizationVPCEndpoints",
+    "getOrganizationVPCEndpointDetails",
+    "assignOrganizationVPCEndpoint",
+    "deleteOrganizationVPCEndpoint",
+    "getActiveRegions",
+    "getCurrentUserInfo",
+    "getCurrentUserOrganizations",
+    "transferProjectsFromUserToOrg",
+    "getAuthDetails",
+    "createSnapshot",
+    "listSnapshots",
+    "deleteSnapshot",
+    "updateSnapshot",
+    "restoreSnapshot",
+    "getSnapshotSchedule",
+    "setSnapshotSchedule",
+    "createProjectBranchBucket",
+    "listProjectBranchBuckets",
+    "deleteProjectBranchBucket",
+    "getProjectBranchStorage",
+    "getProjectBranchAiGateway",
+    "queryProjectBranchLogs",
+    "listProjectBranchLogFields",
+    "listProjectBranchLogFieldValues",
+    "listProjectBranchBucketObjects",
+    "deleteProjectBranchBucketObject",
+    "getProjectBranchBucketObject",
+    "deleteProjectBranchBucketObjectsByPrefix",
+    "presignProjectBranchBucketObject",
+    "createCredential",
+    "listCredentials",
+    "revokeCredential",
+    "revealCredential",
+    "rotateCredential",
+    "listProjectBranchFunctions",
+    "getProjectBranchFunction",
+    "updateProjectBranchFunction",
+    "deleteProjectBranchFunction",
+    "createProjectBranchFunctionDeployment",
+    "listProjectBranchTriggers",
+    "createProjectBranchTrigger",
+    "getProjectBranchTrigger",
+    "updateProjectBranchTrigger",
+    "deleteProjectBranchTrigger",
+    "registerProjectBranchCustomDomain",
+    "listProjectBranchCustomDomains",
+    "deleteProjectBranchCustomDomain"
+  ],
+  "operations": [
+    {
+      "id": "getProjectAdvisorSecurityIssues",
+      "apiArea": "project",
+      "tool": "neon.getProjectAdvisorSecurityIssues",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listApiKeys",
+      "apiArea": "api-key",
+      "tool": "neon.listApiKeys",
+      "scope": "trusted-account",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "createApiKey",
+      "apiArea": "api-key",
+      "tool": "neon.createApiKey",
+      "scope": "trusted-account",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "revokeApiKey",
+      "apiArea": "api-key",
+      "tool": "neon.revokeApiKey",
+      "scope": "key_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getProjectOperation",
+      "apiArea": "operation",
+      "tool": "neon.getProjectOperation",
+      "scope": "project_id/operation_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listProjects",
+      "apiArea": "project",
+      "tool": "neon.listProjects",
+      "scope": "trusted-account",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "createProject",
+      "apiArea": "project",
+      "tool": "neon.createProject",
+      "scope": "trusted-account",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "countProjects",
+      "apiArea": "project",
+      "tool": "neon.countProjects",
+      "scope": "trusted-account",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listSharedProjects",
+      "apiArea": "project",
+      "tool": "neon.listSharedProjects",
+      "scope": "trusted-account",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getProject",
+      "apiArea": "project",
+      "tool": "neon.getProject",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/metadata.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Reviewed compatible core, accepted trusted host/policy/credential/journal/audit integration, metadata-only entitlement, independent non-waking evidence and specialist gates."
+    },
+    {
+      "id": "updateProject",
+      "apiArea": "project",
+      "tool": "neon.updateProject",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "deleteProject",
+      "apiArea": "project",
+      "tool": "neon.deleteProject",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "recoverProject",
+      "apiArea": "project",
+      "tool": "neon.recoverProject",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listProjectOperations",
+      "apiArea": "operation",
+      "tool": "neon.listProjectOperations",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listProjectPermissions",
+      "apiArea": "project",
+      "tool": "neon.listProjectPermissions",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "grantPermissionToProject",
+      "apiArea": "project",
+      "tool": "neon.grantPermissionToProject",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listProjectMembers",
+      "apiArea": "project",
+      "tool": "neon.listProjectMembers",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "setProjectMemberRole",
+      "apiArea": "project",
+      "tool": "neon.setProjectMemberRole",
+      "scope": "project_id/member_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "removeProjectMemberRole",
+      "apiArea": "project",
+      "tool": "neon.removeProjectMemberRole",
+      "scope": "project_id/member_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "revokePermissionFromProject",
+      "apiArea": "project",
+      "tool": "neon.revokePermissionFromProject",
+      "scope": "project_id/permission_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getAvailablePreloadLibraries",
+      "apiArea": "project",
+      "tool": "neon.getAvailablePreloadLibraries",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "createProjectTransferRequest",
+      "apiArea": "project",
+      "tool": "neon.createProjectTransferRequest",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "acceptProjectTransferRequest",
+      "apiArea": "project",
+      "tool": "neon.acceptProjectTransferRequest",
+      "scope": "project_id/request_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getProjectJWKS",
+      "apiArea": "project",
+      "tool": "neon.getProjectJWKS",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "addProjectJWKS",
+      "apiArea": "project",
+      "tool": "neon.addProjectJWKS",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "deleteProjectJWKS",
+      "apiArea": "project",
+      "tool": "neon.deleteProjectJWKS",
+      "scope": "project_id/jwks_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "createProjectBranchDataAPI",
+      "apiArea": "dataapi",
+      "tool": "neon.createProjectBranchDataAPI",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateProjectBranchDataAPI",
+      "apiArea": "dataapi",
+      "tool": "neon.updateProjectBranchDataAPI",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "deleteProjectBranchDataAPI",
+      "apiArea": "dataapi",
+      "tool": "neon.deleteProjectBranchDataAPI",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getProjectBranchDataAPI",
+      "apiArea": "dataapi",
+      "tool": "neon.getProjectBranchDataAPI",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "createNeonAuthIntegration",
+      "apiArea": "auth-legacy",
+      "tool": "neon.createNeonAuthIntegration",
+      "scope": "trusted-account",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getNeonAuth",
+      "apiArea": "auth",
+      "tool": "neon.getNeonAuth",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "createNeonAuth",
+      "apiArea": "auth",
+      "tool": "neon.createNeonAuth",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "disableNeonAuth",
+      "apiArea": "auth",
+      "tool": "neon.disableNeonAuth",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listNeonAuthRedirectURIWhitelistDomains",
+      "apiArea": "auth-legacy",
+      "tool": "neon.listNeonAuthRedirectURIWhitelistDomains",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "addNeonAuthDomainToRedirectURIWhitelist",
+      "apiArea": "auth-legacy",
+      "tool": "neon.addNeonAuthDomainToRedirectURIWhitelist",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "deleteNeonAuthDomainFromRedirectURIWhitelist",
+      "apiArea": "auth-legacy",
+      "tool": "neon.deleteNeonAuthDomainFromRedirectURIWhitelist",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listBranchNeonAuthTrustedDomains",
+      "apiArea": "auth",
+      "tool": "neon.listBranchNeonAuthTrustedDomains",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "addBranchNeonAuthTrustedDomain",
+      "apiArea": "auth",
+      "tool": "neon.addBranchNeonAuthTrustedDomain",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "deleteBranchNeonAuthTrustedDomain",
+      "apiArea": "auth",
+      "tool": "neon.deleteBranchNeonAuthTrustedDomain",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "createNeonAuthProviderSDKKeys",
+      "apiArea": "auth-legacy",
+      "tool": "neon.createNeonAuthProviderSDKKeys",
+      "scope": "trusted-account",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "createNeonAuthNewUser",
+      "apiArea": "auth-legacy",
+      "tool": "neon.createNeonAuthNewUser",
+      "scope": "trusted-account",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "createBranchNeonAuthNewUser",
+      "apiArea": "auth",
+      "tool": "neon.createBranchNeonAuthNewUser",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "deleteBranchNeonAuthUser",
+      "apiArea": "auth",
+      "tool": "neon.deleteBranchNeonAuthUser",
+      "scope": "project_id/branch_id/auth_user_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateNeonAuthUserRole",
+      "apiArea": "auth",
+      "tool": "neon.updateNeonAuthUserRole",
+      "scope": "project_id/branch_id/auth_user_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "deleteNeonAuthUser",
+      "apiArea": "auth-legacy",
+      "tool": "neon.deleteNeonAuthUser",
+      "scope": "project_id/auth_user_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "transferNeonAuthProviderProject",
+      "apiArea": "auth-legacy",
+      "tool": "neon.transferNeonAuthProviderProject",
+      "scope": "trusted-account",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listNeonAuthIntegrations",
+      "apiArea": "auth-legacy",
+      "tool": "neon.listNeonAuthIntegrations",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listNeonAuthOauthProviders",
+      "apiArea": "auth-legacy",
+      "tool": "neon.listNeonAuthOauthProviders",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "addNeonAuthOauthProvider",
+      "apiArea": "auth-legacy",
+      "tool": "neon.addNeonAuthOauthProvider",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listBranchNeonAuthOauthProviders",
+      "apiArea": "auth",
+      "tool": "neon.listBranchNeonAuthOauthProviders",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "addBranchNeonAuthOauthProvider",
+      "apiArea": "auth",
+      "tool": "neon.addBranchNeonAuthOauthProvider",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateNeonAuthOauthProvider",
+      "apiArea": "auth-legacy",
+      "tool": "neon.updateNeonAuthOauthProvider",
+      "scope": "project_id/oauth_provider_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "deleteNeonAuthOauthProvider",
+      "apiArea": "auth-legacy",
+      "tool": "neon.deleteNeonAuthOauthProvider",
+      "scope": "project_id/oauth_provider_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateBranchNeonAuthOauthProvider",
+      "apiArea": "auth",
+      "tool": "neon.updateBranchNeonAuthOauthProvider",
+      "scope": "project_id/branch_id/oauth_provider_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "deleteBranchNeonAuthOauthProvider",
+      "apiArea": "auth",
+      "tool": "neon.deleteBranchNeonAuthOauthProvider",
+      "scope": "project_id/branch_id/oauth_provider_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getNeonAuthEmailServer",
+      "apiArea": "auth-legacy",
+      "tool": "neon.getNeonAuthEmailServer",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateNeonAuthEmailServer",
+      "apiArea": "auth-legacy",
+      "tool": "neon.updateNeonAuthEmailServer",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "sendNeonAuthTestEmail",
+      "apiArea": "auth",
+      "tool": "neon.sendNeonAuthTestEmail",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "sendNeonAuthEmailProviderTest",
+      "apiArea": "auth",
+      "tool": "neon.sendNeonAuthEmailProviderTest",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getNeonAuthEmailAndPasswordConfig",
+      "apiArea": "auth",
+      "tool": "neon.getNeonAuthEmailAndPasswordConfig",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateNeonAuthEmailAndPasswordConfig",
+      "apiArea": "auth",
+      "tool": "neon.updateNeonAuthEmailAndPasswordConfig",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getNeonAuthEmailProvider",
+      "apiArea": "auth",
+      "tool": "neon.getNeonAuthEmailProvider",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateNeonAuthEmailProvider",
+      "apiArea": "auth",
+      "tool": "neon.updateNeonAuthEmailProvider",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "deleteNeonAuthIntegration",
+      "apiArea": "auth-legacy",
+      "tool": "neon.deleteNeonAuthIntegration",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getConnectionURI",
+      "apiArea": "project",
+      "tool": "neon.getConnectionURI",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getNeonAuthAllowLocalhost",
+      "apiArea": "auth",
+      "tool": "neon.getNeonAuthAllowLocalhost",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateNeonAuthAllowLocalhost",
+      "apiArea": "auth",
+      "tool": "neon.updateNeonAuthAllowLocalhost",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateNeonAuthLogsExport",
+      "apiArea": "auth",
+      "tool": "neon.updateNeonAuthLogsExport",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getNeonAuthPluginConfigs",
+      "apiArea": "auth",
+      "tool": "neon.getNeonAuthPluginConfigs",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateNeonAuthOrganizationPlugin",
+      "apiArea": "auth",
+      "tool": "neon.updateNeonAuthOrganizationPlugin",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateNeonAuthConfig",
+      "apiArea": "auth",
+      "tool": "neon.updateNeonAuthConfig",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateNeonAuthMagicLinkPlugin",
+      "apiArea": "auth",
+      "tool": "neon.updateNeonAuthMagicLinkPlugin",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getNeonAuthPhoneNumberPlugin",
+      "apiArea": "auth",
+      "tool": "neon.getNeonAuthPhoneNumberPlugin",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateNeonAuthPhoneNumberPlugin",
+      "apiArea": "auth",
+      "tool": "neon.updateNeonAuthPhoneNumberPlugin",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getNeonAuthOAuthProviderPlugin",
+      "apiArea": "auth",
+      "tool": "neon.getNeonAuthOAuthProviderPlugin",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateNeonAuthOAuthProviderPlugin",
+      "apiArea": "auth",
+      "tool": "neon.updateNeonAuthOAuthProviderPlugin",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listNeonAuthOAuthClients",
+      "apiArea": "auth",
+      "tool": "neon.listNeonAuthOAuthClients",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "createNeonAuthOAuthClient",
+      "apiArea": "auth",
+      "tool": "neon.createNeonAuthOAuthClient",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getNeonAuthOAuthClient",
+      "apiArea": "auth",
+      "tool": "neon.getNeonAuthOAuthClient",
+      "scope": "project_id/branch_id/client_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateNeonAuthOAuthClient",
+      "apiArea": "auth",
+      "tool": "neon.updateNeonAuthOAuthClient",
+      "scope": "project_id/branch_id/client_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "deleteNeonAuthOAuthClient",
+      "apiArea": "auth",
+      "tool": "neon.deleteNeonAuthOAuthClient",
+      "scope": "project_id/branch_id/client_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "rotateNeonAuthOAuthClientSecret",
+      "apiArea": "auth",
+      "tool": "neon.rotateNeonAuthOAuthClientSecret",
+      "scope": "project_id/branch_id/client_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getNeonAuthWebhookConfig",
+      "apiArea": "auth",
+      "tool": "neon.getNeonAuthWebhookConfig",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateNeonAuthWebhookConfig",
+      "apiArea": "auth",
+      "tool": "neon.updateNeonAuthWebhookConfig",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "createProjectBranch",
+      "apiArea": "branch",
+      "tool": "neon.createProjectBranch",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listProjectBranches",
+      "apiArea": "branch",
+      "tool": "neon.listProjectBranches",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/metadata.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Reviewed compatible core, accepted trusted host/policy/credential/journal/audit integration, metadata-only entitlement, independent non-waking evidence and specialist gates."
+    },
+    {
+      "id": "createProjectBranchAnonymized",
+      "apiArea": "branch",
+      "tool": "neon.createProjectBranchAnonymized",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "countProjectBranches",
+      "apiArea": "branch",
+      "tool": "neon.countProjectBranches",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getProjectBranch",
+      "apiArea": "branch",
+      "tool": "neon.getProjectBranch",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/metadata.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Reviewed compatible core, accepted trusted host/policy/credential/journal/audit integration, metadata-only entitlement, independent non-waking evidence and specialist gates."
+    },
+    {
+      "id": "deleteProjectBranch",
+      "apiArea": "branch",
+      "tool": "neon.deleteProjectBranch",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateProjectBranch",
+      "apiArea": "branch",
+      "tool": "neon.updateProjectBranch",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "restoreProjectBranch",
+      "apiArea": "branch",
+      "tool": "neon.restoreProjectBranch",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getProjectBranchSchema",
+      "apiArea": "branch",
+      "tool": "neon.getProjectBranchSchema",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getProjectBranchSchemaComparison",
+      "apiArea": "branch",
+      "tool": "neon.getProjectBranchSchemaComparison",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getMaskingRules",
+      "apiArea": "branch",
+      "tool": "neon.getMaskingRules",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateMaskingRules",
+      "apiArea": "branch",
+      "tool": "neon.updateMaskingRules",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getAnonymizedBranchStatus",
+      "apiArea": "branch",
+      "tool": "neon.getAnonymizedBranchStatus",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "startAnonymization",
+      "apiArea": "branch",
+      "tool": "neon.startAnonymization",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "setDefaultProjectBranch",
+      "apiArea": "branch",
+      "tool": "neon.setDefaultProjectBranch",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "finalizeRestoreBranch",
+      "apiArea": "branch",
+      "tool": "neon.finalizeRestoreBranch",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listProjectBranchEndpoints",
+      "apiArea": "branch",
+      "tool": "neon.listProjectBranchEndpoints",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/metadata.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Reviewed compatible core, accepted trusted host/policy/credential/journal/audit integration, metadata-only entitlement, independent non-waking evidence and specialist gates."
+    },
+    {
+      "id": "listProjectBranchDatabases",
+      "apiArea": "branch",
+      "tool": "neon.listProjectBranchDatabases",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "createProjectBranchDatabase",
+      "apiArea": "branch",
+      "tool": "neon.createProjectBranchDatabase",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getProjectBranchDatabase",
+      "apiArea": "branch",
+      "tool": "neon.getProjectBranchDatabase",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateProjectBranchDatabase",
+      "apiArea": "branch",
+      "tool": "neon.updateProjectBranchDatabase",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "deleteProjectBranchDatabase",
+      "apiArea": "branch",
+      "tool": "neon.deleteProjectBranchDatabase",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listProjectBranchRoles",
+      "apiArea": "branch",
+      "tool": "neon.listProjectBranchRoles",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "createProjectBranchRole",
+      "apiArea": "branch",
+      "tool": "neon.createProjectBranchRole",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getProjectBranchRole",
+      "apiArea": "branch",
+      "tool": "neon.getProjectBranchRole",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "deleteProjectBranchRole",
+      "apiArea": "branch",
+      "tool": "neon.deleteProjectBranchRole",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getProjectBranchRolePassword",
+      "apiArea": "branch",
+      "tool": "neon.getProjectBranchRolePassword",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getProjectBranchRealtime",
+      "apiArea": "realtime",
+      "tool": "neon.getProjectBranchRealtime",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "enableProjectBranchRealtime",
+      "apiArea": "realtime",
+      "tool": "neon.enableProjectBranchRealtime",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "disableProjectBranchRealtime",
+      "apiArea": "realtime",
+      "tool": "neon.disableProjectBranchRealtime",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getProjectBranchRealtimeSecret",
+      "apiArea": "realtime",
+      "tool": "neon.getProjectBranchRealtimeSecret",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "rotateProjectBranchRealtimeSecret",
+      "apiArea": "realtime",
+      "tool": "neon.rotateProjectBranchRealtimeSecret",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "resetProjectBranchRolePassword",
+      "apiArea": "branch",
+      "tool": "neon.resetProjectBranchRolePassword",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listProjectVPCEndpoints",
+      "apiArea": "project",
+      "tool": "neon.listProjectVPCEndpoints",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "assignProjectVPCEndpoint",
+      "apiArea": "project",
+      "tool": "neon.assignProjectVPCEndpoint",
+      "scope": "project_id/vpc_endpoint_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "deleteProjectVPCEndpoint",
+      "apiArea": "project",
+      "tool": "neon.deleteProjectVPCEndpoint",
+      "scope": "project_id/vpc_endpoint_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "createProjectEndpoint",
+      "apiArea": "endpoint",
+      "tool": "neon.createProjectEndpoint",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listProjectEndpoints",
+      "apiArea": "endpoint",
+      "tool": "neon.listProjectEndpoints",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getProjectEndpoint",
+      "apiArea": "endpoint",
+      "tool": "neon.getProjectEndpoint",
+      "scope": "project_id/endpoint_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/metadata.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Reviewed compatible core, accepted trusted host/policy/credential/journal/audit integration, metadata-only entitlement, independent non-waking evidence and specialist gates."
+    },
+    {
+      "id": "deleteProjectEndpoint",
+      "apiArea": "endpoint",
+      "tool": "neon.deleteProjectEndpoint",
+      "scope": "project_id/endpoint_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateProjectEndpoint",
+      "apiArea": "endpoint",
+      "tool": "neon.updateProjectEndpoint",
+      "scope": "project_id/endpoint_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "startProjectEndpoint",
+      "apiArea": "endpoint",
+      "tool": "neon.startProjectEndpoint",
+      "scope": "project_id/endpoint_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "suspendProjectEndpoint",
+      "apiArea": "endpoint",
+      "tool": "neon.suspendProjectEndpoint",
+      "scope": "project_id/endpoint_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "restartProjectEndpoint",
+      "apiArea": "endpoint",
+      "tool": "neon.restartProjectEndpoint",
+      "scope": "project_id/endpoint_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getConsumptionHistoryPerProject",
+      "apiArea": "consumption",
+      "tool": "neon.getConsumptionHistoryPerProject",
+      "scope": "trusted-account",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getConsumptionHistoryPerProjectV2",
+      "apiArea": "consumption",
+      "tool": "neon.getConsumptionHistoryPerProjectV2",
+      "scope": "trusted-account",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getConsumptionHistoryPerBranchV2",
+      "apiArea": "consumption",
+      "tool": "neon.getConsumptionHistoryPerBranchV2",
+      "scope": "trusted-account",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getOrganization",
+      "apiArea": "organizations",
+      "tool": "neon.getOrganization",
+      "scope": "org_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listOrgApiKeys",
+      "apiArea": "organizations",
+      "tool": "neon.listOrgApiKeys",
+      "scope": "org_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "createOrgApiKey",
+      "apiArea": "organizations",
+      "tool": "neon.createOrgApiKey",
+      "scope": "org_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "revokeOrgApiKey",
+      "apiArea": "organizations",
+      "tool": "neon.revokeOrgApiKey",
+      "scope": "org_id/key_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getOrganizationSpendingLimit",
+      "apiArea": "organizations",
+      "tool": "neon.getOrganizationSpendingLimit",
+      "scope": "org_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "setOrganizationSpendingLimit",
+      "apiArea": "organizations",
+      "tool": "neon.setOrganizationSpendingLimit",
+      "scope": "org_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "deleteOrganizationSpendingLimit",
+      "apiArea": "organizations",
+      "tool": "neon.deleteOrganizationSpendingLimit",
+      "scope": "org_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getOrganizationMembers",
+      "apiArea": "organizations",
+      "tool": "neon.getOrganizationMembers",
+      "scope": "org_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getOrganizationMember",
+      "apiArea": "organizations",
+      "tool": "neon.getOrganizationMember",
+      "scope": "org_id/member_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateOrganizationMember",
+      "apiArea": "organizations",
+      "tool": "neon.updateOrganizationMember",
+      "scope": "org_id/member_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "removeOrganizationMember",
+      "apiArea": "organizations",
+      "tool": "neon.removeOrganizationMember",
+      "scope": "org_id/member_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getOrganizationInvitations",
+      "apiArea": "organizations",
+      "tool": "neon.getOrganizationInvitations",
+      "scope": "org_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "createOrganizationInvitations",
+      "apiArea": "organizations",
+      "tool": "neon.createOrganizationInvitations",
+      "scope": "org_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "transferProjectsFromOrgToOrg",
+      "apiArea": "organizations",
+      "tool": "neon.transferProjectsFromOrgToOrg",
+      "scope": "source_org_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listOrganizationVPCEndpointsAllRegions",
+      "apiArea": "organizations",
+      "tool": "neon.listOrganizationVPCEndpointsAllRegions",
+      "scope": "org_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listOrganizationVPCEndpoints",
+      "apiArea": "organizations",
+      "tool": "neon.listOrganizationVPCEndpoints",
+      "scope": "org_id/region_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getOrganizationVPCEndpointDetails",
+      "apiArea": "organizations",
+      "tool": "neon.getOrganizationVPCEndpointDetails",
+      "scope": "org_id/region_id/vpc_endpoint_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "assignOrganizationVPCEndpoint",
+      "apiArea": "organizations",
+      "tool": "neon.assignOrganizationVPCEndpoint",
+      "scope": "org_id/region_id/vpc_endpoint_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "deleteOrganizationVPCEndpoint",
+      "apiArea": "organizations",
+      "tool": "neon.deleteOrganizationVPCEndpoint",
+      "scope": "org_id/region_id/vpc_endpoint_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getActiveRegions",
+      "apiArea": "region",
+      "tool": "neon.getActiveRegions",
+      "scope": "trusted-account",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getCurrentUserInfo",
+      "apiArea": "users",
+      "tool": "neon.getCurrentUserInfo",
+      "scope": "trusted-account",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getCurrentUserOrganizations",
+      "apiArea": "users-organizations",
+      "tool": "neon.getCurrentUserOrganizations",
+      "scope": "trusted-account",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "transferProjectsFromUserToOrg",
+      "apiArea": "users",
+      "tool": "neon.transferProjectsFromUserToOrg",
+      "scope": "trusted-account",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getAuthDetails",
+      "apiArea": "users",
+      "tool": "neon.getAuthDetails",
+      "scope": "trusted-account",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "createSnapshot",
+      "apiArea": "snapshot",
+      "tool": "neon.createSnapshot",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listSnapshots",
+      "apiArea": "snapshot",
+      "tool": "neon.listSnapshots",
+      "scope": "project_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "deleteSnapshot",
+      "apiArea": "snapshot",
+      "tool": "neon.deleteSnapshot",
+      "scope": "project_id/snapshot_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateSnapshot",
+      "apiArea": "snapshot",
+      "tool": "neon.updateSnapshot",
+      "scope": "project_id/snapshot_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "restoreSnapshot",
+      "apiArea": "snapshot",
+      "tool": "neon.restoreSnapshot",
+      "scope": "project_id/snapshot_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getSnapshotSchedule",
+      "apiArea": "snapshot",
+      "tool": "neon.getSnapshotSchedule",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "setSnapshotSchedule",
+      "apiArea": "snapshot",
+      "tool": "neon.setSnapshotSchedule",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "createProjectBranchBucket",
+      "apiArea": "buckets",
+      "tool": "neon.createProjectBranchBucket",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listProjectBranchBuckets",
+      "apiArea": "buckets",
+      "tool": "neon.listProjectBranchBuckets",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "deleteProjectBranchBucket",
+      "apiArea": "buckets",
+      "tool": "neon.deleteProjectBranchBucket",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getProjectBranchStorage",
+      "apiArea": "storage",
+      "tool": "neon.getProjectBranchStorage",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getProjectBranchAiGateway",
+      "apiArea": "ai-gateway",
+      "tool": "neon.getProjectBranchAiGateway",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "queryProjectBranchLogs",
+      "apiArea": "logs",
+      "tool": "neon.queryProjectBranchLogs",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listProjectBranchLogFields",
+      "apiArea": "logs",
+      "tool": "neon.listProjectBranchLogFields",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listProjectBranchLogFieldValues",
+      "apiArea": "logs",
+      "tool": "neon.listProjectBranchLogFieldValues",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listProjectBranchBucketObjects",
+      "apiArea": "buckets",
+      "tool": "neon.listProjectBranchBucketObjects",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "deleteProjectBranchBucketObject",
+      "apiArea": "buckets",
+      "tool": "neon.deleteProjectBranchBucketObject",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getProjectBranchBucketObject",
+      "apiArea": "buckets",
+      "tool": "neon.getProjectBranchBucketObject",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "deleteProjectBranchBucketObjectsByPrefix",
+      "apiArea": "buckets",
+      "tool": "neon.deleteProjectBranchBucketObjectsByPrefix",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "presignProjectBranchBucketObject",
+      "apiArea": "buckets",
+      "tool": "neon.presignProjectBranchBucketObject",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "createCredential",
+      "apiArea": "credentials",
+      "tool": "neon.createCredential",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listCredentials",
+      "apiArea": "credentials",
+      "tool": "neon.listCredentials",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "revokeCredential",
+      "apiArea": "credentials",
+      "tool": "neon.revokeCredential",
+      "scope": "project_id/branch_id/token_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "revealCredential",
+      "apiArea": "credentials",
+      "tool": "neon.revealCredential",
+      "scope": "project_id/branch_id/token_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "rotateCredential",
+      "apiArea": "credentials",
+      "tool": "neon.rotateCredential",
+      "scope": "project_id/branch_id/token_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listProjectBranchFunctions",
+      "apiArea": "functions",
+      "tool": "neon.listProjectBranchFunctions",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getProjectBranchFunction",
+      "apiArea": "functions",
+      "tool": "neon.getProjectBranchFunction",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateProjectBranchFunction",
+      "apiArea": "functions",
+      "tool": "neon.updateProjectBranchFunction",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "deleteProjectBranchFunction",
+      "apiArea": "functions",
+      "tool": "neon.deleteProjectBranchFunction",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "createProjectBranchFunctionDeployment",
+      "apiArea": "functions",
+      "tool": "neon.createProjectBranchFunctionDeployment",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listProjectBranchTriggers",
+      "apiArea": "functions",
+      "tool": "neon.listProjectBranchTriggers",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "createProjectBranchTrigger",
+      "apiArea": "functions",
+      "tool": "neon.createProjectBranchTrigger",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "getProjectBranchTrigger",
+      "apiArea": "functions",
+      "tool": "neon.getProjectBranchTrigger",
+      "scope": "project_id/branch_id/trigger_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "updateProjectBranchTrigger",
+      "apiArea": "functions",
+      "tool": "neon.updateProjectBranchTrigger",
+      "scope": "project_id/branch_id/trigger_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "deleteProjectBranchTrigger",
+      "apiArea": "functions",
+      "tool": "neon.deleteProjectBranchTrigger",
+      "scope": "project_id/branch_id/trigger_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "registerProjectBranchCustomDomain",
+      "apiArea": "functions",
+      "tool": "neon.registerProjectBranchCustomDomain",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "listProjectBranchCustomDomains",
+      "apiArea": "functions",
+      "tool": "neon.listProjectBranchCustomDomains",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    },
+    {
+      "id": "deleteProjectBranchCustomDomain",
+      "apiArea": "functions",
+      "tool": "neon.deleteProjectBranchCustomDomain",
+      "scope": "project_id/branch_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "incomplete",
+      "tests": [],
+      "implemented": false,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+    }
+  ]
+}

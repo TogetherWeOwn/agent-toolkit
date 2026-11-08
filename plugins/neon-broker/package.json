@@ -1,0 +1,13 @@
+{
+  "name": "@agent-toolkit/neon-broker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Disabled source-only Neon metadata adapters and mocked contracts",
+  "engines": { "node": ">=24.11.0 <25" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test --test-timeout=30000 test/*.test.mjs",
+    "test:compat": "node --test --test-timeout=30000 test/core.compat.mjs"
+  }
+}
