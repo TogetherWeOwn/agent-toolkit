@@ -148,13 +148,30 @@ test("Cloudflare schedule foreign, malformed, denied and audit failures retain u
   for (const options of [{ response: { ...result(), account_id: foreign } }, { response: { schedules: [{ cron: null }] } },
     { status: 403 }, { status: 404 }, { auditFailure: true }]) {
     const f = fixture(options);
+    const append = f.dependencies.audit.append;
     if (options.auditFailure) f.dependencies.audit.append = async event => { if (event.phase === "outcome") throw new Error(credentialCanary); };
     const out = await f.invoke();
     assert.equal(out.code, options.auditFailure ? "OUTCOME_UNCERTAIN" : "UPSTREAM_UNAVAILABLE");
     assert.equal([...f.journal.values()][0].outcome, "uncertain");
     assert.equal(f.calls.close, 1);
-    assert.equal((await f.invoke()).code, "REPLAY_CONFLICT");
+    const journal = structuredClone([...f.journal]);
+    if (options.auditFailure) {
+      const offline = await f.invoke();
+      assert.equal(offline.code, "AUDIT_UNAVAILABLE");
+      assert.equal(f.calls.secret, 1);
+      assert.equal(f.calls.close, 1);
+      assert.equal(f.requests.length, 1);
+      assert.deepEqual([...f.journal], journal);
+      safe(f, offline);
+      f.dependencies.audit.append = append;
+    }
+    const replay = await f.invoke();
+    assert.equal(replay.code, "REPLAY_CONFLICT");
+    assert.equal(f.calls.secret, 1);
+    assert.equal(f.calls.close, 1);
     assert.equal(f.requests.length, 1);
+    assert.deepEqual([...f.journal], journal);
+    safe(f, replay);
     safe(f, out);
   }
 });
