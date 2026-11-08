@@ -91,7 +91,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(descriptors.workersList), metadata(descriptors.secretNames),
     metadata(descriptors.hyperdriveList), metadata(descriptors.hyperdriveGet),
     metadata(descriptors.d1List), metadata(descriptors.d1Get),
-    metadata(descriptors.r2List), metadata(descriptors.r2Get),
+    metadata(descriptors.r2List), metadata(descriptors.r2Get), metadata(descriptors.r2LocksGet),
     metadata(descriptors.deploymentsList), metadata(descriptors.deploymentGet),
     metadata(descriptors.versionsList), metadata(descriptors.versionGet),
     metadata(descriptors.kvNamespacesList), metadata(descriptors.kvNamespaceGet),

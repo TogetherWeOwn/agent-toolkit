@@ -932,9 +932,9 @@ test("Cloudflare full schema inventory is pinned, explicit about holes, and cons
       }
     }
   }
-  assert.equal(operations.filter(row => row.typedTool !== null).length, 44);
+  assert.equal(operations.filter(row => row.typedTool !== null).length, 45);
   assert.equal(operations.filter(row => row.tier === "reserved").length, 5);
-  assert.equal(operations.filter(row => row.tier === "read").length, 39);
+  assert.equal(operations.filter(row => row.tier === "read").length, 40);
   assert.equal(operations.filter(row => row.implementation === "content-descriptor-only").length, 1);
   assert.equal(manifest.counts.contentDescriptors, 1);
   assert.equal(manifest.counts.descriptors, Object.keys(allDescriptors).length);

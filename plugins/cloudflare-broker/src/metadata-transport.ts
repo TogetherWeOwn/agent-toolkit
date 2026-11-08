@@ -12,6 +12,8 @@ function endpoint(request: MetadataRequest): string {
   requireThat(Number.isSafeInteger(request.timeoutMs) && request.timeoutMs > 0 && request.timeoutMs <= 10000, "cap");
   requireThat(typeof request.path === "string" && request.path.length <= 2048 &&
     /^\/(?:accounts\/[a-f0-9]{32}\/[A-Za-z0-9_/?=&.-]+|zones\/[a-f0-9]{32}(?:\/[A-Za-z0-9_/?=&.-]+)?)$/.test(request.path), "schema");
+  requireThat(request.r2Jurisdiction === undefined || (request.r2Jurisdiction === "eu" &&
+    /^\/accounts\/[a-f0-9]{32}\/r2\/buckets\/[a-z0-9][a-z0-9-]{1,62}[a-z0-9](?:\/lock)?$/.test(request.path)), "schema");
   const url = new URL(`/client/v4${request.path}`, origin);
   requireThat(url.origin === origin && url.pathname + url.search === `/client/v4${request.path}`, "schema");
   return url.href;
@@ -40,7 +42,7 @@ async function boundedResponse(fetcher: typeof fetch, request: MetadataRequest, 
       const response = await fetcher(url, {
         method: "GET", redirect: "manual", signal: controller.signal,
         credentials: "omit", cache: "no-store", referrerPolicy: "no-referrer",
-        headers: { authorization, accept },
+        headers: { authorization, accept, ...(request.r2Jurisdiction === "eu" ? { "cf-r2-jurisdiction": "eu" } : {}) },
       });
       if (controller.signal.aborted) {
         void response.body?.cancel().catch(() => {});

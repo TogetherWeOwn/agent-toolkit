@@ -33,6 +33,8 @@ export interface MetadataScope {
   hyperdriveIds: readonly string[];
   databaseIds?: readonly string[];
   defaultBucketNames?: readonly string[];
+  euBucketNames?: readonly string[];
+  euBucketLocks?: readonly { bucketName: string; prefixes: readonly string[] }[];
   kvNamespaceIds?: readonly string[];
   queueIds?: readonly string[];
   workerDeployments?: readonly { scriptName: string; deploymentIds: readonly string[] }[];
@@ -48,6 +50,7 @@ export interface MetadataRequest {
   readonly timeoutMs: number;
   readonly maxRequests: 1;
   readonly redirects: "deny";
+  readonly r2Jurisdiction?: "eu";
 }
 export interface PreparedMetadata<A> {
   readonly arguments: A;
@@ -165,6 +168,24 @@ export function metadataDescriptors(scope: MetadataScope) {
   requireThat(Array.isArray(databaseIds) && databaseIds.length <= 100 && Array.isArray(defaultBucketNames) && defaultBucketNames.length <= 100, "cap");
   const databases = new Set(databaseIds.map(value => databaseId.parse(value)));
   const buckets = new Set(defaultBucketNames.map(value => bucketName.parse(value)));
+  const euBucketNames = scope.euBucketNames ?? [];
+  requireThat(Array.isArray(euBucketNames) && euBucketNames.length <= maxRows, "cap");
+  const euBuckets = new Set(euBucketNames.map(value => bucketName.parse(value)));
+  requireThat(euBuckets.size === euBucketNames.length, "schema");
+  for (const name of euBuckets) requireThat(!buckets.has(name), "schema");
+  const euBucketLocks = scope.euBucketLocks ?? [];
+  requireThat(Array.isArray(euBucketLocks) && euBucketLocks.length <= maxRows, "cap");
+  const lockPrefixes = new Map<string, Set<string>>();
+  const prefix = text(256, /^[A-Za-z0-9._/-]*$/);
+  for (const entry of euBucketLocks) {
+    const name = bucketName.parse(entry.bucketName);
+    requireThat(euBuckets.has(name), "scope");
+    requireThat(!lockPrefixes.has(name), "schema");
+    requireThat(Array.isArray(entry.prefixes) && entry.prefixes.length <= maxRows, "cap");
+    const prefixes = new Set<string>(entry.prefixes.map((value: unknown) => value === "" ? "" : prefix.parse(value)));
+    requireThat(prefixes.size === entry.prefixes.length, "schema");
+    lockPrefixes.set(name, prefixes);
+  }
   const kvNamespaceIds = scope.kvNamespaceIds ?? [];
   const queueIds = scope.queueIds ?? [];
   requireThat(Array.isArray(kvNamespaceIds) && kvNamespaceIds.length <= maxRows && Array.isArray(queueIds) && queueIds.length <= maxRows, "cap");
@@ -314,19 +335,73 @@ export function metadataDescriptors(scope: MetadataScope) {
       return bounded({ items, complete: false as const });
     },
   });
-  const r2Get: MetadataDescriptor<ReturnType<typeof bucket.parse>, { name: string }> = Object.freeze({
+  function r2Prepared(args: ReturnType<typeof bucket.parse>, lock = false): PreparedMetadata<ReturnType<typeof bucket.parse>> {
+    const eu = euBuckets.has(args.bucketName);
+    requireThat(eu || buckets.has(args.bucketName), "scope");
+    if (lock) requireThat(eu && (lockPrefixes.get(args.bucketName)?.size ?? 0) > 0, "scope");
+    const input = prepared(args, `r2:jurisdiction:${eu ? "eu" : "default"}:bucket:${args.bucketName}${lock ? ":locks" : ""}`,
+      `${root}/r2/buckets/${args.bucketName}${lock ? "/lock" : ""}`);
+    return eu ? Object.freeze({ ...input, request: Object.freeze({ ...input.request, r2Jurisdiction: "eu" as const }) }) : input;
+  }
+  function r2Response(raw: string, input: PreparedMetadata<ReturnType<typeof bucket.parse>>, lock = false): Row {
+    const expected = r2Prepared(bucket.parse(input.arguments), lock);
+    requireThat(input.resource.id === expected.resource.id && input.resource.revision === revision &&
+      input.request.path === expected.request.path && input.request.r2Jurisdiction === expected.request.r2Jurisdiction, "scope");
+    const row = object(envelope(raw).result);
+    requireThat(row.account_id === undefined || row.account_id === account, "scope");
+    requireThat(row.jurisdiction === undefined || row.jurisdiction === expected.request.r2Jurisdiction ||
+      (expected.request.r2Jurisdiction === undefined && row.jurisdiction === "default"), "scope");
+    return row;
+  }
+  const r2Get: MetadataDescriptor<ReturnType<typeof bucket.parse>, { name: string; jurisdiction?: "eu" }> = Object.freeze({
     name: "cloudflare.r2.get", version: "1", tier: "read", providerOperationId: "r2-get-bucket",
-    prepare(raw: unknown) {
-      const args = bucket.parse(raw);
-      bucketScope(args.bucketName);
-      return prepared(args, `r2:jurisdiction:default:bucket:${args.bucketName}`, `${root}/r2/buckets/${args.bucketName}`);
-    },
+    prepare(raw: unknown) { return r2Prepared(bucket.parse(raw)); },
     project(raw: string, input: PreparedMetadata<ReturnType<typeof bucket.parse>>) {
-      const args = bucket.parse(input.arguments);
-      bucketScope(args.bucketName);
-      const row = object(envelope(raw).result);
-      requireThat(row.name === args.bucketName, "scope");
+      const row = r2Response(raw, input);
+      requireThat(row.name === input.arguments.bucketName, "scope");
+      if (euBuckets.has(input.arguments.bucketName)) {
+        requireThat(row.jurisdiction === "eu", "scope");
+        return bounded({ name: providerText(row.name, bucketName), jurisdiction: "eu" as const });
+      }
       return bounded(bucketMetadata(row));
+    },
+  });
+  type LockCondition = { type: "Age"; maxAgeSeconds: number } | { type: "Date"; date: string } | { type: "Indefinite" };
+  const r2LocksGet: MetadataDescriptor<ReturnType<typeof bucket.parse>, {
+    bucketName: string; requestedJurisdiction: "eu"; rules: { prefix: string; enabled: boolean; condition: LockCondition }[];
+    complete: false; subject: "configured-prefix-locks"; effectiveProtection: "not-established";
+  }> = Object.freeze({
+    name: "cloudflare.r2.locks.get", version: "1", tier: "read", providerOperationId: "r2-get-bucket-lock-configuration",
+    prepare(raw: unknown) { return r2Prepared(bucket.parse(raw), true); },
+    project(raw: string, input: PreparedMetadata<ReturnType<typeof bucket.parse>>) {
+      const result = r2Response(raw, input, true);
+      requireThat(result.bucket_name === undefined || result.bucket_name === input.arguments.bucketName, "scope");
+      const ids = new Set<string>();
+      const rules: { prefix: string; enabled: boolean; condition: LockCondition }[] = [];
+      for (const row of rows(result.rules)) {
+        const id = providerText(row.id, text(256, /^[^\x00-\x1f\x7f]+$/));
+        requireThat(!ids.has(id), "upstream");
+        ids.add(id);
+        // Missing prefixes are not interpreted as a bucket-wide rule.
+        if (typeof row.prefix !== "string" || !lockPrefixes.get(input.arguments.bucketName)!.has(row.prefix)) continue;
+        requireThat(typeof row.enabled === "boolean", "upstream");
+        const value = object(row.condition);
+        let condition: LockCondition;
+        if (value.type === "Age") {
+          requireThat(Number.isSafeInteger(value.maxAgeSeconds) && (value.maxAgeSeconds as number) >= 0 &&
+            Object.keys(value).every(key => key === "type" || key === "maxAgeSeconds"), "upstream");
+          condition = { type: "Age", maxAgeSeconds: value.maxAgeSeconds as number };
+        } else if (value.type === "Date") {
+          requireThat(Object.keys(value).every(key => key === "type" || key === "date"), "upstream");
+          condition = { type: "Date", date: providerTimestamp(value.date) };
+        } else {
+          requireThat(value.type === "Indefinite" && Object.keys(value).length === 1, "upstream");
+          condition = { type: "Indefinite" };
+        }
+        rules.push({ prefix: row.prefix, enabled: row.enabled, condition });
+      }
+      return bounded({ bucketName: input.arguments.bucketName, requestedJurisdiction: "eu" as const, rules,
+        complete: false as const, subject: "configured-prefix-locks" as const, effectiveProtection: "not-established" as const });
     },
   });
   function deploymentScope(name: string, id: string) {
@@ -556,7 +631,7 @@ export function metadataDescriptors(scope: MetadataScope) {
       });
     },
   });
-  return Object.freeze({ workersList, secretNames, hyperdriveList, hyperdriveGet, d1List, d1Get, r2List, r2Get, deploymentsList, deploymentGet, versionsList, versionGet, kvNamespacesList, kvNamespaceGet, queuesList, queueGet, workerSubdomainGet, workerSettingsGet });
+  return Object.freeze({ workersList, secretNames, hyperdriveList, hyperdriveGet, d1List, d1Get, r2List, r2Get, r2LocksGet, deploymentsList, deploymentGet, versionsList, versionGet, kvNamespacesList, kvNamespaceGet, queuesList, queueGet, workerSubdomainGet, workerSettingsGet });
 }
 
 export interface ZoneMetadataScope {
