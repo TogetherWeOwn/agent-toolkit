@@ -92,7 +92,7 @@ test('branch consumption: malformed metrics, foreign identity, duplicate periods
   const op = fixture(raw).operation(name);
   assert.throws(() => op.project({ ...raw, pagination: { cursor: 'next' } }));
   assert.throws(() => op.project({ branches: new Array(1) }));
-  assert.throws(() => op.project(Object.defineProperty({ ...raw }, 'projects', { get() { throw Error('getter'); }, enumerable: true })));
+  assert.throws(() => op.project(Object.defineProperty({ ...raw }, 'branches', { get() { throw Error('getter'); }, enumerable: true })));
   assert.deepEqual(op.project(Object.defineProperty({ ...raw }, 'diagnostic', { get() { throw Error('unused'); }, enumerable: true })), expected);
 });
 
