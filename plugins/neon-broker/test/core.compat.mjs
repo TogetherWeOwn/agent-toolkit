@@ -1136,9 +1136,10 @@ test('email-auth configuration uses its exact grant without changing auth or ses
   assert.deepEqual(maxResult.value, expected);
   safeEnvelope(maximum, maxResult);
   const reflected = brokerFixture(name, args, raw, {
-    credentials: { async resolve() { return { value: 'link', redactions: [], async close() {} }; } },
+    credentials: { async resolve() { return { value: 'false', redactions: [], async close() {} }; } },
   });
   assert.equal((await reflected.call()).code, 'OUTPUT_REFUSED');
+  assert.equal(reflected.provider.requests.length, 1);
 });
 
 test('common operation-map validator confirms incomplete status for all unknown entitlements', () => {
