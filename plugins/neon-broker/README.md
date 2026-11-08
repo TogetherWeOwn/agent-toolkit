@@ -7,6 +7,30 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonBranchUpdateOperations(trustedScope, transport)` adds `updateProjectBranch`
+as a **name-only** write descriptor. Copy exact project/branch/revision and expected
+and desired nonempty ASCII labels <=80 characters; labels must differ. Require the
+separate `neon/projects/<project>/branches/<branch>/rename` grant. Caller arguments
+match the copied desired name; protection, expiry and arbitrary update/authority
+fields refuse. Those fields remain unsupported, not silently covered by this row.
+
+The validated plan includes the exact label diff with protection/expiry unchanged.
+A fixed detail GET requires the selected immutable branch ID, project ID and
+expected label before exactly one PATCH sending `{branch: {name}}` only. No
+conditional or provider idempotency header is invented. **Preflight is not atomic
+CAS:** another writer can change the name after preflight or acknowledgement;
+runtime qualification must accept or resolve this limitation before live use.
+HTTP200 exact ID/project/desired-name echo yields closed `{id, updated: true}`
+acknowledgement only, not lifecycle completion or persistent-state guarantees.
+Labels, operations, protection/expiry, settings and arbitrary metadata are omitted.
+
+Ambiguity triggers at most one bounded detail observation then stays uncertain,
+even if the desired name appears. No proven causation, successful read fallback or
+automatic mutation retry is claimed. Common permanent complete/uncertain journal
+entries block same-request restart/replay; native durable recovery must preserve
+them. Host/policy/custody, provider effects/entitlement and independent qualification
+remain unresolved. No live branch update, production authority or enabled worker.
+
 `createNeonSnapshotUpdateOperations(trustedScope, transport)` adds `updateSnapshot`
 as a **name-only** write descriptor. Copy exact project/source-branch/snapshot/revision,
 expected label and desired label; labels are nonempty ASCII tokens of at most 80

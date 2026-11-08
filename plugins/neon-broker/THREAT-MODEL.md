@@ -19,6 +19,27 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
 
+## Branch label-update source delta
+
+The branch rename subset requires a copied exact project/branch/revision and
+expected/desired bounded label, with a dedicated branch/rename grant. Parent,
+sibling, read or delete grants do not substitute. Caller protection, expiry and
+approval overrides refuse. The exact before/after plan is not a provider dry-run.
+Detail preflight checks immutable ID/project and expected label before one fixed
+name-only PATCH; no protection/expiry field is sent. Preflight is not atomic CAS
+and cannot stop an external concurrent writer. Live qualification must resolve or
+accept that limitation; no serializability is claimed.
+
+Only HTTP200 exact identity/desired-label echo yields a closed acknowledgement.
+Provider operations, settings, expiry/protection and labels never enter output or
+safe audit. A lost/invalid acknowledgement permits one bounded detail observation,
+then remains uncertain regardless of observed desired state or read failure.
+There is no automatic PATCH retry, invented provider idempotency header or
+read-to-success conversion. The common permanent journal prevents same-request
+restart/replay; native durable custody/recovery, effects/entitlement, host/policy
+integration and independent reviews remain prerequisites. Source/mocks are not
+runtime registration, lifecycle enforcement or permission for live branch changes.
+
 ## Reserved snapshot-deletion source delta
 
 This source is a destructive mutation request, not a read, an enabled worker or a
