@@ -44,8 +44,8 @@ function noEffects(f) {
 
 test("Cloudflare read registry binds account metadata with empty optional family scopes and reserved content", () => {
   const f = fixture();
-  assert.equal(f.operations.length, 33);
-  assert.equal(new Set(f.operations.map(op => op.name)).size, 33);
+  assert.equal(f.operations.length, 34);
+  assert.equal(new Set(f.operations.map(op => op.name)).size, 34);
   assert.ok(Object.isFrozen(f.operations));
   for (const operation of f.operations) {
     assert.ok(Object.isFrozen(operation));

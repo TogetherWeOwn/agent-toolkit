@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { accessPolicyMetadataDescriptors, accessApplicationMetadataDescriptors, metadataDescriptors, zoneMetadataDescriptors, workerRouteMetadataDescriptors, secretsStoreMetadataDescriptors, durableObjectMetadataDescriptors, pagesMetadataDescriptors } from "../dist/plugins/cloudflare-broker/src/metadata.js";
 import { currentContentDescriptor } from "../dist/plugins/cloudflare-broker/src/current-content.js";
+import { versionAssetDescriptor } from "../dist/plugins/cloudflare-broker/src/version-assets.js";
 import { deletionPlanDescriptors } from "../dist/plugins/cloudflare-broker/src/deletion-plans.js";
 import { inventory, source } from "../plugins/cloudflare-broker/scripts/inventory.mjs";
 import { familySummary } from "../plugins/cloudflare-broker/scripts/families.mjs";
@@ -64,7 +65,9 @@ const accessDescriptors = accessApplicationMetadataDescriptors({ accountId: acco
 const accessPolicyDescriptors = accessPolicyMetadataDescriptors({ accountId: account, revision: "policy-1", applications: [{ applicationId: db, policyIds: [otherDb] }] });
 const metadataOnly = { ...descriptors, ...zoneDescriptors, ...routeDescriptors, ...accessDescriptors, ...accessPolicyDescriptors, ...secretsStoreDescriptors, ...durableDescriptors, ...pagesDescriptors };
 const contentDescriptor = currentContentDescriptor({ accountId: account, revision: "source-policy-1", sourceDigestScriptNames: ["safe-worker"] });
-const allDescriptors = { ...metadataOnly, ...deletionDescriptors, contentDescriptor };
+const allDescriptors = { ...metadataOnly, ...deletionDescriptors, contentDescriptor,
+  versionAssets: versionAssetDescriptor({ accountId: account, revision: "policy-1", workers: [{ scriptName: "safe-worker", versionIds: [db] }] }),
+};
 const deletionCases = [
   ["workerDelete", { scriptName: "safe-worker" }, `/accounts/${account}/workers/scripts/safe-worker?force=false`, `cloudflare:account:${account}:worker:safe-worker`],
   ["hyperdriveDelete", { hyperdriveId: own }, `/accounts/${account}/hyperdrive/configs/${own}`, `cloudflare:account:${account}:hyperdrive:${own}`],
@@ -929,9 +932,9 @@ test("Cloudflare full schema inventory is pinned, explicit about holes, and cons
       }
     }
   }
-  assert.equal(operations.filter(row => row.typedTool !== null).length, 43);
+  assert.equal(operations.filter(row => row.typedTool !== null).length, 44);
   assert.equal(operations.filter(row => row.tier === "reserved").length, 5);
-  assert.equal(operations.filter(row => row.tier === "read").length, 38);
+  assert.equal(operations.filter(row => row.tier === "read").length, 39);
   assert.equal(operations.filter(row => row.implementation === "content-descriptor-only").length, 1);
   assert.equal(manifest.counts.contentDescriptors, 1);
   assert.equal(manifest.counts.descriptors, Object.keys(allDescriptors).length);

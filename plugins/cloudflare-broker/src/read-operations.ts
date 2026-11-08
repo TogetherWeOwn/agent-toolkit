@@ -1,6 +1,7 @@
 import { jsonData, requireThat } from "../../../packages/core/src/index.js";
 import { canonicalHash, type Json, type Prepared, type ProviderOperation, type Tier } from "../../../packages/core/src/provider/index.js";
 import { currentContentDescriptor, type CurrentContentScope } from "./current-content.js";
+import { versionAssetDescriptor, type VersionAssetScope } from "./version-assets.js";
 import { accessApplicationMetadataDescriptors, accessPolicyMetadataDescriptors, type AccessApplicationMetadataScope, type AccessPolicyMetadataScope, durableObjectMetadataDescriptors, metadataDescriptors, pagesMetadataDescriptors, secretsStoreMetadataDescriptors,
   workerRouteMetadataDescriptors, zoneMetadataDescriptors, type DurableObjectMetadataScope, type MetadataDescriptor, type MetadataScope,
   type PagesMetadataScope, type PreparedMetadata, type SecretsStoreMetadataScope, type WorkerRouteMetadataScope, type ZoneMetadataScope } from "./metadata.js";
@@ -55,6 +56,7 @@ export interface CloudflareReadScope extends MetadataScope {
   secretStores?: SecretsStoreMetadataScope["stores"];
   durableNamespaces?: DurableObjectMetadataScope["namespaces"];
   pagesProjects?: PagesMetadataScope["projects"];
+  workerAssetVersions?: VersionAssetScope["workers"];
   accessApplications?: AccessApplicationMetadataScope["applications"];
   accessPolicies?: AccessPolicyMetadataScope["applications"];
   zone?: Pick<ZoneMetadataScope, "zoneId" | "dnsRecordIds"> & { workerRoutes?: WorkerRouteMetadataScope["routes"] };
@@ -94,6 +96,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(descriptors.kvNamespacesList), metadata(descriptors.kvNamespaceGet),
     metadata(descriptors.queuesList), metadata(descriptors.queueGet),
     metadata(descriptors.workerSubdomainGet), metadata(descriptors.workerSettingsGet),
+    metadata(versionAssetDescriptor({ accountId, revision, workers: scope.workerAssetVersions ?? [] })),
     metadata(stores.storesList), metadata(stores.storeGet), metadata(stores.secretsList), metadata(stores.secretGet),
     metadata(durable.durableNamespacesList), metadata(durable.durableObjectsList),
     metadata(pages.pagesProjectsList), metadata(pages.pagesProjectGet),
