@@ -1135,6 +1135,32 @@ and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/a
 passed. This is previous-head evidence, not execution of the new read contracts.
 Earlier unchanged SDK recovery-test uncertainty remains unresolved.
 
+## Lifecycle detail core preparation — source increment
+
+`test/core-lifecycle-read-preparation.test.mjs` adds 23 synthetic contracts for
+backup, backup-policy and deploy-request detail preparations, reusing the fixed
+GET builders and common read wrapper. Closed immutable host snapshots bind parent
+IDs/names, record IDs, revision, backup branch identity and independently supplied
+deploy request ID/number/source/destination bindings. All fields affect plan/full
+core hashes; caller arguments are empty. Nested captures, non-invoked accessors,
+missing/extra/unsafe input, ID/number refusal and resource-kind namespaces are
+covered. Record-ID projections do not authenticate parent IDs; the deploy response
+also lacks destination ID. Plans retain those exact response limits and unverified
+non-waking semantics. No executor, runtime registration, credential resolution,
+authority consumption or new adapter coverage. Coverage stays 134/291, 157 missing;
+twelve previews and eighteen pure preparations remain separate from integration.
+New contracts require exact-head Actions; no local suite/build/typecheck ran.
+
+Previous exact `189ff147e53ebfbc8dcd4d70521fc9af0cb474c4`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42501956888)
+passed [tests](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42501956888/job/128796463941):
+1155/1155 PlanetScale, root 317/317, helpers 122/122, GitHub 219/219 and Neon 37/37,
+zero failures/skips/cancellations. Lint/typecheck/native-policy/ci-ok,
+[Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42501956627)
+and [CodeQL](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42501953113)
+passed. This is prior-head evidence, not execution of the 23 new contracts.
+Earlier unchanged SDK recovery-test uncertainty remains unresolved.
+
 ## Metrics preregistration — required before enablement
 
 Baseline and matched post-window measurements are **not yet collected or approved**.

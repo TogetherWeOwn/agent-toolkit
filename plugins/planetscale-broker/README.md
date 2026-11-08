@@ -159,6 +159,27 @@ hash sensitivity, refusal, resource-kind separation and existing projection limi
 Adapter coverage stays 134/291, with 157 missing; these are not three new adapters
 or runtime-integrated operations.
 
+Three further seams in the same module bind existing backup, backup-policy and
+number-addressed deploy-request detail reads. Closed host snapshots retain parent
+organization/database IDs and names, resource IDs and revision; backups also bind
+the branch, and deploy requests capture immutable source ID/name, request ID/number
+and an independently supplied destination branch ID/name. Resources share the
+existing mutation-preview namespaces, not their operation/plan hashes. Every host
+field is retained in the full plan hash, including IDs absent from the provider
+request. Caller arguments remain empty; no executor or project hook is returned.
+
+These projections match record IDs; the deploy projection additionally matches
+number/source ID and both branch names. They do not authenticate parent IDs or the
+destination ID. Plans explicitly report `record-id-only-parent-not-verified` or
+`record-and-source-ids-destination-not-verified`, never full response identity.
+Neither a host snapshot nor a provider flag establishes current ownership,
+approval, non-waking behavior, backup restorability or safe deployment. Trusted
+transport/current identity and parent/destination revalidation remain required.
+`test/core-lifecycle-read-preparation.test.mjs` covers deep immutable captures,
+every-field hashes, nested ID/number refusals, projection limits and closed caller
+arguments. Eighteen total pure preparations still mean zero runtime-integrated
+operations; adapter coverage stays 134/291 with 157 missing.
+
 All 291 entries remain `incomplete`, `implemented=false`, `reviewed=false`,
 `enabled=false`, and entitlement `unknown`. Existing offline read/preview test
 paths are linked as source evidence, never as full `ProviderOperation` tests.
