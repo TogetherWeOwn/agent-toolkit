@@ -38,6 +38,16 @@ ADAPTERS = {
     "list_deploy_request_reviews": "list-deploy-request-reviews",
     "list_schema_recommendations": "list-schema-recommendations",
     "get_schema_recommendation": "get-schema-recommendation",
+    "get_service_token": "get-service-token",
+    "list_service_tokens": "list-service-tokens",
+    "get_oauth_token": "get-oauth-token",
+    "list_oauth_tokens": "list-oauth-tokens",
+    "get_webhook": "get-webhook",
+    "list_webhooks": "list-webhooks",
+}
+SECURITY_RECORDS = {
+    "get_service_token", "list_service_tokens", "get_oauth_token",
+    "list_oauth_tokens", "get_webhook", "list_webhooks",
 }
 DEPLOYMENT_DETAILS = {
     "get_deployment", "get_deploy_queue", "list_deploy_operations",
@@ -156,7 +166,7 @@ def inventory(raw):
                 } if operation_id in LOCAL_PLANS else None,
                 "credentialEntitlement": "unknown-awaiting-operator-metadata",
                 "adapter": "src/tools/" + adapter + ".ts" if adapter else None,
-                "test": ("test/deployment-details.test.mjs" if operation_id in DEPLOYMENT_DETAILS else ("test/lifecycle.test.mjs" if operation_id in LIFECYCLE else ("test/discovery.test.mjs" if operation_id in DISCOVERY else "test/metadata.test.mjs"))) if adapter else None,
+                "test": ("test/security-records.test.mjs" if operation_id in SECURITY_RECORDS else ("test/deployment-details.test.mjs" if operation_id in DEPLOYMENT_DETAILS else ("test/lifecycle.test.mjs" if operation_id in LIFECYCLE else ("test/discovery.test.mjs" if operation_id in DISCOVERY else "test/metadata.test.mjs")))) if adapter else None,
                 "projectionCoverage": "bounded-metadata-subset-not-full-operation" if adapter else "missing",
                 "testExecution": "see-exact-head-actions-evidence" if adapter else "no-test-implemented",
                 "implementation": "offline-adapter-only" if adapter else "missing",

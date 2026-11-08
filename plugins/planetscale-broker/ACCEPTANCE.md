@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 265 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 259 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -97,6 +97,17 @@ is informational and never native approval. Trusted parent-child ownership and
 immutable destination revalidation are not supplied by these response schemas.
 Coverage is 26/291 bounded API subsets, not full provider operations. Fresh
 exact-head Actions is required; no local suite or native authorization is claimed.
+
+`test/security-records.test.mjs` adds 33 synthetic contracts for service-token,
+OAuth-token and webhook list/get projections. Tests cover exact pinned endpoints,
+closed scope/arguments, whole-page ID refusal, immutable bindings, nullable fields,
+wire/page limits and dropped token/refresh-token/webhook-secret/URL/actor/grant
+canaries. Expiry/usage flags mean timestamp presence, never validity or effective
+authority. No live secret-bearing response is fetched; raw-body custody, parent
+ownership, collection authorization and final selected-field secret guarding are
+still integration prerequisites. Coverage is now 32/291 bounded metadata subsets,
+259 missing adapters, zero integrated/reviewed/enabled operations. Fresh exact-head
+Actions is required; no local suite or native authority enforcement is claimed.
 
 ## Metrics preregistration — required before enablement
 
