@@ -12,6 +12,8 @@ import sys
 
 SOURCE_SHA256 = "ae45866599cb5d248fadb9d7f0ed30fd6aed440a17ec0950c4e9e0d58da4cb73"
 ADAPTERS = {
+    "get_branch_query": "get-branch-query",
+    "list_branch_queries": "list-branch-queries",
     "list_audit_logs": "list-audit-logs",
     "list_branch_vitess_parameters": "list-branch-vitess-parameters",
     "get_branch_anomaly": "get-branch-anomaly",
@@ -252,6 +254,7 @@ def policy_candidate(operation_id):
 
 def adapter_test(operation_id):
     for operations, name in [
+        ({"get_branch_query", "list_branch_queries"}, "query-records"),
         ({"list_audit_logs"}, "audit-events"),
         ({"list_branch_vitess_parameters"}, "vitess-parameters"),
         ({"get_branch_anomaly", "list_branch_anomalies"}, "anomalies"),

@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The 116 adapters are pure request builders and bounded output projections,
+The 118 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,19 +36,37 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 116 | Narrow projections; not full operation coverage |
-| Missing source adapters | 175 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 118 | Narrow projections; not full operation coverage |
+| Missing source adapters | 173 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-116 adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 159
+118 adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 157
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
 backups/restore, schema/deploy, topology, maintenance and every other official
 area remain in the map even when access or implementation is missing.
+
+## Query-record metadata
+
+`planetscale.list_branch_queries` reads only the fixed first summary page
+(`page=1&per_page=10`); `planetscale.get_branch_query` reads one separately bound
+individual query ID. Summary IDs are not assumed to identify individual queries.
+The projections return only bound IDs and strict `multishard` (summary) or
+`explainable`/`truncated` (detail) flags, with `executionAuthority: not-established`.
+No SQL, password object, fingerprints, tags, users, addresses, table/keyspace
+names, metrics or timestamps are returned. The summary list uses the official
+`type/next_page/prev_page/data` envelope; malformed envelopes, unknown or duplicate
+IDs and over-cap data refuse the whole page. No provider URLs are followed;
+`hasMore` and first-page-only coverage never claim completeness. Broker bindings
+are snapshotted and capped at 32. Flags never grant EXPLAIN, replay, execution,
+remediation or native approval authority. Current parent ownership, independent
+collection authorization, broker-side raw-body custody/reflected-secret guards
+and operation-specific non-waking evidence remain prerequisites. Optional
+filters/later pages and full insights capability remain incomplete.
 
 ## Audit-event metadata
 
