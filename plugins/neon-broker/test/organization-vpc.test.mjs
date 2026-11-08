@@ -125,6 +125,18 @@ test('scope is copied, unique, bounded and rejects unbound regions without mutat
   for (const name of ['assignOrganizationVPCEndpoint', 'deleteOrganizationVPCEndpoint', 'listProjects', 'sql']) assert.equal(fixture({}).operation(name), undefined);
 });
 
+test('composed detail resource accepts exactly 256 characters and refuses oversized scope at construction', () => {
+  const organizationId = 'a'.repeat(60);
+  const endpointId = 'v'.repeat(80);
+  const at = length => ({ organizationId, revision: 'scope-v1', regionIds: ['aws-' + 'a'.repeat(length - 4)],
+    endpoints: [{ id: endpointId, regionId: 'aws-' + 'a'.repeat(length - 4) }] });
+  const config = at(70);
+  const operations = createNeonOrganizationVPCOperations(config, {});
+  const args = { org_id: organizationId, region_id: config.regionIds[0], vpc_endpoint_id: endpointId };
+  assert.equal(operations[2].prepare(args).resource.id.length, 256);
+  for (const length of [71, 80]) assert.throws(() => createNeonOrganizationVPCOperations(at(length), {}));
+});
+
 test('Azure lists remain available under mocks but pinned unsupported Azure detail refuses before fetch', async () => {
   const azure = { vpc_endpoint_id: 'vpce-azure', region_id: 'azure-eastus2' };
   assert.deepEqual(await fixture({ endpoints: [azure] }).run(cases[0][0], cases[0][1]), { endpoints: [azure] });

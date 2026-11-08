@@ -356,7 +356,8 @@ Scope copies one organization/revision, up to 16 unique region IDs and 16 unique
 endpoint-ID/region bindings; every endpoint must bind to a configured region. The
 organization path follows the pinned lowercase alphanumeric/hyphen 1–60 pattern;
 selected endpoint IDs use the common 1–80 ASCII identifier subset, and regions use
-bounded canonical aws/azure identifiers. Other provider-valid selected identifiers
+bounded canonical aws/azure identifiers. Construction also rejects any composed
+endpoint-detail resource exceeding the common broker's 256-character resource limit. Other provider-valid selected identifiers
 are unavailable rather than rewritten. An organization parent, regional collection,
 all-regions collection, endpoint detail or project VPC grant never implies another.
 

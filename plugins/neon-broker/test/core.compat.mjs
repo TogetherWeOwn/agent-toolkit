@@ -764,6 +764,19 @@ test('organization VPC policy separates organization, region, detail and project
   }
 });
 
+test('organization VPC detail at the composed 256-character boundary executes through the common broker', async () => {
+  const config = { organizationId: 'a'.repeat(60), revision: 'scope-v1', regionIds: ['aws-' + 'a'.repeat(66)],
+    endpoints: [{ id: 'v'.repeat(80), regionId: 'aws-' + 'a'.repeat(66) }] };
+  const args = { org_id: config.organizationId, region_id: config.regionIds[0], vpc_endpoint_id: config.endpoints[0].id };
+  const raw = { vpc_endpoint_id: args.vpc_endpoint_id };
+  const f = brokerFixture('getOrganizationVPCEndpointDetails', args, raw, {}, config);
+  assert.equal(f.provider.operation('getOrganizationVPCEndpointDetails').prepare(args).resource.id.length, 256);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { ...raw, region_id: args.region_id });
+  safeEnvelope(f, result);
+});
+
 test('maximum organization VPC selection and ID/region output fit real common-core budgets', async () => {
   const indices = Array.from({ length: 16 }, (_, n) => n);
   const config = { ...organizationVPCScope, regionIds: indices.map(n => `aws-region-${n}`),

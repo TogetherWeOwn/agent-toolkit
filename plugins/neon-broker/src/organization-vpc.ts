@@ -29,6 +29,9 @@ export function createNeonOrganizationVPCOperations(scope: NeonOrganizationVPCSc
   const endpoints = new Map(config.endpoints.map(value => [value.id, value.regionId]));
   check(regions.size === config.regionIds.length && endpoints.size === config.endpoints.length);
   check(config.endpoints.every(value => regions.has(value.regionId)));
+  const root = `neon/organizations/${config.organizationId}/vpc`;
+  // The composed detail resource must fit the common broker's 256-character limit.
+  check(config.endpoints.every(value => `${root}/region/${value.regionId}/vpc_endpoints/${value.id}`.length <= 256));
 
   function parse(name: OrganizationVPCOperation, raw: unknown): { org_id: string; region_id?: string; vpc_endpoint_id?: string } {
     const args: { org_id: string; region_id?: string; vpc_endpoint_id?: string } = name === "listOrganizationVPCEndpointsAllRegions" ? organizationArguments.parse(raw) :
@@ -42,7 +45,6 @@ export function createNeonOrganizationVPCOperations(scope: NeonOrganizationVPCSc
   }
   function prepareFor(name: OrganizationVPCOperation, raw: unknown): Prepared {
     const args = parse(name, raw);
-    const root = `neon/organizations/${config.organizationId}/vpc`;
     const resource = name === "listOrganizationVPCEndpointsAllRegions" ? `${root}/vpc_endpoints` :
       `${root}/region/${args.region_id}/vpc_endpoints${name === "getOrganizationVPCEndpointDetails" ? `/${args.vpc_endpoint_id}` : ""}`;
     return { resource: { id: resource, revision: config.revision }, arguments: args,
