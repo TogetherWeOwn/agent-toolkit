@@ -7,7 +7,7 @@ const contentTool = "cloudflare.workers.current_content.digest";
 
 export interface CaptureEvidenceRecord {
   readonly contract: "toolkit.cloudflare-capture/v1";
-  readonly subject: "credential-filtered-current-content-projection";
+  readonly subject: "credential-filtered-current-content-projection" | "credential-filtered-pages-list-projection";
   readonly event: string;
   readonly targetHash: string;
   readonly valueHash: string;
@@ -32,13 +32,18 @@ export function createCloudflareReadBroker(scope: CloudflareReadScope, sourceSco
       // Per-call closure, not shared last-response state. Core generates the event
       // and target hash; neither comes from model input or provider headers.
       let valueHash: string | null = null;
+      const subject = tool === contentTool ? "credential-filtered-current-content-projection" :
+        tool === "cloudflare.pages.projects.list" || tool === "cloudflare.pages.deployments.list" ?
+          "credential-filtered-pages-list-projection" : null;
       const broker = createProviderBroker({
         ...dependencies, provider: "cloudflare",
-        operations: operations.map(operation => operation.name !== contentTool ? operation : Object.freeze({
+        operations: operations.map(operation => operation.name !== tool || subject === null ? operation : Object.freeze({
           ...operation,
           project(output: unknown) {
             const value = operation.project(output);
-            valueHash = canonicalHash(value);
+            if (tool === contentTool || (value !== null && typeof value === "object" && !Array.isArray(value) && value.capture !== undefined)) {
+              valueHash = canonicalHash(value);
+            }
             return value;
           },
         })),
@@ -47,10 +52,10 @@ export function createCloudflareReadBroker(scope: CloudflareReadScope, sourceSco
             // Core invokes ALLOW outcome only after projection, credential-output
             // refusal, lease cleanup and journal completion. Do not persist a
             // receipt for denied, malformed or credential-reflecting output.
-            if (record.tool === contentTool && record.phase === "outcome" && record.decision === "ALLOW") {
-              requireThat(valueHash !== null && record.targetHash !== null, "scope");
+            if (record.tool === tool && subject !== null && valueHash !== null && record.phase === "outcome" && record.decision === "ALLOW") {
+              requireThat(record.targetHash !== null, "scope");
               await captureEvidence.append(Object.freeze({
-                contract: "toolkit.cloudflare-capture/v1", subject: "credential-filtered-current-content-projection",
+                contract: "toolkit.cloudflare-capture/v1", subject,
                 event: record.event, targetHash: record.targetHash, valueHash,
               }));
             }

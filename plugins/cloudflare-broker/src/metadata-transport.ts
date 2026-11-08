@@ -101,6 +101,39 @@ export function metadataTransport(fetcher: typeof fetch = fetch) {
   };
 }
 
+export function pagesCollectionTransport(fetcher: typeof fetch = fetch) {
+  const read = metadataTransport(fetcher);
+  return async function collect<A, O extends { pagination?: unknown }>(descriptor: MetadataDescriptor<A, O>, raw: unknown,
+    credential: string, signal: AbortSignal) {
+    requireThat((descriptor.name === "cloudflare.pages.projects.list" && descriptor.providerOperationId === "pages-project-get-projects") ||
+      (descriptor.name === "cloudflare.pages.deployments.list" && descriptor.providerOperationId === "pages-deployment-get-deployments"), "schema");
+    const prepared = descriptor.prepare(raw);
+    const correlationId = randomUUID();
+    const startedAt = new Date().toISOString();
+    const start = performance.now();
+    const output = await read(descriptor, raw, credential, signal);
+    // The descriptor's copied independent evidence scope controls this field,
+    // including unavailable page metadata. Ordinary list scope never opts in.
+    if (output.pagination === undefined) return output;
+    const completedAt = new Date().toISOString();
+    const durationMs = performance.now() - start;
+    requireThat(!signal.aborted && Number.isFinite(durationMs) && durationMs >= 0 &&
+      durationMs <= prepared.request.timeoutMs && Date.parse(completedAt) >= Date.parse(startedAt), "upstream");
+    const value = Object.freeze({
+      ...output,
+      capture: Object.freeze({
+        correlationId, startedAt, completedAt, durationMs,
+        resource: prepared.resource,
+        provenance: "internal-transport-observation" as const,
+        enumeration: "not-established" as const,
+        snapshotConsistency: "not-established" as const,
+      }),
+    });
+    requireThat(Buffer.byteLength(JSON.stringify(value), "utf8") <= 32768, "cap");
+    return value;
+  };
+}
+
 export function currentContentTransport(fetcher: typeof fetch = fetch) {
   return async function read(descriptor: ReturnType<typeof currentContentDescriptor>, raw: unknown,
     credential: string, signal: AbortSignal) {

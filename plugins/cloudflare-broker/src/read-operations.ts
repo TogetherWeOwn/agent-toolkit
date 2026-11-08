@@ -26,7 +26,7 @@ import { r2CustomDomainDescriptors, type R2CustomDomainScope } from "./r2-custom
 import { accessApplicationMetadataDescriptors, accessPolicyMetadataDescriptors, type AccessApplicationMetadataScope, type AccessPolicyMetadataScope, durableObjectMetadataDescriptors, metadataDescriptors, pagesMetadataDescriptors, secretsStoreMetadataDescriptors,
   workerRouteMetadataDescriptors, zoneMetadataDescriptors, type DurableObjectMetadataScope, type MetadataDescriptor, type MetadataScope,
   type PagesMetadataScope, type PreparedMetadata, type SecretsStoreMetadataScope, type WorkerRouteMetadataScope, type ZoneMetadataScope } from "./metadata.js";
-import { currentContentTransport, metadataTransport } from "./metadata-transport.js";
+import { currentContentTransport, metadataTransport, pagesCollectionTransport } from "./metadata-transport.js";
 
 function json(value: unknown): Json {
   jsonData(value);
@@ -147,6 +147,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     zoneId: scope.zone.zoneId, settings: scope.zone.hostnameTls ?? [] });
   const content = currentContentDescriptor(sourceScope);
   const readContent = currentContentTransport(fetcher);
+  const collectPages = pagesCollectionTransport(fetcher);
   return Object.freeze([
     metadata(subscriptions.subscriptionsList), metadata(subscriptions.subscriptionGet),
     metadata(workerScheduleDescriptor({ accountId, revision, workers: scope.workerSchedules ?? [] })),
@@ -173,8 +174,10 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
       packageVersions: scope.workerPackageVersions ?? [] })),
     metadata(stores.storesList), metadata(stores.storeGet), metadata(stores.secretsList), metadata(stores.secretGet),
     metadata(durable.durableNamespacesList), metadata(durable.durableObjectsList),
-    metadata(pages.pagesProjectsList), metadata(pages.pagesProjectGet),
-    metadata(pages.pagesDeploymentsList), metadata(pages.pagesDeploymentGet),
+    bind(pages.pagesProjectsList, (args, credential, signal) => collectPages(pages.pagesProjectsList, args, credential, signal)),
+    metadata(pages.pagesProjectGet),
+    bind(pages.pagesDeploymentsList, (args, credential, signal) => collectPages(pages.pagesDeploymentsList, args, credential, signal)),
+    metadata(pages.pagesDeploymentGet),
     metadata(pagesDomains.domainsList), metadata(pagesDomains.domainGet),
     metadata(access.accessApplicationsList), metadata(access.accessApplicationGet),
     metadata(accessPolicies.accessPoliciesList), metadata(accessPolicies.accessPolicyGet),
