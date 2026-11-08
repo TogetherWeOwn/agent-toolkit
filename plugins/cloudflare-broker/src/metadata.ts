@@ -1121,6 +1121,7 @@ export interface PagesMetadataScope {
   projects: readonly { projectName: string; projectId: string; deploymentIds: readonly string[] }[];
   provenanceProjects?: readonly { projectName: string; sourceType: "github" | "gitlab"; repositoryOwner: string;
     repositoryName: string; productionBranch: string; deploymentBranches: readonly string[] }[];
+  pagination?: { projects: boolean; deploymentProjects: readonly string[] };
 }
 type PagesUnavailable = { status: "unavailable"; reason: "not-returned" };
 type PagesConfigured<T> = { status: "configured"; value: T } | PagesUnavailable;
@@ -1137,6 +1138,10 @@ type PagesProvenance = { subject: "configured-pages-project"; source: PagesSourc
 interface PagesMetadata {
   id: string;
   provenance?: PagesProvenance;
+}
+interface PagesList extends PartialList<PagesMetadata> {
+  pagination?: PagesUnavailable | { status: "provider-reported"; page: number; perPage: number;
+    totalPages: PagesReported<number>; enumeration: "not-established"; snapshotConsistency: "not-established" };
 }
 const pagesRepositoryPart = text(100, /^[A-Za-z0-9][A-Za-z0-9_.-]*$/);
 const pagesBranch = text(200, /^[A-Za-z0-9][A-Za-z0-9_./-]*$/);
@@ -1160,6 +1165,17 @@ export function pagesMetadataDescriptors(scope: PagesMetadataScope) {
     requireThat(Array.isArray(entry.deploymentIds) && entry.deploymentIds.length <= maxRows, "cap");
     projects.set(name, { id, deployments: new Set<string>(entry.deploymentIds.map((value: unknown) => deploymentId.parse(value))) });
     projectIds.add(id);
+  }
+  const pagination = scope.pagination;
+  requireThat(pagination === undefined || (pagination !== null && typeof pagination === "object"
+    && typeof pagination.projects === "boolean" && Array.isArray(pagination.deploymentProjects)), "schema");
+  const projectPagination = pagination?.projects ?? false;
+  const deploymentPagination = new Set<string>();
+  requireThat((pagination?.deploymentProjects.length ?? 0) <= maxRows, "cap");
+  for (const value of pagination?.deploymentProjects ?? []) {
+    const name = pagesProjectName.parse(value);
+    requireThat(projects.has(name) && !deploymentPagination.has(name), "scope");
+    deploymentPagination.add(name);
   }
   const provenance = new Map<string, { sourceType: "github" | "gitlab"; owner: string; repository: string;
     productionBranch: string; branches: Set<string> }>();
@@ -1248,7 +1264,23 @@ export function pagesMetadataDescriptors(scope: PagesMetadataScope) {
     requireThat(project.deployments.has(id), "scope");
     return { id, ...deploymentProvenance(row, name) };
   }
-  const pagesProjectsList: MetadataDescriptor<ReturnType<typeof page.parse>, PartialList<PagesMetadata>> = Object.freeze({
+  function pageEvidence(body: Row, args: { page: number; perPage: number }, count: number, allowed: boolean): Pick<PagesList, "pagination"> {
+    if (!allowed) return {};
+    if (body.result_info === undefined) return { pagination: unavailable() };
+    const info = object(body.result_info);
+    requireThat(info.page === undefined || info.page === args.page, "upstream");
+    requireThat(info.per_page === undefined || info.per_page === args.perPage, "upstream");
+    const total = info.total_pages;
+    requireThat(total === undefined || (typeof total === "number" && Number.isSafeInteger(total) && total >= 0), "upstream");
+    if (total !== undefined) {
+      requireThat(total === 0 ? args.page === 1 && count === 0 : args.page <= (total as number), "upstream");
+    }
+    if (info.page === undefined || info.per_page === undefined) return { pagination: unavailable() };
+    return { pagination: { status: "provider-reported", page: args.page, perPage: args.perPage,
+      totalPages: total === undefined ? unavailable() : { status: "provider-reported", value: total as number },
+      enumeration: "not-established", snapshotConsistency: "not-established" } };
+  }
+  const pagesProjectsList: MetadataDescriptor<ReturnType<typeof page.parse>, PagesList> = Object.freeze({
     name: "cloudflare.pages.projects.list", version: "1", tier: "read", providerOperationId: "pages-project-get-projects",
     prepare(raw: unknown) {
       const args = page.parse(raw);
@@ -1256,10 +1288,11 @@ export function pagesMetadataDescriptors(scope: PagesMetadataScope) {
     },
     project(raw: string, input: PreparedMetadata<ReturnType<typeof page.parse>>) {
       const args = page.parse(input.arguments);
-      const result = rows(envelope(raw).result);
+      const body = envelope(raw);
+      const result = rows(body.result);
       requireThat(result.length <= args.perPage, "cap");
       const items = result.filter(row => typeof row.name === "string" && projects.has(row.name)).map(row => projectMetadata(row, providerText(row.name, pagesProjectName)));
-      return bounded({ items, complete: false as const });
+      return bounded({ items, complete: false as const, ...pageEvidence(body, args, result.length, projectPagination) });
     },
   });
   const pagesProjectGet: MetadataDescriptor<ReturnType<typeof pagesProject.parse>, PagesMetadata> = Object.freeze({
@@ -1274,7 +1307,7 @@ export function pagesMetadataDescriptors(scope: PagesMetadataScope) {
       return bounded(projectMetadata(object(envelope(raw).result), args.projectName));
     },
   });
-  const pagesDeploymentsList: MetadataDescriptor<ReturnType<typeof pagesDeploymentsPage.parse>, PartialList<PagesMetadata>> = Object.freeze({
+  const pagesDeploymentsList: MetadataDescriptor<ReturnType<typeof pagesDeploymentsPage.parse>, PagesList> = Object.freeze({
     name: "cloudflare.pages.deployments.list", version: "1", tier: "read", providerOperationId: "pages-deployment-get-deployments",
     prepare(raw: unknown) {
       const args = pagesDeploymentsPage.parse(raw);
@@ -1284,10 +1317,11 @@ export function pagesMetadataDescriptors(scope: PagesMetadataScope) {
     project(raw: string, input: PreparedMetadata<ReturnType<typeof pagesDeploymentsPage.parse>>) {
       const args = pagesDeploymentsPage.parse(input.arguments);
       const project = projectScope(args.projectName);
-      const result = rows(envelope(raw).result);
+      const body = envelope(raw);
+      const result = rows(body.result);
       requireThat(result.length <= args.perPage, "cap");
       const items = result.filter(row => typeof row.id === "string" && project.deployments.has(row.id)).map(row => deploymentMetadata(row, args.projectName));
-      return bounded({ items, complete: false as const });
+      return bounded({ items, complete: false as const, ...pageEvidence(body, args, result.length, deploymentPagination.has(args.projectName)) });
     },
   });
   const pagesDeploymentGet: MetadataDescriptor<ReturnType<typeof pagesDeployment.parse>, PagesMetadata> = Object.freeze({

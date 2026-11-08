@@ -30,14 +30,15 @@ const cases = [
   ["pagesDeploymentsList", "cloudflare.pages.deployments.list", { projectName, page: 2, perPage: 10 }, () => [deployment()]],
   ["pagesDeploymentGet", "cloudflare.pages.deployments.get", { projectName, deploymentId }, deployment],
 ];
-function fixture(c, { selected = provenanceProjects(), response = c[3](), status = 200 } = {}) {
+function fixture(c, { selected = provenanceProjects(), response = c[3](), status = 200, pagination, resultInfo } = {}) {
   const f = providerFixture();
   const requests = [];
   const operations = cloudflareReadOperations({ accountId: account, revision: "resource-1", scriptNames: [], hyperdriveIds: [],
-    pagesProjects: projects(), pagesProvenanceProjects: selected }, { accountId: account, revision: "resource-1" }, async (url, init) => {
+    pagesProjects: projects(), pagesProvenanceProjects: selected, pagesPagination: pagination }, { accountId: account, revision: "resource-1" }, async (url, init) => {
     requests.push({ url, init });
     assert.equal(init.headers.authorization, `Bearer ${credentialCanary}`);
-    return new Response(success(response), { status, headers: { "content-type": "application/json" } });
+    return new Response(JSON.stringify({ success: true, errors: [], result: response, result_info: resultInfo }),
+      { status, headers: { "content-type": "application/json" } });
   });
   const operation = operations.find(op => op.name === c[1]);
   f.vector.policy = { revision: "policy-1", agents: [f.vector.principal.agent], resources: [operation.prepare(c[2]).resource.id] };
@@ -227,6 +228,146 @@ test("Cloudflare Pages provenance upstream and outcome-audit failures retain unc
     assert.equal(f.calls.secret, 1);
     assert.equal(f.calls.close, 1);
     assert.equal(f.requests.length, 1);
+    assert.deepEqual([...f.journal], journal);
+    safe(f, out);
+  }
+});
+
+const paginationScope = () => ({ projects: true, deploymentProjects: [projectName] });
+const listCases = cases.filter(c => c[0].endsWith("List"));
+const pageInfo = () => ({ page: 2, per_page: 10, total_pages: 5, total_count: 49, count: 10,
+  cursor: credentialCanary, url: derivedCanary });
+const pageBody = (result, info) => JSON.stringify({ success: true, errors: [], result, result_info: info });
+
+test("Cloudflare Pages pagination evidence independently defaults off and snapshots list scopes", () => {
+  const pagination = paginationScope();
+  const d = pagesMetadataDescriptors({ ...scope(), pagination });
+  pagination.projects = false; pagination.deploymentProjects.length = 0;
+  for (const c of listCases) {
+    const prepared = d[c[0]].prepare(c[2]);
+    const out = d[c[0]].project(pageBody(c[3](), pageInfo()), prepared);
+    assert.deepEqual(out.pagination, { status: "provider-reported", page: 2, perPage: 10,
+      totalPages: { status: "provider-reported", value: 5 }, enumeration: "not-established", snapshotConsistency: "not-established" });
+    assert.equal(out.complete, false);
+    const base = pagesMetadataDescriptors(scope());
+    assert.equal(base[c[0]].project(pageBody(c[3](), pageInfo()), base[c[0]].prepare(c[2])).pagination, undefined);
+    safe({ audit: [], journal: [] }, out);
+    assert.ok(!JSON.stringify(out).includes("total_count"));
+  }
+  for (const [selected, expected] of [[{ projects: true, deploymentProjects: [] }, [true, false]],
+    [{ projects: false, deploymentProjects: [projectName] }, [false, true]]]) {
+    const split = pagesMetadataDescriptors({ ...scope(), pagination: selected });
+    listCases.forEach((c, i) => assert.equal(Boolean(split[c[0]].project(pageBody(c[3](), pageInfo()),
+      split[c[0]].prepare(c[2])).pagination), expected[i]));
+  }
+  for (const invalid of [null, { projects: 1, deploymentProjects: [] }, { projects: true, deploymentProjects: "bad" },
+    { projects: true, deploymentProjects: ["other"] }, { projects: true, deploymentProjects: [projectName, projectName] },
+    { projects: true, deploymentProjects: Array(101).fill(projectName) }]) {
+    assert.throws(() => pagesMetadataDescriptors({ ...scope(), pagination: invalid }), /schema|scope|cap/);
+  }
+});
+
+test("Cloudflare Pages pagination omission is unavailable and terminal or empty pages never prove enumeration", () => {
+  const d = pagesMetadataDescriptors({ ...scope(), pagination: paginationScope() });
+  for (const c of listCases) {
+    const p = d[c[0]].prepare(c[2]);
+    for (const info of [undefined, {}, { page: 2 }, { per_page: 10 }]) {
+      assert.deepEqual(d[c[0]].project(pageBody(c[3](), info), p).pagination, unavailable);
+    }
+    const partial = d[c[0]].project(pageBody(c[3](), { page: 2, per_page: 10 }), p);
+    assert.deepEqual(partial.pagination.totalPages, unavailable);
+    for (const result of [[], c[3]()]) {
+      const out = d[c[0]].project(pageBody(result, { page: 2, per_page: 10, total_pages: 2 }), p);
+      assert.equal(out.complete, false);
+      assert.equal(out.pagination.enumeration, "not-established");
+    }
+    const first = d[c[0]].prepare({ ...c[2], page: 1 });
+    assert.equal(d[c[0]].project(pageBody([], { page: 1, per_page: 10, total_pages: 0 }), first).complete, false);
+  }
+});
+
+test("Cloudflare Pages pagination rejects drift malformed metadata and contradictory zero pages", () => {
+  const d = pagesMetadataDescriptors({ ...scope(), pagination: paginationScope() });
+  for (const c of listCases) {
+    const p = d[c[0]].prepare(c[2]);
+    for (const info of [null, [], { ...pageInfo(), page: 1 }, { ...pageInfo(), page: "2" },
+      { ...pageInfo(), per_page: 100 }, { ...pageInfo(), total_pages: -1 }, { ...pageInfo(), total_pages: 1.5 },
+      { ...pageInfo(), total_pages: "5" }, { ...pageInfo(), total_pages: null },
+      { ...pageInfo(), total_pages: Number.MAX_SAFE_INTEGER + 1 }, { ...pageInfo(), total_pages: 1 },
+      { ...pageInfo(), total_pages: 0 }, { total_pages: -1 }]) {
+      assert.throws(() => d[c[0]].project(pageBody(c[3](), info), p), /upstream/);
+    }
+    const first = d[c[0]].prepare({ ...c[2], page: 1 });
+    assert.throws(() => d[c[0]].project(pageBody(c[3](), { page: 1, per_page: 10, total_pages: 0 }), first), /upstream/);
+    for (const args of [{ ...c[2], page: 1001 }, { ...c[2], perPage: 101 }]) assert.throws(() => d[c[0]].prepare(args), /schema/);
+  }
+});
+
+test("Cloudflare Pages pagination evidence cannot be enabled by model arguments before credentials", async () => {
+  for (const c of listCases) for (const patch of [{ pagination: true }, { pagesPagination: paginationScope() },
+    { totalPages: 5 }, { result_info: pageInfo() }, { accountId: "f".repeat(32) }]) {
+    const f = fixture(c, { resultInfo: pageInfo() });
+    assert.equal((await f.invoke({ ...c[2], ...patch })).code, "INVALID_ARGUMENTS");
+    assert.equal(f.calls.secret, 0);
+    assert.equal(f.requests.length, 0);
+  }
+});
+
+test("Cloudflare Pages pagination actual-core binds exact page and preserves redaction audit cleanup replay", async () => {
+  for (const c of listCases) {
+    const f = fixture(c, { pagination: paginationScope(), resultInfo: pageInfo() });
+    const out = await f.invoke();
+    assert.equal(out.ok, true);
+    assert.equal(out.value.pagination.page, 2);
+    assert.equal(out.value.pagination.totalPages.value, 5);
+    assert.equal(out.value.complete, false);
+    assert.ok(f.requests[0].url.endsWith("?page=2&per_page=10"));
+    assert.equal(f.calls.close, 1);
+    assert.deepEqual(f.audit.map(event => event.phase), ["intent", "outcome"]);
+    assert.equal([...f.journal.values()][0].outcome, "complete");
+    assert.equal((await f.invoke()).code, "REPLAY_CONFLICT");
+    assert.equal(f.requests.length, 1);
+    safe(f, out);
+    const legacy = fixture(c, { resultInfo: pageInfo() });
+    assert.equal((await legacy.invoke()).value.pagination, undefined);
+  }
+});
+
+test("Cloudflare Pages pagination current agent resource and lease-time revocation deny network", async () => {
+  for (const c of listCases) for (const denied of ["agent", "resource", "binding", "revocation"]) {
+    const f = fixture(c, { pagination: paginationScope(), resultInfo: pageInfo() });
+    if (denied === "agent") f.vector.policy.agents = ["other-agent"];
+    if (denied === "resource") f.vector.policy.resources = ["other-resource"];
+    if (denied === "binding") f.dependencies.host.revalidate = async () => false;
+    if (denied === "revocation") {
+      const resolve = f.dependencies.credentials.resolve;
+      f.dependencies.credentials.resolve = async target => { const lease = await resolve(target); f.vector.policy.revision = "revoked"; return lease; };
+    }
+    assert.equal((await f.invoke()).code, denied === "binding" ? "RESOURCE_CHANGED" : denied === "revocation" ? "POLICY_CHANGED" : "POLICY_DENIED");
+    assert.equal(f.requests.length, 0);
+    assert.equal(f.calls.secret, denied === "revocation" ? 1 : 0);
+    assert.equal(f.calls.close, denied === "revocation" ? 1 : 0);
+  }
+});
+
+test("Cloudflare Pages pagination mismatch and outcome-audit outage retain uncertain replay tombstones", async () => {
+  for (const c of listCases) for (const failure of ["page", "audit"]) {
+    const f = fixture(c, { pagination: paginationScope(), resultInfo: { ...pageInfo(), page: failure === "page" ? 1 : 2 } });
+    const append = f.dependencies.audit.append;
+    if (failure === "audit") f.dependencies.audit.append = async event => { if (event.phase === "outcome") throw new Error(credentialCanary); };
+    const out = await f.invoke();
+    assert.equal(out.code, failure === "page" ? "UPSTREAM_UNAVAILABLE" : "OUTCOME_UNCERTAIN");
+    assert.equal([...f.journal.values()][0].outcome, "uncertain");
+    const journal = structuredClone([...f.journal]);
+    if (failure === "audit") {
+      assert.equal((await f.invoke()).code, "AUDIT_UNAVAILABLE");
+      assert.equal(f.requests.length, 1);
+      assert.deepEqual([...f.journal], journal);
+      f.dependencies.audit.append = append;
+    }
+    assert.equal((await f.invoke()).code, "REPLAY_CONFLICT");
+    assert.equal(f.requests.length, 1);
+    assert.equal(f.calls.close, 1);
     assert.deepEqual([...f.journal], journal);
     safe(f, out);
   }
