@@ -15,6 +15,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  suspendProjectEndpoint(project: string, endpoint: string, options: MetadataRequestOptions): Promise<unknown>;
   updateProjectEndpoint(project: string, endpoint: string, name: string, options: MetadataRequestOptions): Promise<unknown>;
   updateProject(project: string, name: string, options: MetadataRequestOptions): Promise<unknown>;
   updateProjectBranch(project: string, branch: string, name: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -135,7 +136,7 @@ function cursorQuery(cursor: string | null): URLSearchParams {
 // Construction is a source/test seam, not an installed or enabled runtime tool.
 export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadataTransport {
   const get = (path: string, query: URLSearchParams, options: MetadataRequestOptions) => request(path, query, options);
-  async function request(path: string, query: URLSearchParams, options: MetadataRequestOptions, body?: string, binary = false, snapshotDelete = false, patch = false): Promise<unknown> {
+  async function request(path: string, query: URLSearchParams, options: MetadataRequestOptions, body?: string, binary = false, snapshotDelete = false, patch = false, suspend = false): Promise<unknown> {
     if (/[\r\n]/.test(options.credential)) throw Error("UPSTREAM_UNAVAILABLE");
     const expiresAt = performance.now() + REQUEST_TIMEOUT_MS;
     const controller = new AbortController();
@@ -156,7 +157,7 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       if (expired()) throw Error("UPSTREAM_UNAVAILABLE");
       const suffix = query.size ? `?${query.toString()}` : "";
       const response = await fetcher(`${NEON_ORIGIN}/api/v2${path}${suffix}`, {
-        method: snapshotDelete ? "DELETE" : patch ? "PATCH" : body === undefined ? "GET" : "POST", redirect: "error", signal: controller.signal,
+        method: snapshotDelete ? "DELETE" : patch ? "PATCH" : suspend ? "POST" : body === undefined ? "GET" : "POST", redirect: "error", signal: controller.signal,
         headers: { Authorization: `Bearer ${options.credential}`, Accept: binary ? "application/octet-stream" : "application/json",
           ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
         ...(body === undefined ? {} : { body }),
@@ -206,6 +207,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    suspendProjectEndpoint: (project: string, endpoint: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/endpoints/${authPathId(endpoint)}/suspend`, new URLSearchParams(), options,
+        undefined, false, false, false, true),
     updateProjectEndpoint: (project: string, endpoint: string, name: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/endpoints/${authPathId(endpoint)}`, new URLSearchParams(), options,
         JSON.stringify({ endpoint: { name: endpointLabel.parse(name) } }), false, false, true),

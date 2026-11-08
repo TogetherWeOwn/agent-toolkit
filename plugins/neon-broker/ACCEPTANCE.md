@@ -2,8 +2,8 @@
 
 ## Implemented source, not accepted enablement
 
-- Seventy-nine typed source operations: name-only endpoint-label, project-label, branch-label and snapshot-label writes, one reserved
-  snapshot-deletion request adapter and 74 reads, including bounded binary-object byte-count observations,
+- Eighty typed source operations: name-only endpoint-label, project-label, branch-label and snapshot-label writes, two reserved
+  snapshot-deletion and endpoint-suspension request adapters and 74 reads, including bounded binary-object byte-count observations,
   selected OAuth-provider ID/type metadata,
   bounded log-query counts, current-head schema comparison and selected log-value observations,
   selected database-schema identities and database-bound advisor summaries,
@@ -13,7 +13,7 @@
   email-auth configuration, auth webhook status and organization VPC/configuration/member/invitation metadata plus organization-filtered region/project catalogs and project count,
   with strict arguments, exact trusted scope and parent-child binding, safe projections
   and fixed bounded injected transport.
-- Full 194-row management inventory; 115 operations still lack source. Snapshot update
+- Full 194-row management inventory; 114 operations still lack source. Snapshot update
   supports names only, not expiry/retention; branch update supports names only, not
   protection/expiry; project update supports names only, not settings/IP allowlist/quota,
   default compute or history retention. Endpoint update supports names only on already
@@ -49,7 +49,10 @@
    version/configuration and resources; any claimed non-waking read needs its own
    proof. GET/mocks/read labels are insufficient. Reserved snapshot deletion needs
    accepted exact-target/plan native authority and asynchronous/uncertain recovery;
-   HTTP202 is not deletion completion. Missing/stale evidence means no live use.
+   HTTP202 is not deletion completion. Reserved endpoint suspension likewise needs
+   accepted exact-target/plan native authority: its HTTP200 acknowledgement and operation
+   observations are not completed suspension, fencing, zero sessions or no-reconnect proof.
+   No enforcing actor or scheduler is supplied. Missing/stale evidence means no live use.
 5. Accepted durable journal/audit/outbox and failure/uncertainty recovery; no
    process-local mock store is an installed adapter. No blind retry or fallback.
 6. Exact-head required Actions, CodeQL/Devin and finding dispositions; fresh-context

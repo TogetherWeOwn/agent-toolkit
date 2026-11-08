@@ -45,6 +45,7 @@ import { createNeonObjectDownloadOperations } from '../dist/plugins/neon-broker/
 import { createNeonBranchUpdateOperations } from '../dist/plugins/neon-broker/src/branch-update.js';
 import { createNeonProjectUpdateOperations } from '../dist/plugins/neon-broker/src/project-update.js';
 import { createNeonEndpointUpdateOperations } from '../dist/plugins/neon-broker/src/endpoint-update.js';
+import { createNeonEndpointSuspendOperations } from '../dist/plugins/neon-broker/src/endpoint-suspend.js';
 import { createNeonSnapshotUpdateOperations } from '../dist/plugins/neon-broker/src/snapshot-update.js';
 import { createNeonSnapshotDeleteOperations } from '../dist/plugins/neon-broker/src/snapshot-delete.js';
 
@@ -462,7 +463,15 @@ export function objectDownloadFixture(value, config = objectDownloadScope) {
   return fixture(typeof value === 'function' ? value : () => binaryResponse(value.bytes), config, createNeonObjectDownloadOperations);
 }
 export const allCases = [...objectDownloadCases, ...oauthProviderCases, ...logQueryCases, ...schemaComparisonCases, ...logValueCases, ...branchSchemaCases, ...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
-export const sourceNames = [...allCases.map(([name]) => name), 'deleteSnapshot', 'updateSnapshot', 'updateProjectBranch', 'updateProject', 'updateProjectEndpoint'];
+export const sourceNames = [...allCases.map(([name]) => name), 'deleteSnapshot', 'updateSnapshot', 'updateProjectBranch', 'updateProject', 'updateProjectEndpoint', 'suspendProjectEndpoint'];
+export const endpointSuspendScope = { projectId: 'project-a', branchId: 'br-a', endpointId: 'ep-a', revision: 'scope-v1' };
+export const endpointSuspendArgs = { project_id: 'project-a', branch_id: 'br-a', endpoint_id: 'ep-a' };
+export const endpointSuspendReceipt = { endpoint, operations: [{ ...operation, action: 'suspend_compute', status: 'running' }] };
+export function endpointSuspendFixture(value = endpointSuspendReceipt, config = endpointSuspendScope) {
+  return fixture((url, init, n) => typeof value === 'function' ? value(url, init, n) :
+    init.method === 'POST' ? response(value) : response({ endpoint: { id: config.endpointId, project_id: config.projectId, branch_id: config.branchId } }),
+  config, createNeonEndpointSuspendOperations);
+}
 export const endpointUpdateScope = { projectId: 'project-a', branchId: 'br-a', endpointId: 'ep-a', revision: 'scope-v1', expectedName: 'before', name: 'after' };
 export const endpointUpdateArgs = { project_id: 'project-a', branch_id: 'br-a', endpoint_id: 'ep-a', name: 'after' };
 export const endpointUpdateReceipt = { endpoint: { id: 'ep-a', project_id: 'project-a', branch_id: 'br-a', name: 'after' }, operations: [] };

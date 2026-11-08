@@ -19,6 +19,26 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
 
+## Reserved endpoint-suspension source delta
+
+Exact copied project/branch/endpoint/revision and a distinct endpoint/suspend grant
+are required. Reserved common-core native authorization binds the exact plan/target
+before resolving credentials; write-tier policy alone cannot substitute. A fixed
+detail GET validates mandatory immutable ancestry before one bodyless POST. Closed
+arguments reject disabled/security flags, settings, other actions and authority.
+HTTP200 exact endpoint echo and bounded unique operation-ID/status observations
+acknowledge the request only; optional operation ancestry must not contradict it.
+Unrelated fields, states, hosts, settings, actions/errors and dates are not evaluated.
+
+Suspension is not a fence, session drain, no-reconnect guarantee, deadline enforcer
+or completed lifecycle evidence. No disabled flag or new scheduler/actor is supplied;
+connections can wake computes again. An ambiguous response triggers at most one
+bounded detail observation, then remains uncertain even on idle. Permanent common
+journal barriers prevent same-request restart/replay, not independent external actions.
+No retry, idempotency header, live provider call or runtime registration. Native
+host/policy/custody, effects/entitlement, durable recovery and independent reviews
+remain gates; the separately missing enforcing actor is not supplied by this source.
+
 ## Endpoint label-update source delta
 
 The endpoint rename subset copies exact project/branch/endpoint/revision and

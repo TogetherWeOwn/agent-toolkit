@@ -7,6 +7,28 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonEndpointSuspendOperations(trustedScope, transport)` adds reserved
+`suspendProjectEndpoint` source. Copy exact project/branch/endpoint/revision and
+require a distinct `neon/projects/<project>/branches/<branch>/endpoints/<endpoint>/suspend`
+grant plus native exact-target/plan authorization through the common core before
+credential resolution. Fixed endpoint-detail GET checks mandatory immutable identity
+and ancestry, then exactly one bodyless POST targets `/suspend`; no configuration,
+disabled/security flags, start/restart or caller authority overrides are accepted.
+
+Only HTTP200 exact endpoint identity and a bounded operation-ID/status list produce
+closed `{id, acknowledged: true, operations}`. Optional operation branch/endpoint
+ancestry must not contradict the copied target. Status observations (even `finished`
+or `failed`) are data, not adapter-certified completion. Hosts, settings, states,
+action/error text and timestamps are not evaluated or emitted. This is **not fencing,
+zero-session/no-reconnect evidence, a deadline enforcer or cutover readiness**.
+A connection may wake a suspended endpoint again; suspension does not disable it.
+
+Ambiguity gets one bounded detail observation and remains uncertain even on `idle`;
+no mutation retry, provider idempotency header or observation-to-success conversion.
+The permanent common journal blocks same-request restart/replay. Native durable
+recovery, effects/entitlement, host/policy/custody and independent qualification remain
+unresolved. No live suspension, runtime registration or new lifecycle actor is supplied.
+
 `createNeonEndpointUpdateOperations(trustedScope, transport)` adds `updateProjectEndpoint`
 as a **name-only** write descriptor. Copy exact project/branch/endpoint/revision and
 expected and desired nonempty ASCII token labels <=64 characters; labels must differ.
@@ -1190,8 +1212,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: seventy-three implemented
-source adapters, 121 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: eighty implemented
+source adapters, 114 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

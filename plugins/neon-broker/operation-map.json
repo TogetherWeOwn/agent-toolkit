@@ -2759,20 +2759,24 @@
       "id": "suspendProjectEndpoint",
       "apiArea": "endpoint",
       "tool": "neon.suspendProjectEndpoint",
-      "scope": "project_id/endpoint_id",
+      "scope": "project_id/branch_id/endpoint_id/suspend",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "endpoint-suspension-request"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/endpoint-suspend.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Mocked source only; reserved native exact-target/plan authority and dedicated suspend grant required. Exact endpoint/project/branch detail preflight then one bodyless POST; HTTP200 closed acknowledgement and operation observations only, not completed suspension, fencing, session closure or no-reconnect proof. Ambiguity remains uncertain after one observation, never retried; permanent common journal blocks restart/replay. Native host/policy/custody, durable recovery, entitlement/effects and independent reviews unresolved. No live suspension, cutover enforcement or enablement."
     },
     {
       "id": "restartProjectEndpoint",
