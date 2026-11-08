@@ -138,9 +138,9 @@ test("Cloudflare read output refuses exact and encoded credential reflection eve
 test("Cloudflare audit and journal outages refuse before credentials; outcome outage remains uncertain", async () => {
   for (const failed of ["intent", "journal", "outcome"]) {
     const f = fixture();
+    const append = f.dependencies.audit.append;
     if (failed === "journal") f.dependencies.journal.claim = async () => { throw Error("never-return-provider-body"); };
     else {
-      const append = f.dependencies.audit.append;
       f.dependencies.audit.append = async record => {
         if (record.phase === failed) throw Error("never-return-provider-body");
         return append(record);
@@ -152,6 +152,7 @@ test("Cloudflare audit and journal outages refuse before credentials; outcome ou
     else {
       assert.equal(f.requests.length, 1);
       assert.equal([...f.journal.values()][0].outcome, "uncertain");
+      f.dependencies.audit.append = append;
       assert.equal((await f.invoke()).code, "REPLAY_CONFLICT");
     }
     safe(f, result);
@@ -166,9 +167,12 @@ test("Cloudflare concurrent responses retain their own prepared request and opaq
     waiting.set(new URL(url).pathname.split("/").at(-2), resolve);
     if (waiting.size === 2) ready();
   }) });
+  f.vector.policy.resources.push(f.operations.find(op => op.name === secrets).prepare({ scriptName: "other-worker" }).resource.id);
   const first = f.invoke(secrets, args, "first");
   const second = f.invoke(secrets, { scriptName: "other-worker" }, "second");
-  await started;
+  await Promise.race([started,
+    first.then(result => assert.fail(`first call completed before both fetches: ${JSON.stringify(result)}`)),
+    second.then(result => assert.fail(`second call completed before both fetches: ${JSON.stringify(result)}`))]);
   assert.equal(waiting.size, 2);
   waiting.get("other-worker")(response([{ name: "OTHER_SECRET", type: "secret_text" }]));
   waiting.get("safe-worker")(response([{ name: "SAFE_SECRET", type: "secret_text" }]));
