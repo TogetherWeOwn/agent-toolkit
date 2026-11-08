@@ -24,7 +24,7 @@ function object(value: unknown): Row {
   return value as Row;
 }
 
-export function hostnameOriginPullsDescriptor(scope: HostnameOriginPullsScope): MetadataDescriptor<Arguments, HostnameOriginPullsResult> {
+function snapshot(scope: HostnameOriginPullsScope) {
   const account = identifier.parse(scope.accountId);
   const zone = identifier.parse(scope.zoneId);
   const revision = label.parse(scope.revision);
@@ -36,11 +36,20 @@ export function hostnameOriginPullsDescriptor(scope: HostnameOriginPullsScope): 
     requireThat(!allowed.has(name), "schema");
     allowed.add(name);
   }
-  const prepared = new WeakSet<object>();
   function context(row: Row): void {
     requireThat(row.account_id === undefined || row.account_id === account, "scope");
     requireThat(row.zone_id === undefined || row.zone_id === zone, "scope");
   }
+  return { account, zone, revision, allowed, context };
+}
+function enabled(row: Row): boolean | null | "unavailable" {
+  requireThat(row.enabled === undefined || row.enabled === null || typeof row.enabled === "boolean", "upstream");
+  return row.enabled === undefined ? "unavailable" : row.enabled as boolean | null;
+}
+
+export function hostnameOriginPullsDescriptor(scope: HostnameOriginPullsScope): MetadataDescriptor<Arguments, HostnameOriginPullsResult> {
+  const { account, zone, revision, allowed, context } = snapshot(scope);
+  const prepared = new WeakSet<object>();
   return Object.freeze({ name: "cloudflare.tls.hostname_origin_pulls.get", version: "1", tier: "read" as const,
     providerOperationId: "per-hostname-authenticated-origin-pull-get-the-hostname-status-for-client-authentication",
     prepare(raw: unknown) {
@@ -64,10 +73,61 @@ export function hostnameOriginPullsDescriptor(scope: HostnameOriginPullsScope): 
       const row = object(body.result);
       context(row);
       requireThat(row.hostname === value.arguments.hostname, "scope");
-      requireThat(row.enabled === undefined || row.enabled === null || typeof row.enabled === "boolean", "upstream");
-      return Object.freeze({ hostname: value.arguments.hostname,
-        enabled: row.enabled === undefined ? "unavailable" as const : row.enabled as boolean | null,
+      return Object.freeze({ hostname: value.arguments.hostname, enabled: enabled(row),
         subject: "configured-hostname-origin-pulls" as const, effectiveProtection: "not-established" as const });
+    },
+  });
+}
+
+const listInput = closed({});
+type ListArguments = ReturnType<typeof listInput.parse>;
+interface HostnameOriginPullAssociationsResult {
+  readonly items: readonly { readonly hostname: string; readonly enabled: boolean | null | "unavailable" }[];
+  readonly subject: "configured-hostname-origin-pull-associations";
+  readonly complete: false;
+  readonly effectiveProtection: "not-established";
+}
+
+export function hostnameOriginPullAssociationsDescriptor(scope: HostnameOriginPullsScope): MetadataDescriptor<ListArguments, HostnameOriginPullAssociationsResult> {
+  const { account, zone, revision, allowed, context } = snapshot(scope);
+  const prepared = new WeakSet<object>();
+  return Object.freeze({ name: "cloudflare.tls.hostname_origin_pulls.list", version: "1", tier: "read" as const,
+    providerOperationId: "per-hostname-authenticated-origin-pull-list-hostname-associations",
+    prepare(raw: unknown) {
+      const args = listInput.parse(raw);
+      requireThat(allowed.size > 0, "scope");
+      const value = Object.freeze({ arguments: args,
+        resource: Object.freeze({ id: `cloudflare:account:${account}:zone:${zone}:hostname-origin-pull-associations`, revision }),
+        request: Object.freeze({ method: "GET" as const,
+          path: `/zones/${zone}/origin_tls_client_auth/hostnames?page=1&per_page=100&status=all`,
+          maxResponseBytes: 131072, timeoutMs: 10000, maxRequests: 1 as const, redirects: "deny" as const }) });
+      prepared.add(value);
+      return value;
+    },
+    project(raw: string, value: PreparedMetadata<ListArguments>) {
+      requireThat(prepared.has(value), "scope");
+      requireThat(typeof raw === "string" && Buffer.byteLength(raw, "utf8") <= 131072, "cap");
+      let parsed: unknown;
+      try { parsed = JSON.parse(raw); } catch { requireThat(false, "upstream"); }
+      const body = object(parsed);
+      context(body);
+      requireThat(body.success === true && Array.isArray(body.errors) && body.errors.length === 0 && Object.hasOwn(body, "result"), "upstream");
+      requireThat(Array.isArray(body.result) && body.result.length <= 100, "cap");
+      const items: { readonly hostname: string; readonly enabled: boolean | null | "unavailable" }[] = [];
+      const seen = new Set<string>();
+      for (const rawRow of body.result) {
+        const row = object(rawRow);
+        context(row);
+        requireThat(typeof row.hostname === "string", "upstream");
+        if (!allowed.has(row.hostname)) continue;
+        requireThat(!seen.has(row.hostname), "upstream");
+        seen.add(row.hostname);
+        items.push(Object.freeze({ hostname: row.hostname, enabled: enabled(row) }));
+      }
+      const output = Object.freeze({ items: Object.freeze(items), subject: "configured-hostname-origin-pull-associations" as const,
+        complete: false as const, effectiveProtection: "not-established" as const });
+      requireThat(Buffer.byteLength(JSON.stringify(output), "utf8") <= 32768, "cap");
+      return output;
     },
   });
 }

@@ -17,7 +17,7 @@ import { dnssecDescriptor } from "../dist/plugins/cloudflare-broker/src/dnssec.j
 import { universalSslDescriptor } from "../dist/plugins/cloudflare-broker/src/universal-ssl.js";
 import { automaticSslDescriptor } from "../dist/plugins/cloudflare-broker/src/automatic-ssl.js";
 import { originPullsDescriptor } from "../dist/plugins/cloudflare-broker/src/origin-pulls.js";
-import { hostnameOriginPullsDescriptor } from "../dist/plugins/cloudflare-broker/src/hostname-origin-pulls.js";
+import { hostnameOriginPullAssociationsDescriptor, hostnameOriginPullsDescriptor } from "../dist/plugins/cloudflare-broker/src/hostname-origin-pulls.js";
 import { eventSubscriptionDescriptors } from "../dist/plugins/cloudflare-broker/src/event-subscriptions.js";
 import { r2CorsDescriptor } from "../dist/plugins/cloudflare-broker/src/r2-cors.js";
 import { r2NotificationDescriptors } from "../dist/plugins/cloudflare-broker/src/r2-notifications.js";
@@ -96,6 +96,7 @@ const allDescriptors = { ...metadataOnly, ...deletionDescriptors, contentDescrip
   automaticSsl: automaticSslDescriptor({ accountId: account, zoneId: zone, revision: "policy-1" }),
   originPulls: originPullsDescriptor({ accountId: account, zoneId: zone, revision: "policy-1" }),
   hostnameOriginPulls: hostnameOriginPullsDescriptor({ accountId: account, zoneId: zone, revision: "policy-1" }),
+  hostnameOriginPullAssociations: hostnameOriginPullAssociationsDescriptor({ accountId: account, zoneId: zone, revision: "policy-1" }),
   ...eventSubscriptionDescriptors({ accountId: account, revision: "policy-1" }),
   ...workerDomainMetadataDescriptors({ accountId: account, revision: "policy-1" }),
   r2Cors: r2CorsDescriptor({ accountId: account, revision: "policy-1" }),
