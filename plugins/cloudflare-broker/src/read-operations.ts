@@ -5,6 +5,7 @@ import { subscriptionDescriptors, type SubscriptionScope } from "./subscriptions
 import { workerScheduleDescriptor, type WorkerScheduleScope } from "./worker-schedules.js";
 import { scriptSettingsDescriptors, type ScriptSettingsScope } from "./script-settings.js";
 import { workerAccountDescriptors, type WorkerAccountScope } from "./worker-account.js";
+import { workerIdentityDescriptors, type WorkerIdentityScope } from "./worker-identities.js";
 import { workerSecretDescriptor, type WorkerSecretScope } from "./worker-secret.js";
 import { workerBuildDescriptor, type WorkerBuildScope } from "./worker-builds.js";
 import { deployHookDescriptor, type DeployHookScope } from "./deploy-hooks.js";
@@ -82,6 +83,8 @@ export interface CloudflareReadScope extends MetadataScope {
   subscriptions?: SubscriptionScope["subscriptions"];
   workerSchedules?: WorkerScheduleScope["workers"];
   workerSecrets?: WorkerSecretScope["workers"];
+  workerIdentityList?: WorkerIdentityScope["listWorkers"];
+  workerIdentityDetails?: WorkerIdentityScope["workers"];
   workerAccountSettingsReadAllowed?: WorkerAccountScope["settingsReadAllowed"];
   workerAccountExpectedSubdomain?: WorkerAccountScope["expectedSubdomain"];
   workerObservabilityScriptNames?: ScriptSettingsScope["observabilityScriptNames"];
@@ -142,6 +145,8 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
   const workerAccount = workerAccountDescriptors({ accountId, revision,
     settingsReadAllowed: scope.workerAccountSettingsReadAllowed ?? false,
     ...(scope.workerAccountExpectedSubdomain === undefined ? {} : { expectedSubdomain: scope.workerAccountExpectedSubdomain }) });
+  const identities = workerIdentityDescriptors({ accountId, revision,
+    listWorkers: scope.workerIdentityList ?? [], workers: scope.workerIdentityDetails ?? [] });
   const consumers = queueConsumerDescriptors({ accountId, revision, queues: scope.queueConsumers ?? [],
     configurationConsumers: scope.queueConsumerConfigurations ?? [] });
   const events = eventSubscriptionDescriptors({ accountId, revision, subscriptions: scope.eventSubscriptions ?? [] });
@@ -174,6 +179,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(workerScheduleDescriptor({ accountId, revision, workers: scope.workerSchedules ?? [] })),
     metadata(scriptSettings.scriptSettingsGet), metadata(scriptSettings.usageModelGet),
     metadata(workerAccount.accountSettingsGet), metadata(workerAccount.accountSubdomainGet),
+    metadata(identities.identitiesList), metadata(identities.identityGet),
     metadata(workerSecretDescriptor({ accountId, revision, workers: scope.workerSecrets ?? [] })),
     metadata(workerBuildDescriptor({ accountId, revision, workers: scope.workerBuildConfigurations ?? [] })),
     metadata(deployHookDescriptor({ accountId, revision, workers: scope.workerDeployHooks ?? [] })),
