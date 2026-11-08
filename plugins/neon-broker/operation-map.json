@@ -2860,15 +2860,18 @@
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
-      "tier": "reserved",
-      "authorization": "native",
+      "tier": "read",
+      "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/organization-keys.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Selected numeric organization API-key identity source only; no tokens, creator/scope/expiry/custody completeness or credential actions. Provider effects, entitlement, credential placement and independent native review/integration remain unverified. No runtime registration or enablement."
     },
     {
       "id": "createOrgApiKey",

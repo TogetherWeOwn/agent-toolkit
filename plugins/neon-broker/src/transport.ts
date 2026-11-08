@@ -8,6 +8,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  listOrgApiKeys(organization: string, options: MetadataRequestOptions): Promise<unknown>;
   listCredentials(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   getAuthDetails(options: MetadataRequestOptions): Promise<unknown>;
   getMaskingRules(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -175,6 +176,8 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    listOrgApiKeys: (organization: string, options: MetadataRequestOptions) =>
+      get(`/organizations/${authPathId(organization)}/api_keys`, new URLSearchParams(), options),
     listCredentials: (project: string, branch: string, options: MetadataRequestOptions) =>
       get(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/credentials`, new URLSearchParams(), options),
     getAuthDetails: (options: MetadataRequestOptions) => get("/auth", new URLSearchParams(), options),
