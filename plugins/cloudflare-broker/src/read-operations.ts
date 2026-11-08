@@ -162,7 +162,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     ...(scope.zone === undefined ? [] : [metadata(zoneTlsDescriptor({ accountId, revision,
       zoneId: scope.zone.zoneId, settingIds: scope.zone.tlsSettingIds ?? [] }))]),
     ...(scope.zone === undefined ? [] : [metadata(dnssecDescriptor({ accountId, revision,
-      zoneId: scope.zone.zoneId, readAllowed: scope.zone.dnssecReadAllowed }))]),
+      zoneId: scope.zone.zoneId, readAllowed: scope.zone.dnssecReadAllowed ?? false }))]),
     // Source acquisition needs exact native authority, even for digest-only output.
     bind(content, (args, credential, signal) => readContent(content, args, credential, signal)),
   ]);
