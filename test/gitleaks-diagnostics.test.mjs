@@ -47,13 +47,14 @@ test('scan revision traversal retains merged and deleted history without unrelat
     git('rm', 'historical.txt');
     git('commit', '-m', 'test: remove synthetic marker');
     git('switch', 'main');
-    await commit('main.txt', 'synthetic main marker\n');
+    const main = await commit('main.txt', 'synthetic main marker\n');
     git('merge', '--no-ff', 'merged-feature', '-m', 'test: merge synthetic history');
-    const head = git('rev-parse', 'HEAD');
+    assert.equal(git('rev-list', '--parents', '-n', '1', 'HEAD').split(' ').length, 3);
     const original = git('log', '-p', '-U0', '--full-history', '--all', '--diff-filter=tuxdb');
     assert.ok(original.includes(unrelated), 'the default all-ref traversal includes unrelated history');
     const scoped = git('log', '-p', '-U0', ...options);
-    for (const sha of [root, merged, head]) assert.ok(scoped.includes(sha), `must retain ancestor ${sha}`);
+    // Patch traversal omits a merge with no new diff; retain both parents' content instead.
+    for (const sha of [root, merged, main]) assert.ok(scoped.includes(sha), `must retain ancestor ${sha}`);
     assert.ok(scoped.includes('+synthetic historical marker'), 'removed material is still scanned at its introduction');
     assert.ok(!scoped.includes(unrelated), 'an unmerged fetched ref is not part of the tested revision');
     assert.ok(!scoped.includes('synthetic sibling marker'));
