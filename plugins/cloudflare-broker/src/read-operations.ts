@@ -4,6 +4,7 @@ import { currentContentDescriptor, type CurrentContentScope } from "./current-co
 import { versionAssetDescriptor, type VersionAssetScope } from "./version-assets.js";
 import { workerDomainMetadataDescriptors, type WorkerDomainScope } from "./worker-domains.js";
 import { r2LifecycleDescriptor, type R2LifecycleScope } from "./r2-lifecycle.js";
+import { r2ManagedDomainDescriptor, type R2ManagedDomainScope } from "./r2-managed-domain.js";
 import { accessApplicationMetadataDescriptors, accessPolicyMetadataDescriptors, type AccessApplicationMetadataScope, type AccessPolicyMetadataScope, durableObjectMetadataDescriptors, metadataDescriptors, pagesMetadataDescriptors, secretsStoreMetadataDescriptors,
   workerRouteMetadataDescriptors, zoneMetadataDescriptors, type DurableObjectMetadataScope, type MetadataDescriptor, type MetadataScope,
   type PagesMetadataScope, type PreparedMetadata, type SecretsStoreMetadataScope, type WorkerRouteMetadataScope, type ZoneMetadataScope } from "./metadata.js";
@@ -61,6 +62,7 @@ export interface CloudflareReadScope extends MetadataScope {
   pagesProjects?: PagesMetadataScope["projects"];
   workerDomains?: WorkerDomainScope["domains"];
   r2LifecycleBuckets?: R2LifecycleScope["buckets"];
+  r2ManagedDomainBuckets?: R2ManagedDomainScope["buckets"];
   workerAssetVersions?: VersionAssetScope["workers"];
   workerPackageVersions?: VersionAssetScope["packageVersions"];
   accessApplications?: AccessApplicationMetadataScope["applications"];
@@ -99,6 +101,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(descriptors.d1List), metadata(descriptors.d1Get),
     metadata(descriptors.r2List), metadata(descriptors.r2Get), metadata(descriptors.r2LocksGet),
     metadata(r2LifecycleDescriptor({ accountId, revision, buckets: scope.r2LifecycleBuckets ?? [] })),
+    metadata(r2ManagedDomainDescriptor({ accountId, revision, buckets: scope.r2ManagedDomainBuckets ?? [] })),
     metadata(descriptors.deploymentsList), metadata(descriptors.deploymentGet),
     metadata(descriptors.versionsList), metadata(descriptors.versionGet),
     metadata(descriptors.kvNamespacesList), metadata(descriptors.kvNamespaceGet),
