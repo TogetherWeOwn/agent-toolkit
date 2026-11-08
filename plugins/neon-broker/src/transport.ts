@@ -8,6 +8,8 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  getOrganizationMembers(organization: string, cursor: string | null, options: MetadataRequestOptions): Promise<unknown>;
+  getOrganizationMember(organization: string, member: string, options: MetadataRequestOptions): Promise<unknown>;
   getOrganization(organization: string, options: MetadataRequestOptions): Promise<unknown>;
   getOrganizationSpendingLimit(organization: string, options: MetadataRequestOptions): Promise<unknown>;
   listOrganizationVPCEndpointsAllRegions(organization: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -155,6 +157,16 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    getOrganizationMembers: (organization: string, cursor: string | null, options: MetadataRequestOptions) => {
+      const query = cursorQuery(cursor);
+      query.set("sort_by", "joined_at");
+      query.set("sort_order", "desc");
+      return get(`/organizations/${authPathId(organization)}/members`, query, options);
+    },
+    getOrganizationMember: (organization: string, member: string, options: MetadataRequestOptions) => {
+      if (typeof member !== "string" || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(member) || /[^a-f0-9-]/.test(member)) throw Error("INVALID_ARGUMENTS");
+      return get(`/organizations/${authPathId(organization)}/members/${member}`, new URLSearchParams(), options);
+    },
     getOrganization: (organization: string, options: MetadataRequestOptions) =>
       get(`/organizations/${authPathId(organization)}`, new URLSearchParams(), options),
     getOrganizationSpendingLimit: (organization: string, options: MetadataRequestOptions) =>

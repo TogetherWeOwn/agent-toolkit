@@ -2950,12 +2950,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "test/organization-members.test.mjs",
+        "test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed organization membership read source and mock refusal contracts only; provider effects, entitlement, credential placement and independent native review/integration remain unverified. No member mutation, access enforcement or enablement."
     },
     {
       "id": "getOrganizationMember",
@@ -2969,12 +2972,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "test/organization-members.test.mjs",
+        "test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed organization membership read source and mock refusal contracts only; provider effects, entitlement, credential placement and independent native review/integration remain unverified. No member mutation, access enforcement or enablement."
     },
     {
       "id": "updateOrganizationMember",

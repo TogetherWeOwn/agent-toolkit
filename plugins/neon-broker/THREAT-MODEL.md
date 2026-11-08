@@ -168,6 +168,22 @@ arguments, output poisoning, copied bindings, nullable/numeric boundaries, trans
 failure and common principal/resource/replay/TOCTOU/reflection/budget contracts.
 Provider entitlement/effects and independent runtime qualification remain unknown.
 
+## Organization membership metadata delta
+
+`getOrganizationMembers` and `getOrganizationMember` use distinct exact collection
+and member resources, with copied one-to-one member/user UUID bindings under one
+organization. The collection's nested member records and unwrapped detail expose
+only IDs, organization and known role; email/profile, MFA/deactivation and timestamps
+are not read. No identity is discovered into policy and no active-access conclusion
+is implied. A returned configured sibling cannot satisfy the requested detail.
+Fixed 10-row pages use joined_at/desc ordering and response next cursors for at most
+three pages, validating echoed ordering and accumulated rows before another request.
+Duplicate identities, reassociation, ancestry, malformed pagination, cursor cycles
+and page exhaustion refuse without partial success. Contracts cover closed arguments,
+copying, selection, poisoned output, transport failures, exact grant separation,
+common identity/replay/TOCTOU/reflection and maximum-scope budgets. No member mutation,
+invitation flow or lifecycle authority is supplied. Native effects remain unverified.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.

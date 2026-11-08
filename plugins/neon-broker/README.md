@@ -406,6 +406,25 @@ endpoint fallback. No account enumeration, limit update, organization mutation,
 credential retrieval or runtime enforcement is introduced. Maximum scope/output fit
 common budgets; provider effects and native qualification remain unknown.
 
+`createNeonOrganizationMemberOperations(trustedScope, transport)` adds
+`getOrganizationMembers` and `getOrganizationMember`, with exact resources
+`neon/organizations/<org>/members` and `neon/organizations/<org>/members/<member>`.
+Collection, detail, organization-parent and project-access grants never imply one
+another. Scope copies one organization/revision and up to 16 one-to-one member UUID /
+user UUID bindings. Arguments accept only org_id and, for detail, a configured member_id.
+The collection preserves the pinned members/member envelope but omits user profiles;
+each member exposes only id, user_id, org_id and a known role. Email, joined timestamps,
+MFA and deactivation information are not read. No active-access or MFA qualification
+is inferred. Detail is an unwrapped exact requested member, not a collection wrapper.
+
+Collection transport fixes limit=10, sort_by=joined_at and sort_order=desc, follows only
+pagination.next for at most three pages, and checks optional sort echoes. Accumulated
+rows validate before another request, bounded to 30 before filtering; duplicates,
+user/member reassociation, contradictory organization/project/branch ancestry, changed
+ordering, cursor cycles and page exhaustion refuse without partial success. Unselected
+members never expand the trusted binding. No role/access mutation, invitation handling,
+account enumeration, runtime enforcement or live provider qualification is introduced.
+
 Trusted metadata scope contains one project, a revision, explicit branch IDs and endpoint
 parent bindings. Construction validates and copies it. Caller IDs only select
 already-configured resources; no caller identity, authority, origin, credential,
@@ -424,7 +443,7 @@ passwords, credentials and connection strings are excluded. Unknown lifecycle
 states fail closed until explicitly supported. No error body/headers are surfaced.
 Common lease-reflection checks remain necessary even in these selected fields.
 
-`createNeonMetadataTransport(injectedFetch)` has forty-four typed methods only. Its
+`createNeonMetadataTransport(injectedFetch)` has forty-six typed methods only. Its
 internal request builder fixes origin `https://console.neon.tech`, `/api/v2`
 paths, GET, JSON content, no redirects and no retries. No global fetch fallback
 exists. Each response is bounded to 64 KiB and 1 s, including streamed body time;
@@ -464,8 +483,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: forty-four implemented
-source adapters, 150 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: forty-six implemented
+source adapters, 148 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable
