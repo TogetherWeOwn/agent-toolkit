@@ -7,6 +7,7 @@ import { currentContentDescriptor } from "../dist/plugins/cloudflare-broker/src/
 import { cloudflareReadOperations } from "../dist/plugins/cloudflare-broker/src/read-operations.js";
 import { versionAssetDescriptor } from "../dist/plugins/cloudflare-broker/src/version-assets.js";
 import { workerDomainMetadataDescriptors } from "../dist/plugins/cloudflare-broker/src/worker-domains.js";
+import { r2CorsDescriptor } from "../dist/plugins/cloudflare-broker/src/r2-cors.js";
 import { r2LifecycleDescriptor } from "../dist/plugins/cloudflare-broker/src/r2-lifecycle.js";
 import { r2ManagedDomainDescriptor } from "../dist/plugins/cloudflare-broker/src/r2-managed-domain.js";
 import { r2CustomDomainDescriptors } from "../dist/plugins/cloudflare-broker/src/r2-custom-domains.js";
@@ -72,6 +73,7 @@ const metadataOnly = { ...descriptors, ...zoneDescriptors, ...routeDescriptors, 
 const contentDescriptor = currentContentDescriptor({ accountId: account, revision: "source-policy-1", sourceDigestScriptNames: ["safe-worker"] });
 const allDescriptors = { ...metadataOnly, ...deletionDescriptors, contentDescriptor,
   ...workerDomainMetadataDescriptors({ accountId: account, revision: "policy-1" }),
+  r2Cors: r2CorsDescriptor({ accountId: account, revision: "policy-1" }),
   r2Lifecycle: r2LifecycleDescriptor({ accountId: account, revision: "policy-1" }),
   r2ManagedDomain: r2ManagedDomainDescriptor({ accountId: account, revision: "policy-1" }),
   ...r2CustomDomainDescriptors({ accountId: account, revision: "policy-1" }),
@@ -941,9 +943,9 @@ test("Cloudflare full schema inventory is pinned, explicit about holes, and cons
       }
     }
   }
-  assert.equal(operations.filter(row => row.typedTool !== null).length, 51);
+  assert.equal(operations.filter(row => row.typedTool !== null).length, 52);
   assert.equal(operations.filter(row => row.tier === "reserved").length, 6);
-  assert.equal(operations.filter(row => row.tier === "read").length, 45);
+  assert.equal(operations.filter(row => row.tier === "read").length, 46);
   assert.equal(operations.filter(row => row.implementation === "content-descriptor-only").length, 1);
   assert.equal(manifest.counts.contentDescriptors, 1);
   assert.equal(manifest.counts.descriptors, Object.keys(allDescriptors).length);
@@ -960,7 +962,7 @@ test("Cloudflare descriptor, coverage and core-binding tiers agree for every sou
   const rows = (await readFile(new URL("../plugins/cloudflare-broker/coverage/operations.jsonl", import.meta.url), "utf8"))
     .trimEnd().split("\n").map(line => JSON.parse(line));
   const rowsByName = new Map(rows.filter(row => row.typedTool !== null).map(row => [row.typedTool, row]));
-  assert.equal(bound.length, 46);
+  assert.equal(bound.length, rows.filter(row => row.typedTool !== null && row.implementation !== "plan-descriptor-only").length);
   assert.equal(new Set(bound.map(operation => operation.name)).size, bound.length);
   for (const operation of bound) {
     assert.equal(operation.tier, descriptorsByName.get(operation.name)?.tier, operation.name);
