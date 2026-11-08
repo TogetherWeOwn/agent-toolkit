@@ -3,8 +3,9 @@ import { jsonData } from "../../../packages/core/src/schema.js";
 import { prepareDeleteBackup, prepareDeleteBackupPolicy, type BackupDeletionPlan } from "./backup-deletion-plans.js";
 import { prepareDeleteBranch, type MutationPlan } from "./mutation-plans.js";
 import { prepareCloseDeployRequest, prepareCancelDeployRequest, type DeploymentStopPlan } from "./deployment-stop-plans.js";
+import { prepareCancelBranchConfigChange, prepareCancelKeyspaceConfigChange, type ConfigurationCancelPlan } from "./configuration-cancel-plans.js";
 
-function preparedPreview(id: string, preview: MutationPlan | BackupDeletionPlan | DeploymentStopPlan): Prepared {
+function preparedPreview(id: string, preview: MutationPlan | BackupDeletionPlan | DeploymentStopPlan | ConfigurationCancelPlan): Prepared {
   const prepared = Object.freeze({
     resource: Object.freeze({ id, revision: preview.target.revision }),
     arguments: preview.arguments,
@@ -49,5 +50,19 @@ export function bindCancelDeployRequestPreparation(rawTarget: unknown): (raw: un
   const target = prepareCancelDeployRequest(rawTarget, {}).target;
   return (raw: unknown): Prepared => preparedPreview(
     `planetscale/deploy-request/${target.requestId}`, prepareCancelDeployRequest(target, raw),
+  );
+}
+
+export function bindCancelBranchConfigChangePreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = prepareCancelBranchConfigChange(rawTarget, {}).target;
+  return (raw: unknown): Prepared => preparedPreview(
+    `planetscale/branch-config-change/${target.changeId}`, prepareCancelBranchConfigChange(target, raw),
+  );
+}
+
+export function bindCancelKeyspaceConfigChangePreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = prepareCancelKeyspaceConfigChange(rawTarget, {}).target;
+  return (raw: unknown): Prepared => preparedPreview(
+    `planetscale/keyspace-config-change/${target.changeId}`, prepareCancelKeyspaceConfigChange(target, raw),
   );
 }

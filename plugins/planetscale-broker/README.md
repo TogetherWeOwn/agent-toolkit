@@ -64,8 +64,9 @@ incomplete. Negative contracts reject missing/duplicate inventory, unknown field
 claim inflation and destructive-tier downgrades. Execution evidence comes only
 from exact-head Actions; this source declaration is not a passing result.
 
-`src/core-preparation.ts` supplies five pure `Prepared` seams for branch,
-backup and backup-policy deletion plus deploy-request close/cancel previews. Trusted host-owned closed snapshots bind
+`src/core-preparation.ts` supplies seven pure `Prepared` seams for branch,
+backup and backup-policy deletion, deploy-request close/cancel and branch/keyspace
+configuration-cancellation previews. Trusted host-owned closed snapshots bind
 `planetscale/branch/<immutable-id>`, `planetscale/backup/<immutable-id>` or
 `planetscale/backup-policy/<immutable-id>` and revision. Parent IDs/names,
 production/protection classifications, the fixed request and all obligations
@@ -92,6 +93,19 @@ cancel has no body. `test/core-deployment-stop-preparation.test.mjs` covers thes
 bindings. A hash is not proof of current ID/number mapping, independently bound
 destination identity, freshness, remote preconditions, rollback or closure.
 Neither operation executes, consumes approval or increases adapter coverage.
+
+Configuration-cancellation bindings use distinct
+`planetscale/branch-config-change/<immutable-id>` and
+`planetscale/keyspace-config-change/<immutable-id>` namespaces. The full preview
+hash retains parent IDs/names, keyspace binding where applicable, change type,
+production/state/revision and the fixed bodyless DELETE. Only draft/pending
+snapshots bind; branch requests require vtgate and keyspace requests require
+mysqld/vttablet. `test/core-configuration-cancel-preparation.test.mjs` covers
+captured immutable snapshots, empty arguments, refusal and hash separation.
+Both keep RM obligations unconsumed; independent conjunctive effect classification
+and current identity/state checks remain prerequisites. These seams neither
+prove remote cancellability, unchanged settings or rollback nor register an
+executor, consume approval or increase adapter coverage.
 
 All 291 entries remain `incomplete`, `implemented=false`, `reviewed=false`,
 `enabled=false`, and entitlement `unknown`. Existing offline read/preview test

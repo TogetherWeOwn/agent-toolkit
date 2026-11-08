@@ -64,6 +64,16 @@ conjunctive obligations; 134 provisional read / 25 unreviewed reserved / 132
 unresolved is unchanged. Twelve pure previews stay separate from 134/291 bounded
 offline adapters and 157 missing adapters. Zero integrated/reviewed/enabled/adopted.
 No host, credential, authority, journal, audit, transport or executor was added.
+Two additional pure configuration-cancellation bindings retain closed captured
+change/revision snapshots in distinct branch/keyspace resource namespaces and the
+complete fixed bodyless DELETE preview. Sixteen synthetic contracts in
+`test/core-configuration-cancel-preparation.test.mjs` cover retained RM obligations,
+deep immutability, caller/host injection and accessor refusal, complete identity,
+hash sensitivity, determinism, type separation and unsupported-state refusal.
+Only draft/pending and the existing vtgate versus mysqld/vttablet restrictions bind.
+Independent conjunctive effect classification, current identity/state and provider
+preconditions remain unresolved; no executor, approval consumption, rollback or
+unchanged-settings guarantee. Execution evidence requires exact-head Actions.
 One pure branch-delete preparation now binds a closed trusted branch ID/revision
 snapshot into `Prepared`, retaining the full fixed preview and RM obligation.
 Six contracts cover fixed request, deep immutability, caller injection/accessors,
