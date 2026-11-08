@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 195 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 191 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -249,6 +249,28 @@ Coverage is **96/291 bounded subsets, 195 missing**; tiers 96 provisional read /
 16 unreviewed reserved / 179 unresolved. Zero integrated/reviewed/enabled/adopted.
 Fresh exact-head Actions remains required; no local suite or native authority
 execution is claimed.
+
+At `8b4d7531a6bd196aab953624675621530712cfcd`, [Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42446353794)
+passed [tests](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42446353794/job/128626029418),
+lint/typecheck, native-policy and ci-ok. This is evidence for 96 source adapters,
+not execution of the newer network/throttler fixtures. The earlier unchanged
+GitHub SDK recovery-test failure passed on one same-SHA retry; cause remains
+unresolved and no repair or weakened assertion is claimed.
+
+`test/network-throttler.test.mjs` adds 27 synthetic contracts for four CIDR-entry
+and database/deploy-request throttler reads. They cover pinned paths/schema/access
+alternatives, CIDR pagination, immutable ID/name snapshots, whole-response refusal,
+closed scopes/arguments, wire/row/page limits, duplicate/foreign bindings, ratio
+bounds and dropped network/schema/role/ratio/actor/timestamp canaries. Configurable
+resource IDs must match independently of parent slugs and deploy-request numbers;
+configuration names must be both broker-allowed and returned eligible keyspaces.
+Configuration presence, including ratio zero, is not effective throttling. CIDR
+ID existence is not effective enforcement. Current parent ownership, independent
+collection permission, final secret guarding, full details/mutations and non-waking
+semantics remain prerequisites. Coverage is **100/291 bounded subsets, 191 missing**;
+tiers 100 provisional read / 16 unreviewed reserved / 175 unresolved. Zero integrated,
+reviewed, enabled or adopted. Fresh exact-head Actions is required; no local suite
+or native authority enforcement is claimed.
 
 ## Metrics preregistration — required before enablement
 

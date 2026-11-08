@@ -12,6 +12,10 @@ import sys
 
 SOURCE_SHA256 = "ae45866599cb5d248fadb9d7f0ed30fd6aed440a17ec0950c4e9e0d58da4cb73"
 ADAPTERS = {
+    "get_database_postgres_cidr": "get-database-postgres-cidr",
+    "list_database_postgres_cidrs": "list-database-postgres-cidrs",
+    "get_database_throttler": "get-database-throttler",
+    "get_deploy_request_throttler": "get-deploy-request-throttler",
     "list_extensions": "list-extensions",
     "list_shard_configuration_profile_extensions": "list-shard-configuration-profile-extensions",
     "list_parameters": "list-parameters",
@@ -108,6 +112,10 @@ ADAPTERS = {
     "list_shard_configuration_profiles": "list-shard-configuration-profiles",
     "get_shard_configuration_profile_shard": "get-shard-configuration-profile-shard",
     "list_shard_configuration_profile_shards": "list-shard-configuration-profile-shards",
+}
+NETWORK_THROTTLER = {
+    "get_database_postgres_cidr", "list_database_postgres_cidrs",
+    "get_database_throttler", "get_deploy_request_throttler",
 }
 CONFIGURATION_DEFINITIONS = {
     "list_extensions", "list_shard_configuration_profile_extensions", "list_parameters",
@@ -227,6 +235,7 @@ def policy_candidate(operation_id):
 
 def adapter_test(operation_id):
     for operations, name in [
+        (NETWORK_THROTTLER, "network-throttler"),
         (CONFIGURATION_DEFINITIONS, "configuration-definitions"),
         (ACCOUNT_AVAILABILITY, "account-availability"),
         (CONFIGURATION_PROFILES, "configuration-profiles"),

@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The ninety-six adapters are pure request builders and bounded output projections,
+The one hundred adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,14 +36,14 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 96 | Narrow projections; not full operation coverage |
-| Missing source adapters | 195 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 100 | Narrow projections; not full operation coverage |
+| Missing source adapters | 191 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-Ninety-six adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 179
+One hundred adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 175
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
@@ -316,6 +316,33 @@ names/pairs. Optional internal filtering is not exposed; no pagination is invent
 Flags never authorize enablement, configuration changes, restarts, spend or wake.
 Full configuration details/mutations and non-waking semantics remain incomplete.
 
+IP-restriction list/get tools (`list_database_postgres_cidrs`,
+`get_database_postgres_cidr`) return bound entry IDs only, explicitly paired with
+`enforcementAuthority: not-established`. CIDR ranges, schema/role selectors,
+descriptions, actors and timestamps are omitted; this is not an effective network
+policy or access receipt. Lists snapshot 1–32 unique IDs and refuse the entire
+page on an unknown entry. Pagination is explicit and bounded.
+
+Database and deploy-request throttler tools (`get_database_throttler`,
+`get_deploy_request_throttler`) match the immutable configurable-resource ID and
+return only that ID plus bound keyspace names and configuration-presence flags.
+Scopes snapshot 1–32 unique keyspace names; responses are capped at 32 eligible
+keyspaces and configurations. Unknown/duplicate names, configurable ID mismatch,
+configurations outside the returned eligible list and ratios outside the documented
+0–95 range refuse the entire response. Ratios, configurable names, actors and times
+are not returned. A zero ratio still means a configuration is present, not that
+throttling is effective. Empty eligible/configuration arrays are supported; no
+collection-completeness claim is made. `configurationAuthority: not-established`
+never grants changes, deployment, safety weakening, spend or wake authority.
+
+Response ID/name confinement is not current database/deploy-request/keyspace
+ownership, immutable parent mapping or independent upstream collection permission;
+these remain reviewed integration prerequisites, along with selected-field secret
+reflection guards and non-waking evidence. CIDR and throttler full details and
+mutations remain missing. The database throttler's service-token alternatives are
+`read_deploy_request` / `create_deploy_request`, while its OAuth alternatives are
+`read_databases` / `read_database`: metadata projection never expands entitlements.
+
 Arguments are closed, scalar and bounded. Configured resource scope is separate
 from arguments and must eventually be resolved by the shared core from an
 authorized resource handle, not accepted from a model. Each request fixes HTTPS
@@ -363,7 +390,7 @@ No connector or replacement broker is introduced.
 ## Local mutation-plan artifacts — not executors
 
 `src/mutation-plans.ts` supplies three pure, bounded previews. They are **not API
-adapters**, do not consume authority and do not increase the 96-adapter count.
+adapters**, do not consume authority and do not increase the 100-adapter count.
 Each artifact labels itself `validated-local-plan-not-provider-dry-run`, with
 execution not implemented, remote preconditions not verified and provider dry-run
 not performed. No network executor, output projector or secret placement exists.
@@ -397,7 +424,7 @@ The candidates only document requirements; native routing, expiry, exact-target
 binding, atomic consumption, replay/concurrent-use refusal and approved placement
 are **not implemented or tested as authority enforcement here**. Credential routes
 remain incomplete until a broker-only sink and reconciliation are accepted. The
-other 179 tier classifications are unresolved, not automatically harmless reads or
+other 175 tier classifications are unresolved, not automatically harmless reads or
 ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.
