@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The 133 adapters are pure request builders and bounded output projections,
+The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,19 +36,42 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 133 | Narrow projections; not full operation coverage |
-| Missing source adapters | 158 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 134 | Narrow projections; not full operation coverage |
+| Missing source adapters | 157 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-133 adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 142
+134 adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 141
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
 backups/restore, schema/deploy, topology, maintenance and every other official
 area remain in the map even when access or implementation is missing.
+
+## MoveTables status availability metadata
+
+`planetscale.get_move_tables_workflow_status` prepares one fixed GET with the
+required `target_keyspace` query. Broker-owned branch/keyspace IDs and parent,
+workflow and target-keyspace names are snapshotted; caller arguments are empty.
+Names use the bounded slug subset and are not immutable workflow identity.
+The required `data` object may omit all three documented fields. Traffic text
+is capped at 4,096 UTF-16 code units; optional table-copy and shard-stream maps
+are each capped at 32 object-valued entries within the shared 64 KiB wire cap.
+Documented copy counters must be safe integers and percentages finite numbers;
+no progress, completion or range semantics are inferred. Stream contents stay
+opaque. Only request-bound branch/keyspace IDs and nonempty string/map presence
+booleans survive, with provenance/executionAuthority explicitly not-established.
+No workflow/keyspace/table/shard names, traffic text, progress or stream details
+are returned.
+
+The response has no branch, keyspace or workflow identity. Fresh ownership and
+workflow/keyspace name bindings, trusted request/response transport, raw-body
+custody, collection permission and non-waking semantics remain prerequisites.
+Presence is not traffic safety, copy completion, freshness, native closure or
+mutation authority. Full workflow status and the opaque workflow list/detail
+contracts remain incomplete; this subset supplies no executor or live grant.
 
 ## Data-topology availability metadata
 

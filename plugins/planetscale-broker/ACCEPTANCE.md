@@ -10,7 +10,7 @@ missing rows are actual missing implementation, not a promise of dormant access.
 | --- | --- | --- |
 | Current credential kind/scope/entitlement receipt | Operator | Non-secret, dated metadata naming existing binding identity, provider/resource classification, service-token grants or OAuth scopes, expiry/restrictions; unknowns retained |
 | Reviewed compatible versioned provider interface | Common-core maintainer | Pinned reviewed core with native identity/policy/approval/audit and contract fixtures; no mock authority in production |
-| 158 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
+| 157 adapters, remaining optional capabilities and per-operation tier classification | PlanetScale package builder | Every entitled operation implemented with closed schemas, resource boundaries, projections/placement, tests and validated plan/diff semantics; explicit unsupported areas retain prerequisites |
 | Reserved-operation authority and replay/TOCTOU tests | Common-core maintainer + package builder | Actual target-native authority path demonstrated for each applicable tier, not a boolean or self-issued grant |
 | Non-waking metadata semantics | Package builder + Operator | Operation-specific provider evidence; GET method alone is insufficient |
 | Fixed catalog/ACL metadata | Package builder + Operator | Nine offline PostgreSQL catalog artifacts exist, not an executor or effective-ACL implementation; native credential-hidden connector, exact staging allowlist/window, caps and closure evidence remain missing |
@@ -40,6 +40,37 @@ read-only transactions, statement/lock/row/byte/page/time caps and native closur
 evidence. No customer rows, password/hash values, DSNs or caller SQL; no silent
 API-to-SQL fallback. A production-classified branch remains production regardless
 of a database's staging-like name, and uses its own Release Manager gate.
+
+## MoveTables status availability source increment
+
+`test/move-tables-status.test.mjs` adds 16 synthetic contracts for one fixed
+offline status GET with required target_keyspace query. Closed arguments and
+snapshotted branch/keyspace IDs plus workflow/target names; optional traffic
+string and object-valued table/stream maps; safe integer/finite numeric copy
+fields, caps, whole-response refusal, canaries, hostile scopes and pinned schema.
+Only request-bound IDs and nonempty field-presence booleans survive; no names,
+traffic text, progress or stream contents. Provenance and execution authority
+remain not-established. The schema supplies no response identity, so current
+ownership/name bindings, trusted request/response transport, raw-body custody,
+collection authorization and non-waking proof remain prerequisites. Workflow
+list/detail and full status capability remain incomplete.
+
+Coverage: **134/291 bounded metadata subsets; 157 missing** (15 GETs, 142
+mutations). Tiers 134 provisional read / 16 unreviewed reserved / 141 unresolved;
+zero integrated/reviewed/enabled/adopted. New contracts require exact-head
+Actions; no local suite/build/typecheck or CI mirror ran.
+
+Prior exact `0a4d74e6bd036dc12d666ac00068a3ca364d66da`
+[Actions test](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42472979280/job/128707912361)
+passed 923/923 PlanetScale, root 181/181, helpers 122/122 and GitHub broker
+219/219; zero failures/cancellations/skips. All three
+[CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42472968694)
+passed. Aggregate attempt 1 failed before actionlint execution on download
+timeouts/connection failure; the same-head failed-job rerun (attempt 2) passed
+lint/typecheck/native-policy/ci-ok without source changes. This does not prove
+the download failure repaired. Earlier SDK recovery cause remains unresolved. No inline findings
+or submitted reviews returned; final fresh-context/Devin/native specialist
+review and merge gates remain.
 
 ## Query/tag historical-metric availability source increment
 

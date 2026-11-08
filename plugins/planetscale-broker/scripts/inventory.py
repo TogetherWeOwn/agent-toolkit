@@ -12,6 +12,7 @@ import sys
 
 SOURCE_SHA256 = "ae45866599cb5d248fadb9d7f0ed30fd6aed440a17ec0950c4e9e0d58da4cb73"
 ADAPTERS = {
+    "get_move_tables_workflow_status": "get-move-tables-workflow-status",
     "get_data_topology": "get-data-topology",
     "get_keyspace_vschema": "get-keyspace-vschema",
     "get_branch_query_metrics": "get-branch-query-metrics",
@@ -269,6 +270,7 @@ def policy_candidate(operation_id):
 
 def adapter_test(operation_id):
     for operations, name in [
+        ({"get_move_tables_workflow_status"}, "move-tables-status"),
         ({"get_data_topology"}, "data-topology"),
         ({"get_keyspace_vschema"}, "keyspace-vschema"),
         ({"get_branch_metrics", "get_tablet_metrics", "get_branch_query_metrics", "get_branch_tag_metrics"}, "historical-metrics"),
