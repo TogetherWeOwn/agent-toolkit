@@ -80,6 +80,12 @@ ADAPTERS = {
     "list_dedicated_read_replicas": "list-dedicated-read-replicas",
     "get_switchover": "get-switchover",
     "list_switchovers": "list-switchovers",
+    "get_change_request": "get-change-request",
+    "list_change_requests": "list-change-requests",
+    "list_dedicated_read_replica_change_requests": "list-dedicated-read-replica-change-requests",
+}
+UNIFIED_CHANGE_RECORDS = {
+    "get_change_request", "list_change_requests", "list_dedicated_read_replica_change_requests",
 }
 ROUTING_RECORDS = {
     "get_router", "list_routers", "get_dedicated_read_replica",
@@ -94,7 +100,10 @@ CHANGE_RECORDS = {
     "get_branch_config_change_request", "list_branch_config_change_requests",
     "get_keyspace_config_change_request", "list_keyspace_config_change_requests",
 }
-REDIRECT_ALIASES = {"get_admin_change_request", "list_admin_change_requests"}
+REDIRECT_ALIASES = {
+    "get_admin_change_request", "list_admin_change_requests", "get_neki_change_request",
+    "list_neki_change_requests", "get_router_change_request", "list_router_change_requests",
+}
 RESIZE_RECORDS = {
     "get_bouncer", "list_bouncers", "list_bouncer_resize_requests",
     "list_branch_bouncer_resize_requests", "get_branch_resize_request",
@@ -173,6 +182,7 @@ def policy_candidate(operation_id):
 
 def adapter_test(operation_id):
     for operations, name in [
+        (UNIFIED_CHANGE_RECORDS, "unified-change-records"),
         (ROUTING_RECORDS, "routing-records"),
         (MAINTENANCE_SCHEDULES, "maintenance-schedules"),
         (CHANGE_RECORDS, "change-records"), (RESIZE_RECORDS, "resize-records"),

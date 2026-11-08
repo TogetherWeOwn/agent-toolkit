@@ -130,7 +130,9 @@ test('complete official map distinguishes mapped, source-adapted, reviewed and e
   const changeRecords = ['get_branch_change_request', 'list_branch_change_requests', 'get_branch_config_change_request', 'list_branch_config_change_requests', 'get_keyspace_config_change_request', 'list_keyspace_config_change_requests'];
   const maintenanceSchedules = ['get_maintenance_schedule', 'list_maintenance_schedules', 'get_branch_maintenance_window', 'list_maintenance_windows'];
   const routingRecords = ['get_router', 'list_routers', 'get_dedicated_read_replica', 'list_dedicated_read_replicas', 'get_switchover', 'list_switchovers'];
+  const unifiedChangeRecords = ['get_change_request', 'list_change_requests', 'list_dedicated_read_replica_change_requests'];
   const groups = [
+    [unifiedChangeRecords, 'unified-change-records'],
     [routingRecords, 'routing-records'],
     [maintenanceSchedules, 'maintenance-schedules'],
     [changeRecords, 'change-records'],

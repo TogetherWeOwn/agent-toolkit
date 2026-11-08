@@ -3,7 +3,7 @@
 **Partial source build. Not installable, reviewed, enabled, or feature-complete.**
 Maintainer role: toolkit engineering. Package version: 0.1.0. No runtime plugin
 manifest, network executor, credential resolver, or tool registration is supplied.
-The sixty-eight adapters are pure request builders and bounded output projections,
+The seventy-one adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
 ## Official surface and scope
@@ -36,14 +36,14 @@ been Operator-verified. Do not fetch credential values to fill this gap.
 | Outcome | Count | Meaning |
 | --- | ---: | --- |
 | Official operations mapped | 291 | Schema inventory, not implementation |
-| Offline metadata adapters | 68 | Narrow projections; not full operation coverage |
-| Missing source adapters | 223 | Explicitly incomplete, never denied placeholders |
+| Offline metadata adapters | 71 | Narrow projections; not full operation coverage |
+| Missing source adapters | 220 | Explicitly incomplete, never denied placeholders |
 | Runtime-integrated operations | 0 | Reviewed compatible common core required |
 | Security/Crypto/QA accepted | 0 | Exact-version reviews pending |
 | Enabled / adopted | 0 / 0 | Separate live authorization and install gates |
 
-Sixty-eight adapter rows have a provisional read tier; sixteen protected-operation
-rows have explicit **unreviewed reserved-tier candidates**. The remaining 207
+Seventy-one adapter rows have a provisional read tier; sixteen protected-operation
+rows have explicit **unreviewed reserved-tier candidates**. The remaining 204
 rows stay `unresolved`. None of these classifications is runtime policy or
 approved authority. The intended tools are not registered. GET alone is not proof
 of harmless, non-waking or non-billable behavior. Billing/admin, token/role/password, SSO/OIDC, query/metrics/log exports,
@@ -218,6 +218,21 @@ presence never prove unchanged primary, rollback, safe retry or native closure.
 Readiness/default/autoscaling flags never grant restart, failover, resize, wake or
 spend authority. Full details/mutations and non-waking semantics remain incomplete.
 
+Unified change-request list/get tools bind ID, matching type/target-type pair,
+nullable target ID and a bounded target-name slug. Mixed-target lists are supported
+only with each exact broker-owned binding. Null target ID stays null, never an
+immutable resource claim. Replica-change lists additionally bind replica ID/name.
+Unknown or rebound identities refuse the whole page. Output contains only those
+bindings, state and (for unified records) the informational `canDelete` flag: no
+configuration/storage/version/SKU, actor, errors or timestamps. State/`canDelete`
+never grants deletion, cancellation, resize, spend or safe-retry authority. Trusted
+parent ownership, target revalidation and independent collection permission remain
+prerequisites. Optional state/target/period/completion filters and full details are
+not implemented. Unsupported target names fail closed rather than leaking arbitrary
+text. The four router/neki list/get aliases, like the two admin-change aliases,
+document 308 only and remain missing pending an explicitly reviewed fixed-alias
+contract. No redirect is followed and no alias is counted as an implemented read.
+
 Arguments are closed, scalar and bounded. Configured resource scope is separate
 from arguments and must eventually be resolved by the shared core from an
 authorized resource handle, not accepted from a model. Each request fixes HTTPS
@@ -265,7 +280,7 @@ No connector or replacement broker is introduced.
 ## Local mutation-plan artifacts — not executors
 
 `src/mutation-plans.ts` supplies three pure, bounded previews. They are **not API
-adapters**, do not consume authority and do not increase the 68-adapter count.
+adapters**, do not consume authority and do not increase the 71-adapter count.
 Each artifact labels itself `validated-local-plan-not-provider-dry-run`, with
 execution not implemented, remote preconditions not verified and provider dry-run
 not performed. No network executor, output projector or secret placement exists.
@@ -299,7 +314,7 @@ The candidates only document requirements; native routing, expiry, exact-target
 binding, atomic consumption, replay/concurrent-use refusal and approved placement
 are **not implemented or tested as authority enforcement here**. Credential routes
 remain incomplete until a broker-only sink and reconciliation are accepted. The
-other 207 tier classifications are unresolved, not automatically harmless reads or
+other 204 tier classifications are unresolved, not automatically harmless reads or
 ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.
