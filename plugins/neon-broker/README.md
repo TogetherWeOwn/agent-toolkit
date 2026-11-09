@@ -1461,6 +1461,27 @@ and collection are not an atomic permission snapshot. Credential custody, effect
 scope/ACL, expiry, entitlement, provider effects and native review remain separate
 unresolved obligations. No live provider or SQL calls are needed for the contracts.
 
+## Reserved OAuth-client deletion request
+
+`createNeonAuthClientDeleteOperations` copies one exact project/branch/client/revision.
+`neon.deleteNeonAuthOAuthClient` accepts only `{ project_id, branch_id, client_id }`,
+requires the dedicated `neon/projects/<project>/branches/<branch>/auth/oauth-provider/clients/<client>/delete`
+grant and reserved native exact-plan authorization, and performs a mandatory fixed
+client-detail GET before one bodyless DELETE. Parent, metadata, create/rotate and
+sibling grants do not authorize deletion. The preflight checks client identity and
+contradictory optional project/branch ancestry; names, flags, redirects, linked
+resources, timestamps and unexpected credential fields are never evaluated/emitted.
+
+Only the documented empty HTTP204 becomes `{ acknowledged: true }`; this is a
+transport acknowledgement, not an identity echo or independent enforcement proof.
+**Tokens already issued to the client are explicitly not revoked by this endpoint.**
+No session closure, cutover fencing or credential-completeness verdict is produced.
+Preflight is not atomic CAS. Ambiguity receives at most one bounded detail observation
+and stays uncertain even on absence/disabled state; no mutation retry or invented
+idempotency header. The common permanent journal blocks replay/restart. Beta
+availability, provider effects, native authority/host/policy/custody, durable recovery
+and independent review remain unresolved. Source/mocks only; no live deletion or enablement.
+
 ## Shared contract and candidate compatibility
 
 Contract: `toolkit.provider-broker/v1`. Merged core: [PR #17](https://github.com/TogetherWeOwn/agent-toolkit/pull/17),
@@ -1486,8 +1507,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: ninety-three implemented
-source adapters, 101 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: ninety-four implemented
+source adapters, 100 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

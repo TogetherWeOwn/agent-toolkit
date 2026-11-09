@@ -1842,20 +1842,24 @@
       "id": "deleteNeonAuthOAuthClient",
       "apiArea": "auth",
       "tool": "neon.deleteNeonAuthOAuthClient",
-      "scope": "project_id/branch_id/client_id",
+      "scope": "project_id/branch_id/client_id/delete",
       "sideEffects": [
+        "oauth-client-deletion-request",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-client-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Reserved OAuth-client deletion-request source only; exact detail preflight then one DELETE and empty HTTP204 acknowledgement. Already-issued tokens are not revoked. Preflight not atomic CAS; ambiguity stays uncertain after one observation even on absence, no retry. Native authority/host/policy/custody, durable common journal recovery, effects/entitlement and independent reviews unresolved."
     },
     {
       "id": "rotateNeonAuthOAuthClientSecret",

@@ -1031,6 +1031,26 @@ or invented provider idempotency header. The common permanent journal must survi
 native restart/replay; durable integration and independent acceptance remain unresolved.
 The separate metadata factory does not gain any mutation descriptor or fallback.
 
+## Reserved OAuth-client deletion acknowledgement delta
+
+One copied exact project/branch/client/revision binds a dedicated client/delete
+resource and reserved native exact-plan authorization. Mandatory fixed detail
+preflight validates the selected client and optional ancestry before one bodyless
+DELETE. Caller authority, scope, secret, URL and retry overrides refuse. The detail
+GET contract excludes client secrets; unused names, redirects, resources, flags,
+timestamps and unexpected secrets are never evaluated/emitted. Preflight is not
+atomic CAS and does not prove durable identity across the mutation race.
+
+Only the documented empty HTTP204 normalizes to a closed acknowledgement; no
+provider identity echo is invented. Already-issued tokens explicitly remain valid
+under the upstream contract: deletion is not token revocation, session closure,
+connection fencing or cutover enforcement. Ambiguous responses receive at most one
+bounded detail observation, remain uncertain even on absence or disabled state,
+and never retry. The common permanent journal prevents restart/replay; native
+host/authority/custody/durable recovery/effects/entitlement qualification and all
+independent reviews remain prerequisites. No live deletion, secret action, OAuth
+flow, create/rotate fallback or runtime registration is introduced.
+
 ## Bounded binary object byte-count observation delta
 
 One copied project/branch/bucket/key/revision binds an exact object/download grant,
