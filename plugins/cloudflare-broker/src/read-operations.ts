@@ -5,6 +5,7 @@ import { subscriptionDescriptors, type SubscriptionScope } from "./subscriptions
 import { workerScheduleDescriptor, type WorkerScheduleScope } from "./worker-schedules.js";
 import { loadBalancingDescriptors, type LoadBalancingScope } from "./load-balancing.js";
 import { zoneLoadBalancerDescriptors, type ZoneLoadBalancerScope } from "./zone-load-balancers.js";
+import { healthCheckDescriptors, type HealthCheckScope } from "./health-checks.js";
 import { scriptSettingsDescriptors, type ScriptSettingsScope } from "./script-settings.js";
 import { environmentSettingsDescriptor, type EnvironmentSettingsScope } from "./environment-settings.js";
 import { dispatchSettingsDescriptor, type DispatchSettingsScope } from "./dispatch-settings.js";
@@ -160,6 +161,8 @@ export interface CloudflareReadScope extends MetadataScope {
     availablePlanIds?: ZonePlanScope["planIds"];
     loadBalancerListIds?: ZoneLoadBalancerScope["listIds"];
     loadBalancerIds?: ZoneLoadBalancerScope["balancerIds"];
+    healthCheckListIds?: HealthCheckScope["listIds"];
+    healthCheckIds?: HealthCheckScope["healthcheckIds"];
     dnsSettingsReadAllowed?: DnsSettingsScope["readAllowed"];
     universalSslReadAllowed?: UniversalSslScope["readAllowed"];
     automaticSslReadAllowed?: AutomaticSslScope["readAllowed"];
@@ -222,6 +225,8 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     zoneId: scope.zone.zoneId, listPlanIds: scope.zone.availablePlanListIds ?? [], planIds: scope.zone.availablePlanIds ?? [] });
   const balancers = scope.zone === undefined ? undefined : zoneLoadBalancerDescriptors({ accountId, revision,
     zoneId: scope.zone.zoneId, listIds: scope.zone.loadBalancerListIds ?? [], balancerIds: scope.zone.loadBalancerIds ?? [] });
+  const healthChecks = scope.zone === undefined ? undefined : healthCheckDescriptors({ accountId, revision,
+    zoneId: scope.zone.zoneId, listIds: scope.zone.healthCheckListIds ?? [], healthcheckIds: scope.zone.healthCheckIds ?? [] });
   const content = currentContentDescriptor(sourceScope);
   const readContent = currentContentTransport(fetcher);
   const collectPages = pagesCollectionTransport(fetcher);
@@ -284,6 +289,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     ...(tls === undefined ? [] : [metadata(tls.settingsList), metadata(tls.settingGet)]),
     ...(plans === undefined ? [] : [metadata(plans.plansList), metadata(plans.planGet)]),
     ...(balancers === undefined ? [] : [metadata(balancers.balancersList), metadata(balancers.balancerGet)]),
+    ...(healthChecks === undefined ? [] : [metadata(healthChecks.checksList), metadata(healthChecks.checkGet)]),
     ...(scope.zone === undefined ? [] : [metadata(zoneTlsDescriptor({ accountId, revision,
       zoneId: scope.zone.zoneId, settingIds: scope.zone.tlsSettingIds ?? [] }))]),
     ...(scope.zone === undefined ? [] : [metadata(zoneHoldDescriptor({ accountId, revision,
