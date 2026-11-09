@@ -125,6 +125,30 @@ test("PR lint rejects unchecked Verification placeholders", () => {
   }
 });
 
+test("workflow lint download bounds transient retries and verifies the pinned archive before extraction", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
+  const block = workflow.match(/      - name: Lint workflows\n        run: \|\n([\s\S]*?)\n\n/)[1];
+  assert.match(block, /set -euo pipefail/);
+  assert.match(block, /curl -fsSL --retry 3 --retry-delay 1 --retry-max-time 120/);
+  assert.match(block, /--connect-timeout 10 --max-time 30 -o "\$lint_dir\/actionlint\.tgz"/);
+  assert.doesNotMatch(block, /--retry-all-errors|--insecure|\|\| true/);
+  assert.match(block, /https:\/\/github\.com\/rhysd\/actionlint\/releases\/download\/v1\.7\.7\/actionlint_1\.7\.7_linux_amd64\.tar\.gz/);
+  const verify = block.indexOf('echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  $lint_dir/actionlint.tgz" | sha256sum -c -');
+  const extract = block.indexOf('tar -xzf "$lint_dir/actionlint.tgz" -C "$lint_dir" actionlint');
+  const execute = block.indexOf('"$lint_dir/actionlint" -shellcheck= -pyflakes=');
+  assert.ok(verify > block.indexOf("curl -fsSL") && extract > verify && execute > extract);
+});
+
+test("Cloudflare PostgreSQL contracts use a pinned disposable service and string port lookup", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/cloudflare-provider.yml", import.meta.url), "utf8");
+  assert.match(workflow, /image: postgres:17\.7@sha256:[a-f0-9]{64}/);
+  assert.match(workflow, /--health-cmd "pg_isready -U postgres"/);
+  assert.ok(workflow.includes("${{ job.services.postgres.ports['5432'] }}"));
+  assert.doesNotMatch(workflow, /ports\[5432\]/);
+  assert.match(workflow, /CLOUDFLARE_POSTGRES_TEST: '1'/);
+  assert.match(workflow, /node --test --test-timeout=120000 plugins\/cloudflare-broker\/testing\/postgres-contracts\.mjs/);
+});
+
 test("ci-ok rejects failed or cancelled prerequisites and accepts intentional skips", () => {
   const aggregate = script("ci.yml");
   for (const result of ["failure", "cancelled", "timed_out", "unknown"]) {
