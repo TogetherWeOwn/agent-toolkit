@@ -121,6 +121,22 @@ for (const c of cases) {
     }
   });
 
+  if (c.list) test(`${name(c)} core-compatible maximum list selection succeeds and excess scope refuses`, async () => {
+    const ids = Array.from({ length: 65 }, (_, i) => `id-${i}`.padEnd(128, "x"));
+    const scopes = { ...scope(), [c.field]: ids.slice(0, 64) };
+    const f = fixture(c, { scopes, response: envelope(ids.map(id => ({ id }))) });
+    const out = await f.invoke();
+    assert.equal(out.ok, true);
+    assert.deepEqual(out.value.items, ids.slice(0, 64).map(id => ({ id })));
+    assert.equal(out.value.complete, false);
+    assert.equal([...f.journal.values()][0].outcome, "complete");
+    assert.equal(f.calls.close, 1); assert.equal(f.requests.length, 1);
+    assert.equal((await f.invoke()).code, "REPLAY_CONFLICT");
+    safe(f, out);
+    assert.throws(() => loadBalancingDescriptors({ ...scope(), [c.field]: ids }), /cap/);
+    assert.throws(() => fixture(c, { scopes: { ...scope(), [c.field]: ids } }), /cap/);
+  });
+
   test(`${name(c)} actual-core exact GET plan, audit, journal, cleanup and replay`, async () => {
     const f = fixture(c), p = f.operation.prepare(c.arg);
     assert.deepEqual(p, { resource: { id: `cloudflare:account:${account}:load-balancing:${c.resource}`, revision: "resource-1" },
