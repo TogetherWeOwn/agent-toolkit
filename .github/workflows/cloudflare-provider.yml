@@ -61,6 +61,8 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run build
+      - name: Test bounded Pages traversal and evidence manifest
+        run: node --test --test-timeout=30000 test/cloudflare-pages-traversal.test.mjs
       - run: node --test --test-timeout=30000 test/cloudflare-*.test.mjs
       - name: Reproduce complete pinned API operation inventory
         run: |
