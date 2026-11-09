@@ -1,5 +1,30 @@
 # Source-slice threat model
 
+## Reserved OAuth client disable delta
+
+`updateNeonAuthOAuthClient` is disable-only: copied exact project/branch/client ID,
+expected type and revision, dedicated client/disable grant and reserved native
+exact-plan authority. Read, collection, plugin-disable, client-delete, enable or
+sibling-target permissions cannot substitute. Mandatory detail GET binds exact ID,
+expected public/confidential type and disabled=false before one PATCH sends true only.
+Enabling, name/redirect/resource/consent overrides refuse before credentials; omitted
+configuration is retained per provider contract. Names, URLs, resource lists, consent,
+secrets and timestamps are never evaluated/emitted. Consumed identity/type/status and
+contradictory ancestry/pagination are checked. Exact HTTP200 echo acknowledges only,
+not independently observed client refusal, issued-token/session revocation, deletion
+or fencing.
+
+Preflight is not atomic CAS and type is not a version fingerprint; external client
+reconfiguration remains unfenced. One detail observation after ambiguity cannot prove
+causal success even on disabled or absence; no retry. Permanent common journal blocks
+same-request replay/restart, not external writers. Regressions isolate target/expiry/
+consume authority negatives, exact policy/agent identity/resource TOCTOU, tampered
+plans, body overrides, identity/type/status drift, response/cancellation/deadline
+bounds, ignored-field getters, reflection and actual common budgets. Conservative
+write-to-reserved classification adds authority, not a waiver. Native host/custody/
+authority/durable recovery, provider effects/Beta entitlement and independent reviews
+remain gates. Source/mocks only; no live mutation, OAuth flow or runtime registration.
+
 ## Reserved OAuth authorization-server plugin disable delta
 
 `updateNeonAuthOAuthProviderPlugin` is disable-only: copied exact project/branch/revision,

@@ -1857,20 +1857,24 @@
       "id": "updateNeonAuthOAuthClient",
       "apiArea": "auth",
       "tool": "neon.updateNeonAuthOAuthClient",
-      "scope": "project_id/branch_id/client_id",
+      "scope": "project_id/branch_id/auth/oauth-provider/clients/client_id/disable",
       "sideEffects": [
+        "oauth-client-disable-request",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-client-disable.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Disable-only source; enabling, names, redirects, resources and consent changes unsupported. Source delta review; Security provider effects and entitlement qualification; common-core integrator native exact-plan authority, trusted host/policy/permanent journal/audit and durable recovery; Operator approved custody placement. Preflight is not atomic CAS; client reconfiguration races unresolved. Acknowledgement is not independently observed client refusal, issued-token/session revocation, deletion or fencing. No live grant or enablement."
     },
     {
       "id": "deleteNeonAuthOAuthClient",

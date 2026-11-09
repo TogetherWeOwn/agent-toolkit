@@ -889,6 +889,137 @@ test('Legacy integration delete: maximum identity selection fits actual common p
   safeEnvelope(f, result);
 });
 
+import { authClientDisableFixture, authClientDisableScope, authClientDisableArgs, authClientDisableMetadata } from './helpers.mjs';
+function authClientDisableBroker(value = null, overrides = {}, config = authClientDisableScope) {
+  const provider = authClientDisableFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId, client_id: config.clientId };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('updateNeonAuthOAuthClient').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.updateNeonAuthOAuthClient', args, context, key);
+  } };
+}
+
+test('OAuth client disable: reserved exact-plan authority and exact disable AND agent grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = authClientDisableBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = 'neon/projects/project-a/branches/br-a/auth/oauth-provider/clients/clientA/disable';
+  for (const resource of [target.replace('/disable', ''), target.replace('clientA', 'other'), target.replace('br-a', 'other'),
+    target.replace('project-a', 'other'), target.replace('/disable', '/enable'), target.replace('/disable', '/delete'),
+    'neon/projects/project-a/branches/br-a/auth/plugins/oauth-provider/disable', 'neon/projects/project-a/branches/br-a']) {
+    const f = authClientDisableBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = authClientDisableBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.common.calls.secret, 0);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = authClientDisableBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { accepted: true });
+  assert.equal(f.common.calls.consumed, 1);
+  safeEnvelope(f, result);
+});
+
+test('OAuth client disable: stale, wrong-target and unconsumable native evidence are isolated negative controls', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = authClientDisableBroker();
+    const base = f.common.authority;
+    let consumeCalls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.updateNeonAuthOAuthClient', authClientDisableArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('OAuth client disable: host identity/resource TOCTOU and enable/configuration overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = authClientDisableBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = authClientDisableBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.updateNeonAuthOAuthClient', authClientDisableArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { project_id: 'other' }, { branch_id: 'other' }, { client_id: 'other' }, { disabled: true }, { disabled: false },
+    { name: 'other' }, { type: 'public' }, { redirect_uris: [] }, { resources: [] }, { skip_consent: false }, { retry: true }]) {
+    const g = authClientDisableBroker();
+    assert.equal((await g.common.broker().call('neon.updateNeonAuthOAuthClient', { ...authClientDisableArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+    assert.equal(g.provider.requests.length, 0);
+  }
+});
+
+test('OAuth client disable: complete/uncertain permanent journal blocks restart replay without enforcement proof', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = authClientDisableBroker((url, init, n) => {
+      if (init.method === 'PATCH') { if (ambiguous) throw Error(credentialCanary); return response({ ...authClientDisableMetadata, disabled: true }); }
+      return response({ ...authClientDisableMetadata, disabled: n !== 1 });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'PATCH').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('OAuth client disable: identity/type/status drift and reflected lease strings cannot enter safe envelopes', async () => {
+  for (const change of [{ project_id: 'other' }, { branch_id: credentialCanary }, { client_id: 'other' }, { type: 'public' },
+    { disabled: true }, { disabled: credentialCanary }, { pagination: {} }]) {
+    const f = authClientDisableBroker(() => response({ ...authClientDisableMetadata, ...change }));
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'PATCH').length, 0);
+    safeEnvelope(f, result);
+  }
+  const f = authClientDisableBroker((url, init) => response({ ...authClientDisableMetadata, disabled: init.method === 'PATCH' ? credentialCanary : false }));
+  const result = await f.call();
+  assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+  safeEnvelope(f, result);
+  const g = authClientDisableBroker((url, init) => response({ ...authClientDisableMetadata, disabled: init.method === 'PATCH',
+    name: credentialCanary, redirect_uris: [derivedCanary], resources: [credentialCanary], skip_consent: credentialCanary, client_secret: credentialCanary }));
+  const clean = await g.call();
+  assert.equal(clean.ok, true);
+  assert.deepEqual(clean.value, { accepted: true });
+  safeEnvelope(g, clean);
+});
+
+test('OAuth client disable: maximum identity selection fits actual common prepared budgets', async () => {
+  const config = { ...authClientDisableScope, projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), clientId: 'C'.repeat(64), revision: 'r'.repeat(80) };
+  const f = authClientDisableBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
 import { authOAuthDisableFixture, authOAuthDisableScope, authOAuthDisableArgs } from './helpers.mjs';
 function authOAuthDisableBroker(value = null, overrides = {}, config = authOAuthDisableScope) {
   const provider = authOAuthDisableFixture(value, config);
