@@ -2356,7 +2356,7 @@
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
+      "status": "implemented",
       "tests": [
         "plugins/neon-broker/test/database-delete.test.mjs",
         "plugins/neon-broker/test/core.compat.mjs"
