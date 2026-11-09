@@ -7,6 +7,7 @@ import { loadBalancingDescriptors, type LoadBalancingScope } from "./load-balanc
 import { zoneLoadBalancerDescriptors, type ZoneLoadBalancerScope } from "./zone-load-balancers.js";
 import { healthCheckDescriptors, type HealthCheckScope } from "./health-checks.js";
 import { rulesetDescriptors, type RulesetScope } from "./rulesets.js";
+import { rulesListsDescriptors, type RulesListsScope } from "./rules-lists.js";
 import { scriptSettingsDescriptors, type ScriptSettingsScope } from "./script-settings.js";
 import { environmentSettingsDescriptor, type EnvironmentSettingsScope } from "./environment-settings.js";
 import { dispatchSettingsDescriptor, type DispatchSettingsScope } from "./dispatch-settings.js";
@@ -108,6 +109,10 @@ export interface CloudflareReadScope extends MetadataScope {
   accountDnsReadAllowed?: AccountDnsScope["readAllowed"];
   subscriptions?: SubscriptionScope["subscriptions"];
   workerSchedules?: WorkerScheduleScope["workers"];
+  rulesListIds?: RulesListsScope["listIds"];
+  rulesListDetailIds?: RulesListsScope["listDetailIds"];
+  rulesListItemLists?: RulesListsScope["itemLists"];
+  rulesListItems?: RulesListsScope["items"];
   accountRulesetListIds?: RulesetScope["accountListIds"];
   accountRulesetIds?: RulesetScope["accountRulesetIds"];
   accountRulesetVersionLists?: RulesetScope["accountVersionLists"];
@@ -210,6 +215,9 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
   }
   const { accountId, revision } = scope;
   const subscriptions = subscriptionDescriptors({ accountId, revision, subscriptions: scope.subscriptions ?? [] });
+  const rulesLists = rulesListsDescriptors({ accountId, revision,
+    listIds: scope.rulesListIds ?? [], listDetailIds: scope.rulesListDetailIds ?? [],
+    itemLists: scope.rulesListItemLists ?? [], items: scope.rulesListItems ?? [] });
   const rulesets = rulesetDescriptors({ accountId, revision,
     accountListIds: scope.accountRulesetListIds ?? [], accountRulesetIds: scope.accountRulesetIds ?? [],
     accountVersionLists: scope.accountRulesetVersionLists ?? [], accountVersions: scope.accountRulesetVersions ?? [],
@@ -286,6 +294,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(accountListDescriptor({ accountId, revision, readAllowed: scope.accountListReadAllowed ?? false })),
     metadata(accountDnsDescriptor({ accountId, revision, readAllowed: scope.accountDnsReadAllowed ?? false })),
     metadata(subscriptions.subscriptionsList), metadata(subscriptions.subscriptionGet),
+    metadata(rulesLists.listsList), metadata(rulesLists.listGet), metadata(rulesLists.itemsList), metadata(rulesLists.itemGet),
     metadata(rulesets.accountList), metadata(rulesets.accountGet),
     metadata(rulesets.accountVersionsList), metadata(rulesets.accountVersionGet),
     metadata(rulesets.accountVersionRulesByTag),

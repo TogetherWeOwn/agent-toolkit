@@ -114,7 +114,7 @@ for (const c of cases) {
           { num_items: -1 }, { num_items: 1.5 }, { num_referencing_filters: null }, { description: 1 }])];
     for (const patch of patches) {
       assert.throws(() => project({ ...row(c), ...patch }));
-      if (c.collection) assert.throws(() => project({ ...row(c), id: foreign, ...patch }));
+      if (c.collection) assert.throws(() => project({ ...row(c), id: "e".repeat(32), ...patch }));
     }
     if (c.item) for (const variant of [{ asn: -1 }, { asn: 4294967296 }, { asn: 1.5 }, { hostname: null }, { hostname: {} },
       { hostname: { url_hostname: "ok", exclude_exact_hostname: 1 } }, { redirect: {} },
