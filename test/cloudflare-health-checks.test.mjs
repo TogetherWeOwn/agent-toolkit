@@ -61,13 +61,25 @@ test("zone health check registry omits zone-less reads and grants nothing from o
 
 test("zone health checks accept a documented path-safe string subset and independent maximum detail scope", () => {
   const ids = Array.from({ length: 100 }, (_, i) => `Health_${i}-ID`.padEnd(32, "x"));
-  const d = healthCheckDescriptors({ ...scope(), zoneId: "Zone_ID-1", listIds: [], healthcheckIds: ids });
+  const d = healthCheckDescriptors({ ...scope(), listIds: [], healthcheckIds: ids });
   const p = d.checkGet.prepare({ healthcheckId: ids[99] });
-  assert.equal(p.request.path, `/zones/Zone_ID-1/healthchecks/${ids[99]}`);
+  assert.equal(p.request.path, `/zones/${zone}/healthchecks/${ids[99]}`);
+  assert.throws(() => healthCheckDescriptors({ ...scope(), zoneId: "Zone_ID-1" }), /schema/);
   assert.throws(() => d.checksList.prepare({ page: 1, perPage: 100 }), /scope/);
   assert.throws(() => healthCheckDescriptors({ ...scope(), healthcheckIds: [...ids, "excess"] }), /cap/);
   const listOnly = healthCheckDescriptors({ ...scope(), healthcheckIds: [] });
   assert.throws(() => listOnly.checkGet.prepare({ healthcheckId: own }), /scope/);
+});
+
+test("Health Checks allow optional matching context and minimum path-safe IDs without requiring identity", () => {
+  const d = healthCheckDescriptors({ ...scope(), listIds: ["Z"], healthcheckIds: ["Z"] });
+  for (const c of cases) {
+    const args = c.list ? c.arg : { healthcheckId: "Z" }, p = d[c.key].prepare(args);
+    const r = { id: "Z", account_id: account, zone_id: zone, account: { id: account }, zone: { id: zone } };
+    const body = JSON.parse(envelope(c.list ? [r] : r));
+    body.account_id = account; body.zone_id = zone;
+    assert.deepEqual(d[c.key].project(JSON.stringify(body), p)[c.list ? "items" : "item"], c.list ? [{ id: "Z" }] : { id: "Z" });
+  }
 });
 
 test("Health Checks pagination is a strict provider-correct single-page subset", async () => {
@@ -154,7 +166,7 @@ for (const c of cases) {
     assert.throws(() => d.project(envelope(result(c)), { ...p }), /scope/);
     assert.throws(() => healthCheckDescriptors(scope())[c.key].project(envelope(result(c)), p), /scope/);
     assert.throws(() => d.prepare(c.list ? { ...c.arg, per_page: 100 } : { ...c.arg, accountId: account }), /schema/);
-    for (const ids of [[own, own], ["../escape"], ["bad\n"], [""], ["x".repeat(33)], [null]]) {
+    for (const ids of [[own, own], ["../escape"], ["bad\n"], [""], ["x".repeat(33)], ["é"], ["id?x=1"], ["id/child"], [null]]) {
       assert.throws(() => healthCheckDescriptors({ ...scope(), [c.field]: ids }), /schema/);
     }
     assert.throws(() => healthCheckDescriptors({ ...scope(), [c.field]: Array(101).fill(own) }), /cap/);
@@ -246,7 +258,7 @@ for (const c of cases) {
   });
 
   test(`${name(c)} current agent/resource/ownership and lease-time revocation deny network`, async () => {
-    for (const denied of ["agent", "resource", "account", "zone", "pool", "monitor", "ordinary-zone", "binding", "revocation"]) {
+    for (const denied of ["agent", "resource", "account", "zone", "pool", "monitor", "ordinary-zone", "other-endpoint", "binding", "revocation"]) {
       const f = fixture(c);
       if (denied === "agent") f.vector.policy.agents = ["other-agent"];
       if (denied === "resource") f.vector.policy.resources = ["other-resource"];
@@ -255,6 +267,7 @@ for (const c of cases) {
       if (denied === "zone") f.vector.policy.resources = [resource.replace(`zone:${zone}`, `zone:${"c".repeat(32)}`)];
       if (denied === "pool" || denied === "monitor") f.vector.policy.resources = [`cloudflare:account:${account}:load-balancing:${denied}:${own}`];
       if (denied === "ordinary-zone") f.vector.policy.resources = [`cloudflare:account:${account}:zone:${zone}`];
+      if (denied === "other-endpoint") f.vector.policy.resources = [`cloudflare:account:${account}:zone:${zone}:health-checks:${c.list ? `check:${own}` : "checks"}`];
       if (denied === "binding") f.dependencies.host.revalidate = async () => false;
       if (denied === "revocation") {
         const resolve = f.dependencies.credentials.resolve;
