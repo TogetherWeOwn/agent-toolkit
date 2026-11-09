@@ -9,6 +9,7 @@ import { bucketDeleteName } from "./bucket-delete.js";
 import { customDomainDeleteName } from "./custom-domain-delete.js";
 import { authDomainDeleteOrigin, authDomainDeleteProvider } from "./auth-domain-delete.js";
 import { providerId } from "./oauth-providers.js";
+import { databaseUpdateName } from "./database-update.js";
 
 export const NEON_ORIGIN = "https://console.neon.tech";
 export const RESPONSE_BYTES = 65_536;
@@ -20,6 +21,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  updateProjectBranchDatabase(project: string, branch: string, database: string, name: string, options: MetadataRequestOptions): Promise<unknown>;
   updateNeonAuthEmailAndPasswordConfig(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   updateProjectBranchTrigger(project: string, branch: string, trigger: string, type: string, options: MetadataRequestOptions): Promise<unknown>;
   updateNeonAuthOAuthClient(project: string, branch: string, client: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -368,6 +370,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     },
     deleteProjectBranchRole: (project: string, branch: string, role: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/roles/${catalogName(role)}`, new URLSearchParams(), options, undefined, false, 200),
+    updateProjectBranchDatabase: (project: string, branch: string, database: string, name: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/databases/${catalogName(database)}`, new URLSearchParams(), options,
+        JSON.stringify({ database: { name: databaseUpdateName.parse(name) } }), false, false, true),
     deleteProjectBranchDatabase: (project: string, branch: string, database: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/databases/${catalogName(database)}`, new URLSearchParams(), options, undefined, false, 200),
     deleteProject: (project: string, options: MetadataRequestOptions) =>

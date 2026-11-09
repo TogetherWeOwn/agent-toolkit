@@ -46,6 +46,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   endpointDeleteFixture, endpointDeleteArgs, endpointDeleteScope, endpointDeleteReceipt,
   projectDeleteFixture, projectDeleteArgs, projectDeleteScope, projectDeleteReceipt,
   databaseDeleteFixture, databaseDeleteArgs, databaseDeleteScope, databaseDeleteReceipt,
+  databaseUpdateFixture, databaseUpdateArgs, databaseUpdateScope, databaseUpdateReceipt,
   userKeyRevokeFixture, userKeyRevokeArgs, userKeyRevokeScope, userKeyRevokeReceipt,
   organizationKeyRevokeFixture, organizationKeyRevokeArgs, organizationKeyRevokeScope, organizationKeyRevokeReceipt,
   credentialRevokeFixture, credentialRevokeArgs, credentialRevokeScope, credentialRevokeMetadata,
@@ -4959,6 +4960,105 @@ test('project rename: maximal copied target and labels fit common budgets', asyn
   const result = await f.call();
   assert.equal(result.ok, true);
   assert.deepEqual(result.value, { id: config.projectId, updated: true });
+  safeEnvelope(f, result);
+});
+
+function databaseRenameBroker(value = databaseUpdateReceipt, overrides = {}, config = databaseUpdateScope) {
+  const provider = databaseUpdateFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId, database_name: config.databaseName, name: config.name };
+  const common = providerFixture(overrides);
+  common.vector.policy.resources = [provider.operation('updateProjectBranchDatabase').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.updateProjectBranchDatabase', args, context, key);
+  } };
+}
+
+test('database rename: exact agent AND rename grant precede credentials; closed receipt omits owner/name metadata', async () => {
+  for (const resource of ['neon/projects/project-a', 'neon/projects/project-a/branches/br-a',
+    'neon/projects/project-a/branches/br-a/databases/before', 'neon/projects/project-a/branches/br-a/databases/before/delete',
+    'neon/projects/project-a/branches/br-b/databases/before/rename', 'neon/projects/project-a/branches/br-a/databases/other/rename']) {
+    const f = databaseRenameBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = databaseRenameBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.common.calls.secret, 0);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = databaseRenameBroker({ ...databaseUpdateReceipt, database: { ...databaseUpdateReceipt.database, owner_name: credentialCanary, connection_uri: derivedCanary } });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { id: 123, branch_id: 'br-a', acknowledged: true,
+    operations: databaseUpdateReceipt.operations.map(({ id, status }) => ({ id, status })) });
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('database rename: identity/resource TOCTOU and owner/body/authority overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = databaseRenameBroker(undefined, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = databaseRenameBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.updateProjectBranchDatabase', databaseUpdateArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ owner_name: 'role' }, { database: { name: 'after' } }, { database_id: 456 }, { approved: true }, { name: 'different' }]) {
+    const g = databaseRenameBroker();
+    assert.equal((await g.common.broker().call('neon.updateProjectBranchDatabase', { ...databaseUpdateArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+    assert.equal(g.provider.requests.length, 0);
+  }
+});
+
+test('database rename: permanent journal blocks complete/uncertain replay after restart without retrying PATCH', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = databaseRenameBroker((url, init, n) => {
+      if (init.method === 'PATCH') {
+        if (ambiguous) throw Error(credentialCanary);
+        return response(databaseUpdateReceipt);
+      }
+      return response({ database: { ...databaseUpdateReceipt.database, name: n === 1 ? 'before' : 'after' } });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const count = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, count);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'PATCH').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('database rename: reflected identity/operation response stays uncertain and redacted', async () => {
+  for (const raw of [{ ...databaseUpdateReceipt, database: { ...databaseUpdateReceipt.database, name: credentialCanary } },
+    { ...databaseUpdateReceipt, operations: [{ ...databaseUpdateReceipt.operations[0], project_id: credentialCanary }] }]) {
+    const f = databaseRenameBroker(raw);
+    const result = await f.call();
+    assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, 'uncertain');
+    safeEnvelope(f, result);
+  }
+});
+
+test('database rename: maximal copied target and labels fit actual common budgets', async () => {
+  const config = { projectId: 'p'.repeat(60), branchId: `br-${'b'.repeat(57)}`, databaseName: 'b'.repeat(63),
+    databaseId: Number.MAX_SAFE_INTEGER, name: 'a'.repeat(63), revision: 'r'.repeat(80) };
+  const f = databaseRenameBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { id: config.databaseId, branch_id: config.branchId, acknowledged: true, operations: [] });
   safeEnvelope(f, result);
 });
 

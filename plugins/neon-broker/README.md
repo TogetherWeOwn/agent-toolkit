@@ -7,6 +7,21 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonDatabaseUpdateOperations` supplies rename-only `updateProjectBranchDatabase`
+source for one copied project/branch/current name/numeric database ID/desired name/revision.
+A dedicated `neon/projects/<project>/branches/<branch>/databases/<name>/rename` grant
+and exact plan/diff precede credentials. Mandatory identity/name detail preflight then
+one PATCH sends only `database.name`; owner-role replacement is unsupported. Exact
+HTTP200 ID/branch/desired-name echo and bounded operation observations yield a closed
+acknowledgement, not successful operation completion, connectivity or persistence.
+Owner names and arbitrary metadata are never evaluated/emitted. Preflight is not
+atomic CAS; name replacement races remain unresolved and destination-name collisions
+remain provider-enforced. Ambiguity gets one old-name detail observation and stays
+uncertain even on absence/replacement; no retry. Permanent common journal blocks
+same-request replay, not external writers. Source/mocks only; effects/entitlement,
+native host/policy/custody/durable recovery, production authority and independent
+reviews remain unresolved. No live database change, SQL or runtime registration.
+
 `createNeonAuthEmailDisableOperations` supplies reserved, disable-only
 `updateNeonAuthEmailAndPasswordConfig` source for one copied project/branch/revision.
 Dedicated `neon/projects/<project>/branches/<branch>/auth/email_and_password/disable`
@@ -1935,8 +1950,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 116 implemented
-source adapters, 78 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 117 implemented
+source adapters, 77 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

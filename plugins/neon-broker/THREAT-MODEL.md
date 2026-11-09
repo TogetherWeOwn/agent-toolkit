@@ -1,5 +1,26 @@
 # Source-slice threat model
 
+## Database rename-only delta
+
+`updateProjectBranchDatabase` copies exact project/branch/current name/numeric ID/
+desired name/revision. Dedicated database/rename grant and validated plan/diff do
+not inherit read/delete/parent/sibling authority. Mandatory detail preflight binds
+ID/name/branch before one PATCH containing only database.name. Owner-role replacement,
+SQL, caller authority/body and generic transport overrides refuse. Consumed ancestry,
+identity and operation status/list bounds are validated; names/owners/diagnostics
+are not output. HTTP200 exact identity/desired-name echo gives acknowledgement and
+operation observations only, not completion, connectivity, persistence or fencing.
+
+The provider path is name-keyed without conditional update: preflight is not atomic
+CAS and same-name replacement races remain unresolved. Destination collisions remain
+provider-enforced, never a fallback rename. Ambiguity gets one old-name detail read
+and stays uncertain even on absence/replacement; no retry. Permanent common journal
+blocks same-request replay/restart, not other writers. Source/common contracts cover
+exact grants, scope/identity TOCTOU, tampered plans, owner overrides, stale/replacement
+preflight, response/operation bounds, cancellation/deadlines, reflected metadata and
+actual common budgets. Native host/policy/custody/durable recovery, effects/entitlement,
+production authority and independent reviews remain gates. Source/mocks only.
+
 ## Reserved email-and-password authentication disable delta
 
 `updateNeonAuthEmailAndPasswordConfig` is disable-only: copied exact project/branch/

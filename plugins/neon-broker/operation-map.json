@@ -2385,20 +2385,24 @@
       "id": "updateProjectBranchDatabase",
       "apiArea": "branch",
       "tool": "neon.updateProjectBranchDatabase",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/database_name/database_id/rename",
       "sideEffects": [
+        "database-name-update",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "write",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/database-update.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Rename-only source subset; owner-role replacement unsupported. Exact numeric ID/name/branch preflight is not atomic CAS; name replacement races unresolved and destination collisions remain provider-enforced. One PATCH, closed identity/operation acknowledgement only, one old-name detail observation on ambiguity without retry. Permanent common journal blocks same-request replay, not external writers. Native host/policy/custody, durable recovery, effects/entitlement, production authority and independent reviews unresolved; no live rename or enablement."
     },
     {
       "id": "deleteProjectBranchDatabase",
