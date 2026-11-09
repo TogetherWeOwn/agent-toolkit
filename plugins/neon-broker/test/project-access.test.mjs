@@ -7,6 +7,32 @@ import { projectAccessCases as cases, projectAccessFixture as fixture, projectAc
 const poison = { email: canary, name: canary, granted_to_email: canary, granted_at: canary, revoked_at: canary,
   project_role: canary, org_default_project_permission: canary, explicit_project_permission: canary,
   password: canary, connection_uri: canary, diagnostics: canary };
+test('members accept documented terminal and continuing sorting metadata; malformed or changing order refuses', async () => {
+  const [name, args, raw, expected] = cases.find(([name]) => name === 'listProjectMembers');
+  for (const pagination of [{ sort_order: 'asc' }, { sort_order: 'desc' }, { sort_by: 'member_id' }]) {
+    const f = fixture({ ...raw, pagination });
+    assert.deepEqual(await f.run(name, args), expected);
+    assert.equal(f.requests.length, 1);
+  }
+  const f = fixture((url, init, n) => response(n === 1 ? {
+    ...raw, pagination: { next: 'page-2', sort_by: 'member_id', sort_order: 'asc' },
+  } : { project_members: [], pagination: { sort_by: 'member_id', sort_order: 'asc' } }));
+  assert.deepEqual(await f.run(name, args), expected);
+  assert.equal(new URL(f.requests[1].url).search, '?limit=10&cursor=page-2');
+  for (const pagination of [{ sort_by: null }, { sort_by: 'x'.repeat(81) }, { sort_order: null }, { sort_order: 'ASC' }]) {
+    const g = fixture({ ...raw, pagination });
+    await assert.rejects(g.run(name, args));
+    assert.equal(g.requests.length, 1);
+  }
+  for (const pagination of [{ sort_by: 'other' }, { sort_order: 'desc' }]) {
+    const g = fixture((url, init, n) => response(n === 1 ? {
+      ...raw, pagination: { next: 'page-2', sort_by: 'member_id', sort_order: 'asc' },
+    } : { project_members: [], pagination }));
+    await assert.rejects(g.run(name, args));
+    assert.equal(g.requests.length, 2);
+  }
+});
+
 for (const [name, args, raw, expected] of cases) {
   const members = name === 'listProjectMembers';
   const collection = members ? 'project_members' : 'project_permissions';

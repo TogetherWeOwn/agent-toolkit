@@ -64,6 +64,8 @@ export function createNeonProjectMemberRoleRemoveOperations(scope: NeonProjectMe
         const users = new Set<string>();
         const cursors = new Set<string>();
         let found = false;
+        let sortBy: string | undefined;
+        let sortOrder: string | undefined;
         let cursor: string | null = null;
         for (let page = 0; page < 3; page++) {
           if (signal.aborted) throw Error("UPSTREAM_UNAVAILABLE");
@@ -87,7 +89,22 @@ export function createNeonProjectMemberRoleRemoveOperations(scope: NeonProjectMe
           }
           const pagination = optional(raw, "pagination");
           const next = pagination === undefined ? undefined : optional(pagination, "next");
-          if (pagination !== undefined) check(Reflect.ownKeys(pagination as object).every(key => key === "next"));
+          if (pagination !== undefined) {
+            check(Reflect.ownKeys(pagination as object).every(key => key === "next" || key === "sort_by" || key === "sort_order"));
+            const by = optional(pagination, "sort_by");
+            const order = optional(pagination, "sort_order");
+            if (by !== undefined) {
+              const parsed = text(80, /^[\x20-\x7e]+$/).parse(by);
+              check(sortBy === undefined || sortBy === parsed);
+              sortBy = parsed;
+            }
+            if (order !== undefined) {
+              check(order === "asc" || order === "desc");
+              check(sortOrder === undefined || sortOrder === order);
+              sortOrder = order;
+            }
+            // This endpoint exposes no sort query; continuation uses its opaque cursor.
+          }
           if (next === undefined) { check(found); return; }
           cursor = text(256, /^[\x20-\x7e]+$/).parse(next);
           check(!cursors.has(cursor));

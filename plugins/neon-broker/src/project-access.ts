@@ -93,6 +93,8 @@ export function createNeonProjectAccessOperations(scope: NeonProjectAccessScope,
       }
       const result: unknown[] = [];
       const cursors = new Set<string>();
+      let sortBy: string | undefined;
+      let sortOrder: string | undefined;
       let cursor: string | null = null;
       for (let page = 0; page < MAX_PAGES; page++) {
         if (signal.aborted) throw Error("UPSTREAM_UNAVAILABLE");
@@ -101,7 +103,22 @@ export function createNeonProjectAccessOperations(scope: NeonProjectAccessScope,
         result.push(...rows(field(raw, "project_members"), PAGE_SIZE));
         const pagination = optional(raw, "pagination");
         const next = pagination === undefined ? undefined : optional(pagination, "next");
-        if (pagination !== undefined) check(Reflect.ownKeys(pagination as object).every(key => key === "next"));
+        if (pagination !== undefined) {
+          check(Reflect.ownKeys(pagination as object).every(key => key === "next" || key === "sort_by" || key === "sort_order"));
+          const by = optional(pagination, "sort_by");
+          const order = optional(pagination, "sort_order");
+          if (by !== undefined) {
+            const parsed = text(80, /^[\x20-\x7e]+$/).parse(by);
+            check(sortBy === undefined || sortBy === parsed);
+            sortBy = parsed;
+          }
+          if (order !== undefined) {
+            check(order === "asc" || order === "desc");
+            check(sortOrder === undefined || sortOrder === order);
+            sortOrder = order;
+          }
+          // This endpoint exposes no sort query; continuation uses its opaque cursor.
+        }
         // Validate every accumulated page before another request; never return a partial result.
         const combined = { project_members: result };
         projectFor(name, combined);

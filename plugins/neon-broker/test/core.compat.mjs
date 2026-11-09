@@ -3515,6 +3515,43 @@ test('project member viewer: reflected or mismatched consumed echoes stay uncert
   safeEnvelope(f, result);
 });
 
+test('project member pagination: read and explicit-grant removal accept documented sorting metadata', async () => {
+  const [name, args, raw, expected] = projectAccessCases.find(([name]) => name === 'listProjectMembers');
+  const read = brokerFixture(name, args, { ...raw, pagination: { sort_order: 'asc', sort_by: 'member_id' } });
+  const result = await read.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, expected);
+  safeEnvelope(read, result);
+  const removal = projectMemberRoleRemovalBroker((url, init, n) => response(init.method === 'DELETE' ? projectMemberRoleRemoveReceipt : n === 1 ? {
+    project_members: [projectMemberRoleRemoveMetadata], pagination: { next: 'page-2', sort_by: 'member_id', sort_order: 'desc' },
+  } : { project_members: [], pagination: { sort_by: 'member_id', sort_order: 'desc' } }));
+  const removed = await removal.call();
+  assert.equal(removed.ok, true);
+  assert.equal(removal.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 1);
+  safeEnvelope(removal, removed);
+});
+
+test('project member viewer: documented pagination metadata passes while malformed or drifting metadata refuses', async () => {
+  for (const pages of [[{ project_members: [projectMemberRoleUpdateMetadata], pagination: { sort_order: 'asc' } }],
+    [{ project_members: [], pagination: { next: 'page-2', sort_by: 'member_id', sort_order: 'desc' } },
+      { project_members: [projectMemberRoleUpdateMetadata], pagination: { sort_by: 'member_id', sort_order: 'desc' } }]]) {
+    const f = projectMemberViewerBroker((url, init, n) => response(init.method === 'PUT' ? projectMemberRoleUpdateReceipt : pages[n - 1]));
+    const result = await f.call();
+    assert.equal(result.ok, true);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'PUT').length, 1);
+    safeEnvelope(f, result);
+  }
+  for (const pagination of [{ sort_order: 'ASC' }, { sort_by: null }, { sort_order: 'desc' }, { sort_by: 'different' }]) {
+    const f = projectMemberViewerBroker((url, init, n) => response(n === 1 ? {
+      project_members: [projectMemberRoleUpdateMetadata], pagination: { next: 'page-2', sort_by: 'member_id', sort_order: 'asc' },
+    } : { project_members: [], pagination }));
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.some(({ init }) => init.method === 'PUT'), false);
+    safeEnvelope(f, result);
+  }
+});
+
 test('project member viewer: maximum copied project and exact native plan fit common budgets', async () => {
   const config = { ...projectMemberRoleUpdateScope, projectId: 'p'.repeat(60), expectedOrgRole: 'member', revision: 'r'.repeat(80) };
   const f = projectMemberViewerBroker(null, {}, config);

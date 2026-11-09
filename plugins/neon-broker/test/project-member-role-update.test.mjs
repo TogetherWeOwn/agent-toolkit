@@ -100,6 +100,34 @@ test('project member viewer: terminal pagination, whole-list duplicates, cycle a
   assert.equal(capped.requests.length, 3);
 });
 
+test('project member viewer: documented terminal and continuing sort metadata is bounded and stable', async () => {
+  for (const pagination of [{ sort_order: 'asc' }, { sort_order: 'desc' }, { sort_by: 'member_id' }, { sort_by: 'x'.repeat(80), sort_order: 'asc' }]) {
+    const f = fixture((url, init) => response(init.method === 'PUT' ? receipt : { project_members: [member], pagination }));
+    assert.deepEqual(await f.run('setProjectMemberRole', args), expected);
+    assert.equal(f.requests.length, 2);
+  }
+  const f = fixture((url, init, n) => response(init.method === 'PUT' ? receipt : n === 1 ? {
+    project_members: [], pagination: { next: 'page-2', sort_by: 'member_id', sort_order: 'asc' },
+  } : { project_members: [member], pagination: { sort_by: 'member_id', sort_order: 'asc' } }));
+  assert.deepEqual(await f.run('setProjectMemberRole', args), expected);
+  assert.equal(f.requests.length, 3);
+  assert.equal(new URL(f.requests[1].url).search, '?limit=10&cursor=page-2');
+  for (const pagination of [{ sort_by: null }, { sort_by: '' }, { sort_by: 'x'.repeat(81) }, { sort_by: 'name\n' },
+    { sort_order: 'ASC' }, { sort_order: 'other' }, { sort_order: null }, { sort_order: 1 }]) {
+    const g = fixture(() => response({ project_members: [member], pagination }));
+    await assert.rejects(g.run('setProjectMemberRole', args));
+    assert.equal(g.requests.length, 1);
+  }
+  for (const pagination of [{ sort_by: 'different', sort_order: 'asc' }, { sort_by: 'member_id', sort_order: 'desc' }]) {
+    const g = fixture((url, init, n) => response(n === 1 ? {
+      project_members: [member], pagination: { next: 'page-2', sort_by: 'member_id', sort_order: 'asc' },
+    } : { project_members: [], pagination }));
+    await assert.rejects(g.run('setProjectMemberRole', args));
+    assert.equal(g.requests.length, 2);
+    assert.equal(g.requests.some(({ init }) => init.method === 'PUT'), false);
+  }
+});
+
 test('project member viewer: ambiguity observes one bounded list without upgrading viewer, absence or replacement', async () => {
   for (const followup of [[], [member], [{ ...member, explicit_project_permission: 'VIEWER' }], [{ ...member, user_id: scope.memberId }]]) {
     const f = fixture((url, init, n) => {

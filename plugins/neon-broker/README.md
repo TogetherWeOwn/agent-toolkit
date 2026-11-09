@@ -7,6 +7,13 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+Project-member collection reads, explicit-role removal preflight and viewer-update
+preflight accept the documented optional `CursorPagination.sort_by` and `sort_order`
+metadata on terminal and continuing pages. Sort names are bounded printable tokens;
+orders must be asc/desc and cannot drift across pages. The endpoint exposes only
+limit/cursor query parameters, so no unsupported sort query is invented. Metadata
+validation does not weaken target/grant, duplicate, cursor-cycle or page-limit checks.
+
 `createNeonProjectMemberRoleUpdateOperations` supplies reserved, viewer-only
 `setProjectMemberRole` source for one copied project/member UUID/user UUID/expected
 member-or-editor org role/revision. Dedicated member/role/viewer grant and native

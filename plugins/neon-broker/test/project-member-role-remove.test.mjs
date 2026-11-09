@@ -104,6 +104,34 @@ test('project member role remove: terminal bounded next pagination precedes DELE
   assert.equal(boundary.requests.length, 4);
 });
 
+test('project member role remove: documented terminal and continuing sort metadata is bounded and stable', async () => {
+  for (const pagination of [{ sort_order: 'asc' }, { sort_order: 'desc' }, { sort_by: 'member_id' }, { sort_by: 'x'.repeat(80), sort_order: 'asc' }]) {
+    const f = fixture((url, init) => response(init.method === 'DELETE' ? receipt : { project_members: [member], pagination }));
+    assert.deepEqual(await f.run('removeProjectMemberRole', args), expected);
+    assert.equal(f.requests.length, 2);
+  }
+  const f = fixture((url, init, n) => response(init.method === 'DELETE' ? receipt : n === 1 ? {
+    project_members: [], pagination: { next: 'page-2', sort_by: 'member_id', sort_order: 'asc' },
+  } : { project_members: [member], pagination: { sort_by: 'member_id', sort_order: 'asc' } }));
+  assert.deepEqual(await f.run('removeProjectMemberRole', args), expected);
+  assert.equal(f.requests.length, 3);
+  assert.equal(new URL(f.requests[1].url).search, '?limit=10&cursor=page-2');
+  for (const pagination of [{ sort_by: null }, { sort_by: '' }, { sort_by: 'x'.repeat(81) }, { sort_by: 'name\n' },
+    { sort_order: 'ASC' }, { sort_order: 'other' }, { sort_order: null }, { sort_order: 1 }]) {
+    const g = fixture(() => response({ project_members: [member], pagination }));
+    await assert.rejects(g.run('removeProjectMemberRole', args));
+    assert.equal(g.requests.length, 1);
+  }
+  for (const pagination of [{ sort_by: 'different', sort_order: 'asc' }, { sort_by: 'member_id', sort_order: 'desc' }]) {
+    const g = fixture((url, init, n) => response(n === 1 ? {
+      project_members: [member], pagination: { next: 'page-2', sort_by: 'member_id', sort_order: 'asc' },
+    } : { project_members: [], pagination }));
+    await assert.rejects(g.run('removeProjectMemberRole', args));
+    assert.equal(g.requests.length, 2);
+    assert.equal(g.requests.some(({ init }) => init.method === 'DELETE'), false);
+  }
+});
+
 test('project member role remove: ambiguity observes once and never upgrades absence, default access or matching state', async () => {
   for (const followup of [page([]), page([member]), page([{ ...member, grant_source: 'org_role_default', explicit_project_permission: undefined }])]) {
     const f = fixture((url, init, n) => {

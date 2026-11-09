@@ -1,5 +1,15 @@
 # Source-slice threat model
 
+## Project-member pagination compatibility repair
+
+The member read and both explicit-role mutation preflights consume the same
+ProjectMembers/CursorPagination schema. All three now accept documented optional
+sort_by/sort_order metadata, bound sort names, reject malformed order and detect
+cross-page drift while retaining opaque-cursor-only continuation. No unsupported
+query, arbitrary sort selection, weakened target/grant check or mutation retry is
+introduced. Terminal/continuing/malformed/drift regressions cover the three instances;
+this corrects false refusals, not an authorization bypass or live-provider finding.
+
 ## Explicit project-member viewer role delta
 
 `setProjectMemberRole` binds copied project/member/user/expected member-or-editor
