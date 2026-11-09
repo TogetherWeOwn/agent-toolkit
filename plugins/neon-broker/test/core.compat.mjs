@@ -63,6 +63,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   oauthProviderDeleteFixture, oauthProviderDeleteArgs, oauthProviderDeleteScope, oauthProviderDeleteMetadata,
   dataAPIDeleteFixture, dataAPIDeleteArgs, dataAPIDeleteScope,
   legacyOAuthProviderDeleteFixture, legacyOAuthProviderDeleteArgs, legacyOAuthProviderDeleteScope,
+  bucketCreateFixture, bucketCreateArgs, bucketCreateScope, bucketCreateReceipt,
   bucketDeleteFixture, bucketDeleteArgs, bucketDeleteScope, bucketDeleteMetadata,
   functionDeleteFixture, functionDeleteArgs, functionDeleteScope, functionDeleteMetadata,
   permissionRevokeFixture, permissionRevokeArgs, permissionRevokeScope, permissionRevokeReceipt,
@@ -4962,6 +4963,116 @@ test('project rename: maximal copied target and labels fit common budgets', asyn
   assert.equal(result.ok, true);
   assert.deepEqual(result.value, { id: config.projectId, updated: true });
   safeEnvelope(f, result);
+});
+
+function privateBucketCreateBroker(value = null, overrides = {}, config = bucketCreateScope) {
+  const provider = bucketCreateFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId, bucket_name: config.bucketName };
+  const common = providerFixture(overrides);
+  common.vector.policy.resources = [provider.operation('createProjectBranchBucket').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.createProjectBranchBucket', args, context, key);
+  } };
+}
+
+test('private bucket create: exact agent AND create grant precede credentials; closed acknowledgement only', async () => {
+  const target = 'neon/projects/project-a/branches/br-a/buckets/assets';
+  for (const resource of ['neon/projects/project-a', 'neon/projects/project-a/branches/br-a/buckets',
+    target, target + '/delete', target.replace('br-a', 'br-b') + '/create', target.replace('assets', 'other') + '/create']) {
+    const f = privateBucketCreateBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = privateBucketCreateBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.common.calls.secret, 0);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = privateBucketCreateBroker({ bucket: { ...bucketCreateReceipt.bucket, created_at: credentialCanary, objects: derivedCanary } });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { name: 'assets', acknowledged: true });
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('private bucket create: identity/resource TOCTOU and public/body/authority overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = privateBucketCreateBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = privateBucketCreateBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.createProjectBranchBucket', bucketCreateArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ access_level: 'public_read' }, { bucket: { name: 'assets' } }, { bucket_name: 'other' }, { approved: true }, { project_id: 'other' }, { branch_id: 'other' }, { retry: true }]) {
+    const g = privateBucketCreateBroker();
+    assert.equal((await g.common.broker().call('neon.createProjectBranchBucket', { ...bucketCreateArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+    assert.equal(g.provider.requests.length, 0);
+  }
+});
+
+test('private bucket create: permanent journal blocks complete/uncertain replay after restart without retrying POST', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = privateBucketCreateBroker((url, init, n) => {
+      if (init.method === 'POST') {
+        if (ambiguous) throw Error(credentialCanary);
+        return response(bucketCreateReceipt, { status: 201 });
+      }
+      return response({ buckets: n === 1 ? [] : [bucketCreateReceipt.bucket] });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const count = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, count);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'POST').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('private bucket create: existing/foreign lists never mutate; reflected receipt stays uncertain and redacted', async () => {
+  for (const raw of [{ buckets: [bucketCreateReceipt.bucket] }, { buckets: [], branch_id: 'other' },
+    { buckets: [{ name: 'other', access_level: 'unknown' }] }]) {
+    const f = privateBucketCreateBroker(() => response(raw));
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 1);
+  }
+  for (const raw of [{ bucket: { ...bucketCreateReceipt.bucket, name: credentialCanary } },
+    { bucket: { ...bucketCreateReceipt.bucket, access_level: credentialCanary } }]) {
+    const f = privateBucketCreateBroker(raw);
+    const result = await f.call();
+    assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, 'uncertain');
+    safeEnvelope(f, result);
+  }
+});
+
+test('private bucket create: maximal copied target fits actual common budgets and reflected name refuses', async () => {
+  const config = { projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), bucketName: 's'.repeat(60), revision: 'r'.repeat(80) };
+  const f = privateBucketCreateBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { name: config.bucketName, acknowledged: true });
+  safeEnvelope(f, result);
+  const reflected = privateBucketCreateBroker(null, {
+    credentials: { async resolve() { return { value: 'assets', redactions: [], async close() {} }; } },
+  });
+  const denied = await reflected.call();
+  assert.equal(denied.code, 'OUTCOME_UNCERTAIN');
+  assert.equal(reflected.provider.requests.length, 2);
+  assert.equal([...reflected.common.journal.values()][0].outcome, 'uncertain');
 });
 
 function functionRenameBroker(value = functionUpdateReceipt, overrides = {}, config = functionUpdateScope) {

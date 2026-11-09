@@ -7,6 +7,22 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonBucketCreateOperations` supplies private-only `createProjectBranchBucket`
+source for one copied project/branch/bounded bucket name/revision. A dedicated
+`neon/projects/<project>/branches/<branch>/buckets/<name>/create` grant and exact
+plan/diff precede credentials. Mandatory terminal bucket-list absence preflight
+validates all rows (30-row cap), then one POST sends name and fixed access_level:private.
+Existing names, including inherited buckets, refuse; public_read and caller body
+configuration are unsupported. Exact HTTP201 name/private echo yields closed
+acknowledgement only, not independent persistence, emptiness, origin ownership or
+access enforcement. Timestamps, origin data and objects are never evaluated/emitted.
+Preflight is not atomic CAS; provider collisions/name races remain unresolved.
+Ambiguity gets one bounded list observation and stays uncertain even on desired
+state or absence; no retry. Permanent common journal blocks same-request replay,
+not external writers. Source/mocks only; no live resource creation, spend or runtime
+registration. Beta effects/entitlement, native policy/host/custody/durable recovery
+and independent reviews remain gates.
+
 `createNeonFunctionUpdateOperations` supplies name-only `updateProjectBranchFunction`
 source for one copied project/effective branch/stable function ID/immutable slug/
 expected and desired display labels/revision. Dedicated function/rename authority
@@ -1966,8 +1982,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 118 implemented
-source adapters, 76 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 119 implemented
+source adapters, 75 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

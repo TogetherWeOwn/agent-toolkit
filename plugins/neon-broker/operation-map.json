@@ -3617,20 +3617,24 @@
       "id": "createProjectBranchBucket",
       "apiArea": "buckets",
       "tool": "neon.createProjectBranchBucket",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/bucket_name/create",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "private-bucket-creation"
       ],
       "tier": "write",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/bucket-create.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Private-only source/mocks; dedicated create grant and exact plan/diff, bounded absence preflight then one fixed private POST. Exact201 name/private echo acknowledges only, not persistence, emptiness, origin ownership or access enforcement. Existing/inherited names and public access refuse. Preflight not atomic CAS; name race unresolved. Ambiguity stays uncertain after one bounded list observation, no retry; permanent common replay journal. Native entitlement/effects/policy/host/custody/durable recovery and reviews unresolved; no live creation, spend or runtime enablement."
     },
     {
       "id": "listProjectBranchBuckets",

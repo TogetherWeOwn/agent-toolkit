@@ -1,5 +1,29 @@
 # Source-slice threat model
 
+## Private-only bucket creation delta
+
+`createProjectBranchBucket` binds copied project/branch/bounded bucket name/revision.
+Dedicated bucket/create authority and exact plan/diff do not inherit read/delete/
+parent/sibling grants. Mandatory full-list absence preflight validates all consumed
+names, access levels, duplicates and optional ancestry before one POST sends exact
+name and fixed private access. Existing/inherited same-name buckets refuse without
+mutation; public_read, arbitrary body and caller authority overrides refuse. The
+strict HTTP201 receipt must echo exact name/private state; only a closed name and
+acknowledgement project. Timestamp/origin/object/diagnostic fields are never evaluated.
+The shared transport's success-status override is internal and fixed to201 only
+for this factory; existing endpoints retain their200/202/204 contracts and bounds.
+
+Preflight is not atomic CAS; absent names are not immutable identities. Concurrent
+creation/replacement and provider collision semantics remain unresolved. A desired
+state after ambiguity is not causal creation proof; one bounded observation never
+changes uncertainty and no mutation retries. Permanent common journal blocks
+same-request replay/restart, not external writers. Source/common contracts cover
+exact grants, identity/resource TOCTOU, copied strict arguments, tampered plans,
+preflight/reflection/response bounds, cancellation/deadlines and common budgets.
+Private acknowledgement is not independently observed access enforcement, emptiness,
+persistence, ownership or lifecycle readiness. Beta entitlement/effects and native
+policy/host/custody/durable recovery/reviews remain gates. No live creation or spend.
+
 ## Function display-name update delta
 
 `updateProjectBranchFunction` binds copied project/effective branch/stable function
