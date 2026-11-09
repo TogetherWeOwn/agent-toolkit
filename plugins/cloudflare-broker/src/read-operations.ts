@@ -29,6 +29,7 @@ import { dnssecDescriptor, type DnssecScope } from "./dnssec.js";
 import { zoneListDescriptor, type ZoneListScope } from "./zone-list.js";
 import { zoneHoldDescriptor, type ZoneHoldScope } from "./zone-hold.js";
 import { regionalCacheDescriptor, type RegionalCacheScope } from "./regional-cache.js";
+import { cacheSettingsDescriptors, type CacheSettingsScope } from "./cache-settings.js";
 import { zonePlanDescriptors, type ZonePlanScope } from "./zone-plans.js";
 import { dnsSettingsDescriptor, type DnsSettingsScope } from "./dns-settings.js";
 import { accountDnsDescriptor, type AccountDnsScope } from "./account-dns.js";
@@ -157,6 +158,8 @@ export interface CloudflareReadScope extends MetadataScope {
     dnssecReadAllowed?: DnssecScope["readAllowed"];
     zoneHoldReadAllowed?: ZoneHoldScope["readAllowed"];
     regionalCacheReadAllowed?: RegionalCacheScope["readAllowed"];
+    cacheReserveReadAllowed?: CacheSettingsScope["reserveReadAllowed"];
+    smartTieredCacheReadAllowed?: CacheSettingsScope["smartTieredReadAllowed"];
     availablePlanListIds?: ZonePlanScope["listPlanIds"];
     availablePlanIds?: ZonePlanScope["planIds"];
     loadBalancerListIds?: ZoneLoadBalancerScope["listIds"];
@@ -227,6 +230,10 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     zoneId: scope.zone.zoneId, listIds: scope.zone.loadBalancerListIds ?? [], balancerIds: scope.zone.loadBalancerIds ?? [] });
   const healthChecks = scope.zone === undefined ? undefined : healthCheckDescriptors({ accountId, revision,
     zoneId: scope.zone.zoneId, listIds: scope.zone.healthCheckListIds ?? [], healthcheckIds: scope.zone.healthCheckIds ?? [] });
+  const cacheSettings = scope.zone === undefined ? undefined : cacheSettingsDescriptors({ accountId, revision,
+    zoneId: scope.zone.zoneId,
+    ...(scope.zone.cacheReserveReadAllowed === undefined ? {} : { reserveReadAllowed: scope.zone.cacheReserveReadAllowed }),
+    ...(scope.zone.smartTieredCacheReadAllowed === undefined ? {} : { smartTieredReadAllowed: scope.zone.smartTieredCacheReadAllowed }) });
   const content = currentContentDescriptor(sourceScope);
   const readContent = currentContentTransport(fetcher);
   const collectPages = pagesCollectionTransport(fetcher);
@@ -290,6 +297,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     ...(plans === undefined ? [] : [metadata(plans.plansList), metadata(plans.planGet)]),
     ...(balancers === undefined ? [] : [metadata(balancers.balancersList), metadata(balancers.balancerGet)]),
     ...(healthChecks === undefined ? [] : [metadata(healthChecks.checksList), metadata(healthChecks.checkGet)]),
+    ...(cacheSettings === undefined ? [] : [metadata(cacheSettings.reserveGet), metadata(cacheSettings.smartTieredGet)]),
     ...(scope.zone === undefined ? [] : [metadata(zoneTlsDescriptor({ accountId, revision,
       zoneId: scope.zone.zoneId, settingIds: scope.zone.tlsSettingIds ?? [] }))]),
     ...(scope.zone === undefined ? [] : [metadata(zoneHoldDescriptor({ accountId, revision,
