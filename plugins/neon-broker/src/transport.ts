@@ -10,6 +10,7 @@ import { customDomainDeleteName } from "./custom-domain-delete.js";
 import { authDomainDeleteOrigin, authDomainDeleteProvider } from "./auth-domain-delete.js";
 import { providerId } from "./oauth-providers.js";
 import { databaseUpdateName } from "./database-update.js";
+import { functionLabel } from "./function-update.js";
 
 export const NEON_ORIGIN = "https://console.neon.tech";
 export const RESPONSE_BYTES = 65_536;
@@ -21,6 +22,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  updateProjectBranchFunction(project: string, branch: string, slug: string, name: string, options: MetadataRequestOptions): Promise<unknown>;
   updateProjectBranchDatabase(project: string, branch: string, database: string, name: string, options: MetadataRequestOptions): Promise<unknown>;
   updateNeonAuthEmailAndPasswordConfig(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   updateProjectBranchTrigger(project: string, branch: string, trigger: string, type: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -336,6 +338,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     deleteProjectBranchBucket: (project: string, branch: string, bucket: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/buckets/${bucketDeleteName.parse(bucket)}`,
         new URLSearchParams(), options, undefined, false, 204),
+    updateProjectBranchFunction: (project: string, branch: string, slug: string, name: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/functions/${functionSlug(slug)}`,
+        new URLSearchParams(), options, JSON.stringify({ name: functionLabel.parse(name) }), false, false, true),
     deleteProjectBranchFunction: (project: string, branch: string, slug: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/functions/${functionSlug(slug)}`,
         new URLSearchParams(), options, undefined, false, 204),

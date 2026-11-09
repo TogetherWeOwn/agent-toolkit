@@ -7,6 +7,22 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonFunctionUpdateOperations` supplies name-only `updateProjectBranchFunction`
+source for one copied project/effective branch/stable function ID/immutable slug/
+expected and desired display labels/revision. Dedicated function/rename authority
+and an exact plan/diff precede credentials. Mandatory detail ID/slug/name preflight
+then one PATCH sends only name; null clearing, trimming, source/deployment/slug
+changes are unsupported. The provider permits only branch-owned functions and
+returns404 for inherited-only slugs; the GET does not independently prove origin
+ownership. Exact HTTP200 ID/slug/desired-name echo yields closed acknowledgement,
+not invocation/deployment change, persistence or lifecycle enforcement. Invocation
+URLs, deployments, timestamps and diagnostics are never evaluated/emitted.
+Preflight is not atomic CAS; slug replacement races remain unresolved. Ambiguity
+gets one bounded detail observation and stays uncertain even on desired state,
+absence or replacement; no retry. Permanent common journal blocks same-request
+replay, not external writers. Source/mocks only; Beta effects/entitlement, native
+host/custody/durable recovery and independent review gates remain unresolved.
+
 `createNeonDatabaseUpdateOperations` supplies rename-only `updateProjectBranchDatabase`
 source for one copied project/branch/current name/numeric database ID/desired name/revision.
 A dedicated `neon/projects/<project>/branches/<branch>/databases/<name>/rename` grant
@@ -1950,8 +1966,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 117 implemented
-source adapters, 77 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 118 implemented
+source adapters, 76 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

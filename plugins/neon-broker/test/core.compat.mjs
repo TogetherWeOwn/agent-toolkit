@@ -47,6 +47,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   projectDeleteFixture, projectDeleteArgs, projectDeleteScope, projectDeleteReceipt,
   databaseDeleteFixture, databaseDeleteArgs, databaseDeleteScope, databaseDeleteReceipt,
   databaseUpdateFixture, databaseUpdateArgs, databaseUpdateScope, databaseUpdateReceipt,
+  functionUpdateFixture, functionUpdateArgs, functionUpdateScope, functionUpdateReceipt,
   userKeyRevokeFixture, userKeyRevokeArgs, userKeyRevokeScope, userKeyRevokeReceipt,
   organizationKeyRevokeFixture, organizationKeyRevokeArgs, organizationKeyRevokeScope, organizationKeyRevokeReceipt,
   credentialRevokeFixture, credentialRevokeArgs, credentialRevokeScope, credentialRevokeMetadata,
@@ -4960,6 +4961,104 @@ test('project rename: maximal copied target and labels fit common budgets', asyn
   const result = await f.call();
   assert.equal(result.ok, true);
   assert.deepEqual(result.value, { id: config.projectId, updated: true });
+  safeEnvelope(f, result);
+});
+
+function functionRenameBroker(value = functionUpdateReceipt, overrides = {}, config = functionUpdateScope) {
+  const provider = functionUpdateFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId, slug: config.functionSlug, name: config.name };
+  const common = providerFixture(overrides);
+  common.vector.policy.resources = [provider.operation('updateProjectBranchFunction').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.updateProjectBranchFunction', args, context, key);
+  } };
+}
+
+test('function rename: exact agent AND rename grant precede credentials; closed acknowledgement omits invocation metadata', async () => {
+  for (const resource of ['neon/projects/project-a', 'neon/projects/project-a/branches/br-a',
+    'neon/projects/project-a/branches/br-a/functions/hello', 'neon/projects/project-a/branches/br-a/functions/hello/delete',
+    'neon/projects/project-a/branches/br-b/functions/hello/rename', 'neon/projects/project-a/branches/br-a/functions/other/rename']) {
+    const f = functionRenameBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = functionRenameBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.common.calls.secret, 0);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = functionRenameBroker({ function: { ...functionUpdateReceipt.function, invocation_url: credentialCanary, current_deployment: { error: derivedCanary } } });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { id: 'fn-a', slug: 'hello', acknowledged: true });
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('function rename: identity/resource TOCTOU and source/body/authority overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = functionRenameBroker(undefined, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = functionRenameBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.updateProjectBranchFunction', functionUpdateArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ source: 'new' }, { function: { name: 'After' } }, { function_id: 'fn-b' }, { approved: true }, { name: null }, { name: 'Different' }]) {
+    const g = functionRenameBroker();
+    assert.equal((await g.common.broker().call('neon.updateProjectBranchFunction', { ...functionUpdateArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+    assert.equal(g.provider.requests.length, 0);
+  }
+});
+
+test('function rename: permanent journal blocks complete/uncertain replay after restart without retrying PATCH', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = functionRenameBroker((url, init, n) => {
+      if (init.method === 'PATCH') {
+        if (ambiguous) throw Error(credentialCanary);
+        return response(functionUpdateReceipt);
+      }
+      return response({ function: { ...functionUpdateReceipt.function, name: n === 1 ? 'Before' : 'After' } });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const count = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, count);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'PATCH').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('function rename: reflected identity/name response stays uncertain and redacted', async () => {
+  for (const raw of [{ function: { ...functionUpdateReceipt.function, name: credentialCanary } },
+    { function: { ...functionUpdateReceipt.function, id: credentialCanary } }]) {
+    const f = functionRenameBroker(raw);
+    const result = await f.call();
+    assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, 'uncertain');
+    safeEnvelope(f, result);
+  }
+});
+
+test('function rename: maximal copied target and labels fit actual common budgets', async () => {
+  const config = { projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), functionId: 'f'.repeat(80),
+    functionSlug: 's'.repeat(20), expectedName: 'B'.repeat(80), name: 'A'.repeat(80), revision: 'r'.repeat(80) };
+  const f = functionRenameBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { id: config.functionId, slug: config.functionSlug, acknowledged: true });
   safeEnvelope(f, result);
 });
 

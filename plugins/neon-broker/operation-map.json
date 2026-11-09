@@ -4038,20 +4038,24 @@
       "id": "updateProjectBranchFunction",
       "apiArea": "functions",
       "tool": "neon.updateProjectBranchFunction",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/slug/rename",
       "sideEffects": [
         "provider-effects-unverified",
+        "function-display-name-update",
         "compute-wake-not-proven"
       ],
       "tier": "write",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/function-update.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Name-only source/mocks with exact stable-ID/slug/current-name preflight and dedicated rename grant/plan; null clearing and deployment/source changes unsupported. Provider enforces branch-local-only updates. Closed acknowledgement only; preflight not atomic CAS and slug replacement race unresolved. Ambiguity stays uncertain after one observation, no retry, permanent common journal. Effects/entitlement, native host/custody/durable recovery and independent reviews remain unresolved; no live change or enablement."
     },
     {
       "id": "deleteProjectBranchFunction",

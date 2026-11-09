@@ -1,5 +1,27 @@
 # Source-slice threat model
 
+## Function display-name update delta
+
+`updateProjectBranchFunction` binds copied project/effective branch/stable function
+ID/immutable slug/expected and desired labels/revision. Dedicated function/rename
+grant and exact plan/diff do not inherit read/delete/parent/sibling authority.
+Mandatory detail ID/slug/name preflight precedes one name-only PATCH. Null clearing,
+trimming, source/deployment/slug replacement and caller authority/body overrides
+refuse. Provider branch-local-only enforcement rejects inherited-only slugs; the
+GET is not an origin-ownership proof. Consumed ancestry/pagination/identity/name
+are validated; invocation URLs, deployments, timestamps and diagnostics are never
+evaluated/emitted. Exact200 echo acknowledges only, not persistence, invocation
+behavior, deployment change or lifecycle enforcement.
+
+Preflight is not atomic CAS and slug replacement races remain unresolved. One
+post-ambiguity detail observation never establishes causation even on desired
+state, absence or replacement; no retry. Permanent common journal prevents
+same-request replay/restart, not external writers. Source/common contracts cover
+exact grants, scope/identity TOCTOU, tampered plans, stale/replacement preflight,
+response/deadline/cancellation bounds, reflection, ignored-field getters and actual
+common budgets. Beta effects/entitlement, native host/custody/durable recovery and
+independent reviews remain gates. Source/mocks only; no live mutation.
+
 ## Database rename-only delta
 
 `updateProjectBranchDatabase` copies exact project/branch/current name/numeric ID/
