@@ -30,6 +30,7 @@ import { hostnameTlsDescriptors } from "../dist/plugins/cloudflare-broker/src/ho
 import { zoneTlsDescriptor } from "../dist/plugins/cloudflare-broker/src/zone-tls.js";
 import { zoneListDescriptor } from "../dist/plugins/cloudflare-broker/src/zone-list.js";
 import { zoneHoldDescriptor } from "../dist/plugins/cloudflare-broker/src/zone-hold.js";
+import { dnsSettingsDescriptor } from "../dist/plugins/cloudflare-broker/src/dns-settings.js";
 import { accountDetailDescriptor } from "../dist/plugins/cloudflare-broker/src/account-detail.js";
 import { accountListDescriptor } from "../dist/plugins/cloudflare-broker/src/account-list.js";
 import { dnssecDescriptor } from "../dist/plugins/cloudflare-broker/src/dnssec.js";
@@ -127,6 +128,7 @@ const allDescriptors = { ...metadataOnly, ...deletionDescriptors, contentDescrip
   ...hostnameTlsDescriptors({ accountId: account, zoneId: zone, revision: "policy-1" }),
   zoneList: zoneListDescriptor({ accountId: account, revision: "policy-1" }),
   zoneHold: zoneHoldDescriptor({ accountId: account, zoneId: zone, revision: "policy-1" }),
+  dnsSettings: dnsSettingsDescriptor({ accountId: account, zoneId: zone, revision: "policy-1" }),
   accountDetail: accountDetailDescriptor({ accountId: account, revision: "policy-1" }),
   accountList: accountListDescriptor({ accountId: account, revision: "policy-1" }),
   zoneTls: zoneTlsDescriptor({ accountId: account, zoneId: zone, revision: "policy-1" }),
