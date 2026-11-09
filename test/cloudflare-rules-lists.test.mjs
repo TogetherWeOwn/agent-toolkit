@@ -101,6 +101,26 @@ for (const c of cases) {
       assert.deepEqual(d.project(envelope(rows), p), { ...base(c), items: [] });
   });
 
+  test(`${c.name} discards bounded multiline free text on selected and unselected rows through actual core`, async () => {
+    const d = rulesListsDescriptors(scope())[c.key], p = d.prepare(args(c)), field = c.item ? "comment" : "description";
+    for (const discarded of [`${derivedCanary}\nsecond line\r\t\u0000\u0085😀`, "", "x".repeat(4096)]) {
+      const selected = { ...row(c), [field]: discarded };
+      const rows = c.collection ? [selected, { ...row(c), id: foreign, [field]: discarded }] : selected;
+      const response = envelope(rows), expected = { ...base(c), ...(c.collection ? { items: [{ id: c.item ? itemId : listId }] } : { item: { id: c.item ? itemId : listId } }) };
+      assert.deepEqual(d.project(response, p), expected);
+      const f = fixture(c, { response }), out = await f.invoke();
+      assert.equal(out.ok, true); assert.deepEqual(out.value, expected); safe(f, out);
+      assert.equal(f.requests.length, 1); assert.equal(f.calls.close, 1);
+      assert.deepEqual(f.audit.map(e => e.phase), ["intent", "outcome"]);
+      assert.equal([...f.journal.values()][0].outcome, "complete");
+      assert.equal((await f.invoke()).code, "REPLAY_CONFLICT"); assert.equal(f.requests.length, 1);
+    }
+    for (const discarded of [1, null, {}, "x".repeat(4097)]) {
+      const bad = { ...row(c), id: c.collection ? foreign : row(c).id, [field]: discarded };
+      assert.throws(() => d.project(envelope(c.collection ? [row(c), bad] : bad), p));
+    }
+  });
+
   test(`${c.name} rejects malformed common metadata, union shapes and explicit foreign context even when unselected`, () => {
     const d = rulesListsDescriptors(scope())[c.key], p = d.prepare(args(c));
     const project = bad => d.project(envelope(c.collection ? [row(c), bad] : bad), p);
@@ -133,7 +153,10 @@ for (const c of cases) {
       assert.throws(() => d.project(raw, p));
     for (const patch of [{ success: false }, { errors: [credentialCanary] }, { messages: undefined }, { messages: [null] },
       { messages: [{ message: "x" }] }, { messages: [{ code: 999, message: "x" }] }, { messages: [{ code: 1000, message: "x\n" }] },
-      { messages: [{ code: 1000, message: "x" }, { code: 1000, message: "x" }] }, { messages: Array(65).fill({ code: 1000, message: "ok" }) }])
+      { messages: [{ code: 1000, message: "x" }, { code: 1000, message: "x" }] },
+      { messages: [{ code: 1000, message: "x" }, { message: "x", code: 1000 }] },
+      { messages: [{ code: 1000, message: "x", extra: 1 }, { message: "x", extra: 2, code: 1000 }] },
+      { messages: Array(65).fill({ code: 1000, message: "ok" }) }])
       assert.throws(() => d.project(JSON.stringify({ ...body, ...patch }), p));
     if (c.collection) for (const rows of [[row(c), row(c)], [c.item ? itemRow(foreign) : listRow(foreign), c.item ? itemRow(foreign) : listRow(foreign)], Array(65).fill(row(c))])
       assert.throws(() => d.project(envelope(rows), p));
