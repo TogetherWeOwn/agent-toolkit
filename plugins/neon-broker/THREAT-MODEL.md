@@ -1098,6 +1098,30 @@ or credential-completeness evidence. Source mocks do not authorize a live object
 read, secret retrieval, configuration change or runtime registration. The three
 password-bearing email/aggregate reads remain incomplete. No tool is enabled.
 
+## Reserved trigger-deletion delta
+
+The dedicated branch/trigger/delete grant and reserved native exact-plan authority
+precede credential access. Copied scope binds one effective branch and project-wide
+trigger ID to its expected function slug, type, positive safe-integer version and
+explicit inherited/enabled flags. Mandatory detail preflight validates those fields
+and any optional wrapper/row ancestry before one bodyless DELETE. Selected IDs use
+a conservative common-resource/detail-transport subset; unsupported provider IDs
+refuse without normalization. Parent, read, function and sibling grants cannot
+substitute. Names, cron, function paths, bucket/prefix configuration and timestamps
+are never evaluated or emitted; no scheduler or invocation executor is introduced.
+
+The documented empty204 is normalized to a closed acknowledgement, not an identity
+echo, independent effective stoppage, completed delivery cancellation or fencing
+proof. Inherited deletion writes a tombstone on the exact requested effective
+branch, never an ancestor delete. Already-committed invocations are explicitly not
+cancelled. Preflight is not atomic CAS and version checks cannot fence another
+writer. Ambiguity gets one bounded detail observation then remains uncertain even
+on absence/disabled/drifted state; no mutation retry or invented conditional or
+idempotency header. Permanent common journal protects same-request restart/replay,
+not external writers. Source/mocks only, zero enabled; native host/authority/custody,
+durable recovery, effects/entitlement/Beta availability and independent reviews
+remain qualification gates. No live deletion, session closure or cutover claim.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.

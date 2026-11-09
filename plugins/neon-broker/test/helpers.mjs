@@ -53,6 +53,7 @@ import { createNeonDatabaseDeleteOperations } from '../dist/plugins/neon-broker/
 import { createNeonProjectMemberRoleRemoveOperations } from '../dist/plugins/neon-broker/src/project-member-role-remove.js';
 import { createNeonOrganizationMemberRemoveOperations } from '../dist/plugins/neon-broker/src/organization-member-remove.js';
 import { createNeonAuthClientDeleteOperations } from '../dist/plugins/neon-broker/src/auth-client-delete.js';
+import { createNeonTriggerDeleteOperations } from '../dist/plugins/neon-broker/src/trigger-delete.js';
 import { createNeonJWKSDeleteOperations } from '../dist/plugins/neon-broker/src/jwks-delete.js';
 import { createNeonPermissionRevokeOperations } from '../dist/plugins/neon-broker/src/permission-revoke.js';
 import { createNeonCredentialRevokeOperations } from '../dist/plugins/neon-broker/src/credential-revoke.js';
@@ -478,7 +479,18 @@ export function objectDownloadFixture(value, config = objectDownloadScope) {
   return fixture(typeof value === 'function' ? value : () => binaryResponse(value.bytes), config, createNeonObjectDownloadOperations);
 }
 export const allCases = [...objectDownloadCases, ...oauthProviderCases, ...logQueryCases, ...schemaComparisonCases, ...logValueCases, ...branchSchemaCases, ...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
-export const sourceNames = [...allCases.map(([name]) => name), 'deleteSnapshot', 'updateSnapshot', 'updateProjectBranch', 'updateProject', 'updateProjectEndpoint', 'suspendProjectEndpoint', 'deleteProjectEndpoint', 'startProjectEndpoint', 'restartProjectEndpoint', 'deleteProjectBranch', 'deleteProject', 'deleteProjectBranchDatabase', 'deleteProjectBranchRole', 'revokeApiKey', 'revokeOrgApiKey', 'revokeCredential', 'revokePermissionFromProject', 'removeOrganizationMember', 'removeProjectMemberRole', 'deleteNeonAuthOAuthClient', 'deleteProjectJWKS'];
+export const sourceNames = [...allCases.map(([name]) => name), 'deleteSnapshot', 'updateSnapshot', 'updateProjectBranch', 'updateProject', 'updateProjectEndpoint', 'suspendProjectEndpoint', 'deleteProjectEndpoint', 'startProjectEndpoint', 'restartProjectEndpoint', 'deleteProjectBranch', 'deleteProject', 'deleteProjectBranchDatabase', 'deleteProjectBranchRole', 'revokeApiKey', 'revokeOrgApiKey', 'revokeCredential', 'revokePermissionFromProject', 'removeOrganizationMember', 'removeProjectMemberRole', 'deleteNeonAuthOAuthClient', 'deleteProjectJWKS', 'deleteProjectBranchTrigger'];
+export const triggerDeleteScope = { projectId: 'project-a', branchId: 'br-a', triggerId: 'tr-a', functionSlug: 'hello',
+  expectedType: 'schedule', expectedVersion: 1, expectedInherited: false, expectedEnabled: true, revision: 'scope-v1' };
+export const triggerDeleteArgs = { project_id: 'project-a', branch_id: 'br-a', trigger_id: 'tr-a' };
+export const triggerDeleteMetadata = { trigger_id: 'tr-a', function_slug: 'hello', type: 'schedule', version: 1, inherited: false, enabled: true };
+export function triggerDeleteFixture(value = null, config = triggerDeleteScope) {
+  const metadata = { trigger_id: config.triggerId, function_slug: config.functionSlug, type: config.expectedType,
+    version: config.expectedVersion, inherited: config.expectedInherited, enabled: config.expectedEnabled };
+  return fixture((url, init, n) => typeof value === 'function' ? value(url, init, n) :
+    init.method === 'DELETE' ? new Response(null, { status: 204 }) : response({ trigger: metadata }),
+  config, createNeonTriggerDeleteOperations);
+}
 export const jwksDeleteScope = { projectId: 'project-a', branchId: 'br-a', jwksId: 'jwks-a', revision: 'scope-v1' };
 export const jwksDeleteArgs = { project_id: 'project-a', jwks_id: 'jwks-a' };
 export const jwksDeleteMetadata = { id: 'jwks-a', project_id: 'project-a', branch_id: 'br-a' };

@@ -1503,6 +1503,30 @@ journal blocks restart/replay. Native authority/host/policy/custody, durable
 recovery, effects/entitlement and independent reviews remain unresolved.
 Source/mocks only; no live deletion, key-material retrieval or runtime enablement.
 
+## Reserved trigger deletion request
+
+`createNeonTriggerDeleteOperations` copies one project/effective branch/trigger ID,
+function slug, expected type/version/inherited/enabled state and revision.
+`neon.deleteProjectBranchTrigger` accepts only `{ project_id, branch_id, trigger_id }`
+and requires the dedicated `neon/projects/<project>/branches/<branch>/triggers/<trigger>/delete`
+grant plus reserved native exact-plan authorization. Mandatory fixed detail GET
+checks that snapshot before one bodyless DELETE. The conservative selected-ID
+subset fits the existing detail transport/common budgets; provider-valid dotted or
+longer trigger IDs remain unsupported, not normalized. Optional ancestry on both
+wrapper and trigger must match. Names, cron, function paths, bucket/prefix settings,
+timestamps and unexpected secret fields are never evaluated/emitted.
+
+Only documented empty HTTP204 becomes `{ acknowledged: true }`, not an identity
+echo or independent stoppage proof. For an inherited trigger the provider writes a
+branch-local tombstone, not an ancestor deletion. **Invocations already committed
+for delivery are not cancelled.** No scheduler, session/fencing/completeness or
+runtime-readiness evidence is produced. Preflight is not atomic CAS: another writer
+can change the trigger after inspection. Ambiguity gets one bounded detail
+observation and stays uncertain even on absence/disabled/version drift; no retry
+or invented idempotency header. The common permanent journal blocks restart/replay.
+Native authority/host/custody, durable recovery, Beta effects/entitlement and
+independent reviews remain unresolved. Source/mocks only; no live deletion or enablement.
+
 ## Shared contract and candidate compatibility
 
 Contract: `toolkit.provider-broker/v1`. Merged core: [PR #17](https://github.com/TogetherWeOwn/agent-toolkit/pull/17),
@@ -1528,8 +1552,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: ninety-five implemented
-source adapters, 99 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: ninety-six implemented
+source adapters, 98 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

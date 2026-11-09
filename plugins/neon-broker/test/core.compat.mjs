@@ -53,6 +53,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   organizationMemberRemoveFixture, organizationMemberRemoveArgs, organizationMemberRemoveScope, organizationMemberRemoveMetadata,
   authClientDeleteFixture, authClientDeleteArgs, authClientDeleteScope, authClientDeleteMetadata,
   jwksDeleteFixture, jwksDeleteArgs, jwksDeleteScope, jwksDeleteMetadata,
+  triggerDeleteFixture, triggerDeleteArgs, triggerDeleteScope, triggerDeleteMetadata,
   permissionRevokeFixture, permissionRevokeArgs, permissionRevokeScope, permissionRevokeReceipt,
   roleDeleteFixture, roleDeleteArgs, roleDeleteScope, roleDeleteReceipt,
   branchDeleteFixture, branchDeleteArgs, branchDeleteScope, branchDeleteReceipt,
@@ -131,6 +132,133 @@ function safeEnvelope(f, result) {
     assert(!serialized.includes(secret), `secret in output/audit/journal: ${secret}`);
   }
 }
+
+function triggerDeletionBroker(value = null, overrides = {}, config = triggerDeleteScope) {
+  const provider = triggerDeleteFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId, trigger_id: config.triggerId };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('deleteProjectBranchTrigger').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.deleteProjectBranchTrigger', args, context, key);
+  } };
+}
+
+test('Trigger delete: reserved authority and exact trigger/delete AND agent grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = triggerDeletionBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = 'neon/projects/project-a/branches/br-a/triggers/tr-a';
+  for (const resource of [target, target + '/reveal', target.replace('br-a', 'other') + '/delete',
+    target.replace('project-a', 'other') + '/delete', target.replace('tr-a', 'other') + '/delete',
+    'neon/projects/project-a/branches/br-a/credentials']) {
+    const f = triggerDeletionBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = triggerDeletionBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = triggerDeletionBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { acknowledged: true });
+  assert.equal(f.common.calls.consumed, 1);
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('Trigger delete: native authorization rejects stale, wrong-target and unconsumable evidence', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = triggerDeletionBroker();
+    const base = f.common.authority;
+    let consumeCalls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.deleteProjectBranchTrigger', triggerDeleteArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.ok, false);
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Trigger delete: identity/resource TOCTOU and caller authority/target overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = triggerDeletionBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = triggerDeletionBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.deleteProjectBranchTrigger', triggerDeleteArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { project_id: 'other' }, { branch_id: 'other' }, { trigger_id: 'other' }, { token: 'not-a-token' }, { retry: true }]) {
+    const g = triggerDeletionBroker();
+    assert.equal((await g.common.broker().call('neon.deleteProjectBranchTrigger', { ...triggerDeleteArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('Trigger delete: permanent journal blocks complete and uncertain replay after restart without cancelling committed invocations', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = triggerDeletionBroker((url, init) => {
+      if (init.method === 'DELETE') { if (ambiguous) throw Error(credentialCanary); return new Response(null, { status: 204 }); }
+      return response({ trigger: triggerDeleteMetadata });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Trigger delete: malformed/foreign detail refuses before deletion; secrets never enter envelopes', async () => {
+  for (const change of [{ branch_id: 'other' }, { project_id: 'other' }, { trigger_id: credentialCanary }, { pagination: {} }]) {
+    const f = triggerDeletionBroker(() => response({ trigger: { ...triggerDeleteMetadata, ...change } }));
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 0);
+    safeEnvelope(f, result);
+  }
+  const f = triggerDeletionBroker((url, init) => init.method === 'DELETE' ? new Response(null, { status: 204 }) :
+    response({ trigger: { ...triggerDeleteMetadata, name: derivedCanary, function_path: credentialCanary, schedule: { cron: credentialCanary } } }));
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
+test('Trigger delete: maximum copied project/branch/opaque IDs fit common budgets', async () => {
+  for (const expectedInherited of [false, true]) {
+    const config = { ...triggerDeleteScope, projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), triggerId: 't'.repeat(80),
+      functionSlug: 'f'.repeat(20), expectedVersion: Number.MAX_SAFE_INTEGER, expectedType: 'storage_object_created',
+      expectedInherited, revision: 'r'.repeat(80) };
+    const f = triggerDeletionBroker(null, {}, config);
+    const result = await f.call();
+    assert.equal(result.ok, true);
+    safeEnvelope(f, result);
+  }
+});
 
 function jwksDeletionBroker(value = null, overrides = {}, config = jwksDeleteScope) {
   const provider = jwksDeleteFixture(value, config);
