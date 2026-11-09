@@ -25,6 +25,7 @@ import { zoneTlsDescriptor, type ZoneTlsScope } from "./zone-tls.js";
 import { dnssecDescriptor, type DnssecScope } from "./dnssec.js";
 import { zoneListDescriptor, type ZoneListScope } from "./zone-list.js";
 import { zoneHoldDescriptor, type ZoneHoldScope } from "./zone-hold.js";
+import { regionalCacheDescriptor, type RegionalCacheScope } from "./regional-cache.js";
 import { zonePlanDescriptors, type ZonePlanScope } from "./zone-plans.js";
 import { dnsSettingsDescriptor, type DnsSettingsScope } from "./dns-settings.js";
 import { accountDnsDescriptor, type AccountDnsScope } from "./account-dns.js";
@@ -148,6 +149,7 @@ export interface CloudflareReadScope extends MetadataScope {
     tlsSettingIds?: ZoneTlsScope["settingIds"];
     dnssecReadAllowed?: DnssecScope["readAllowed"];
     zoneHoldReadAllowed?: ZoneHoldScope["readAllowed"];
+    regionalCacheReadAllowed?: RegionalCacheScope["readAllowed"];
     availablePlanListIds?: ZonePlanScope["listPlanIds"];
     availablePlanIds?: ZonePlanScope["planIds"];
     dnsSettingsReadAllowed?: DnsSettingsScope["readAllowed"];
@@ -270,6 +272,8 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
       zoneId: scope.zone.zoneId, settingIds: scope.zone.tlsSettingIds ?? [] }))]),
     ...(scope.zone === undefined ? [] : [metadata(zoneHoldDescriptor({ accountId, revision,
       zoneId: scope.zone.zoneId, readAllowed: scope.zone.zoneHoldReadAllowed ?? false }))]),
+    ...(scope.zone === undefined ? [] : [metadata(regionalCacheDescriptor({ accountId, revision,
+      zoneId: scope.zone.zoneId, readAllowed: scope.zone.regionalCacheReadAllowed ?? false }))]),
     ...(scope.zone === undefined ? [] : [metadata(dnsSettingsDescriptor({ accountId, revision,
       zoneId: scope.zone.zoneId, readAllowed: scope.zone.dnsSettingsReadAllowed ?? false }))]),
     ...(scope.zone === undefined ? [] : [metadata(dnssecDescriptor({ accountId, revision,
