@@ -6,6 +6,7 @@ import { branchLabel } from "./branch-update.js";
 import { projectLabel } from "./project-update.js";
 import { endpointLabel } from "./endpoint-update.js";
 import { bucketDeleteName } from "./bucket-delete.js";
+import { customDomainDeleteName } from "./custom-domain-delete.js";
 
 export const NEON_ORIGIN = "https://console.neon.tech";
 export const RESPONSE_BYTES = 65_536;
@@ -17,6 +18,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  deleteProjectBranchCustomDomain(project: string, branch: string, domain: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchBucket(project: string, branch: string, bucket: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchFunction(project: string, branch: string, slug: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchTrigger(project: string, branch: string, trigger: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -237,6 +239,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    deleteProjectBranchCustomDomain: (project: string, branch: string, domain: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/custom-domains/${customDomainDeleteName.parse(domain)}`,
+        new URLSearchParams(), options, undefined, false, 204),
     deleteProjectBranchBucket: (project: string, branch: string, bucket: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/buckets/${bucketDeleteName.parse(bucket)}`,
         new URLSearchParams(), options, undefined, false, 204),

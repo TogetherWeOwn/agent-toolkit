@@ -1161,6 +1161,28 @@ custody, durable recovery, provider effects/Beta entitlement and independent rev
 remain unresolved. Source/mocks only, zero enabled; no live deletion or lifecycle
 enforcement claim.
 
+## Reserved custom-domain deletion delta
+
+Copied project/branch/normalized domain/function-slug/revision and the dedicated
+exact domain/delete resource require common reserved native exact-plan authority.
+Parent/read, registration, function/trigger and cross-agent grants cannot substitute.
+Terminal bounded list preflight validates 10 rows per page and at most three pages,
+including duplicate/ancestry/continuation checks after an early target match, before
+one bodyless DELETE. Selected domain must still bind the expected function slug.
+Provider project-Admin restrictions are not bypassed; no caller authority/URL/DNS,
+force/registration or credential override is supported. Names are not immutable IDs;
+preflight is not atomic CAS and same-name rebinding remains unresolved.
+
+Only documented empty HTTP204 acknowledges the request. It is not provider identity
+echo, independent routing stoppage, DNS/certificate removal, invocation refusal,
+session closure or fencing. CNAME activation targets, validity status and routing/DNS
+diagnostics are never evaluated/emitted. Ambiguity gets one bounded list observation
+and stays uncertain even on absence/rebinding; no mutation retry or invented provider
+idempotency header. Permanent common journal blocks same-request replay/restart,
+not external writers. Native host/authority/custody, durable recovery, Beta effects/
+entitlement and independent reviews remain gates. Source/mocks only, zero enabled;
+no DNS following, live deletion or lifecycle enforcement.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.

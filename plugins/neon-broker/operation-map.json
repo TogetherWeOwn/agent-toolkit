@@ -4190,7 +4190,7 @@
       "id": "deleteProjectBranchCustomDomain",
       "apiArea": "functions",
       "tool": "neon.deleteProjectBranchCustomDomain",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/domain/delete",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -4198,12 +4198,15 @@
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/custom-domain-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only. Reserved native exact-plan authority and dedicated domain/delete grant required. Terminal bounded list preflight binds exact domain/function target, not atomic CAS; domain names are not immutable identity. Empty204 acknowledges only, not independent routing stoppage, DNS/certificate removal or fencing. Ambiguity remains uncertain after one bounded list observation, no retry; permanent common journal blocks restart/replay. Native host/custody/durable recovery, entitlement/effects and independent review unresolved; no live deletion or enablement."
     }
   ]
 }

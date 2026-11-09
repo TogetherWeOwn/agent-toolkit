@@ -1571,6 +1571,29 @@ not external writers. Native authority/host/custody, durable recovery, Beta
 effects/entitlement and independent reviews remain unresolved. Source/mocks only;
 no live deletion, invocation or runtime enablement.
 
+## Reserved custom-domain deletion request
+
+`createNeonCustomDomainDeleteOperations` copies one exact project/branch/normalized
+domain/function slug/revision. The dedicated `custom-domains/<domain>/delete` grant
+and reserved native exact-plan authorization precede credentials. A terminal list
+preflight (10 rows per page, at most three pages) validates names, target identities,
+duplicates and optional ancestry before one bodyless DELETE; finding the target
+on an early page does not bypass later validation. `pagination.next` is the pinned
+continuation field. Unknown future entity kinds on unrelated domains are data, not
+authority for the selected function target. Names are canonical lowercase hostnames;
+the composed resource must fit the common 256-character budget.
+
+Only empty HTTP204 becomes `{ acknowledged: true }`, never independently verified
+routing stoppage, DNS/certificate removal, invocation refusal, session or fencing
+proof. CNAME activation targets, status and DNS/routing diagnostics are not evaluated
+or emitted. Provider project-Admin/org-key access restrictions remain enforced; no
+privilege fallback. Preflight is not atomic CAS and cannot prevent same-name rebinding.
+Ambiguity gets one bounded terminal-list observation, remains uncertain even on
+absence/rebinding and never retries the mutation. Permanent common journal blocks
+same-request restart/replay, not external writers. No DNS following, registration,
+live mutation or enablement. Native host/authority/custody, durable recovery, Beta
+effects/entitlement and independent reviews remain unresolved.
+
 ## Shared contract and candidate compatibility
 
 Contract: `toolkit.provider-broker/v1`. Merged core: [PR #17](https://github.com/TogetherWeOwn/agent-toolkit/pull/17),
@@ -1596,8 +1619,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: ninety-eight implemented
-source adapters, 96 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: ninety-nine implemented
+source adapters, 95 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable
