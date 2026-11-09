@@ -71,6 +71,34 @@ not prove that the database write failed; retained rows remain authoritative for
 exclusion. A completed row alone is not a successful call: a matching durable
 ALLOW outcome and capture receipt must also be accepted independently.
 
+## Candidate exact-record retrieval
+
+The separate `createCloudflareNativeJournalReader` factory captures only the
+host-derived namespace and SDK `db.query` method (declaration lines 425–429),
+not the writer. Its internal `read` requires a request-key hash, independently
+expected target hash and original event. One parameterized fixed-table SELECT
+by key returns at most two rows so duplicate records refuse even if the host's
+unique constraint is broken. No scan, pagination, arbitrary selector or mutation
+is exposed. Missing rows return null; wrong target/event, malformed columns,
+invalid outcome, duplicate rows and query exceptions produce the same fixed
+`cloudflare.journal.unavailable` diagnostic without raw values or causes.
+Only a frozen targetHash/event/outcome snapshot returns; request keys and any
+unexpected columns never return. The factory is not connected to a tool, broker,
+coverage join or native handler.
+
+This narrows retrieval source work, **not authenticated native evidence
+acceptance**. The host must authorize the reader and supply the expected key,
+target and event from accepted correlation, never from untrusted model input.
+A missing row is not proof that no call executed. Pending/refused/uncertain are
+never promoted to success, and complete alone is not success either: core can
+write complete before outcome audit, then downgrade it to uncertain. A snapshot
+can become stale immediately. Native acceptance still needs independently
+accepted durable ALLOW audit/capture records, complete authenticated retrieval
+and a qualified consistency boundary; this reader provides no transaction,
+current-policy authority, successful-call attestation, reconciliation or retry.
+No native SELECT admission, capability or production database access is inferred
+from SDK declarations or isolated SQL fixtures.
+
 ## Source tests versus native acceptance
 
 `test/cloudflare-native-journal.test.mjs` executes the candidate statements on

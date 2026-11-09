@@ -3,6 +3,36 @@ import type { ProviderDependencies } from "../../../packages/core/src/provider/c
 import { digest, identifier } from "../../../packages/core/src/schema.js";
 
 type Database = Pick<PluginContext["db"], "namespace" | "execute">;
+type ReadDatabase = Pick<PluginContext["db"], "namespace" | "query">;
+type JournalSnapshot = Readonly<{ targetHash: string; event: string; outcome: "pending" | "complete" | "refused" | "uncertain" }>;
+
+// Internal exact-record retrieval only. The host must authorize the caller and
+// independently join durable audit/capture evidence; a snapshot is not acceptance.
+export function createCloudflareNativeJournalReader(database: ReadDatabase) {
+  const unavailable = () => new Error("cloudflare.journal.unavailable");
+  const namespace = database?.namespace;
+  if (typeof namespace !== "string" || !/^[a-z_][a-z0-9_]{0,62}$/.test(namespace) ||
+    typeof database?.query !== "function") throw unavailable();
+  const query = database.query.bind(database);
+  const table = `"${namespace}"."cloudflare_provider_calls"`;
+  return Object.freeze({
+    async read(key: string, expectedTargetHash: string, expectedEvent: string): Promise<JournalSnapshot | null> {
+      try {
+        digest.parse(key); digest.parse(expectedTargetHash); identifier.parse(expectedEvent);
+        const rows: unknown = await query(`SELECT key, target, event, outcome FROM ${table} WHERE key = $1 LIMIT 2`, [key]);
+        if (!Array.isArray(rows) || rows.length > 1) throw unavailable();
+        if (rows.length === 0) return null;
+        const row: unknown = rows[0];
+        if (row === null || typeof row !== "object" || Array.isArray(row)) throw unavailable();
+        const record = row as Record<string, unknown>;
+        if (Object.keys(record).sort().join(",") !== "event,key,outcome,target" || record.key !== key || record.target !== expectedTargetHash ||
+          record.event !== expectedEvent || (record.outcome !== "pending" && record.outcome !== "complete" &&
+            record.outcome !== "refused" && record.outcome !== "uncertain")) throw unavailable();
+        return Object.freeze({ targetHash: expectedTargetHash, event: expectedEvent, outcome: record.outcome });
+      } catch { throw unavailable(); }
+    },
+  });
+}
 
 // Candidate native SQL adapter, not installed-host qualification. The host must
 // provision and qualify the fixed table/unique key, SQL admission and durability

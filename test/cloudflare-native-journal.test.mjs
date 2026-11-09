@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { createCloudflareNativeJournal } from "../dist/plugins/cloudflare-broker/src/native-journal.js";
+import { createCloudflareNativeJournal, createCloudflareNativeJournalReader } from "../dist/plugins/cloudflare-broker/src/native-journal.js";
 import { cloudflareReadOperations } from "../dist/plugins/cloudflare-broker/src/read-operations.js";
 import { createProviderBroker } from "../dist/packages/core/src/provider/index.js";
 import { providerFixture, credentialCanary } from "../packages/core/testing/provider-fixture.mjs";
@@ -32,6 +32,9 @@ function fixture(t) {
   const port = (connection = db) => ({ namespace: "main", async execute(sql, params) {
     calls.push({ sql, params });
     return { rowCount: Number(connection.prepare(sql).run(Object.fromEntries(params.map((value, index) => [`$${index + 1}`, value]))).changes) };
+  }, async query(sql, params) {
+    calls.push({ sql, params });
+    return connection.prepare(sql).all(Object.fromEntries(params.map((value, index) => [`$${index + 1}`, value])));
   } });
   t.after(() => { for (const connection of connections) connection.close(); rmSync(directory, { recursive: true }); });
   return { path, db, connect, port, calls, journal: createCloudflareNativeJournal(port()),
@@ -177,6 +180,102 @@ test("Cloudflare candidate native journal lost completion acknowledgment refuses
   assert.equal((await f.invoke()).code, "REPLAY_CONFLICT");
   assert.equal(f.calls.secret, 1); assert.equal(f.requests.length, 1); assert.equal(f.calls.close, 1);
   assert.ok(!f.audit.some(record => record.phase === "outcome" && record.decision === "ALLOW"));
+});
+
+test("Cloudflare candidate journal reader snapshots its namespace/query and exposes no writer", async () => {
+  const calls = [];
+  const db = { namespace: "plugin_example", async query(sql, params) {
+    calls.push({ sql, params, receiver: this }); return [{ key, target, event, outcome: "pending" }];
+  } };
+  const reader = createCloudflareNativeJournalReader(db);
+  db.namespace = "foreign"; db.query = () => { throw new Error("mutated"); };
+  const out = await reader.read(key, target, event);
+  assert.deepEqual(out, { targetHash: target, event, outcome: "pending" });
+  assert.ok(Object.isFrozen(reader)); assert.ok(Object.isFrozen(out));
+  assert.deepEqual(Object.keys(reader), ["read"]); assert.equal(calls.length, 1);
+  assert.equal(calls[0].receiver, db); assert.deepEqual(calls[0].params, [key]);
+  assert.match(calls[0].sql, /^SELECT key, target, event, outcome FROM "plugin_example"\."cloudflare_provider_calls" WHERE key = \$1 LIMIT 2$/);
+  for (const namespace of [undefined, null, "", "a".repeat(64), "x.y", 'x"; DROP TABLE x', "x\n", "PUBLIC", "a-b"]) {
+    assert.throws(() => createCloudflareNativeJournalReader({ ...db, namespace }), /^Error: cloudflare\.journal\.unavailable$/);
+  }
+  assert.throws(() => createCloudflareNativeJournalReader({ namespace: "main", query: null }), /cloudflare.journal.unavailable/);
+});
+
+test("Cloudflare candidate journal reader returns absent and persistent exact pending/terminal snapshots", async t => {
+  const f = fixture(t), reader = createCloudflareNativeJournalReader(f.port());
+  assert.equal(await reader.read(key, target, event), null);
+  await f.journal.claim(key, target, event);
+  for (const outcome of ["pending", "complete", "uncertain"]) {
+    if (outcome !== "pending") await f.journal.finish(key, event, outcome);
+    const reopened = createCloudflareNativeJournalReader(f.port(f.connect()));
+    assert.deepEqual(await reopened.read(key, target, event), { targetHash: target, event, outcome });
+  }
+  const otherKey = "e".repeat(64); await f.journal.claim(otherKey, target, "refused-event");
+  await f.journal.finish(otherKey, "refused-event", "refused");
+  assert.deepEqual(await reader.read(otherKey, target, "refused-event"), { targetHash: target, event: "refused-event", outcome: "refused" });
+  assert.equal(f.rows().length, 2);
+  assert.equal(await f.journal.claim(key, target, "replay-event"), false);
+});
+
+test("Cloudflare candidate journal reader rejects invalid selectors before query and mismatched ownership", async t => {
+  const f = fixture(t), reader = createCloudflareNativeJournalReader(f.port());
+  for (const value of [undefined, null, "", "A".repeat(64), "x".repeat(65), "invalid/hash", {}]) {
+    await assert.rejects(reader.read(value, target, event), /cloudflare.journal.unavailable/);
+    await assert.rejects(reader.read(key, value, event), /cloudflare.journal.unavailable/);
+  }
+  for (const value of [null, "", "a".repeat(81), "event\n", "event/one", {}]) {
+    await assert.rejects(reader.read(key, target, value), /cloudflare.journal.unavailable/);
+  }
+  assert.equal(f.calls.length, 0);
+  await f.journal.claim(key, target, event);
+  await assert.rejects(reader.read(key, "e".repeat(64), event), /cloudflare.journal.unavailable/);
+  await assert.rejects(reader.read(key, target, "foreign-event"), /cloudflare.journal.unavailable/);
+  assert.deepEqual(f.rows(), [{ key, target, event, outcome: "pending" }]);
+});
+
+test("Cloudflare candidate journal reader rejects malformed/duplicate records with fixed redacted diagnostics", async () => {
+  const row = { key, target, event, outcome: "complete" };
+  for (const rows of [null, undefined, {}, [null], [[]], [row, row], [row, row, row],
+    [{ ...row, key: "e".repeat(64) }], [{ ...row, target: "e".repeat(64) }], [{ ...row, event: "foreign-event" }],
+    ...[undefined, null, "", "COMPLETE", "expired", {}].map(outcome => [{ ...row, outcome }]),
+    [{ ...row, extra: credentialCanary }]]) {
+    const reader = createCloudflareNativeJournalReader({ namespace: "main", async query() { return rows; } });
+    await assert.rejects(reader.read(key, target, event), failure => failure.message === "cloudflare.journal.unavailable" &&
+      failure.cause === undefined && !failure.stack.includes(credentialCanary));
+  }
+  const reader = createCloudflareNativeJournalReader({ namespace: "main", async query() { throw new Error(credentialCanary); } });
+  await assert.rejects(reader.read(key, target, event), failure => failure.message === "cloudflare.journal.unavailable" &&
+    failure.cause === undefined && !failure.stack.includes(credentialCanary));
+});
+
+test("Cloudflare candidate journal reader preserves actual-core success and uncertain audit snapshots", async t => {
+  const f = core(t); const append = f.dependencies.audit.append;
+  const success = await f.invoke(); assert.equal(success.ok, true);
+  const first = f.sql.rows()[0], reader = createCloudflareNativeJournalReader(f.sql.port(f.sql.connect()));
+  assert.deepEqual(await reader.read(first.key, first.target, first.event), { targetHash: first.target, event: success.event, outcome: "complete" });
+  f.dependencies.audit.append = async record => { if (record.phase === "outcome") throw new Error(credentialCanary); return append(record); };
+  const uncertain = await f.invoke("audit-failure"); assert.equal(uncertain.code, "OUTCOME_UNCERTAIN");
+  const second = f.sql.rows().find(row => row.event === uncertain.event);
+  assert.deepEqual(await reader.read(second.key, second.target, second.event), { targetHash: second.target, event: second.event, outcome: "uncertain" });
+  f.dependencies.audit.append = append;
+  assert.equal((await f.invoke("audit-failure")).code, "REPLAY_CONFLICT");
+  assert.equal(f.calls.secret, 2); assert.equal(f.requests.length, 2);
+  assert.ok(!JSON.stringify({ first, second, success, uncertain }).includes(credentialCanary));
+});
+
+test("Cloudflare candidate journal reader does not promote a lost-claim acknowledgment or allow replay", async t => {
+  let lose = true;
+  const f = core(t, port => ({ ...port, async execute(sql, params) {
+    const result = await port.execute(sql, params);
+    if (lose && sql.startsWith("INSERT")) { lose = false; throw new Error(credentialCanary); }
+    return result;
+  } }));
+  assert.equal((await f.invoke()).code, "DEPENDENCY_UNAVAILABLE");
+  const [row] = f.sql.rows(), reader = createCloudflareNativeJournalReader(f.sql.port(f.sql.connect()));
+  assert.deepEqual(await reader.read(row.key, row.target, row.event), { targetHash: row.target, event: row.event, outcome: "pending" });
+  assert.equal((await f.invoke()).code, "REPLAY_CONFLICT");
+  assert.equal(f.calls.secret, 0); assert.equal(f.requests.length, 0);
+  assert.equal((await reader.read(row.key, row.target, row.event)).outcome, "pending");
 });
 
 test("Cloudflare candidate native journal excludes competing processes on one persistent key", async t => {
