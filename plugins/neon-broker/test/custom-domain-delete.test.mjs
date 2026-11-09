@@ -94,6 +94,29 @@ test('Custom domain delete: complete bounded pagination required even after targ
   assert(capped.requests.every(({ init }) => init.method === 'GET'));
 });
 
+test('Custom domain delete: documented sort metadata is accepted on terminal and continuing pages; malformed or drifting sorts refuse', async () => {
+  for (const pagination of [{ sort_by: 'domain' }, { sort_order: 'asc' }, { sort_by: 'domain', sort_order: 'desc' }]) {
+    const f = fixture((url, init) => init.method === 'DELETE' ? new Response(null, { status: 204 }) : response({ ...listed, pagination }));
+    assert.deepEqual(await f.run('deleteProjectBranchCustomDomain', args), expected);
+    assert.equal(f.requests.length, 2);
+  }
+  const f = fixture((url, init, n) => init.method === 'DELETE' ? new Response(null, { status: 204 }) : response({ custom_domains: n === 1 ? [metadata] : [],
+    pagination: { sort_by: 'domain', sort_order: 'asc', ...(n === 1 ? { next: 'next' } : {}) } }));
+  assert.deepEqual(await f.run('deleteProjectBranchCustomDomain', args), expected);
+  assert.equal(f.requests[1].url, base + '?limit=10&cursor=next');
+  for (const pagination of [{ sort_by: null }, { sort_by: 'a'.repeat(81) }, { sort_order: 'unknown' }, { sort_order: null }, { sort_by: 'domain\n' }]) {
+    const g = fixture(() => response({ ...listed, pagination }));
+    await assert.rejects(g.run('deleteProjectBranchCustomDomain', args));
+    assert.equal(g.requests.length, 1);
+  }
+  for (const change of [{ sort_by: 'entity_id' }, { sort_order: 'desc' }]) {
+    const g = fixture((url, init, n) => response({ custom_domains: n === 1 ? [metadata] : [], pagination: {
+      sort_by: 'domain', sort_order: 'asc', ...(n === 1 ? { next: 'next' } : change) } }));
+    await assert.rejects(g.run('deleteProjectBranchCustomDomain', args));
+    assert.deepEqual(g.requests.map(({ init }) => init.method), ['GET', 'GET']);
+  }
+});
+
 test('Custom domain delete: ambiguity observes once without retry or upgrading absence/rebinding to success', async () => {
   for (const followup of [{ custom_domains: [] }, listed, { custom_domains: [{ ...metadata, entity_id: 'other' }] }, null]) {
     const f = fixture((url, init, n) => {

@@ -251,6 +251,19 @@ test('Custom domain delete: malformed/foreign list refuses before deletion; secr
   safeEnvelope(f, result);
 });
 
+test('Custom domain delete: schema-backed pagination sort metadata reaches acknowledgement without weakening late-page checks', async () => {
+  for (const drift of [false, true]) {
+    const f = customDomainDeletionBroker((url, init, n) => init.method === 'DELETE' ? new Response(null, { status: 204 }) : response({
+      custom_domains: n === 1 ? [customDomainDeleteMetadata] : [], pagination: { sort_by: 'domain', sort_order: drift && n === 2 ? 'desc' : 'asc',
+        ...(n === 1 ? { next: 'next' } : {}) } }));
+    const result = await f.call();
+    assert.equal(result.ok, !drift);
+    if (!drift) assert.deepEqual(result.value, { acknowledged: true });
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, drift ? 0 : 1);
+    safeEnvelope(f, result);
+  }
+});
+
 test('Custom domain delete: maximum copied project/branch/domain names fit common budgets', async () => {
   const config = { ...customDomainDeleteScope, projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), domain: 's'.repeat(63) + '.invalid', revision: 'r'.repeat(80) };
   const f = customDomainDeletionBroker(null, {}, config);

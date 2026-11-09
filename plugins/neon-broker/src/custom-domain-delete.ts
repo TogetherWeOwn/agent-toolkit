@@ -61,6 +61,8 @@ export function createNeonCustomDomainDeleteOperations(scope: NeonCustomDomainDe
         const cursors = new Set<string>();
         let found = false;
         let cursor: string | null = null;
+        let sortBy: string | undefined;
+        let sortOrder: string | undefined;
         for (let page = 0; page < 3; page++) {
           if (signal.aborted) throw Error("UPSTREAM_UNAVAILABLE");
           const raw = await transport.listProjectBranchCustomDomains(config.projectId, config.branchId, cursor, options);
@@ -80,7 +82,22 @@ export function createNeonCustomDomainDeleteOperations(scope: NeonCustomDomainDe
           }
           const pagination = optional(raw, "pagination");
           const next = pagination === undefined ? undefined : optional(pagination, "next");
-          if (pagination !== undefined) check(Reflect.ownKeys(pagination as object).every(key => key === "next"));
+          if (pagination !== undefined) {
+            check(Reflect.ownKeys(pagination as object).every(key => key === "next" || key === "sort_by" || key === "sort_order"));
+            const by = optional(pagination, "sort_by");
+            const order = optional(pagination, "sort_order");
+            if (by !== undefined) {
+              const parsed = text(80, /^[\x20-\x7e]+$/).parse(by);
+              check(sortBy === undefined || sortBy === parsed);
+              sortBy = parsed;
+            }
+            if (order !== undefined) {
+              check(order === "asc" || order === "desc");
+              check(sortOrder === undefined || sortOrder === order);
+              sortOrder = order;
+            }
+            // This list endpoint exposes no sort query; only its opaque cursor is sent.
+          }
           if (next === undefined) { check(found); return; }
           cursor = text(256, /^[\x20-\x7e]+$/).parse(next);
           check(!cursors.has(cursor));
