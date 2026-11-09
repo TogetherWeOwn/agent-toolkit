@@ -2671,20 +2671,25 @@
       "id": "deleteProjectVPCEndpoint",
       "apiArea": "project",
       "tool": "neon.deleteProjectVPCEndpoint",
-      "scope": "project_id/vpc_endpoint_id",
+      "scope": "exact_project_id/vpc_endpoint_id/restriction_remove",
       "sideEffects": [
+        "network-restriction-removal",
+        "may-broaden-network-access",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/project-vpc-remove.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only: exact restriction/remove grant, native exact-plan authority, host/custody/durable recovery, provider effects/entitlement and independent reviews unresolved. Removal may broaden network access; empty200 acknowledges only, not endpoint deletion, effective policy/session/fencing evidence. Preflight not atomic CAS; ambiguity stays uncertain after one observation, no retry."
     },
     {
       "id": "createProjectEndpoint",

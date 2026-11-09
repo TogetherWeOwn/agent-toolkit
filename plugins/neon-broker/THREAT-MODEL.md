@@ -1292,6 +1292,28 @@ response status/body bounds, abort/deadlines and common native identity/authorit
 TOCTOU, replay and safe envelopes. Source/mocks only; native host/custody, durable
 recovery, effects/entitlement and independent reviews remain unresolved.
 
+## Reserved project VPC restriction-removal delta
+
+`deleteProjectVPCEndpoint` copies exact project/cloud endpoint ID/revision and requires
+a dedicated restriction/remove grant plus reserved native exact-plan authorization.
+Mandatory bounded nonpaginated full-list presence preflight precedes one bodyless
+DELETE. Only empty200 normalizes acknowledgement; no identity echo or independent
+effective-policy observation. Full-list validation rejects duplicates, malformed IDs,
+foreign project/branch ancestry and pagination before selecting presence. Labels and
+provider diagnostics are not consumed. No organization endpoint deletion, cloud
+provisioning, live call or fallback is introduced.
+
+Removing a restriction may BROADEN network access; it is not a revocation, session
+closure, connection fence or cutover enforcing primitive. The plan states this effect
+and expressly disclaims endpoint deletion/enforcement/session evidence. Source coverage
+is not owner approval for live security weakening. Endpoint ID is not immutable
+restriction identity; preflight is not atomic CAS and reconfiguration races remain.
+Ambiguity gets one bounded list observation and stays uncertain even on absence;
+no retry, permanent common journal blocks same-request restart/replay, not external
+writers. Negative native-authority, TOCTOU, bounds/deadline, ignored-field and safe-envelope
+contracts are source/mocks, not runtime qualification. Host/custody, durable recovery,
+effects/entitlement, actual authority and independent reviews remain unresolved.
+
 ## Reserved Realtime disable delta
 
 `disableProjectBranchRealtime` copies exact project/branch/expected deployment revision

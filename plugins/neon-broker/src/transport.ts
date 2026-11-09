@@ -20,6 +20,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  deleteProjectVPCEndpoint(project: string, endpoint: string, options: MetadataRequestOptions): Promise<unknown>;
   disableProjectBranchRealtime(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchDataAPI(project: string, branch: string, database: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteNeonAuthOauthProvider(project: string, provider: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -265,6 +266,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    deleteProjectVPCEndpoint: (project: string, endpoint: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/vpc_endpoints/${identifier.parse(endpoint)}`, new URLSearchParams(), options,
+        undefined, false, 200, false, false, true),
     disableProjectBranchRealtime: (project: string, branch: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/realtime`, new URLSearchParams(), options,
         undefined, false, 202, false, false, true),
