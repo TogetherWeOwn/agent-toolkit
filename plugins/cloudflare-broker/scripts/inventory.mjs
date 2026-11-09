@@ -100,6 +100,8 @@ const descriptors = new Map([
   ["GET /zones", "cloudflare.zones.list"],
   ["GET /zones/{zone_id}", "cloudflare.zones.get"],
   ["GET /zones/{zone_id}/hold", "cloudflare.zones.hold.get"],
+  ["GET /zones/{zone_id}/available_plans", "cloudflare.zones.available_plans.list"],
+  ["GET /zones/{zone_id}/available_plans/{plan_identifier}", "cloudflare.zones.available_plans.get"],
   ["GET /zones/{zone_id}/dns_settings", "cloudflare.dns.settings.get"],
   ["GET /zones/{zone_id}/dns_records", "cloudflare.dns.list"],
   ["GET /zones/{zone_id}/dns_records/{dns_record_id}", "cloudflare.dns.get"],

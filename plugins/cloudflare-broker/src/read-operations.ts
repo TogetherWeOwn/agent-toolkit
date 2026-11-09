@@ -25,6 +25,7 @@ import { zoneTlsDescriptor, type ZoneTlsScope } from "./zone-tls.js";
 import { dnssecDescriptor, type DnssecScope } from "./dnssec.js";
 import { zoneListDescriptor, type ZoneListScope } from "./zone-list.js";
 import { zoneHoldDescriptor, type ZoneHoldScope } from "./zone-hold.js";
+import { zonePlanDescriptors, type ZonePlanScope } from "./zone-plans.js";
 import { dnsSettingsDescriptor, type DnsSettingsScope } from "./dns-settings.js";
 import { accountDnsDescriptor, type AccountDnsScope } from "./account-dns.js";
 import { accountDetailDescriptor, type AccountDetailScope } from "./account-detail.js";
@@ -147,6 +148,8 @@ export interface CloudflareReadScope extends MetadataScope {
     tlsSettingIds?: ZoneTlsScope["settingIds"];
     dnssecReadAllowed?: DnssecScope["readAllowed"];
     zoneHoldReadAllowed?: ZoneHoldScope["readAllowed"];
+    availablePlanListIds?: ZonePlanScope["listPlanIds"];
+    availablePlanIds?: ZonePlanScope["planIds"];
     dnsSettingsReadAllowed?: DnsSettingsScope["readAllowed"];
     universalSslReadAllowed?: UniversalSslScope["readAllowed"];
     automaticSslReadAllowed?: AutomaticSslScope["readAllowed"];
@@ -202,6 +205,8 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     zoneId: scope.zone.zoneId, routes: scope.zone.workerRoutes ?? [] });
   const tls = scope.zone === undefined ? undefined : hostnameTlsDescriptors({ accountId, revision,
     zoneId: scope.zone.zoneId, settings: scope.zone.hostnameTls ?? [] });
+  const plans = scope.zone === undefined ? undefined : zonePlanDescriptors({ accountId, revision,
+    zoneId: scope.zone.zoneId, listPlanIds: scope.zone.availablePlanListIds ?? [], planIds: scope.zone.availablePlanIds ?? [] });
   const content = currentContentDescriptor(sourceScope);
   const readContent = currentContentTransport(fetcher);
   const collectPages = pagesCollectionTransport(fetcher);
@@ -260,6 +265,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     ...(zone === undefined ? [] : [metadata(zone.zoneGet), metadata(zone.dnsList), metadata(zone.dnsGet)]),
     ...(routes === undefined ? [] : [metadata(routes.workerRoutesList), metadata(routes.workerRouteGet)]),
     ...(tls === undefined ? [] : [metadata(tls.settingsList), metadata(tls.settingGet)]),
+    ...(plans === undefined ? [] : [metadata(plans.plansList), metadata(plans.planGet)]),
     ...(scope.zone === undefined ? [] : [metadata(zoneTlsDescriptor({ accountId, revision,
       zoneId: scope.zone.zoneId, settingIds: scope.zone.tlsSettingIds ?? [] }))]),
     ...(scope.zone === undefined ? [] : [metadata(zoneHoldDescriptor({ accountId, revision,
