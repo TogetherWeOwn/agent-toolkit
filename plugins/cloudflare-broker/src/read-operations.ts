@@ -26,6 +26,7 @@ import { dnssecDescriptor, type DnssecScope } from "./dnssec.js";
 import { zoneListDescriptor, type ZoneListScope } from "./zone-list.js";
 import { zoneHoldDescriptor, type ZoneHoldScope } from "./zone-hold.js";
 import { dnsSettingsDescriptor, type DnsSettingsScope } from "./dns-settings.js";
+import { accountDnsDescriptor, type AccountDnsScope } from "./account-dns.js";
 import { accountDetailDescriptor, type AccountDetailScope } from "./account-detail.js";
 import { accountListDescriptor, type AccountListScope } from "./account-list.js";
 import { universalSslDescriptor, type UniversalSslScope } from "./universal-ssl.js";
@@ -95,6 +96,7 @@ export interface CloudflareReadScope extends MetadataScope {
   zoneListIds?: ZoneListScope["zoneIds"];
   accountDetailReadAllowed?: AccountDetailScope["readAllowed"];
   accountListReadAllowed?: AccountListScope["readAllowed"];
+  accountDnsReadAllowed?: AccountDnsScope["readAllowed"];
   subscriptions?: SubscriptionScope["subscriptions"];
   workerSchedules?: WorkerScheduleScope["workers"];
   workerSecrets?: WorkerSecretScope["workers"];
@@ -207,6 +209,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(zoneListDescriptor({ accountId, revision, zoneIds: scope.zoneListIds ?? [] })),
     metadata(accountDetailDescriptor({ accountId, revision, readAllowed: scope.accountDetailReadAllowed ?? false })),
     metadata(accountListDescriptor({ accountId, revision, readAllowed: scope.accountListReadAllowed ?? false })),
+    metadata(accountDnsDescriptor({ accountId, revision, readAllowed: scope.accountDnsReadAllowed ?? false })),
     metadata(subscriptions.subscriptionsList), metadata(subscriptions.subscriptionGet),
     metadata(workerScheduleDescriptor({ accountId, revision, workers: scope.workerSchedules ?? [] })),
     metadata(scriptSettings.scriptSettingsGet), metadata(scriptSettings.usageModelGet),

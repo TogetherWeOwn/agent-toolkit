@@ -31,6 +31,17 @@ function flag(row: Row, field: string): boolean | "unavailable" {
   return value === undefined ? "unavailable" : value as boolean;
 }
 
+export function projectDnsConfiguration(row: Row) {
+  const mode = row.zone_mode;
+  requireThat(mode === undefined || mode === "standard" || mode === "cdn_only" || mode === "dns_only", "upstream");
+  const ttl = row.ns_ttl;
+  requireThat(ttl === undefined || (typeof ttl === "number" && Number.isFinite(ttl) && ttl >= 30 && ttl <= 86400), "upstream");
+  return Object.freeze({ flattenAllCnames: flag(row, "flatten_all_cnames"), multiProvider: flag(row, "multi_provider"),
+    secondaryOverrides: flag(row, "secondary_overrides"),
+    zoneMode: (mode === undefined ? "unavailable" : mode) as DnsSettingsResult["zoneMode"],
+    nameserverTtl: ttl === undefined ? "unavailable" as const : ttl as number });
+}
+
 // SOA names/contact, internal fallback-zone IDs and nameserver-set identities
 // are deliberately omitted. Configured values do not establish DNS behavior.
 export function dnsSettingsDescriptor(scope: DnsSettingsScope): MetadataDescriptor<Arguments, DnsSettingsResult> {
@@ -66,14 +77,7 @@ export function dnsSettingsDescriptor(scope: DnsSettingsScope): MetadataDescript
       requireThat(body.success === true && Array.isArray(body.errors) && body.errors.length === 0 && Object.hasOwn(body, "result"), "upstream");
       const row = object(body.result);
       context(row);
-      const mode = row.zone_mode;
-      requireThat(mode === undefined || mode === "standard" || mode === "cdn_only" || mode === "dns_only", "upstream");
-      const ttl = row.ns_ttl;
-      requireThat(ttl === undefined || (typeof ttl === "number" && Number.isFinite(ttl) && ttl >= 30 && ttl <= 86400), "upstream");
-      return Object.freeze({ flattenAllCnames: flag(row, "flatten_all_cnames"), multiProvider: flag(row, "multi_provider"),
-        secondaryOverrides: flag(row, "secondary_overrides"),
-        zoneMode: (mode === undefined ? "unavailable" : mode) as DnsSettingsResult["zoneMode"],
-        nameserverTtl: ttl === undefined ? "unavailable" as const : ttl as number,
+      return Object.freeze({ ...projectDnsConfiguration(row),
         subject: "configured-zone-dns-settings" as const, effectiveDnsBehavior: "not-established" as const });
     },
   });
