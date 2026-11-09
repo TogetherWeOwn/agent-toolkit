@@ -275,6 +275,21 @@ test("Pages runner uses existing broker for both operations, redacts output and 
   assert.equal((await f.run()).stopReason, "provider-refused"); assert.equal(f.requests.length, 6);
 });
 
+for (const afterCall of [false, true]) test(`Pages runner samples deadline after trusted context refresh ${afterCall ? "at acceptance" : "before dispatch"}`, async t => {
+  t.mock.timers.enable({ apis: ["Date"], now: startedAt });
+  const f = runnerFixture();
+  let now = startedAt, refreshes = 0;
+  f.ports.clock = () => now;
+  f.ports.readContext = async () => {
+    if (++refreshes === (afterCall ? 2 : 1)) now = startedAt + f.s.budgets.elapsedMs;
+    return f.s;
+  };
+  const m = await f.run();
+  assert.equal(m.stopReason, "elapsed-cap"); assert.equal(m.projects.discovered, 0);
+  assert.equal(f.requests.length, afterCall ? 1 : 0); assert.equal(m.usage.rows, 0);
+  assert.equal(m.window.completedAt, now); incomplete(m);
+});
+
 for (const option of ["auditFailure", "sinkFailure", "readFailure", "denied", "revoke", "cancel"]) test(`Pages runner halts safely on ${option} without retry`, async t => {
   t.mock.timers.enable({ apis: ["Date"], now: startedAt });
   const f = runnerFixture({ [option]: true }), m = await f.run();

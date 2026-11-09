@@ -265,7 +265,8 @@ export async function collectPagesInventory(session: PagesTraversalSession, scop
   const broker = createCloudflareReadBroker(fixedScope, { accountId: fixedScope.accountId, revision: fixedScope.revision }, dependencies, evidence, fetcher);
   try {
     for (;;) {
-      const request = traversal.next(ports.clock(), await ports.readContext(), ports.signal.aborted);
+      const currentContext = await ports.readContext();
+      const request = traversal.next(ports.clock(), currentContext, ports.signal.aborted);
       if (request === null) break;
       // Session-local deterministic identities; the core journal owns atomic
       // replay exclusion. Keys are never exported as evidence receipts.
@@ -274,7 +275,8 @@ export async function collectPagesInventory(session: PagesTraversalSession, scop
       if (!result.ok) { traversal.stop(result.code === "OUTCOME_UNCERTAIN" ? "uncertain-outcome" : "provider-refused", ports.clock()); break; }
       const observation = await ports.readObservation(result, request);
       requireThat(canonicalHash(observation.result as unknown as Json) === canonicalHash(result as unknown as Json), "scope");
-      traversal.accept(request, observation, ports.clock(), await ports.readContext(), ports.signal.aborted);
+      const refreshedContext = await ports.readContext();
+      traversal.accept(request, observation, ports.clock(), refreshedContext, ports.signal.aborted);
     }
   } catch { traversal.stop("records-unavailable", ports.clock()); }
   return traversal.manifest();

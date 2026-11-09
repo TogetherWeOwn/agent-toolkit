@@ -54,6 +54,8 @@ Elapsed and cancellation checks are **session admission/acceptance checks**, not
 new native wall-clock supervisor. The existing broker owns the bounded in-flight GET
 and cleanup. Cancellation during a call is observed after it settles and discards its
 output from accepted session coverage; there is no fire-and-forget race or retry.
+The runner samples its clock after each awaited trusted-context refresh, so refresh
+latency counts against both dispatch admission and returned-page acceptance.
 Trusted host/context/storage callbacks still need their own qualified bounded latency
 and cleanup. No source test establishes those native properties.
 
