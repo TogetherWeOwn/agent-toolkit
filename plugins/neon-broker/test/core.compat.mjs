@@ -49,6 +49,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   userKeyRevokeFixture, userKeyRevokeArgs, userKeyRevokeScope, userKeyRevokeReceipt,
   organizationKeyRevokeFixture, organizationKeyRevokeArgs, organizationKeyRevokeScope, organizationKeyRevokeReceipt,
   credentialRevokeFixture, credentialRevokeArgs, credentialRevokeScope, credentialRevokeMetadata,
+  projectMemberRoleRemoveFixture, projectMemberRoleRemoveArgs, projectMemberRoleRemoveScope, projectMemberRoleRemoveMetadata, projectMemberRoleRemoveReceipt,
   organizationMemberRemoveFixture, organizationMemberRemoveArgs, organizationMemberRemoveScope, organizationMemberRemoveMetadata,
   permissionRevokeFixture, permissionRevokeArgs, permissionRevokeScope, permissionRevokeReceipt,
   roleDeleteFixture, roleDeleteArgs, roleDeleteScope, roleDeleteReceipt,
@@ -128,6 +129,127 @@ function safeEnvelope(f, result) {
     assert(!serialized.includes(secret), `secret in output/audit/journal: ${secret}`);
   }
 }
+
+function projectMemberRoleRemovalBroker(value, overrides = {}, config = projectMemberRoleRemoveScope) {
+  const provider = projectMemberRoleRemoveFixture(value, config);
+  const args = { project_id: config.projectId, member_id: config.memberId };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('removeProjectMemberRole').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.removeProjectMemberRole', args, context, key);
+  } };
+}
+
+test('project member role remove: reserved authority and exact member/role/remove AND agent grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = projectMemberRoleRemovalBroker(undefined, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = `neon/projects/project-a/members/${projectMemberRoleRemoveScope.memberId}`;
+  for (const resource of [target, target + '/role', target + '/remove', target.replace('project-a', 'other') + '/role/remove',
+    target.replace(projectMemberRoleRemoveScope.memberId, projectMemberRoleRemoveScope.userId) + '/remove', 'neon/projects/project-a/members']) {
+    const f = projectMemberRoleRemovalBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = projectMemberRoleRemovalBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = projectMemberRoleRemovalBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { member_id: projectMemberRoleRemoveScope.memberId, acknowledged: true });
+  assert.equal(f.common.calls.consumed, 1);
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('project member role remove: native authorization rejects stale, wrong-target and unconsumable evidence', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = projectMemberRoleRemovalBroker();
+    const base = f.common.authority;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { return false; } };
+    const result = await f.common.broker().call('neon.removeProjectMemberRole', projectMemberRoleRemoveArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('project member role remove: identity/resource TOCTOU and caller target/authority overrides refuse', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = projectMemberRoleRemovalBroker(undefined, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = projectMemberRoleRemovalBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.removeProjectMemberRole', projectMemberRoleRemoveArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { project_id: 'other' }, { member_id: projectMemberRoleRemoveScope.userId }, { user_id: 'user-a' }, { role: 'admin' }, { retry: true }]) {
+    const g = projectMemberRoleRemovalBroker();
+    assert.equal((await g.common.broker().call('neon.removeProjectMemberRole', { ...projectMemberRoleRemoveArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('project member role remove: permanent journal blocks complete and uncertain replay after restart', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = projectMemberRoleRemovalBroker((url, init) => {
+      if (init.method === 'DELETE') { if (ambiguous) throw Error(credentialCanary); return response(projectMemberRoleRemoveReceipt); }
+      return response({ project_members: [projectMemberRoleRemoveMetadata] });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('project member role remove: wrong response identities stay uncertain; profile/default access never enter envelopes', async () => {
+  for (const change of [{ project_id: 'other' }, { member_id: projectMemberRoleRemoveScope.userId }, { user_id: projectMemberRoleRemoveScope.memberId }, { org_role: 'admin' }, { pagination: {} }]) {
+    const f = projectMemberRoleRemovalBroker({ ...projectMemberRoleRemoveReceipt, ...change });
+    const result = await f.call();
+    assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, 'uncertain');
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 1);
+    safeEnvelope(f, result);
+  }
+  const f = projectMemberRoleRemovalBroker((url, init) => response(init.method === 'DELETE' ? {
+    ...projectMemberRoleRemoveReceipt, effective_project_permission: 'EDITOR', credential_rotation_recommended: true,
+    email: credentialCanary, name: derivedCanary } : { project_members: [{ ...projectMemberRoleRemoveMetadata, email: credentialCanary, name: derivedCanary }] }));
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { member_id: projectMemberRoleRemoveScope.memberId, acknowledged: true });
+  safeEnvelope(f, result);
+});
+
+test('project member role remove: maximum copied organization, UUID and plan fields fit common budgets', async () => {
+  const config = { ...projectMemberRoleRemoveScope, projectId: 'p'.repeat(60), expectedOrgRole: 'collaborator', revision: 'r'.repeat(80) };
+  const f = projectMemberRoleRemovalBroker(undefined, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
 
 function organizationMemberRemovalBroker(value = {}, overrides = {}, config = organizationMemberRemoveScope) {
   const provider = organizationMemberRemoveFixture(value, config);

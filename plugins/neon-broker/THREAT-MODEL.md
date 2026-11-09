@@ -19,6 +19,26 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
 
+## Reserved explicit project-grant removal source delta
+
+Exact copied project/member UUID/user UUID/expected org-role/explicit permission and
+revision require a dedicated member/role/remove grant and reserved native exact-plan
+authority before credentials. A terminal bounded list preflight validates identities,
+explicit grant and expected permission: 10 rows/page, three pages, pagination.next,
+duplicate/reassociation/ancestry/cycle/ceiling refusal before the sole bodyless DELETE.
+Preflight is not atomic CAS. No confirm_self_lockout is sent; provider self-lockout
+controls remain intact. Provider idempotence does not authorize a mutation retry.
+
+Only HTTP200 exact project/member/user/org-role echo acknowledges. Organization-default
+access still applies; this is not independent effective-access removal, credential
+revocation, session closure, fencing, completeness or cutover enforcement. Profile,
+default/effective permission and rotation hints are never evaluated/emitted. Ambiguity
+gets at most one bounded list observation and remains uncertain even on absence or
+default access. Permanent common journal blocks restart/replay, not external writers.
+Each request remains bounded at 64KiB/1s; an 8s operation ceiling covers up to seven
+requests. Native host/authority/custody/durable recovery, effects/entitlement and
+independent reviews remain unresolved. Source/mocks only; no live grant removal.
+
 ## Reserved organization-member removal source delta
 
 Exact copied organization/member UUID/user UUID/expected role/revision and a dedicated

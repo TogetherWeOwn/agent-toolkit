@@ -7,6 +7,28 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonProjectMemberRoleRemoveOperations(trustedScope, transport)` adds reserved
+`removeProjectMemberRole` source. Copy exact project/member UUID/user UUID, expected
+organization role, explicit project permission and revision; require the dedicated
+`neon/projects/<project>/members/<member>/role/remove` grant and common-core native
+exact-plan authority before credentials. A terminal bounded member-list preflight
+(10 rows/page, three pages, pagination.next) validates identity, explicit grant and
+expected permission before one bodyless DELETE. Later duplicates, reassociation,
+malformed pagination or a nonterminal third page refuse even if the target was seen.
+
+Only HTTP200 exact project/member/user/org-role echo yields closed acknowledgement.
+Organization-default access still applies; no effective-access removal, credential
+revocation/rotation, session closure, fencing or completeness is inferred. No
+confirm_self_lockout is sent, no provider self-lockout control is bypassed. Profiles,
+default/effective permissions and rotation hints are never evaluated/emitted.
+Preflight is not atomic CAS. Ambiguity gets at most one bounded list observation,
+then stays uncertain even on absence or default access; no mutation retry despite
+provider idempotence. Permanent common journal barriers block restart/replay, not
+external writers. Each request keeps the 64KiB/1s bound; operation ceiling 8s covers
+three preflight pages, one mutation and three reconciliation pages. Native authority,
+host/custody/durable recovery, effects/entitlement and independent reviews remain
+gates. Source/mocks only, no live removal or runtime enablement.
+
 `createNeonOrganizationMemberRemoveOperations(trustedScope, transport)` adds reserved
 `removeOrganizationMember` source. Copy exact organization/member UUID/user UUID,
 expected known role and revision. Dedicated
@@ -1464,8 +1486,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: ninety-two implemented
-source adapters, 102 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: ninety-three implemented
+source adapters, 101 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

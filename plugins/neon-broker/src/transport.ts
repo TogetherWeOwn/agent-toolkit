@@ -16,6 +16,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  removeProjectMemberRole(project: string, member: string, options: MetadataRequestOptions): Promise<unknown>;
   removeOrganizationMember(organization: string, member: string, options: MetadataRequestOptions): Promise<unknown>;
   revokePermissionFromProject(project: string, permission: string, options: MetadataRequestOptions): Promise<unknown>;
   revokeCredential(project: string, branch: string, token: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -230,6 +231,10 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    removeProjectMemberRole: (project: string, member: string, options: MetadataRequestOptions) => {
+      if (typeof member !== "string" || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(member) || /[^a-f0-9-]/.test(member)) throw Error("INVALID_ARGUMENTS");
+      return request(`/projects/${authPathId(project)}/members/${member}/role`, new URLSearchParams(), options, undefined, false, 200);
+    },
     removeOrganizationMember: (organization: string, member: string, options: MetadataRequestOptions) => {
       if (typeof member !== "string" || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(member) || /[^a-f0-9-]/.test(member)) throw Error("INVALID_ARGUMENTS");
       return request(`/organizations/${authPathId(organization)}/members/${member}`, new URLSearchParams(), options, undefined, false, 200);

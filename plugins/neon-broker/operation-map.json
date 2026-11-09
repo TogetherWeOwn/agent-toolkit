@@ -592,20 +592,24 @@
       "id": "removeProjectMemberRole",
       "apiArea": "project",
       "tool": "neon.removeProjectMemberRole",
-      "scope": "project_id/member_id",
+      "scope": "project_id/member_id/role/remove",
       "sideEffects": [
+        "explicit-project-grant-removal-request",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/project-member-role-remove.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Reserved explicit project-grant removal-request source only; terminal bounded member/user/org-role/explicit-permission preflight then one DELETE. Organization-default access remains; no self-lockout confirmation or bypass. Acknowledgement is not independent access removal, credential revocation, session fencing or cutover enforcement. Preflight not atomic CAS. Native authority/host/policy/custody, durable common journal recovery, effects/entitlement and independent reviews unresolved."
     },
     {
       "id": "revokePermissionFromProject",

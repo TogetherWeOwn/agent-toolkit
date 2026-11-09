@@ -50,6 +50,7 @@ import { createNeonEndpointRestartOperations } from '../dist/plugins/neon-broker
 import { createNeonEndpointSuspendOperations } from '../dist/plugins/neon-broker/src/endpoint-suspend.js';
 import { createNeonEndpointDeleteOperations } from '../dist/plugins/neon-broker/src/endpoint-delete.js';
 import { createNeonDatabaseDeleteOperations } from '../dist/plugins/neon-broker/src/database-delete.js';
+import { createNeonProjectMemberRoleRemoveOperations } from '../dist/plugins/neon-broker/src/project-member-role-remove.js';
 import { createNeonOrganizationMemberRemoveOperations } from '../dist/plugins/neon-broker/src/organization-member-remove.js';
 import { createNeonPermissionRevokeOperations } from '../dist/plugins/neon-broker/src/permission-revoke.js';
 import { createNeonCredentialRevokeOperations } from '../dist/plugins/neon-broker/src/credential-revoke.js';
@@ -475,7 +476,20 @@ export function objectDownloadFixture(value, config = objectDownloadScope) {
   return fixture(typeof value === 'function' ? value : () => binaryResponse(value.bytes), config, createNeonObjectDownloadOperations);
 }
 export const allCases = [...objectDownloadCases, ...oauthProviderCases, ...logQueryCases, ...schemaComparisonCases, ...logValueCases, ...branchSchemaCases, ...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
-export const sourceNames = [...allCases.map(([name]) => name), 'deleteSnapshot', 'updateSnapshot', 'updateProjectBranch', 'updateProject', 'updateProjectEndpoint', 'suspendProjectEndpoint', 'deleteProjectEndpoint', 'startProjectEndpoint', 'restartProjectEndpoint', 'deleteProjectBranch', 'deleteProject', 'deleteProjectBranchDatabase', 'deleteProjectBranchRole', 'revokeApiKey', 'revokeOrgApiKey', 'revokeCredential', 'revokePermissionFromProject', 'removeOrganizationMember'];
+export const sourceNames = [...allCases.map(([name]) => name), 'deleteSnapshot', 'updateSnapshot', 'updateProjectBranch', 'updateProject', 'updateProjectEndpoint', 'suspendProjectEndpoint', 'deleteProjectEndpoint', 'startProjectEndpoint', 'restartProjectEndpoint', 'deleteProjectBranch', 'deleteProject', 'deleteProjectBranchDatabase', 'deleteProjectBranchRole', 'revokeApiKey', 'revokeOrgApiKey', 'revokeCredential', 'revokePermissionFromProject', 'removeOrganizationMember', 'removeProjectMemberRole'];
+export const projectMemberRoleRemoveScope = { projectId: 'project-a', memberId: '11111111-1111-4111-8111-111111111111',
+  userId: '22222222-2222-4222-8222-222222222222', expectedOrgRole: 'editor', expectedPermission: 'EDITOR', revision: 'scope-v1' };
+export const projectMemberRoleRemoveArgs = { project_id: 'project-a', member_id: projectMemberRoleRemoveScope.memberId };
+export const projectMemberRoleRemoveMetadata = { member_id: projectMemberRoleRemoveScope.memberId, user_id: projectMemberRoleRemoveScope.userId,
+  org_role: 'editor', explicit_project_permission: 'EDITOR', grant_source: 'explicit' };
+export const projectMemberRoleRemoveReceipt = { project_id: 'project-a', member_id: projectMemberRoleRemoveScope.memberId,
+  user_id: projectMemberRoleRemoveScope.userId, org_role: 'editor' };
+export function projectMemberRoleRemoveFixture(value, config = projectMemberRoleRemoveScope) {
+  return fixture((url, init, n) => typeof value === 'function' ? value(url, init, n) :
+    init.method === 'DELETE' ? response(value === undefined ? { project_id: config.projectId, member_id: config.memberId, user_id: config.userId, org_role: config.expectedOrgRole } : value) :
+      response({ project_members: [{ member_id: config.memberId, user_id: config.userId, org_role: config.expectedOrgRole,
+        explicit_project_permission: config.expectedPermission, grant_source: 'explicit' }] }), config, createNeonProjectMemberRoleRemoveOperations);
+}
 export const organizationMemberRemoveScope = { organizationId: 'org-a', memberId: '11111111-1111-4111-8111-111111111111',
   userId: '22222222-2222-4222-8222-222222222222', expectedRole: 'editor', revision: 'scope-v1' };
 export const organizationMemberRemoveArgs = { org_id: 'org-a', member_id: organizationMemberRemoveScope.memberId };
