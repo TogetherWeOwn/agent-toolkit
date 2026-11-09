@@ -42,12 +42,13 @@ function core(t, wrap = port => port) {
   const scope = { accountId: "c".repeat(32), revision: "resource-1", scriptNames: [], hyperdriveIds: [],
     pagesProjects: [{ projectName: "safe-pages", projectId: "project-id", deploymentIds: [] }],
     pagesPagination: { projects: true, deploymentProjects: [] } };
+  const source = { accountId: scope.accountId, revision: scope.revision, sourceDigestScriptNames: [] };
   const tool = "cloudflare.pages.projects.list", args = { page: 1, perPage: 10 };
-  const operation = cloudflareReadOperations(scope).find(op => op.name === tool);
+  const operation = cloudflareReadOperations(scope, source).find(op => op.name === tool);
   f.vector.policy = { revision: "policy-1", agents: [f.vector.principal.agent], resources: [operation.prepare(args).resource.id] };
   const sink = createCloudflareNativeAuditSink(wrap(sql.port()));
   f.dependencies.audit = { async append(row) { f.audit.push(row); await sink.append(row); } };
-  const broker = createCloudflareReadBroker(scope, undefined, f.dependencies, { async append(row) { captures.push(row); } }, async (url, init) => {
+  const broker = createCloudflareReadBroker(scope, source, f.dependencies, { async append(row) { captures.push(row); } }, async (url, init) => {
     requests.push(url); assert.equal(init.headers.authorization, `Bearer ${credentialCanary}`);
     return new Response(JSON.stringify({ success: true, errors: [], result: [{ id: "project-id", name: "safe-pages" }],
       result_info: { page: 1, per_page: 10, total_pages: 1 } }), { headers: { "content-type": "application/json" } });
