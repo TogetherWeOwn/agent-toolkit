@@ -625,7 +625,7 @@ test('Organization VPC delete: complete/uncertain permanent journal blocks resta
 test('Organization VPC delete: foreign/absent restrictions and reflected lease strings cannot enter safe envelopes', async () => {
   for (const raw of [{ ...organizationVPCDeleteMetadata, org_id: 'other' }, { ...organizationVPCDeleteMetadata, pagination: {} },
     {}, { vpc_endpoint_id: credentialCanary },
-    { vpc_endpoint_id: 'vpce-a', region_id: credentialCanary }] {
+    { vpc_endpoint_id: 'vpce-a', region_id: credentialCanary }]) {
     const f = organizationVPCDeleteBroker(() => response(raw));
     const result = await f.call();
     assert.equal(result.ok, false);
