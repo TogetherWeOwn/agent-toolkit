@@ -1051,6 +1051,25 @@ host/authority/custody/durable recovery/effects/entitlement qualification and al
 independent reviews remain prerequisites. No live deletion, secret action, OAuth
 flow, create/rotate fallback or runtime registration is introduced.
 
+## Reserved JWKS-deletion acknowledgement delta
+
+Copied exact project/JWKS ID/nullable branch/revision binds a dedicated delete
+resource and reserved native exact-plan authorization. Null requires absence of a
+branch field; it never widens to any branch. Mandatory nonpaginated list preflight
+caps at 30 rows, rejects duplicate/foreign/malformed/paginated observations and
+requires selected identity presence before one bodyless DELETE. HTTP200 must echo
+exact ID/project/branch. URLs, provider names, audiences, roles, timestamps and
+unexpected secrets are never evaluated or followed; caller identity, authority,
+URL, credential, target and retry overrides refuse. Preflight is not atomic CAS.
+
+Acknowledgement does not independently establish JWT-authentication refusal,
+effective ACL removal, session closure, credential completeness or fencing.
+Ambiguity receives one bounded list observation and remains uncertain even on
+absence; no mutation retry, alternate provider/SQL path or fabricated idempotency
+header. Common permanent journal recovery must survive restart/replay. Native
+host/authority/custody/effects/entitlement qualification and independent acceptance
+remain prerequisites. No live mutation, key retrieval or runtime grant is added.
+
 ## Bounded binary object byte-count observation delta
 
 One copied project/branch/bucket/key/revision binds an exact object/download grant,

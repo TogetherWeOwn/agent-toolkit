@@ -1482,6 +1482,27 @@ idempotency header. The common permanent journal blocks replay/restart. Beta
 availability, provider effects, native authority/host/policy/custody, durable recovery
 and independent review remain unresolved. Source/mocks only; no live deletion or enablement.
 
+## Reserved JWKS deletion request
+
+`createNeonJWKSDeleteOperations` copies one exact project/JWKS ID/revision and a
+required nullable branch binding: null means project-wide, not any branch.
+`neon.deleteProjectJWKS` accepts only `{ project_id, jwks_id }`, requires the
+separate `neon/projects/<project>/jwks/<jwks>/delete` grant and reserved native
+exact-plan authorization. A mandatory bounded project-JWKS list validates all
+rows before requiring the selected ID/project/branch; then one bodyless DELETE
+must return HTTP200 with the exact identity. Metadata, parent and sibling grants
+do not authorize deletion. URLs, provider names, audiences, role names, timestamps
+and unexpected secrets are never evaluated, emitted or followed.
+
+The closed identity/acknowledged output is only a provider acknowledgement, not
+independently observed JWT-authentication refusal, effective-access removal,
+session closure, completeness or cutover fencing. Preflight is not atomic CAS.
+Ambiguity gets at most one bounded list observation and stays uncertain even on
+absence; no retry or invented provider idempotency header. The common permanent
+journal blocks restart/replay. Native authority/host/policy/custody, durable
+recovery, effects/entitlement and independent reviews remain unresolved.
+Source/mocks only; no live deletion, key-material retrieval or runtime enablement.
+
 ## Shared contract and candidate compatibility
 
 Contract: `toolkit.provider-broker/v1`. Merged core: [PR #17](https://github.com/TogetherWeOwn/agent-toolkit/pull/17),
@@ -1507,8 +1528,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: ninety-four implemented
-source adapters, 100 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: ninety-five implemented
+source adapters, 99 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

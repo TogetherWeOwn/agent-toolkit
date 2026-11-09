@@ -52,6 +52,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   projectMemberRoleRemoveFixture, projectMemberRoleRemoveArgs, projectMemberRoleRemoveScope, projectMemberRoleRemoveMetadata, projectMemberRoleRemoveReceipt,
   organizationMemberRemoveFixture, organizationMemberRemoveArgs, organizationMemberRemoveScope, organizationMemberRemoveMetadata,
   authClientDeleteFixture, authClientDeleteArgs, authClientDeleteScope, authClientDeleteMetadata,
+  jwksDeleteFixture, jwksDeleteArgs, jwksDeleteScope, jwksDeleteMetadata,
   permissionRevokeFixture, permissionRevokeArgs, permissionRevokeScope, permissionRevokeReceipt,
   roleDeleteFixture, roleDeleteArgs, roleDeleteScope, roleDeleteReceipt,
   branchDeleteFixture, branchDeleteArgs, branchDeleteScope, branchDeleteReceipt,
@@ -130,6 +131,129 @@ function safeEnvelope(f, result) {
     assert(!serialized.includes(secret), `secret in output/audit/journal: ${secret}`);
   }
 }
+
+function jwksDeletionBroker(value = null, overrides = {}, config = jwksDeleteScope) {
+  const provider = jwksDeleteFixture(value, config);
+  const args = { project_id: config.projectId, jwks_id: config.jwksId };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('deleteProjectJWKS').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.deleteProjectJWKS', args, context, key);
+  } };
+}
+
+test('JWKS delete: reserved authority and exact delete AND agent grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = jwksDeletionBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = 'neon/projects/project-a/jwks/jwks-a';
+  for (const resource of [target, target + '/read', target.replace('project-a', 'other') + '/delete',
+    target.replace('jwks-a', 'other') + '/delete', 'neon/projects/project-a/jwks', 'neon/projects/project-a/delete']) {
+    const f = jwksDeletionBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = jwksDeletionBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = jwksDeletionBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { ...jwksDeleteMetadata, acknowledged: true });
+  assert.equal(f.common.calls.consumed, 1);
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('JWKS delete: native authorization independently rejects stale, wrong-target and unconsumable evidence', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = jwksDeletionBroker();
+    const base = f.common.authority;
+    let consumeCalls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.deleteProjectJWKS', jwksDeleteArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('JWKS delete: identity/resource TOCTOU and caller authority/target overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = jwksDeletionBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = jwksDeletionBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.deleteProjectJWKS', jwksDeleteArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { project_id: 'other' }, { jwks_id: 'other' }, { branch_id: 'other' }, { token: 'not-a-token' }, { retry: true }]) {
+    const g = jwksDeletionBroker();
+    assert.equal((await g.common.broker().call('neon.deleteProjectJWKS', { ...jwksDeleteArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('JWKS delete: permanent journal blocks complete and uncertain replay after restart', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = jwksDeletionBroker((url, init) => {
+      if (init.method === 'DELETE') { if (ambiguous) throw Error(credentialCanary); return response(jwksDeleteMetadata); }
+      return response({ jwks: [jwksDeleteMetadata] });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('JWKS delete: foreign/reassociated/paginated preflight refuses; secret-bearing extras never enter envelopes', async () => {
+  for (const change of [{ branch_id: 'other' }, { project_id: 'other' }, { id: credentialCanary }, { pagination: {} }]) {
+    const f = jwksDeletionBroker(() => response({ jwks: [{ ...jwksDeleteMetadata, ...change }] }));
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 0);
+    safeEnvelope(f, result);
+  }
+  const value = { ...jwksDeleteMetadata, jwks_url: credentialCanary, provider_name: derivedCanary, role_names: [credentialCanary] };
+  const f = jwksDeletionBroker((url, init) => response(init.method === 'DELETE' ? value : { jwks: [value] }));
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
+test('JWKS delete: maximum copied IDs and project-wide binding fit common budgets', async () => {
+  for (const branchId of [null, 'b'.repeat(60)]) {
+    const config = { projectId: 'p'.repeat(60), branchId, jwksId: 'j'.repeat(80), revision: 'r'.repeat(80) };
+    const f = jwksDeletionBroker(null, {}, config);
+    const result = await f.call();
+    assert.equal(result.ok, true);
+    safeEnvelope(f, result);
+  }
+});
 
 function authClientDeletionBroker(value = null, overrides = {}, config = authClientDeleteScope) {
   const provider = authClientDeleteFixture(value, config);

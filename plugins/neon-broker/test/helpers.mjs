@@ -53,6 +53,7 @@ import { createNeonDatabaseDeleteOperations } from '../dist/plugins/neon-broker/
 import { createNeonProjectMemberRoleRemoveOperations } from '../dist/plugins/neon-broker/src/project-member-role-remove.js';
 import { createNeonOrganizationMemberRemoveOperations } from '../dist/plugins/neon-broker/src/organization-member-remove.js';
 import { createNeonAuthClientDeleteOperations } from '../dist/plugins/neon-broker/src/auth-client-delete.js';
+import { createNeonJWKSDeleteOperations } from '../dist/plugins/neon-broker/src/jwks-delete.js';
 import { createNeonPermissionRevokeOperations } from '../dist/plugins/neon-broker/src/permission-revoke.js';
 import { createNeonCredentialRevokeOperations } from '../dist/plugins/neon-broker/src/credential-revoke.js';
 import { createNeonOrganizationKeyRevokeOperations } from '../dist/plugins/neon-broker/src/organization-key-revoke.js';
@@ -477,7 +478,15 @@ export function objectDownloadFixture(value, config = objectDownloadScope) {
   return fixture(typeof value === 'function' ? value : () => binaryResponse(value.bytes), config, createNeonObjectDownloadOperations);
 }
 export const allCases = [...objectDownloadCases, ...oauthProviderCases, ...logQueryCases, ...schemaComparisonCases, ...logValueCases, ...branchSchemaCases, ...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
-export const sourceNames = [...allCases.map(([name]) => name), 'deleteSnapshot', 'updateSnapshot', 'updateProjectBranch', 'updateProject', 'updateProjectEndpoint', 'suspendProjectEndpoint', 'deleteProjectEndpoint', 'startProjectEndpoint', 'restartProjectEndpoint', 'deleteProjectBranch', 'deleteProject', 'deleteProjectBranchDatabase', 'deleteProjectBranchRole', 'revokeApiKey', 'revokeOrgApiKey', 'revokeCredential', 'revokePermissionFromProject', 'removeOrganizationMember', 'removeProjectMemberRole', 'deleteNeonAuthOAuthClient'];
+export const sourceNames = [...allCases.map(([name]) => name), 'deleteSnapshot', 'updateSnapshot', 'updateProjectBranch', 'updateProject', 'updateProjectEndpoint', 'suspendProjectEndpoint', 'deleteProjectEndpoint', 'startProjectEndpoint', 'restartProjectEndpoint', 'deleteProjectBranch', 'deleteProject', 'deleteProjectBranchDatabase', 'deleteProjectBranchRole', 'revokeApiKey', 'revokeOrgApiKey', 'revokeCredential', 'revokePermissionFromProject', 'removeOrganizationMember', 'removeProjectMemberRole', 'deleteNeonAuthOAuthClient', 'deleteProjectJWKS'];
+export const jwksDeleteScope = { projectId: 'project-a', branchId: 'br-a', jwksId: 'jwks-a', revision: 'scope-v1' };
+export const jwksDeleteArgs = { project_id: 'project-a', jwks_id: 'jwks-a' };
+export const jwksDeleteMetadata = { id: 'jwks-a', project_id: 'project-a', branch_id: 'br-a' };
+export function jwksDeleteFixture(value = null, config = jwksDeleteScope) {
+  const metadata = { id: config.jwksId, project_id: config.projectId, ...(config.branchId === null ? {} : { branch_id: config.branchId }) };
+  return fixture((url, init, n) => typeof value === 'function' ? value(url, init, n) :
+    response(init.method === 'DELETE' ? metadata : { jwks: [metadata] }), config, createNeonJWKSDeleteOperations);
+}
 export const authClientDeleteScope = { projectId: 'project-a', branchId: 'br-a', clientId: 'clientA', revision: 'scope-v1' };
 export const authClientDeleteArgs = { project_id: 'project-a', branch_id: 'br-a', client_id: 'clientA' };
 export const authClientDeleteMetadata = { client_id: 'clientA' };
