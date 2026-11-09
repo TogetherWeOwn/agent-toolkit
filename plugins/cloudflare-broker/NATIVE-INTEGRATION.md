@@ -140,6 +140,53 @@ validation, redacted failures, lost acknowledgment and actual-core content/Pages
 capture-success, delayed acknowledgment, outage, audit-failure and replay cases.
 These are source contracts, not native PostgreSQL, host or provider qualification.
 
+## Candidate append-only provider audit
+
+`src/native-audit.ts` supplies separate internal sink and exact event/phase reader
+factories for the reviewed core's audit port, using only captured SDK DB methods
+and a fixed `cloudflare_provider_audit` table. No worker, manifest, broker or tool
+connects these candidates. The separately provisioned schema requires:
+
+- `event` and `phase`: non-null composite primary/unique key, bounded core event
+  identifier and `refused`, `intent` or `outcome` respectively.
+- `time`: non-null exact nonnegative safe-integer local clock observation; the DB
+  reader must preserve its numeric type/value. No timestamp string coercion.
+- `decision`: non-null `ALLOW` or one of the reviewed core's fixed refusal codes.
+- `contract`, `provider`: non-null exact `toolkit.provider-broker/v1`, `cloudflare`.
+- `tool`: nullable bounded Cloudflare operation label.
+- `principal_hash`, `target_hash`: nullable 64-character lowercase hex hashes.
+
+Closed records are validated before SQL. Intent requires ALLOW and non-null tool,
+principal and target; outcome requires those non-null bindings, while refused
+cannot be ALLOW. Early refusals may lack identity/target/tool. These are structural
+checks, not proof that the supplied record came from an authenticated executor.
+The sink performs one parameterized INSERT requiring exactly one affected row.
+Duplicate event/phase appends always refuse; no upsert, retry, update/delete, DDL,
+scan or fallback. The reader requires an independently expected full audit record,
+selects by event/phase with LIMIT 2, rejects duplicates/corruption/extra fields or
+any expected-value mismatch, and returns a frozen matching record or null. Errors
+expose only `cloudflare.audit.unavailable`, without causes or DB diagnostics.
+No raw arguments, principal identifiers, credential or projection bodies enter
+this table. Existing namespace authorization/provisioning gates still apply.
+
+Persisted ALLOW is **not call success**: the core can receive a lost outcome
+acknowledgment after commit, suppress output and mark the journal uncertain. Its
+subsequent refusal append cannot overwrite the retained ALLOW phase. Similarly,
+lost intent acknowledgment can retain an intent followed by a refused record
+without any credential/network access or journal claim. Separate phase records
+provide no authenticated insertion order, monotonic clock or transactionally
+consistent journal/capture join. The port is not a reconciliation or acceptance
+engine; null is not proof of no execution. Host SQL admission, PostgreSQL schema
+and numeric decoding, unique constraints, commit/restart retention, namespace
+isolation, complete authenticated retrieval and an accepted consistency boundary
+remain unqualified, along with current policy/authority and provider media.
+
+`test/cloudflare-native-audit.test.mjs` covers isolated SQLite reopen/immutable
+phase records, fixed SQL/strict pre-SQL validation, exact expected-record reads,
+corruption/redaction/lost acknowledgment and actual-core Pages capture, intent
+outage, outcome outage, delayed acknowledgment and uncertain replay behavior.
+These source contracts do not qualify a native host or enable a consumer tool.
+
 ## Source tests versus native acceptance
 
 `test/cloudflare-native-journal.test.mjs` executes the candidate statements on
