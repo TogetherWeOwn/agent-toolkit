@@ -19,7 +19,7 @@ const scope = c => ({ accountId: account, zoneId: zone, revision: "resource-1", 
 const success = result => JSON.stringify({ success: true, errors: [], messages: [], result });
 const row = c => ({ id: c.id, value: "on", editable: true, modified_on: derivedCanary,
   owner: credentialCanary, origin_ip: derivedCanary, unrelated: { token: credentialCanary } });
-function fixture(c, { allowed = true, response = row(c), raw, status = 200, noZone = false, flags = {} } = {}) {
+function fixture(c, { allowed = true, response = row(c), raw, status = 200, noZone = false, flags = {}, fetchResponse } = {}) {
   const f = providerFixture();
   const requests = [];
   const trusted = { accountId: account, revision: "resource-1", scriptNames: [], hyperdriveIds: [],
@@ -27,6 +27,7 @@ function fixture(c, { allowed = true, response = row(c), raw, status = 200, noZo
   const operations = cloudflareReadOperations(trusted, { accountId: account, revision: "resource-1" }, async (url, init) => {
     requests.push({ url, init });
     assert.equal(init.headers.authorization, `Bearer ${credentialCanary}`);
+    if (fetchResponse) return fetchResponse(url, init);
     return new Response(raw ?? success(response), { status, headers: { "content-type": "application/json" } });
   });
   const operation = operations.find(op => op.name === c.name);
@@ -159,20 +160,25 @@ for (const c of cases) {
   });
 
   test(`${c.name} exact policy resources, agent, binding and revocation deny before network`, async () => {
-    for (const denied of ["agent", "resource", "other-cache", "regional", "wildcard", "binding", "revocation"]) {
+    for (const denied of ["agent", "resource", "other-cache", "regional", "reserve", "smart-tiered", "account", "zone", "wildcard", "binding", "stale-revision", "revocation"]) {
       const f = fixture(c);
       if (denied === "agent") f.vector.policy.agents = ["other-agent"];
       if (denied === "resource") f.vector.policy.resources = ["other-resource"];
       if (denied === "other-cache") f.vector.policy.resources = [`cloudflare:account:${account}:zone:${zone}:${cases.find(item => item !== c).suffix}`];
       if (denied === "regional") f.vector.policy.resources = [`cloudflare:account:${account}:zone:${zone}:regional-tiered-cache`];
       if (denied === "wildcard") f.vector.policy.resources = [`cloudflare:account:${account}:zone:${zone}:*`];
+      if (denied === "reserve") f.vector.policy.resources = [`cloudflare:account:${account}:zone:${zone}:cache-reserve`];
+      if (denied === "smart-tiered") f.vector.policy.resources = [`cloudflare:account:${account}:zone:${zone}:smart-tiered-cache`];
+      if (denied === "account") f.vector.policy.resources = [`cloudflare:account:${foreign}:zone:${zone}:${c.suffix}`];
+      if (denied === "zone") f.vector.policy.resources = [`cloudflare:account:${account}:zone:${foreign}:${c.suffix}`];
       if (denied === "binding") f.dependencies.host.revalidate = async () => false;
+      if (denied === "stale-revision") f.dependencies.host.revalidate = async (_principal, resource) => resource.revision === "resource-2";
       if (denied === "revocation") {
         const resolve = f.dependencies.credentials.resolve;
         f.dependencies.credentials.resolve = async target => { const lease = await resolve(target); f.vector.policy.revision = "revoked"; return lease; };
       }
       const out = await f.invoke();
-      assert.equal(out.code, denied === "binding" ? "RESOURCE_CHANGED" : denied === "revocation" ? "POLICY_CHANGED" : "POLICY_DENIED");
+      assert.equal(out.code, ["binding", "stale-revision"].includes(denied) ? "RESOURCE_CHANGED" : denied === "revocation" ? "POLICY_CHANGED" : "POLICY_DENIED");
       assert.equal(f.calls.secret, denied === "revocation" ? 1 : 0);
       assert.equal(f.calls.close, denied === "revocation" ? 1 : 0);
       assert.equal(f.requests.length, 0);
@@ -207,6 +213,27 @@ for (const c of cases) {
       assert.equal(f.calls.close, closes);
       assert.equal(f.requests.length, 1);
       assert.deepEqual([...f.journal], journal);
+      safe(f, out);
+    }
+  });
+
+  test(`${c.name} transport errors, media, redirects and streamed bounds refuse without retry`, async () => {
+    for (const fetchResponse of [
+      async () => { throw new Error(credentialCanary); },
+      async () => new Response(success(row(c)), { headers: { "content-type": "text/plain" } }),
+      async () => new Response(success(row(c)), { status: 302, headers: { location: "https://example.com" } }),
+      async () => new Response(success(row(c)), { headers: { "content-type": "application/json", "content-length": "131073" } }),
+      async () => new Response("x".repeat(131073), { headers: { "content-type": "application/json" } }),
+      async () => new Response(new Uint8Array([0xff]), { headers: { "content-type": "application/json" } }),
+    ]) {
+      const f = fixture(c, { fetchResponse });
+      const out = await f.invoke();
+      assert.equal(out.code, "UPSTREAM_UNAVAILABLE");
+      assert.equal(f.requests.length, 1);
+      assert.equal(f.calls.close, 1);
+      assert.equal([...f.journal.values()][0].outcome, "uncertain");
+      assert.equal((await f.invoke()).code, "REPLAY_CONFLICT");
+      assert.equal(f.requests.length, 1);
       safe(f, out);
     }
   });
