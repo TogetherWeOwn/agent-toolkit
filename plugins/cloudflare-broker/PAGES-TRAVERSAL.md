@@ -38,7 +38,17 @@ The raw response still has its existing 131072-byte cap, each projected value in
 capture its 32768-byte cap, and each scope array its 100-entry cap. No ceiling is
 raised. A session may discover more than 100 projects, but cannot acquire permission
 for them through discovery. Unmapped or unapproved deployment collections are gaps.
-The test fixture includes 1000 denied discoveries in the denominator.
+The thousand-project fixture uses 10-row pages and stops at the manifest reservation
+before page 93, retaining all 920 accepted discoveries as denied denominator members
+and labeling project discovery partial; it does not promise that 1000 projects fit.
+
+Capture hashing also retains the core canonical JSON validation limits: 256 nodes,
+depth 8, at most 65 own keys per object/array, strings at most 4096 characters, and
+16384 serialized bytes. These constraints are independent of the reader's larger
+row/value caps. A schema-valid 100-row project page can exceed them and must stop
+incomplete, not bypass the hash validator, shrink the fixed page size or retry. The
+broker fixture exercises this refusal without accepting rows or exporting a receipt.
+Rich projections may hit these bounds at still smaller page sizes.
 
 Elapsed and cancellation checks are **session admission/acceptance checks**, not a
 new native wall-clock supervisor. The existing broker owns the bounded in-flight GET

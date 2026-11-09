@@ -228,9 +228,9 @@ test("Pages traversal finite scope/budget validation does not raise retained cei
   assert.throws(() => fixture({}, selected), /scope/);
 });
 
-function runnerFixture({ changeResponse, changeRecord, auditFailure = false, sinkFailure = false, readFailure = false, denied = false, revoke = false, cancel = false } = {}) {
+function runnerFixture({ changeResponse, changeRecord, perPage = 1, auditFailure = false, sinkFailure = false, readFailure = false, denied = false, revoke = false, cancel = false } = {}) {
   const f = providerFixture(), selected = scope(), receipts = [], targets = [], requests = [], controller = new AbortController();
-  const s = session({ principalHash: canonicalHash(f.vector.principal) });
+  const s = session({ principalHash: canonicalHash(f.vector.principal), perPage });
   const ops = cloudflareReadOperations(selected, { accountId, revision: selected.revision });
   f.vector.policy = { revision: "policy-1", agents: [f.vector.principal.agent], resources: ops.filter(op => ["cloudflare.pages.projects.list", "cloudflare.pages.deployments.list"].includes(op.name))
     .flatMap(op => op.name.includes("projects.list") ? [op.prepare({ page: 1, perPage: 1 }).resource.id]
@@ -256,7 +256,7 @@ function runnerFixture({ changeResponse, changeRecord, auditFailure = false, sin
     requests.push(u.pathname + u.search);
     if (cancel) controller.abort();
     const result = projects ? [project(page)] : [deployment(page, Number(u.pathname.split("/").at(-2).slice(-1)))];
-    const body = { success: true, errors: [], result, result_info: { page, per_page: 1, total_pages: 2 } };
+    const body = { success: true, errors: [], result, result_info: { page, per_page: s.perPage, total_pages: 2 } };
     if (projects) { result[0].env_vars = credentialCanary; result[0].build_config = { build_command: derivedCanary }; }
     if (revoke && !projects) f.vector.policy = { ...f.vector.policy, revision: "policy-2", resources: [] };
     return new Response(JSON.stringify(changeResponse ? changeResponse(body, projects) : body), { headers: { "content-type": "application/json" } });
@@ -305,13 +305,27 @@ test("Pages runner rejects foreign project/name data, oversized raw response and
   assert.equal((await f.run()).stopReason, "records-unavailable");
 });
 
-test("Pages traversal retains a bounded thousand-project denied denominator without manifest truncation", () => {
+test("Pages traversal retains every denied discovery when a thousand-project account exceeds manifest reservations", () => {
   const selected = scope(); selected.pagesProjects = []; selected.pagesDeploymentInventoryProjects = []; selected.pagesPagination.deploymentProjects = [];
-  const f = fixture({ perPage: 100 }, selected);
-  const m = f.drive(r => ({ rows: Array.from({ length: 100 }, (_, i) => project((r.arguments.page - 1) * 100 + i + 1)), total: 10 })).manifest;
-  assert.equal(m.projects.discovered, 1000); assert.equal(m.collections.length, 1001);
-  assert.equal(m.projects.denominator, "all-observed-projects"); assert.equal(m.projects.observed, 0);
+  // Small pages respect the retained canonical JSON node/key bounds as well as
+  // reader row/byte limits. Reservations deliberately stop before all 100 pages.
+  const f = fixture({ perPage: 10 }, selected);
+  const m = f.drive(r => ({ rows: Array.from({ length: 10 }, (_, i) => project((r.arguments.page - 1) * 10 + i + 1)), total: 100 })).manifest;
+  assert.equal(m.stopReason, "manifest-byte-cap"); assert.equal(m.usage.requests, 92);
+  assert.equal(m.projects.discovered, 920); assert.equal(m.collections.length, 921);
+  assert.equal(m.projects.denominator, "partial-project-discovery"); assert.equal(m.projects.observed, 0);
+  assert.ok(m.collections.slice(1).every(c => c.gap === "unapproved-project"));
   assert.ok(Buffer.byteLength(JSON.stringify(m)) <= m.budgets.manifestBytes); incomplete(m);
+});
+
+test("Pages runner stops incomplete when a reader-valid page exceeds retained canonical JSON bounds", async t => {
+  t.mock.timers.enable({ apis: ["Date"], now: startedAt });
+  const f = runnerFixture({ perPage: 100, changeResponse: body => ({ ...body,
+    result: Array.from({ length: 100 }, (_, i) => project(i + 1)),
+    result_info: { ...body.result_info, total_pages: 1 } }) });
+  const m = await f.run();
+  assert.equal(m.sourceTraversal, "incomplete"); assert.equal(m.usage.rows, 0);
+  assert.equal(f.requests.length, 1); assert.equal(f.receipts.length, 0); incomplete(m);
 });
 
 test("Pages traversal stops at 100 observations rather than evading the helper ceiling", () => {
