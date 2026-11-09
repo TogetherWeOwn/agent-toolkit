@@ -27,7 +27,7 @@ function fixture({ configurations = [own], allowed = true, response = result(), 
       return new Response(success(response), { status, headers: { "content-type": "application/json" } });
     });
   const operation = operations.find(op => op.name === tool);
-  f.vector.policy = { revision: "policy-1", agents: [f.vector.principal.agent], resources: [`cloudflare:account:${account}:queue:${own}`] };
+  f.vector.policy = { revision: "policy-1", agents: [f.vector.principal.agent], resources: [`cloudflare:account:${account}:queue:${own}${configurations.includes(own) ? ":configuration" : ""}`] };
   f.dependencies.provider = "cloudflare";
   f.dependencies.operations = operations;
   const broker = createProviderBroker(f.dependencies);
@@ -47,7 +47,7 @@ test("Cloudflare Queue configuration is independently copied and leaves basic de
   s.accountId = "f".repeat(32);
   s.revision = "changed";
   const p = d.queueGet.prepare(args);
-  assert.deepEqual(p.resource, { id: `cloudflare:account:${account}:queue:${own}`, revision: "resource-1" });
+  assert.deepEqual(p.resource, { id: `cloudflare:account:${account}:queue:${own}:configuration`, revision: "resource-1" });
   assert.equal(p.request.path, `/accounts/${account}/queues/${own}`);
   assert.equal(d.queueGet.project(success(result()), p).configuration.deliveryDelaySeconds, 5);
   assert.throws(() => d.queueGet.prepare({ queueId: other }), /scope/);

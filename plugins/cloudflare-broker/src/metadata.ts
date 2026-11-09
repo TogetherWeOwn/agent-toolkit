@@ -383,7 +383,7 @@ export function metadataDescriptors(scope: MetadataScope) {
     prepare(raw: unknown) {
       const args = hyperdrive.parse(raw);
       hyperdriveScope(args.hyperdriveId);
-      return prepared(args, `hyperdrive:${args.hyperdriveId}`, `${root}/hyperdrive/configs/${args.hyperdriveId}`);
+      return prepared(args, `hyperdrive:${args.hyperdriveId}${configurationHyperdrives.has(args.hyperdriveId) ? ":configuration" : ""}`, `${root}/hyperdrive/configs/${args.hyperdriveId}`);
     },
     project(raw: string, input: PreparedMetadata<ReturnType<typeof hyperdrive.parse>>) {
       const args = hyperdrive.parse(input.arguments);
@@ -438,7 +438,7 @@ export function metadataDescriptors(scope: MetadataScope) {
       const args = database.parse(raw);
       databaseScope(args.databaseId);
       const fields = configurationDatabases.has(args.databaseId) ? "uuid,jurisdiction,read_replication" : "uuid";
-      return prepared(args, `d1:${args.databaseId}`, `${root}/d1/database/${args.databaseId}?fields=${fields}`);
+      return prepared(args, `d1:${args.databaseId}${configurationDatabases.has(args.databaseId) ? ":configuration" : ""}`, `${root}/d1/database/${args.databaseId}?fields=${fields}`);
     },
     project(raw: string, input: PreparedMetadata<ReturnType<typeof database.parse>>) {
       const args = database.parse(input.arguments);
@@ -741,7 +741,7 @@ export function metadataDescriptors(scope: MetadataScope) {
     prepare(raw: unknown) {
       const args = queue.parse(raw);
       queueScope(args.queueId);
-      return prepared(args, `queue:${args.queueId}`, `${root}/queues/${args.queueId}`);
+      return prepared(args, `queue:${args.queueId}${configurationQueues.has(args.queueId) ? ":configuration" : ""}`, `${root}/queues/${args.queueId}`);
     },
     project(raw: string, input: PreparedMetadata<ReturnType<typeof queue.parse>>) {
       const args = queue.parse(input.arguments);

@@ -26,7 +26,7 @@ function fixture({ configurations = [own], allowed = true, response = result(), 
       return new Response(success(response), { status, headers: { "content-type": "application/json" } });
     });
   const operation = operations.find(op => op.name === tool);
-  f.vector.policy = { revision: "policy-1", agents: [f.vector.principal.agent], resources: [`cloudflare:account:${account}:d1:${own}`] };
+  f.vector.policy = { revision: "policy-1", agents: [f.vector.principal.agent], resources: [`cloudflare:account:${account}:d1:${own}${configurations.includes(own) ? ":configuration" : ""}`] };
   f.dependencies.provider = "cloudflare";
   f.dependencies.operations = operations;
   const broker = createProviderBroker(f.dependencies);
@@ -46,7 +46,7 @@ test("Cloudflare D1 configuration uses copied exact UUID scope and minimal field
   s.accountId = "f".repeat(32);
   s.revision = "changed";
   const p = d.d1Get.prepare(args);
-  assert.deepEqual(p.resource, { id: `cloudflare:account:${account}:d1:${own}`, revision: "resource-1" });
+  assert.deepEqual(p.resource, { id: `cloudflare:account:${account}:d1:${own}:configuration`, revision: "resource-1" });
   assert.equal(p.request.path, `/accounts/${account}/d1/database/${own}?fields=uuid,jurisdiction,read_replication`);
   assert.equal(d.d1Get.project(success(result()), p).configuration.readReplicationMode, "auto");
   assert.throws(() => d.d1Get.prepare({ databaseId: other }), /scope/);

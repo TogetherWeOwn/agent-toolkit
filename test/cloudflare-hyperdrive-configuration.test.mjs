@@ -25,7 +25,7 @@ function fixture({ configurations = [own], allowed = true, response = result(), 
       return new Response(success(response), { status, headers: { "content-type": "application/json" } });
     });
   const operation = operations.find(op => op.name === tool);
-  f.vector.policy = { revision: "policy-1", agents: [f.vector.principal.agent], resources: [`cloudflare:account:${account}:hyperdrive:${own}`] };
+  f.vector.policy = { revision: "policy-1", agents: [f.vector.principal.agent], resources: [`cloudflare:account:${account}:hyperdrive:${own}${configurations.includes(own) ? ":configuration" : ""}`] };
   f.dependencies.provider = "cloudflare";
   f.dependencies.operations = operations;
   const broker = createProviderBroker(f.dependencies);
@@ -44,7 +44,7 @@ test("Cloudflare Hyperdrive configuration projection has independent copied exac
   s.accountId = "f".repeat(32);
   s.revision = "changed";
   const p = d.hyperdriveGet.prepare(args);
-  assert.deepEqual(p.resource, { id: `cloudflare:account:${account}:hyperdrive:${own}`, revision: "resource-1" });
+  assert.deepEqual(p.resource, { id: `cloudflare:account:${account}:hyperdrive:${own}:configuration`, revision: "resource-1" });
   assert.equal(p.request.path, `/accounts/${account}/hyperdrive/configs/${own}`);
   assert.equal(d.hyperdriveGet.project(success(result()), p).configuration.originConnectionLimit, 60);
   assert.throws(() => d.hyperdriveGet.prepare({ hyperdriveId: other }), /scope/);
