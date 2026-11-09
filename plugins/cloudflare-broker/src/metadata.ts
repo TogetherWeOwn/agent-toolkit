@@ -592,7 +592,7 @@ export function metadataDescriptors(scope: MetadataScope) {
     prepare(raw: unknown) {
       const args = deploymentPage.parse(raw);
       scriptScope(args.scriptName);
-      return prepared(args, `worker:${args.scriptName}:deployments`, `${root}/workers/scripts/${encodeURIComponent(args.scriptName)}/deployments?page=${args.page}&per_page=${args.perPage}`);
+      return prepared(args, `worker:${args.scriptName}:deployments${attributionScripts.has(args.scriptName) ? ":attribution" : ""}`, `${root}/workers/scripts/${encodeURIComponent(args.scriptName)}/deployments?page=${args.page}&per_page=${args.perPage}`);
     },
     project(raw: string, input: PreparedMetadata<ReturnType<typeof deploymentPage.parse>>) {
       const args = deploymentPage.parse(input.arguments);
@@ -608,7 +608,7 @@ export function metadataDescriptors(scope: MetadataScope) {
     prepare(raw: unknown) {
       const args = deployment.parse(raw);
       deploymentScope(args.scriptName, args.deploymentId);
-      return prepared(args, `worker:${args.scriptName}:deployment:${args.deploymentId}`, `${root}/workers/scripts/${encodeURIComponent(args.scriptName)}/deployments/${args.deploymentId}`);
+      return prepared(args, `worker:${args.scriptName}:deployment:${args.deploymentId}${attributionScripts.has(args.scriptName) ? ":attribution" : ""}`, `${root}/workers/scripts/${encodeURIComponent(args.scriptName)}/deployments/${args.deploymentId}`);
     },
     project(raw: string, input: PreparedMetadata<ReturnType<typeof deployment.parse>>) {
       const args = deployment.parse(input.arguments);
@@ -627,7 +627,7 @@ export function metadataDescriptors(scope: MetadataScope) {
     prepare(raw: unknown) {
       const args = versionPage.parse(raw);
       scriptScope(args.scriptName);
-      return prepared(args, `worker:${args.scriptName}:versions`, `${root}/workers/scripts/${encodeURIComponent(args.scriptName)}/versions?deployable=false&page=${args.page}&per_page=${args.perPage}`);
+      return prepared(args, `worker:${args.scriptName}:versions${attributionScripts.has(args.scriptName) ? ":attribution" : ""}`, `${root}/workers/scripts/${encodeURIComponent(args.scriptName)}/versions?deployable=false&page=${args.page}&per_page=${args.perPage}`);
     },
     project(raw: string, input: PreparedMetadata<ReturnType<typeof versionPage.parse>>) {
       const args = versionPage.parse(input.arguments);
@@ -644,7 +644,9 @@ export function metadataDescriptors(scope: MetadataScope) {
     prepare(raw: unknown) {
       const args = workerVersion.parse(raw);
       versionScope(args.scriptName, args.versionId);
-      const suffix = versionBindings.has(`${args.scriptName}:${args.versionId}`) ? ":binding-identities" : "";
+      const suffix = (attributionScripts.has(args.scriptName) ? ":attribution" : "")
+        + (versionDetailScripts.has(args.scriptName) ? ":detail" : "")
+        + (versionBindings.has(`${args.scriptName}:${args.versionId}`) ? ":binding-identities" : "");
       const value = prepared(args, `worker:${args.scriptName}:version:${args.versionId}${suffix}`, `${root}/workers/scripts/${encodeURIComponent(args.scriptName)}/versions/${args.versionId}`);
       versionPreparations.add(value); return value;
     },

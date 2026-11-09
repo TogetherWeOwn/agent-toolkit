@@ -37,7 +37,7 @@ test("Cloudflare version detail reports provider content tag and version CPU wit
   assert.ok(!JSON.stringify(project(row())).includes("never-return-private"));
   const prepared = metadataDescriptors(scope()).versionGet.prepare(args);
   assert.equal(prepared.request.path, `/accounts/${account}/workers/scripts/${scriptName}/versions/${versionId}`);
-  assert.equal(prepared.resource.id, `cloudflare:account:${account}:worker:${scriptName}:version:${versionId}`);
+  assert.equal(prepared.resource.id, `cloudflare:account:${account}:worker:${scriptName}:version:${versionId}:detail`);
   assert.equal(prepared.resource.revision, "resource-1");
 });
 
