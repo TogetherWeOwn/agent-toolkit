@@ -1,5 +1,26 @@
 # Source-slice threat model
 
+## Explicit project-member viewer role delta
+
+`setProjectMemberRole` binds copied project/member/user/expected member-or-editor
+org role/revision, dedicated member/role/viewer grant and reserved native exact-plan
+authority. Mandatory terminal bounded member-list preflight validates exact identity,
+existing explicit EDITOR grant, duplicate/reassociation/ancestry and pagination bounds
+before one PUT sends only role:viewer. Grant creation, promotion and caller role/body
+or confirm_self_demotion overrides refuse. Provider self-demotion checks remain.
+Exact200 identity/explicit-VIEWER echo acknowledges only; missing optional explicit
+permission is not inferred from project_role and stays uncertain. Organization defaults
+or creator fallback may retain higher effective access; effective roles, rotation hints,
+profiles and timestamps never evaluate/project. No independent ACL reduction, token/session
+revocation or fencing proof. Preflight is not atomic CAS; external reconfiguration races
+remain unresolved. One bounded post-ambiguity list observation never clears uncertainty,
+even on viewer/absence/replacement; no retry. Permanent common journal blocks same-request
+restart/replay, not external writers. Source/common contracts isolate each native-authority
+negative, exact principal/resource/TOCTOU, strict plans, reflected/malformed responses,
+cancellation/deadlines and common budgets. Source/mocks only; no live access change,
+new authority or runtime registration. Native host/custody/durable recovery/effects,
+entitlement and independent reviews remain unresolved.
+
 ## Viewer-only organization-member role update delta
 
 `updateOrganizationMember` binds copied organization/member UUID/user UUID/expected

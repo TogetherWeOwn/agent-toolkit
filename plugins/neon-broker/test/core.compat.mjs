@@ -54,6 +54,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   projectMemberRoleRemoveFixture, projectMemberRoleRemoveArgs, projectMemberRoleRemoveScope, projectMemberRoleRemoveMetadata, projectMemberRoleRemoveReceipt,
   organizationMemberRemoveFixture, organizationMemberRemoveArgs, organizationMemberRemoveScope, organizationMemberRemoveMetadata,
   organizationMemberUpdateFixture, organizationMemberUpdateArgs, organizationMemberUpdateScope, organizationMemberUpdateMetadata, organizationMemberUpdateReceipt,
+  projectMemberRoleUpdateFixture, projectMemberRoleUpdateArgs, projectMemberRoleUpdateScope, projectMemberRoleUpdateMetadata, projectMemberRoleUpdateReceipt,
   authClientDeleteFixture, authClientDeleteArgs, authClientDeleteScope, authClientDeleteMetadata,
   jwksDeleteFixture, jwksDeleteArgs, jwksDeleteScope, jwksDeleteMetadata,
   triggerDeleteFixture, triggerDeleteArgs, triggerDeleteScope, triggerDeleteMetadata,
@@ -3390,6 +3391,133 @@ test('organization member viewer: reflected or mismatched consumed echoes stay u
 test('organization member viewer: maximum copied organization and exact native plan fit common budgets', async () => {
   const config = { ...organizationMemberUpdateScope, organizationId: 'p'.repeat(60), expectedRole: 'member', revision: 'r'.repeat(80) };
   const f = organizationMemberViewerBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
+function projectMemberViewerBroker(value = null, overrides = {}, config = projectMemberRoleUpdateScope) {
+  const provider = projectMemberRoleUpdateFixture(value, config);
+  const args = { project_id: config.projectId, member_id: config.memberId };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('setProjectMemberRole').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.setProjectMemberRole', args, context, key);
+  } };
+}
+
+test('project member viewer: reserved authority and exact viewer AND agent grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = projectMemberViewerBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = `neon/projects/project-a/members/${projectMemberRoleUpdateScope.memberId}`;
+  for (const resource of [target, target + '/role', target + '/remove', target + '/role/admin',
+    target.replace('project-a', 'other') + '/role/viewer', target.replace(projectMemberRoleUpdateScope.memberId, projectMemberRoleUpdateScope.userId) + '/role/viewer']) {
+    const f = projectMemberViewerBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = projectMemberViewerBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.common.calls.secret, 0);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = projectMemberViewerBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { member_id: projectMemberRoleUpdateScope.memberId, acknowledged: true });
+  assert.equal(f.common.calls.consumed, 1);
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('project member viewer: native wrong-target, expired and unconsumable evidence isolate each invariant', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = projectMemberViewerBroker();
+    const base = f.common.authority;
+    let consumeCalls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.setProjectMemberRole', projectMemberRoleUpdateArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('project member viewer: identity/resource TOCTOU and caller target or role overrides refuse', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = projectMemberViewerBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = projectMemberViewerBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.setProjectMemberRole', projectMemberRoleUpdateArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { project_id: 'other' }, { member_id: projectMemberRoleUpdateScope.userId }, { user_id: 'user-a' },
+    { role: 'admin' }, { role: 'viewer' }, { confirm_self_demotion: true }, { retry: true }]) {
+    const g = projectMemberViewerBroker();
+    assert.equal((await g.common.broker().call('neon.setProjectMemberRole', { ...projectMemberRoleUpdateArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('project member viewer: permanent journal blocks complete and uncertain same-request replay after restart', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = projectMemberViewerBroker((url, init, n) => {
+      if (init.method === 'PUT') { if (ambiguous) throw Error(credentialCanary); return response(projectMemberRoleUpdateReceipt); }
+      return response({ project_members: [n === 1 ? projectMemberRoleUpdateMetadata : { ...projectMemberRoleUpdateMetadata, explicit_project_permission: 'VIEWER' }] });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'PUT').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('project member viewer: reflected or mismatched consumed echoes stay uncertain; profile fields stay hidden', async () => {
+  for (const raw of [{ ...projectMemberRoleUpdateReceipt, member_id: credentialCanary }, { ...projectMemberRoleUpdateReceipt, project_id: 'other' },
+    { ...projectMemberRoleUpdateReceipt, user_id: credentialCanary }, { ...projectMemberRoleUpdateReceipt, explicit_project_permission: credentialCanary },
+    { ...projectMemberRoleUpdateReceipt, pagination: {} }]) {
+    const f = projectMemberViewerBroker(raw);
+    const result = await f.call();
+    assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, 'uncertain');
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'PUT').length, 1);
+    safeEnvelope(f, result);
+  }
+  const f = projectMemberViewerBroker((url, init) => response(init.method === 'PUT' ? {
+    ...projectMemberRoleUpdateReceipt, effective_project_permission: 'ADMIN', project_role: 'admin',
+    email: credentialCanary, name: derivedCanary } : { project_members: [{ ...projectMemberRoleUpdateMetadata, email: credentialCanary }] }));
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
+test('project member viewer: maximum copied project and exact native plan fit common budgets', async () => {
+  const config = { ...projectMemberRoleUpdateScope, projectId: 'p'.repeat(60), expectedOrgRole: 'member', revision: 'r'.repeat(80) };
+  const f = projectMemberViewerBroker(null, {}, config);
   const result = await f.call();
   assert.equal(result.ok, true);
   safeEnvelope(f, result);

@@ -573,20 +573,24 @@
       "id": "setProjectMemberRole",
       "apiArea": "project",
       "tool": "neon.setProjectMemberRole",
-      "scope": "project_id/member_id",
+      "scope": "project_id/member_id/role/viewer",
       "sideEffects": [
+        "explicit-project-viewer-grant-request",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/project-member-role-update.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Viewer-only source from existing explicit EDITOR grant and exact expected member/editor org role. Bounded terminal identity/grant preflight then one fixed viewer PUT; no creation, promotion or self-demotion confirmation. Exact HTTP200 identity/explicit-VIEWER echo acknowledges only; organization defaults/creator fallback may retain higher effective access. No sessions/fencing proof. Preflight not atomic CAS; ambiguity stays uncertain after one bounded observation, no retry, permanent common replay journal. Native authority/host/policy/custody/durable recovery/effects/entitlement and independent reviews unresolved."
     },
     {
       "id": "removeProjectMemberRole",

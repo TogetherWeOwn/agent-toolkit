@@ -7,6 +7,26 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonProjectMemberRoleUpdateOperations` supplies reserved, viewer-only
+`setProjectMemberRole` source for one copied project/member UUID/user UUID/expected
+member-or-editor org role/revision. Dedicated member/role/viewer grant and native
+exact-plan authority precede credentials. Mandatory terminal member-list preflight
+(10 rows per page, three pages maximum) binds the exact member/user/org role and
+existing explicit EDITOR grant before one PUT sends only `{role: "viewer"}`.
+Grant creation, promotions, caller role/body and self-demotion confirmation are
+unsupported. Provider self-demotion restrictions remain; no confirmation bypass.
+Exact HTTP200 identity and explicit-VIEWER echo yield closed acknowledgement only.
+The optional explicit-permission echo is required by this narrow source; omission
+stays uncertain, never inferred from effective role. Organization defaults and
+creator fallback may retain higher access; effective roles, rotation hints, profiles
+and timestamps are never evaluated/emitted. No independently observed access reduction,
+token/session revocation or fencing is claimed. Preflight is not atomic CAS; external
+membership/grant races remain unresolved. Ambiguity gets one bounded list observation
+and stays uncertain even on viewer/absence/replacement, with no retry. Permanent
+common journal blocks same-request restart/replay, not external writers. Source/mocks
+only; native host/custody/durable recovery/effects/entitlement and independent review
+remain gates. No live permission change or runtime registration.
+
 `createNeonAuthWebhookDisableOperations` supplies reserved, disable-only
 `updateNeonAuthWebhookConfig` source for one copied project/branch/revision.
 Dedicated `neon/projects/<project>/branches/<branch>/auth/webhooks/disable` grant
@@ -2026,8 +2046,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 121 implemented
-source adapters, 73 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 122 implemented
+source adapters, 72 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable
