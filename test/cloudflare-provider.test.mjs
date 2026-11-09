@@ -118,6 +118,8 @@ const rulesets = rulesetDescriptors({ accountId: account, zoneId: zone, revision
 const allDescriptors = { ...metadataOnly, ...deletionDescriptors, contentDescriptor,
   rulesetsAccountList: rulesets.accountList, rulesetsAccountGet: rulesets.accountGet,
   rulesetsZoneList: rulesets.zoneList, rulesetsZoneGet: rulesets.zoneGet,
+  rulesetsAccountVersionsList: rulesets.accountVersionsList, rulesetsAccountVersionGet: rulesets.accountVersionGet,
+  rulesetsZoneVersionsList: rulesets.zoneVersionsList, rulesetsZoneVersionGet: rulesets.zoneVersionGet,
   ...subscriptionDescriptors({ accountId: account, revision: "policy-1" }),
   workerSchedules: workerScheduleDescriptor({ accountId: account, revision: "policy-1" }),
   ...loadBalancingDescriptors({ accountId: account, revision: "policy-1" }),

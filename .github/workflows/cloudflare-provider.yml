@@ -64,17 +64,49 @@ jobs:
       - name: Test bounded Pages traversal and evidence manifest
         run: node --test --test-timeout=30000 test/cloudflare-pages-traversal.test.mjs
       - run: node --test --test-timeout=30000 test/cloudflare-*.test.mjs
-      - name: Reproduce complete pinned API operation inventory
+      - name: Regenerate complete pinned API operation inventory
+        if: always()
         run: |
           set -euo pipefail
           schema_dir=$(mktemp -d "$RUNNER_TEMP/cloudflare-schema.XXXXXX")
+          inventory_dir="$RUNNER_TEMP/cloudflare-inventory"
+          mkdir -p "$inventory_dir"
           curl -fsS --max-time 120 --max-filesize 60000000 \
             https://raw.githubusercontent.com/cloudflare/api-schemas/650bd71c22db3b938a4611bf4cc5afd896b400b7/openapi.json \
             -o "$schema_dir/openapi.json"
-          node plugins/cloudflare-broker/scripts/inventory.mjs "$schema_dir/openapi.json" "$schema_dir/operations.jsonl"
-          cmp plugins/cloudflare-broker/coverage/operations.jsonl "$schema_dir/operations.jsonl"
-          node plugins/cloudflare-broker/scripts/families.mjs "$schema_dir/operations.jsonl" "$schema_dir/families.json"
-          cmp plugins/cloudflare-broker/coverage/families.json "$schema_dir/families.json"
+          node plugins/cloudflare-broker/scripts/inventory.mjs "$schema_dir/openapi.json" "$inventory_dir/operations.jsonl"
+          node plugins/cloudflare-broker/scripts/families.mjs "$inventory_dir/operations.jsonl" "$inventory_dir/families.json"
+          node --input-type=module - "$inventory_dir" <<'JS'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          import { createHash } from 'node:crypto';
+          const dir = process.argv[2];
+          const bytes = readFileSync(`${dir}/operations.jsonl`);
+          const rows = bytes.toString('utf8').trimEnd().split('\n').map(line => JSON.parse(line));
+          const source = JSON.parse(readFileSync('plugins/cloudflare-broker/coverage/source.json', 'utf8'));
+          source.inventorySha256 = createHash('sha256').update(bytes).digest('hex');
+          source.counts.descriptors = rows.filter(row => row.typedTool !== null).length;
+          source.counts.metadataDescriptors = rows.filter(row => row.implementation === 'descriptor-only').length;
+          writeFileSync(`${dir}/source.json`, JSON.stringify(source, null, 2) + '\n');
+          JS
+      - name: Save generated source coverage for authoring
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cloudflare-source-inventory
+          path: ${{ runner.temp }}/cloudflare-inventory/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Verify committed inventory matches generated source
+        if: always()
+        run: |
+          cmp plugins/cloudflare-broker/coverage/operations.jsonl "$RUNNER_TEMP/cloudflare-inventory/operations.jsonl"
+          cmp plugins/cloudflare-broker/coverage/families.json "$RUNNER_TEMP/cloudflare-inventory/families.json"
+          node --input-type=module - "$RUNNER_TEMP/cloudflare-inventory/source.json" <<'JS'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          assert.deepEqual(JSON.parse(readFileSync(process.argv[2], 'utf8')),
+            JSON.parse(readFileSync('plugins/cloudflare-broker/coverage/source.json', 'utf8')));
+          JS
       - name: Reproduce pinned supplemental R2 S3 compatibility inventory
         run: |
           set -euo pipefail
