@@ -139,6 +139,16 @@ test("workflow lint download bounds transient retries and verifies the pinned ar
   assert.ok(verify > block.indexOf("curl -fsSL") && extract > verify && execute > extract);
 });
 
+test("Cloudflare PostgreSQL contracts use a pinned disposable service and string port lookup", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/cloudflare-provider.yml", import.meta.url), "utf8");
+  assert.match(workflow, /image: postgres:17\.7@sha256:[a-f0-9]{64}/);
+  assert.match(workflow, /--health-cmd "pg_isready -U postgres"/);
+  assert.ok(workflow.includes("${{ job.services.postgres.ports['5432'] }}"));
+  assert.doesNotMatch(workflow, /ports\[5432\]/);
+  assert.match(workflow, /CLOUDFLARE_POSTGRES_TEST: '1'/);
+  assert.match(workflow, /node --test --test-timeout=120000 plugins\/cloudflare-broker\/testing\/postgres-contracts\.mjs/);
+});
+
 test("ci-ok rejects failed or cancelled prerequisites and accepts intentional skips", () => {
   const aggregate = script("ci.yml");
   for (const result of ["failure", "cancelled", "timed_out", "unknown"]) {

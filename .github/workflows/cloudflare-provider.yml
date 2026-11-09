@@ -26,7 +26,7 @@ jobs:
         ports:
           - 5432/tcp
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U postgres"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 12
@@ -45,7 +45,7 @@ jobs:
       - name: Test candidate SQL against isolated PostgreSQL (not native qualification)
         env:
           CLOUDFLARE_POSTGRES_TEST: '1'
-          CLOUDFLARE_POSTGRES_PORT: ${{ job.services.postgres.ports[5432] }}
+          CLOUDFLARE_POSTGRES_PORT: ${{ job.services.postgres.ports['5432'] }}
         run: node --test --test-timeout=120000 plugins/cloudflare-broker/testing/postgres-contracts.mjs
 
   cloudflare-contracts:
