@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { versionAssetDescriptor } from "../dist/plugins/cloudflare-broker/src/version-assets.js";
 import { cloudflareReadOperations } from "../dist/plugins/cloudflare-broker/src/read-operations.js";
-import { createProviderBroker } from "../dist/packages/core/src/provider/index.js";
+import { canonicalHash, createProviderBroker } from "../dist/packages/core/src/provider/index.js";
 import { providerFixture, credentialCanary, derivedCanary } from "../packages/core/testing/provider-fixture.mjs";
 
 const account = "a".repeat(32);
@@ -166,6 +166,64 @@ function fixture(change = () => {}, result = row(), packageVersions = []) {
   const broker = createProviderBroker(f.dependencies);
   return { ...f, requests, invoke: (raw = args, key = "version-assets-call") => broker.call(name, raw, "verified-runtime", key) };
 }
+test("Cloudflare package projection has a distinct snapshotted policy resource without changing the request", () => {
+  const basic = versionAssetDescriptor(scope()).prepare(args);
+  const selected = packageScope();
+  const descriptor = versionAssetDescriptor(selected);
+  selected.packageVersions.length = 0;
+  const expanded = descriptor.prepare(args);
+  assert.equal(expanded.resource.id, `${basic.resource.id}:package-dependencies`);
+  assert.deepEqual(expanded.request, basic.request);
+  assert.deepEqual(expanded.arguments, basic.arguments);
+  assert.equal(expanded.resource.revision, basic.resource.revision);
+  assert.deepEqual(descriptor.project(success(packageRow()), expanded).packageDependencies, expectedPackages());
+});
+
+test("Cloudflare package projection requires exact expanded policy before credentials and network", async () => {
+  const baseResource = versionAssetDescriptor(scope()).prepare(args).resource.id;
+  for (const packages of [[], packageVersions()]) {
+    const f = fixture(f => {
+      f.vector.policy.resources = [packages.length === 0 ? `${baseResource}:package-dependencies` : baseResource];
+    }, packageRow(), packages);
+    const result = await f.invoke();
+    assert.equal(result.ok, false);
+    assert.equal(result.code, "POLICY_DENIED");
+    assert.equal(f.calls.secret, 0);
+    assert.equal(f.requests.length, 0);
+    assert.equal(f.calls.close, 0);
+    safe(f, result);
+  }
+});
+
+test("Cloudflare package resource is retained in exact core audit and replay records", async () => {
+  let target;
+  const f = fixture(f => {
+    const resolve = f.dependencies.credentials.resolve;
+    f.dependencies.credentials.resolve = async value => { target = value; return resolve(value); };
+  }, packageRow(), packageVersions());
+  const result = await f.invoke();
+  assert.equal(result.ok, true);
+  const resource = versionAssetDescriptor(packageScope()).prepare(args).resource;
+  assert.ok(resource.id.endsWith(":package-dependencies"));
+  assert.deepEqual(target.resource, resource);
+  assert.equal(f.audit.length, 2);
+  for (const record of f.audit) assert.equal(record.targetHash, canonicalHash(target));
+  assert.equal([...f.journal.values()][0].target, canonicalHash(target));
+  assert.equal([...f.journal.values()][0].outcome, "complete");
+  assert.equal((await f.invoke()).code, "REPLAY_CONFLICT");
+  assert.equal(f.requests.length, 1);
+  safe(f, result);
+});
+
+test("Cloudflare package execute refuses a prepared resource changed back to basic identity", async () => {
+  const f = fixture(() => {}, packageRow(), packageVersions());
+  const operation = f.dependencies.operations.find(value => value.name === "cloudflare.workers.version_assets.get");
+  const prepared = operation.prepare(args);
+  await assert.rejects(() => operation.execute({ ...prepared, resource: versionAssetDescriptor(scope()).prepare(args).resource },
+    credentialCanary, new AbortController().signal), /scope/);
+  assert.equal(f.requests.length, 0);
+});
+
 test("Cloudflare installed-package projection traverses core without source fetch and retains replay and redaction", async () => {
   const f = fixture(() => {}, packageRow(), packageVersions());
   const result = await f.invoke();

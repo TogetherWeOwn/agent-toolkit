@@ -114,8 +114,9 @@ export function versionAssetDescriptor(scope: VersionAssetScope): MetadataDescri
     prepare(raw: unknown): PreparedMetadata<Arguments> {
       const args = input.parse(raw);
       requireThat(allowed.get(args.scriptName)?.has(args.versionId) === true, "scope");
+      const suffix = packageScopes.has(`${args.scriptName}:${args.versionId}`) ? ":package-dependencies" : "";
       const prepared = Object.freeze({ arguments: args,
-        resource: Object.freeze({ id: `cloudflare:account:${account}:worker:${args.scriptName}:asset-version:${args.versionId}`, revision }),
+        resource: Object.freeze({ id: `cloudflare:account:${account}:worker:${args.scriptName}:asset-version:${args.versionId}${suffix}`, revision }),
         request: Object.freeze({ method: "GET" as const,
           path: `/accounts/${account}/workers/workers/${args.scriptName}/versions/${args.versionId}`,
           maxResponseBytes: 131072, timeoutMs: 10000, maxRequests: 1 as const, redirects: "deny" as const }),
