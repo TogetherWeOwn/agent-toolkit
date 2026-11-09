@@ -118,8 +118,9 @@ export function queueConsumerDescriptors(scope: QueueConsumerScope): {
   function prepare<A extends { queueId: string }>(args: A, consumerId?: string): PreparedMetadata<A> {
     const selected = selections(args.queueId);
     requireThat(consumerId === undefined || selected.has(consumerId), "scope");
+    const configurationSelected = consumerId !== undefined && configurations.get(args.queueId)?.has(consumerId) === true;
     const value = Object.freeze({ arguments: args,
-      resource: Object.freeze({ id: `cloudflare:account:${account}:queue:${args.queueId}:consumers${consumerId === undefined ? "" : `:${consumerId}`}`, revision }),
+      resource: Object.freeze({ id: `cloudflare:account:${account}:queue:${args.queueId}:consumers${consumerId === undefined ? "" : `:${consumerId}`}${configurationSelected ? ":configuration" : ""}`, revision }),
       request: Object.freeze({ method: "GET" as const,
         path: `/accounts/${account}/queues/${args.queueId}/consumers${consumerId === undefined ? "" : `/${consumerId}`}`,
         maxResponseBytes: 131072, timeoutMs: 10000, maxRequests: 1 as const, redirects: "deny" as const }) });
