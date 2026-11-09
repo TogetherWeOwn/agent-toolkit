@@ -19,6 +19,26 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
 
+## Reserved user-key revocation source delta
+
+Exact copied user/numeric key ID/revision and a dedicated user/key/revoke grant
+require reserved native exact-plan authority before credentials. Same-credential
+`/users/me` identity proof precedes a capped 30-row key-list preflight and one
+bodyless DELETE. Userless/wrong-user keys refuse before the account-wide list.
+All list IDs/duplicates/ancestry are validated before selection. Numeric IDs are
+not tokens. HTTP200 exact ID and explicit revoked=true acknowledge only, not
+credential completeness, independently observed revocation enforcement, session
+closure, expiry or cutover fencing. Unused credential/profile/usage fields never
+enter projection. Preflight is not atomic CAS or a guard against external writers.
+
+Ambiguity gets at most one bounded same-credential list observation and remains
+uncertain even on absence or observed revoked state; no mutation retry, alternate
+identity, organization fallback or invented idempotency header. The four-request
+worst-case path has a 4.5s operation ceiling, each request retains 64KiB/1s bounds.
+Permanent common journal barriers block same-request restart/replay. Native
+credential authority, host/policy/custody, durable recovery, effects/entitlement and
+independent reviews remain gates. Source/mocks only, no live revoke or enablement.
+
 ## Reserved role-deletion source delta
 
 Copied exact project/branch/role name/creation fingerprint/revision and a distinct

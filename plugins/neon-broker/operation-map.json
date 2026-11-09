@@ -272,20 +272,24 @@
       "id": "revokeApiKey",
       "apiArea": "api-key",
       "tool": "neon.revokeApiKey",
-      "scope": "key_id",
+      "scope": "user_id/key_id",
       "sideEffects": [
+        "api-key-revocation-request",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/user-key-revoke.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Reserved revocation-request source only; same-credential user proof, bounded exact numeric key-ID preflight, one DELETE and closed acknowledgement do not prove credential completeness, session fencing or cutover enforcement. Preflight is not atomic CAS. Native credential authority/host/policy/custody, durable common journal recovery, effects/entitlement and independent reviews unresolved."
     },
     {
       "id": "getProjectOperation",

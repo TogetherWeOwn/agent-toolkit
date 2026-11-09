@@ -7,6 +7,27 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonUserKeyRevokeOperations(trustedScope, transport)` adds reserved
+`revokeApiKey` source. Copy exact selected user/numeric key ID/revision; require
+`neon/users/<user>/api_keys/<id>/revoke` and common-core native exact-plan authority
+before credentials. Fixed same-credential `/users/me` proof precedes a nonpaginated
+30-row key-list preflight; validate all IDs/duplicates/ancestry before requiring the
+selected immutable numeric ID. Then exactly one bodyless DELETE. No account-wide
+output, organization-key fallback, token lookup, mint or rotation is introduced.
+
+Only HTTP200 exact ID and explicit `revoked: true` yield closed `{id, acknowledged: true}`.
+This is a provider acknowledgement, not independent enforcement, credential
+completeness, effective session closure, expiry or cutover fencing evidence. Names,
+creator profiles, usage/addresses, tokens and arbitrary extras are never evaluated
+or emitted. Ambiguity permits at most one same-credential bounded list observation
+and stays uncertain even on absence or a revoked observation; no retry or invented
+idempotency header. Preflight is not atomic CAS. Permanent common journal barriers
+block same-request restart/replay, not external writers. Each request retains the
+64KiB/1s bound; the four-request worst-case path has a 4.5s operation ceiling.
+Native credential authority/host/policy/custody, durable recovery, entitlement/effects
+and independent reviews remain gates. Source/mocks only: no live key revocation,
+credential retrieval, runtime registration or enablement.
+
 `createNeonRoleDeleteOperations(trustedScope, transport)` adds reserved
 `deleteProjectBranchRole` source. Copy exact project/branch/role name, expected
 `created_at` fingerprint and revision; require the distinct
@@ -1360,8 +1381,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: eighty-seven implemented
-source adapters, 107 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: eighty-eight implemented
+source adapters, 106 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable
