@@ -1589,20 +1589,23 @@
       "id": "updateNeonAuthAllowLocalhost",
       "apiArea": "auth",
       "tool": "neon.updateNeonAuthAllowLocalhost",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/auth/allow_localhost/disable",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-localhost-disable.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Disable-only source: true preflight then fixed false PATCH; enabling unsupported. Source delta review; native exact-plan authority, trusted host/custody, durable journal/recovery and provider effects/entitlement qualification remain. Preflight not atomic CAS; acknowledgement is not independently verified authentication refusal, token/session revocation or fencing. No live grant or enablement."
     },
     {
       "id": "updateNeonAuthLogsExport",

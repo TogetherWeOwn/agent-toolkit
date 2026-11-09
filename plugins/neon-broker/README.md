@@ -7,6 +7,26 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonAuthLocalhostDisableOperations` supplies reserved, disable-only
+`updateNeonAuthAllowLocalhost` source for one copied exact project/branch/revision.
+Dedicated `neon/projects/<project>/branches/<branch>/auth/allow_localhost/disable`
+grant and native exact-plan authority precede credentials. Mandatory exact-path
+GET requires `allow_localhost: true`, then one PATCH sends fixed
+`{allow_localhost: false}`. Enabling and caller body/boolean overrides are unsupported.
+HTTP200 must echo false; closed `{accepted: true}` acknowledges only, not independently
+verified authentication refusal, issued-token/session revocation or connection fencing.
+Other response fields are ignored without evaluation, except contradictory ancestry
+or pagination, which refuse.
+
+The setting is not immutable deployment identity; preflight is not atomic CAS and
+external reconfiguration races remain unresolved. One bounded status observation
+after ambiguity never upgrades false or absence to success. No mutation retry;
+permanent common journal blocks same-request replay, not external writers. The
+inventory conservatively promotes this authentication-trust mutation from write to
+reserved/native; source coverage does not include enabling. Fixed transport bounds
+and unresolved native host/custody/authority, effects/entitlement and review gates
+remain. No live change, legacy fallback or runtime registration is supplied.
+
 `createNeonAuthIntegrationDeleteOperations` adds reserved legacy
 `deleteNeonAuthIntegration` source. Copy exact project/provider/expected branch/ownership
 and revision; dedicated `neon/projects/<project>/auth/integration/<provider>/delete`
@@ -1815,8 +1835,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 110 implemented
-source adapters, 84 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 111 implemented
+source adapters, 83 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

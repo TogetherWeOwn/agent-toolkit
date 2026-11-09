@@ -1,5 +1,27 @@
 # Source-slice threat model
 
+## Reserved localhost authentication exception disable delta
+
+`updateNeonAuthAllowLocalhost` is disable-only: copied exact project/branch/revision,
+dedicated allow_localhost/disable permission and reserved native exact-plan authority.
+Read, branch-wide, auth-disable, other-project/branch or enable permissions cannot
+substitute. Enabling and all caller body overrides are rejected before credentials.
+Mandatory fixed-path GET requires true before exactly one PATCH sends false; HTTP200
+must return a boolean false. Only closed acknowledgement escapes; no independent
+localhost authentication refusal, issued-token/session revocation or fencing proof.
+Unused metadata is never evaluated or emitted; consumed ancestry/pagination is checked.
+
+Boolean state is not immutable deployment identity. Preflight is not atomic CAS,
+so external reconfiguration remains unfenced. A post-ambiguity status observation
+never establishes causal success, including false or absence; no mutation retry.
+Common permanent journal blocks same-request replay/restart only. Source/common
+regressions isolate target/expiry/consume authority negatives, policy/identity/resource
+TOCTOU, tampered plans, drift, response boundaries, cancellation/deadlines, reflection
+and actual common budgets. Conservative inventory write-to-reserved classification
+adds authority rather than weakening it. Native host/custody/authority, durable recovery,
+provider effects/entitlement and independent reviews remain unresolved. No live change,
+legacy fallback, production authority or runtime registration is supplied.
+
 ## Reserved organization VPC endpoint removal delta
 
 `deleteOrganizationVPCEndpoint` copies one exact organization/AWS region/cloud
