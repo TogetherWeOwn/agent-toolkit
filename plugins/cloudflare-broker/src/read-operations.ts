@@ -24,6 +24,7 @@ import { hostnameTlsDescriptors, type HostnameTlsScope } from "./hostname-tls.js
 import { zoneTlsDescriptor, type ZoneTlsScope } from "./zone-tls.js";
 import { dnssecDescriptor, type DnssecScope } from "./dnssec.js";
 import { zoneListDescriptor, type ZoneListScope } from "./zone-list.js";
+import { accountDetailDescriptor, type AccountDetailScope } from "./account-detail.js";
 import { universalSslDescriptor, type UniversalSslScope } from "./universal-ssl.js";
 import { automaticSslDescriptor, type AutomaticSslScope } from "./automatic-ssl.js";
 import { originPullsDescriptor, type OriginPullsScope } from "./origin-pulls.js";
@@ -89,6 +90,7 @@ function bind<A>(descriptor: {
 
 export interface CloudflareReadScope extends MetadataScope {
   zoneListIds?: ZoneListScope["zoneIds"];
+  accountDetailReadAllowed?: AccountDetailScope["readAllowed"];
   subscriptions?: SubscriptionScope["subscriptions"];
   workerSchedules?: WorkerScheduleScope["workers"];
   workerSecrets?: WorkerSecretScope["workers"];
@@ -197,6 +199,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
   const collectPages = pagesCollectionTransport(fetcher);
   return Object.freeze([
     metadata(zoneListDescriptor({ accountId, revision, zoneIds: scope.zoneListIds ?? [] })),
+    metadata(accountDetailDescriptor({ accountId, revision, readAllowed: scope.accountDetailReadAllowed ?? false })),
     metadata(subscriptions.subscriptionsList), metadata(subscriptions.subscriptionGet),
     metadata(workerScheduleDescriptor({ accountId, revision, workers: scope.workerSchedules ?? [] })),
     metadata(scriptSettings.scriptSettingsGet), metadata(scriptSettings.usageModelGet),

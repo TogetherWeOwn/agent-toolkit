@@ -29,7 +29,7 @@ test("Cloudflare internal transport makes one fixed-origin GET and projects meta
   assert.equal(calls[0].init.signal.aborted, true);
 });
 
-test("Cloudflare transport accepts the exact zone-detail root without exposing account or malformed roots", async () => {
+test("Cloudflare transport accepts the exact zone-detail root without exposing collection or malformed roots", async () => {
   const zone = zoneMetadataDescriptors({ accountId: account, revision: "resource-1", zoneId: own, dnsRecordIds: [] }).zoneGet;
   const calls = [];
   const read = metadataTransport(async (url, init) => {
@@ -40,7 +40,7 @@ test("Cloudflare transport accepts the exact zone-detail root without exposing a
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, `https://api.cloudflare.com/client/v4/zones/${own}`);
   assert.equal(calls[0].init.redirect, "manual");
-  for (const path of [`/accounts/${account}`, `/zones/${own}/`, `/zones/${own}?extra=1`, `/zones/${own}/../${account}`]) {
+  for (const path of ["/accounts", `/zones/${own}/`, `/zones/${own}?extra=1`, `/zones/${own}/../${account}`]) {
     await assert.rejects(read(changed({ path }), args, credential, signal()));
   }
   assert.equal(calls.length, 1);
