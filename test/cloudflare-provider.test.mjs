@@ -10,6 +10,7 @@ import { workerDomainMetadataDescriptors } from "../dist/plugins/cloudflare-brok
 import { subscriptionDescriptors } from "../dist/plugins/cloudflare-broker/src/subscriptions.js";
 import { workerScheduleDescriptor } from "../dist/plugins/cloudflare-broker/src/worker-schedules.js";
 import { loadBalancingDescriptors } from "../dist/plugins/cloudflare-broker/src/load-balancing.js";
+import { zoneLoadBalancerDescriptors } from "../dist/plugins/cloudflare-broker/src/zone-load-balancers.js";
 import { scriptSettingsDescriptors } from "../dist/plugins/cloudflare-broker/src/script-settings.js";
 import { environmentSettingsDescriptor } from "../dist/plugins/cloudflare-broker/src/environment-settings.js";
 import { dispatchSettingsDescriptor } from "../dist/plugins/cloudflare-broker/src/dispatch-settings.js";
@@ -112,6 +113,7 @@ const allDescriptors = { ...metadataOnly, ...deletionDescriptors, contentDescrip
   ...subscriptionDescriptors({ accountId: account, revision: "policy-1" }),
   workerSchedules: workerScheduleDescriptor({ accountId: account, revision: "policy-1" }),
   ...loadBalancingDescriptors({ accountId: account, revision: "policy-1" }),
+  ...zoneLoadBalancerDescriptors({ accountId: account, zoneId: zone, revision: "policy-1" }),
   ...scriptSettingsDescriptors({ accountId: account, revision: "policy-1" }),
   environmentSettings: environmentSettingsDescriptor({ accountId: account, revision: "policy-1" }),
   dispatchSettings: dispatchSettingsDescriptor({ accountId: account, revision: "policy-1" }),
