@@ -30,6 +30,7 @@ import { zoneListDescriptor, type ZoneListScope } from "./zone-list.js";
 import { zoneHoldDescriptor, type ZoneHoldScope } from "./zone-hold.js";
 import { regionalCacheDescriptor, type RegionalCacheScope } from "./regional-cache.js";
 import { cacheSettingsDescriptors, type CacheSettingsScope } from "./cache-settings.js";
+import { cacheMetadataDescriptors, type CacheMetadataScope } from "./cache-metadata.js";
 import { argoSettingsDescriptors, type ArgoSettingsScope } from "./argo-settings.js";
 import { zonePlanDescriptors, type ZonePlanScope } from "./zone-plans.js";
 import { dnsSettingsDescriptor, type DnsSettingsScope } from "./dns-settings.js";
@@ -159,6 +160,8 @@ export interface CloudflareReadScope extends MetadataScope {
     dnssecReadAllowed?: DnssecScope["readAllowed"];
     zoneHoldReadAllowed?: ZoneHoldScope["readAllowed"];
     regionalCacheReadAllowed?: RegionalCacheScope["readAllowed"];
+    cacheVariantsFormats?: CacheMetadataScope["formats"];
+    cacheReserveClearStatusReadAllowed?: CacheMetadataScope["clearStatusReadAllowed"];
     cacheReserveReadAllowed?: CacheSettingsScope["reserveReadAllowed"];
     smartTieredCacheReadAllowed?: CacheSettingsScope["smartTieredReadAllowed"];
     argoSmartRoutingReadAllowed?: ArgoSettingsScope["smartRoutingReadAllowed"];
@@ -233,6 +236,9 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     zoneId: scope.zone.zoneId, listIds: scope.zone.loadBalancerListIds ?? [], balancerIds: scope.zone.loadBalancerIds ?? [] });
   const healthChecks = scope.zone === undefined ? undefined : healthCheckDescriptors({ accountId, revision,
     zoneId: scope.zone.zoneId, listIds: scope.zone.healthCheckListIds ?? [], healthcheckIds: scope.zone.healthCheckIds ?? [] });
+  const cacheMetadata = scope.zone === undefined ? undefined : cacheMetadataDescriptors({ accountId, revision,
+    zoneId: scope.zone.zoneId, formats: scope.zone.cacheVariantsFormats ?? [],
+    ...(scope.zone.cacheReserveClearStatusReadAllowed === undefined ? {} : { clearStatusReadAllowed: scope.zone.cacheReserveClearStatusReadAllowed }) });
   const cacheSettings = scope.zone === undefined ? undefined : cacheSettingsDescriptors({ accountId, revision,
     zoneId: scope.zone.zoneId,
     ...(scope.zone.cacheReserveReadAllowed === undefined ? {} : { reserveReadAllowed: scope.zone.cacheReserveReadAllowed }),
@@ -304,6 +310,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     ...(plans === undefined ? [] : [metadata(plans.plansList), metadata(plans.planGet)]),
     ...(balancers === undefined ? [] : [metadata(balancers.balancersList), metadata(balancers.balancerGet)]),
     ...(healthChecks === undefined ? [] : [metadata(healthChecks.checksList), metadata(healthChecks.checkGet)]),
+    ...(cacheMetadata === undefined ? [] : [metadata(cacheMetadata.variantsGet), metadata(cacheMetadata.reserveClearStatusGet)]),
     ...(cacheSettings === undefined ? [] : [metadata(cacheSettings.reserveGet), metadata(cacheSettings.smartTieredGet)]),
     ...(argoSettings === undefined ? [] : [metadata(argoSettings.smartRoutingGet), metadata(argoSettings.tieredCachingGet)]),
     ...(scope.zone === undefined ? [] : [metadata(zoneTlsDescriptor({ accountId, revision,
