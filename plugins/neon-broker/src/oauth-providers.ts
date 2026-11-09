@@ -5,8 +5,8 @@ import type { NeonMetadataTransport } from "./transport.js";
 
 export const OAUTH_PROVIDER_OPERATIONS = ["listNeonAuthOauthProviders", "listBranchNeonAuthOauthProviders"] as const;
 type OAuthProviderOperation = typeof OAUTH_PROVIDER_OPERATIONS[number];
-const providerId = oneOf(["google", "github", "microsoft", "vercel", "apple"] as const);
-const providerType = oneOf(["standard", "shared"] as const);
+export const providerId = oneOf(["google", "github", "microsoft", "vercel", "apple"] as const);
+export const providerType = oneOf(["standard", "shared"] as const);
 const pathId = text(60, /^[a-z0-9-]+$/);
 const projectArguments = closed({ project_id: pathId });
 const branchArguments = closed({ project_id: pathId, branch_id: pathId });

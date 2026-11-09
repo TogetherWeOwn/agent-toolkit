@@ -1336,20 +1336,24 @@
       "id": "deleteBranchNeonAuthOauthProvider",
       "apiArea": "auth",
       "tool": "neon.deleteBranchNeonAuthOauthProvider",
-      "scope": "project_id/branch_id/oauth_provider_id",
+      "scope": "project_id/branch_id/auth/oauth_providers/oauth_provider_id/delete",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "oauth-provider-removal-request"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/oauth-provider-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only: copied exact branch/provider ID/expected type, native exact-plan authority, bounded full-list presence/type preflight and one bodyless DELETE. Empty HTTP200 acknowledges only, not independently verified enforcement or session/token revocation. Provider ID/type are not immutable identity; preflight not atomic CAS. Ambiguity stays uncertain after one observation, no retry; permanent common journal blocks replay. No legacy fallback. Native entitlement, effects, custody/host integration and independent reviews remain unresolved."
     },
     {
       "id": "getNeonAuthEmailServer",

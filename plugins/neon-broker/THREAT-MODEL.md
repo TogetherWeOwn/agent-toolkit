@@ -1,5 +1,29 @@
 # Source-slice threat model
 
+## Reserved branch OAuth-provider deletion delta
+
+`deleteBranchNeonAuthOauthProvider` copies one exact project/branch/known provider
+ID/expected type/revision. Dedicated provider/delete permission cannot be replaced
+by list, branch-wide, legacy or another-provider authority. Native exact-plan
+authorization precedes credentials. Mandatory full nonpaginated five-row list
+validation refuses duplicate/unknown IDs or types, contradictory ancestry and
+pagination; exact selected presence/type must match before one bodyless DELETE.
+Client identities, masked secrets and provider-specific fields are never consumed.
+Shared ID/type parsers align the existing read, new source and fixed transport.
+
+Only documented terminal empty HTTP200 acknowledges, without inventing an upstream
+identity echo or independently verified authentication refusal. No issued-token/
+session revocation, fencing or completeness proof is claimed. ID/type are not
+immutable identity; preflight is not atomic CAS, leaving configuration replacement
+races unresolved. Ambiguity gets one bounded list observation and stays uncertain
+even on absence or replacement; no mutation retry. Common permanent journal blocks
+same-request replay/restart, not external actors. Existing transport deadlines,
+size/cancellation/redirect controls apply. No legacy fallback, credential action,
+live mutation, native host/custody or runtime qualification is provided. Source and
+common contracts cover exact authority/agent/resource/TOCTOU, replay, malformed
+inputs, closed projection, ignored metadata, reflection and actual common budgets.
+Independent native reviews remain required.
+
 ## Reserved branch trusted-redirect deletion delta
 
 `deleteBranchNeonAuthTrustedDomain` copies one exact branch/provider/canonical HTTPS
