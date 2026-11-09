@@ -99,6 +99,47 @@ current-policy authority, successful-call attestation, reconciliation or retry.
 No native SELECT admission, capability or production database access is inferred
 from SDK declarations or isolated SQL fixtures.
 
+## Candidate append-only capture persistence
+
+`src/native-evidence.ts` supplies separate internal sink and exact-record reader
+factories for the existing `CaptureEvidenceSink` contract. Neither is wired into
+a tool, broker, manifest or native handler. They capture the host-derived namespace
+and only their respective SDK `db.execute` / `db.query` method. The separately
+provisioned fixed table is `cloudflare_capture_evidence`:
+
+- `event`: primary/unique, non-null bounded core event identifier.
+- `contract`: non-null literal `toolkit.cloudflare-capture/v1`.
+- `subject`: non-null literal `credential-filtered-current-content-projection` or
+  `credential-filtered-pages-list-projection`.
+- `target_hash`, `value_hash`: non-null 64-character lowercase hex hashes of the
+  exact core target and credential-filtered projection respectively.
+
+Only closed bounded records enter parameterized SQL. Append is one plain INSERT;
+a duplicate event refuses even when identical, never overwrites the observation,
+and never retries a lost acknowledgment. Exactly one affected row is required.
+No DDL, update/delete, scan, TTL, automatic reconciliation or fallback is supplied.
+The reader takes an independently expected full record, performs one SELECT by
+exact event with LIMIT 2, refuses duplicates/extra/corrupt/foreign fields and
+returns only a frozen matching record or null. Database/validation failures expose
+only `cloudflare.evidence.unavailable`, without causes or raw diagnostics. No raw
+source, projection body, credential or target arguments are stored by these ports.
+
+A committed capture is an **observation, not successful-call acceptance**. A lost
+acknowledgment can retain a capture while suppressing output; a later failed ALLOW
+outcome audit leaves the capture with an uncertain journal. Null is not proof of
+no execution. The reader does not authorize its caller, validate current policy,
+prove authenticity/durability or provide a transactionally consistent audit/journal
+join. Host SQL admission, plugin-owned namespace isolation, schema constraints,
+PostgreSQL commit/restart semantics, retained authenticated retrieval and the exact
+capture/audit/journal consistency boundary remain unqualified. Installation and
+schema provisioning require their existing independent review/release gates.
+
+`test/cloudflare-native-evidence.test.mjs` uses isolated SQLite and synthetic core
+ports for immutable/reopened records, duplicate/foreign/corrupt refusals, strict
+validation, redacted failures, lost acknowledgment and actual-core content/Pages
+capture-success, delayed acknowledgment, outage, audit-failure and replay cases.
+These are source contracts, not native PostgreSQL, host or provider qualification.
+
 ## Source tests versus native acceptance
 
 `test/cloudflare-native-journal.test.mjs` executes the candidate statements on
