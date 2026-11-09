@@ -45,6 +45,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   objectDownloadCases, objectDownloadFixture, objectDownloadScope, binaryResponse,
   endpointDeleteFixture, endpointDeleteArgs, endpointDeleteScope, endpointDeleteReceipt,
   projectDeleteFixture, projectDeleteArgs, projectDeleteScope, projectDeleteReceipt,
+  databaseDeleteFixture, databaseDeleteArgs, databaseDeleteScope, databaseDeleteReceipt,
   branchDeleteFixture, branchDeleteArgs, branchDeleteScope, branchDeleteReceipt,
   endpointStartFixture, endpointStartArgs, endpointStartScope, endpointStartReceipt,
   endpointRestartFixture, endpointRestartArgs, endpointRestartScope, endpointRestartReceipt,
@@ -121,6 +122,129 @@ function safeEnvelope(f, result) {
     assert(!serialized.includes(secret), `secret in output/audit/journal: ${secret}`);
   }
 }
+
+function databaseDeletionBroker(value = databaseDeleteReceipt, overrides = {}, config = databaseDeleteScope) {
+  const provider = databaseDeleteFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId, database_name: config.databaseName };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('deleteProjectBranchDatabase').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.deleteProjectBranchDatabase', args, context, key);
+  } };
+}
+
+test('database deletion: reserved exact agent AND delete grant precede credentials and transport', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = databaseDeletionBroker(undefined, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  for (const resource of ['neon/projects/project-a/branches/br-a/databases/main', 'neon/projects/project-a/delete',
+    'neon/projects/project-a/branches/br-a/delete', 'neon/projects/project-a/branches/br-a/databases/other/delete',
+    'neon/projects/project-a/branches/br-other/databases/main/delete']) {
+    const f = databaseDeletionBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = databaseDeletionBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = databaseDeletionBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { id: 123, branch_id: 'br-a', acknowledged: true,
+    operations: databaseDeleteReceipt.operations.map(({ id, status }) => ({ id, status })) });
+  assert.equal(f.common.calls.consumed, 1);
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('database deletion: native authorization rejects stale, wrong target or unconsumable evidence', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = databaseDeletionBroker();
+    const base = f.common.authority;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { return false; } };
+    const result = await f.common.broker().call('neon.deleteProjectBranchDatabase', databaseDeleteArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('database deletion: identity/resource TOCTOU and caller ID/SQL/cascade overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = databaseDeletionBroker(undefined, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = databaseDeletionBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.deleteProjectBranchDatabase', databaseDeleteArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { database_id: 123 }, { sql: 'DROP DATABASE main' }, { cascade: true }, { force: true }, { database_name: 'other' }]) {
+    const g = databaseDeletionBroker();
+    assert.equal((await g.common.broker().call('neon.deleteProjectBranchDatabase', { ...databaseDeleteArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('database deletion: permanent journal blocks complete and uncertain replay after restart', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = databaseDeletionBroker((url, init) => {
+      if (init.method === 'DELETE' && ambiguous) throw Error(credentialCanary);
+      return response(databaseDeleteReceipt);
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('database deletion: malformed/reflected or reassociated echoes retain uncertainty and safe envelopes', async () => {
+  for (const raw of [{ ...databaseDeleteReceipt, database: { ...databaseDeleteReceipt.database, name: credentialCanary } },
+    { ...databaseDeleteReceipt, database: { ...databaseDeleteReceipt.database, id: 456 } },
+    { ...databaseDeleteReceipt, operations: [{ ...databaseDeleteReceipt.operations[0], project_id: credentialCanary }] }]) {
+    const f = databaseDeletionBroker(raw);
+    const result = await f.call();
+    assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, 'uncertain');
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 1);
+    safeEnvelope(f, result);
+  }
+  const f = databaseDeletionBroker({ ...databaseDeleteReceipt, password: credentialCanary,
+    database: { ...databaseDeleteReceipt.database, owner_name: credentialCanary, connection_uri: derivedCanary } });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
+test('database deletion: maximum copied IDs and database name fit common budgets', async () => {
+  const config = { projectId: 'p'.repeat(60), branchId: 'br-' + 'b'.repeat(57), databaseName: 'D'.repeat(63),
+    databaseId: Number.MAX_SAFE_INTEGER, revision: 'r'.repeat(80) };
+  const f = databaseDeletionBroker({ database: { id: config.databaseId, branch_id: config.branchId, name: config.databaseName }, operations: [] }, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
 
 function projectDeletionBroker(value = projectDeleteReceipt, overrides = {}, config = projectDeleteScope) {
   const provider = projectDeleteFixture(value, config);

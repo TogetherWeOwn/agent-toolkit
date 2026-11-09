@@ -780,6 +780,28 @@ this does not establish atomicity across live branch heads. Database comparison
 may wake compute; native effects, entitlement and independent acceptance remain
 unresolved. No runtime tool is enabled.
 
+## Reserved database-deletion acknowledgement delta
+
+`deleteProjectBranchDatabase` binds copied project/branch/database name/immutable
+numeric database ID/revision to a dedicated database/delete resource and reserved
+native exact-plan authority. Parent/read, project/branch-delete, sibling-database
+and cross-agent grants never substitute. Mandatory detail GET requires exact
+ID/name/branch before one bodyless DELETE. Same-name replacements refuse, but
+preflight is not atomic CAS and cannot eliminate a subsequent rename/replacement
+race without provider support. No SQL, force/cascade, recovery, credential or
+arbitrary URL override is accepted. Source mocks authorize no live deletion.
+
+Only bounded HTTP200 exact identity plus unique operation-ID/status observations
+yield closed acknowledgement, not completed deletion, session closure, no reconnect,
+fencing, recovery or cutover enforcement. Owner names, timestamps, operation actions,
+endpoint IDs and diagnostics are omitted without evaluation. HTTP204, lost, rejected
+or malformed responses get at most one bounded observation and stay uncertain even
+on absence or name reuse; no mutation retry or invented idempotency header. Native
+durable journal integration must retain complete/uncertain tombstones across restart.
+Custody, host/policy, durable recovery, native authority, effects/entitlement,
+production deletion authority and independent reviews remain unresolved; no runtime
+tool enabled. GET/mocks do not prove non-waking safety.
+
 ## Reserved project-deletion acknowledgement delta
 
 `deleteProject` binds copied project/owning organization/revision to a dedicated

@@ -2347,8 +2347,9 @@
       "id": "deleteProjectBranchDatabase",
       "apiArea": "branch",
       "tool": "neon.deleteProjectBranchDatabase",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/database_name/database_id",
       "sideEffects": [
+        "database-deletion-request",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
@@ -2356,11 +2357,14 @@
       "authorization": "native",
       "entitlement": "unknown",
       "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "tests": [
+        "plugins/neon-broker/test/database-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Reserved deletion-request source only; exact immutable database ID/name/branch preflight, one DELETE and closed acknowledgement are not completed deletion, fencing or recovery proof. Native authority/host/policy/custody, durable common journal recovery, provider effects/entitlement, production deletion authority and independent reviews unresolved."
     },
     {
       "id": "listProjectBranchRoles",

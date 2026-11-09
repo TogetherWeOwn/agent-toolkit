@@ -7,6 +7,26 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonDatabaseDeleteOperations(trustedScope, transport)` adds reserved
+`deleteProjectBranchDatabase` source. Copy exact project/branch/database name,
+immutable numeric database ID and revision; require the dedicated
+`neon/projects/<project>/branches/<branch>/databases/<database>/delete` grant and
+common-core native exact-target/plan authorization before credentials. Mandatory
+database-detail GET binds ID/name/branch before one bodyless DELETE. Name reuse with
+a different ID refuses. Preflight is not atomic CAS: the provider documents no
+conditional delete or idempotency header, so a race after preflight is unresolved.
+
+Only HTTP200 exact database identity and bounded unique operation-ID/status
+observations yield `{id, branch_id, acknowledged: true, operations}`. This is not
+completed deletion, zero sessions/no reconnect, fencing, recovery or cutover proof.
+Owner names, timestamps, operation actions/endpoints and diagnostics are not evaluated
+or emitted. HTTP204/ambiguity gets at most one bounded detail observation and remains
+uncertain even on absence or name replacement. No mutation retry, SQL, force/cascade,
+recovery or cross-database fallback exists. Permanent common journal entries block
+same-request restart/replay; durable native recovery, custody, host/policy, authority,
+entitlement/effects, production deletion authority and independent reviews remain
+gates. Source/mocks only, no live deletion or non-waking claim.
+
 `createNeonProjectDeleteOperations(trustedScope, transport)` adds reserved
 `deleteProject` source. Copy exact project/owning organization/revision; require the
 dedicated `neon/projects/<project>/delete` grant and common-core native exact-plan
@@ -1317,8 +1337,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: eighty-five implemented
-source adapters, 109 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: eighty-six implemented
+source adapters, 108 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable
