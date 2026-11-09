@@ -44,6 +44,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   oauthProviderCases, oauthProviderFixture, oauthProviderScope, oauthProvider,
   objectDownloadCases, objectDownloadFixture, objectDownloadScope, binaryResponse,
   endpointDeleteFixture, endpointDeleteArgs, endpointDeleteScope, endpointDeleteReceipt,
+  projectDeleteFixture, projectDeleteArgs, projectDeleteScope, projectDeleteReceipt,
   branchDeleteFixture, branchDeleteArgs, branchDeleteScope, branchDeleteReceipt,
   endpointStartFixture, endpointStartArgs, endpointStartScope, endpointStartReceipt,
   endpointRestartFixture, endpointRestartArgs, endpointRestartScope, endpointRestartReceipt,
@@ -120,6 +121,126 @@ function safeEnvelope(f, result) {
     assert(!serialized.includes(secret), `secret in output/audit/journal: ${secret}`);
   }
 }
+
+function projectDeletionBroker(value = projectDeleteReceipt, overrides = {}, config = projectDeleteScope) {
+  const provider = projectDeleteFixture(value, config);
+  const args = { project_id: config.projectId };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('deleteProject').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.deleteProject', args, context, key);
+  } };
+}
+
+test('project deletion: reserved exact agent AND delete grant precede credentials and transport', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = projectDeletionBroker(undefined, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  for (const resource of ['neon/projects/project-a', 'neon/projects/project-a/rename', 'neon/projects/project-b/delete',
+    'neon/projects/project-a/branches/br-a/delete', 'neon/organizations/org-a']) {
+    const f = projectDeletionBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = projectDeletionBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = projectDeletionBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { id: 'project-a', acknowledged: true });
+  assert.equal(f.common.calls.consumed, 1);
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('project deletion: native authorization rejects stale, wrong target or unconsumable evidence', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = projectDeletionBroker();
+    const base = f.common.authority;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { return false; } };
+    const result = await f.common.broker().call('neon.deleteProject', projectDeleteArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('project deletion: identity/resource TOCTOU and caller ownership/cascade/force refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = projectDeletionBroker(undefined, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = projectDeletionBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.deleteProject', projectDeleteArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { owner_id: 'org-a' }, { org_id: 'org-a' }, { cascade: false }, { force: true }, { project_id: 'project-b' }]) {
+    const g = projectDeletionBroker();
+    assert.equal((await g.common.broker().call('neon.deleteProject', { ...projectDeleteArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('project deletion: permanent journal blocks complete and uncertain replay after restart', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = projectDeletionBroker((url, init) => {
+      if (init.method === 'DELETE' && ambiguous) throw Error(credentialCanary);
+      return response(projectDeleteReceipt);
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('project deletion: malformed/reflected owner echoes retain uncertainty and omit unused secret fields', async () => {
+  for (const raw of [{ project: { ...projectDeleteReceipt.project, owner_id: credentialCanary } },
+    { project: { ...projectDeleteReceipt.project, id: 'project-other' } }]) {
+    const f = projectDeletionBroker(raw);
+    const result = await f.call();
+    assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, 'uncertain');
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 1);
+    safeEnvelope(f, result);
+  }
+  const f = projectDeletionBroker({ password: credentialCanary,
+    project: { ...projectDeleteReceipt.project, name: credentialCanary, proxy_host: derivedCanary, owner: { email: credentialCanary } } });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
+test('project deletion: maximum copied project and organization fit common budgets', async () => {
+  const config = { projectId: 'p'.repeat(60), organizationId: 'o'.repeat(60), revision: 'r'.repeat(80) };
+  const f = projectDeletionBroker({ project: { id: config.projectId, owner_id: config.organizationId } }, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { id: config.projectId, acknowledged: true });
+  safeEnvelope(f, result);
+});
 
 function branchDeletionBroker(value = branchDeleteReceipt, overrides = {}, config = branchDeleteScope) {
   const provider = branchDeleteFixture(value, config);

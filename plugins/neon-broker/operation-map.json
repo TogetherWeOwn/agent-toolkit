@@ -442,20 +442,24 @@
       "id": "deleteProject",
       "apiArea": "project",
       "tool": "neon.deleteProject",
-      "scope": "project_id",
+      "scope": "project_id/delete",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "project-cascade-deletion-request"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/project-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Mocked source only; dedicated project/delete grant and reserved native exact-plan authority required. Exact project/owner detail preflight then one bodyless DELETE, explicitly cascading to all endpoints, branches, databases and users. HTTP200 exact identity/owner echo is acknowledgement only, not completed deletion, fencing, zero sessions or recoverability proof. HTTP204/ambiguity stays uncertain after one observation including absence, never retried; permanent common journal blocks restart/replay. Native host/policy/custody, durable recovery, entitlement/effects, production deletion authority and independent reviews unresolved. No live deletion, cutover enforcement or enablement."
     },
     {
       "id": "recoverProject",

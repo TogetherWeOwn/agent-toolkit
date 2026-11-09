@@ -780,6 +780,28 @@ this does not establish atomicity across live branch heads. Database comparison
 may wake compute; native effects, entitlement and independent acceptance remain
 unresolved. No runtime tool is enabled.
 
+## Reserved project-deletion acknowledgement delta
+
+`deleteProject` binds copied project/owning organization/revision to a dedicated
+project/delete resource and reserved native exact-plan authority. Parent/read,
+rename, branch-delete, sibling-project and cross-agent grants never substitute.
+Mandatory detail preflight requires exact project ID and required owner_id; optional
+org_id must agree. Exactly one bodyless DELETE explicitly cascades to all endpoints,
+branches, databases and users, not a selected subset. No caller cascade/force,
+credential, recovery or arbitrary URL override is accepted. Preflight is not atomic
+CAS or proof of ownership at mutation. Source mocks authorize no live deletion.
+
+Only bounded HTTP200 exact project/owner echo yields a closed acknowledgement,
+not completed cascade deletion, fencing, zero sessions/no reconnect or cutover
+enforcement. Provider-documented recovery within seven days is not verified or
+performed here. Names, hosts, settings, usage, owner profiles and diagnostics are
+omitted without evaluation. HTTP204, lost, rejected or malformed responses get at
+most one bounded observation and stay uncertain even on absence; no mutation retry,
+recovery/catalog fallback or invented idempotency header. Native durable common
+journal integration must retain complete/uncertain tombstones across restart.
+Custody, host/policy, durable recovery, effects/entitlement, production deletion
+authority and independent reviews remain unresolved; no runtime tool enabled.
+
 ## Reserved branch-deletion acknowledgement delta
 
 `deleteProjectBranch` binds one copied project/branch/parent/revision to a dedicated
