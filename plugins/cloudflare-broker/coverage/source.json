@@ -1,0 +1,42 @@
+{
+  "manifestVersion": 1,
+  "contract": "toolkit.provider-broker/v1",
+  "complete": false,
+  "source": {
+    "repository": "https://github.com/cloudflare/api-schemas",
+    "revision": "650bd71c22db3b938a4611bf4cc5afd896b400b7",
+    "url": "https://raw.githubusercontent.com/cloudflare/api-schemas/650bd71c22db3b938a4611bf4cc5afd896b400b7/openapi.json",
+    "sha256": "f4a13c74ffc7e9108a1e8b459c39c5e405f659f6b5e5b9a5a284f9039620a40c",
+    "openapi": "3.0.3",
+    "version": "4.0.0"
+  },
+  "inventorySha256": "0d173fd68eba6fa28f58ddd6b3fb6b6c7c081e8b60326a7356f97eae57f62066",
+  "counts": { "paths": 2352, "operations": 3777, "apiTags": 599, "descriptors": 102, "metadataDescriptors": 96, "contentDescriptors": 1, "planDescriptors": 5, "implementedTools": 0, "reviewedTools": 0, "enabledTools": 0 },
+  "familySummary": { "file": "families.json", "grouping": "first-provider-tag-exclusive", "primaryFamilies": 596, "note": "Additive source-workload counts only, not credential intersection, policy classification or effort estimates; six operations have additional tags." },
+  "credentialScope": {
+    "status": "operation-entitlements-unresolved",
+    "credentialReference": null,
+    "verifiedBy": null,
+    "verifiedAt": null,
+    "accounts": null,
+    "zones": null,
+    "tokenPermissions": null,
+    "planEntitlements": null,
+    "note": "Private connection metadata is retained in the admission record, not this public manifest. Operation/resource/protocol entitlement remains unresolved; OAuth scopes are not API-token groups or S3 signing credentials. API annotations and credential breadth are not agent grants. An intentionally broker-held master does not require narrowing for breadth alone. No credential value is part of this manifest."
+  },
+  "supplementalSurfaces": [
+    { "surface": "R2 S3-compatible API", "status": "documentary-inventory-only", "inventory": "r2-s3.json", "inventorySha256": "4b35efec6937566c21693e0d5f37682b4a0d343ef6e71d511cd802c0123953fe", "prerequisite": "credential-protocol-intersection-and-typed-adapters" },
+    { "surface": "GraphQL Analytics API", "status": "not-inventoried", "referenceRevision": "53ce9b502646fdc019b8184b29b9f1054939e1b6", "referenceUrl": "https://raw.githubusercontent.com/cloudflare/cloudflare-docs/53ce9b502646fdc019b8184b29b9f1054939e1b6/src/content/docs/analytics/graphql-api/features/discovery/introspection.mdx", "referenceSha256": "88bd3c1dca295fc8967a6d12ffdd10c524e3499f1b4c8a0388c63189d19ffbf4", "prerequisite": "authorized-entitled-schema-settings-snapshot-and-typed-queries" }
+  ],
+  "qualificationPrerequisites": [
+    "complete-entitled-surface-and-supplemental-inventory",
+    "operator-verified-credential-scope-metadata",
+    "reviewed-compatible-common-core",
+    "typed-adapters-for-every-entitled-operation",
+    "native-host-policy-approval-journal-audit-integration",
+    "independent-security-crypto-and-final-qa",
+    "exact-head-actions-and-required-review-checks",
+    "exact-artifact-runtime-install-and-enablement-authority",
+    "approved-affected-agent-usage-per-enabled-tier"
+  ]
+}
