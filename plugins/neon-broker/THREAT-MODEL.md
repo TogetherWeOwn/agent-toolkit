@@ -1122,6 +1122,26 @@ not external writers. Source/mocks only, zero enabled; native host/authority/cus
 durable recovery, effects/entitlement/Beta availability and independent reviews
 remain qualification gates. No live deletion, session closure or cutover claim.
 
+## Reserved function-deletion delta
+
+The dedicated exact branch/function-slug/delete grant and reserved native exact-plan
+authorization precede credential access. Copied scope includes a stable function ID
+and immutable slug; detail preflight binds both before one bodyless DELETE. Optional
+wrapper/row ancestry must match. Read, parent, trigger, deployment and sibling grants
+cannot substitute. Names, invocation URLs, deployment/environment/error fields and
+timestamps are never evaluated/emitted. Provider-valid IDs outside the conservative
+selected subset refuse rather than being normalized.
+
+Empty HTTP204 acknowledges only; it is not an identity echo, independently verified
+invocation refusal, committed-work cancellation, session closure or fencing proof.
+Preflight is not atomic CAS and cannot prevent a same-slug replacement after the
+GET. Ambiguity gets one bounded detail observation and remains uncertain even on
+absence/replacement. No retry or invented conditional/idempotency header; permanent
+common journal blocks restart/replay, not external writers. Native host/authority,
+custody, durable recovery, provider effects/Beta entitlement and independent review
+remain unresolved. Source/mocks only, zero enabled; no live deletion or lifecycle
+enforcement claim.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.

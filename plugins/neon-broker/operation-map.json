@@ -3998,20 +3998,24 @@
       "id": "deleteProjectBranchFunction",
       "apiArea": "functions",
       "tool": "neon.deleteProjectBranchFunction",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/slug/delete",
       "sideEffects": [
         "provider-effects-unverified",
+        "branch-function-deletion-request",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/function-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Reserved exact-plan source/mocks only; stable-ID/slug preflight is not atomic CAS and slug replacement race remains. Empty204 acknowledges only, not invocation refusal or committed-work cancellation. No retry; permanent common journal and uncertain reconciliation required. Native authority/host/custody, durable recovery, effects/entitlement, beta availability and independent reviews unresolved. No live enablement."
     },
     {
       "id": "createProjectBranchFunctionDeployment",

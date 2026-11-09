@@ -16,6 +16,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  deleteProjectBranchFunction(project: string, branch: string, slug: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchTrigger(project: string, branch: string, trigger: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectJWKS(project: string, jwks: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteNeonAuthOAuthClient(project: string, branch: string, client: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -234,6 +235,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    deleteProjectBranchFunction: (project: string, branch: string, slug: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/functions/${functionSlug(slug)}`,
+        new URLSearchParams(), options, undefined, false, 204),
     deleteProjectBranchTrigger: (project: string, branch: string, trigger: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/triggers/${id(trigger)}`,
         new URLSearchParams(), options, undefined, false, 204),

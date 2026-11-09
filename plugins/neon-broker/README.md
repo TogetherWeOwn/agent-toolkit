@@ -1527,6 +1527,29 @@ or invented idempotency header. The common permanent journal blocks restart/repl
 Native authority/host/custody, durable recovery, Beta effects/entitlement and
 independent reviews remain unresolved. Source/mocks only; no live deletion or enablement.
 
+## Reserved function deletion request
+
+`createNeonFunctionDeleteOperations` copies one exact project/branch/stable function
+ID/immutable slug/revision. `neon.deleteProjectBranchFunction` accepts only
+`{ project_id, branch_id, slug }`, requires the dedicated
+`neon/projects/<project>/branches/<branch>/functions/<slug>/delete` grant and reserved
+native exact-plan authorization. Mandatory detail GET binds the stable ID and slug,
+then one bodyless DELETE is issued. Selected project/branch IDs are a conservative
+60-character lowercase subset shared with the detail transport; slugs are bounded
+to the pinned path's 20 lowercase alphanumeric characters. Optional wrapper/row
+ancestry must match. Names, invocation URLs, deployments, environment names, errors
+and timestamps are never evaluated/emitted.
+
+Only documented empty HTTP204 becomes `{ acknowledged: true }`, not an identity
+echo, independent invocation-refusal, committed-work cancellation, session/fencing
+or completeness proof. Preflight is not atomic CAS: a slug replacement after the
+GET remains an unresolved race. Ambiguity gets one bounded detail observation and
+stays uncertain even on absence/replacement; no mutation retry or invented
+idempotency/conditional header. The common permanent journal blocks restart/replay,
+not external writers. Native authority/host/custody, durable recovery, Beta
+effects/entitlement and independent reviews remain unresolved. Source/mocks only;
+no live deletion, invocation or runtime enablement.
+
 ## Shared contract and candidate compatibility
 
 Contract: `toolkit.provider-broker/v1`. Merged core: [PR #17](https://github.com/TogetherWeOwn/agent-toolkit/pull/17),
@@ -1552,8 +1575,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: ninety-six implemented
-source adapters, 98 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: ninety-seven implemented
+source adapters, 97 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable
