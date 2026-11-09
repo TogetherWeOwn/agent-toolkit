@@ -13,6 +13,7 @@ import { scriptSettingsDescriptors } from "../dist/plugins/cloudflare-broker/src
 import { environmentSettingsDescriptor } from "../dist/plugins/cloudflare-broker/src/environment-settings.js";
 import { dispatchSettingsDescriptor } from "../dist/plugins/cloudflare-broker/src/dispatch-settings.js";
 import { dispatchScriptDescriptor } from "../dist/plugins/cloudflare-broker/src/dispatch-scripts.js";
+import { dispatchBindingsDescriptor } from "../dist/plugins/cloudflare-broker/src/dispatch-bindings.js";
 import { dispatchSecretDescriptor, dispatchSecretListDescriptor } from "../dist/plugins/cloudflare-broker/src/dispatch-secret.js";
 import { workerAccountDescriptors } from "../dist/plugins/cloudflare-broker/src/worker-account.js";
 import { workerIdentityDescriptors } from "../dist/plugins/cloudflare-broker/src/worker-identities.js";
@@ -105,6 +106,7 @@ const allDescriptors = { ...metadataOnly, ...deletionDescriptors, contentDescrip
   environmentSettings: environmentSettingsDescriptor({ accountId: account, revision: "policy-1" }),
   dispatchSettings: dispatchSettingsDescriptor({ accountId: account, revision: "policy-1" }),
   dispatchScripts: dispatchScriptDescriptor({ accountId: account, revision: "policy-1" }),
+  dispatchBindings: dispatchBindingsDescriptor({ accountId: account, revision: "policy-1" }),
   dispatchSecret: dispatchSecretDescriptor({ accountId: account, revision: "policy-1" }),
   dispatchSecretList: dispatchSecretListDescriptor({ accountId: account, revision: "policy-1" }),
   ...workerAccountDescriptors({ accountId: account, revision: "policy-1" }),

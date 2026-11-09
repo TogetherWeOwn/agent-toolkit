@@ -7,6 +7,7 @@ import { scriptSettingsDescriptors, type ScriptSettingsScope } from "./script-se
 import { environmentSettingsDescriptor, type EnvironmentSettingsScope } from "./environment-settings.js";
 import { dispatchSettingsDescriptor, type DispatchSettingsScope } from "./dispatch-settings.js";
 import { dispatchScriptDescriptor, type DispatchScriptScope } from "./dispatch-scripts.js";
+import { dispatchBindingsDescriptor, type DispatchBindingScope } from "./dispatch-bindings.js";
 import { dispatchSecretDescriptor, dispatchSecretListDescriptor, type DispatchSecretScope } from "./dispatch-secret.js";
 import { workerAccountDescriptors, type WorkerAccountScope } from "./worker-account.js";
 import { workerIdentityDescriptors, type WorkerIdentityScope } from "./worker-identities.js";
@@ -99,6 +100,7 @@ export interface CloudflareReadScope extends MetadataScope {
   workerEnvironmentSettings?: EnvironmentSettingsScope["environments"];
   dispatchScriptSettings?: DispatchSettingsScope["scripts"];
   dispatchScriptLists?: DispatchScriptScope["namespaces"];
+  dispatchScriptBindings?: DispatchBindingScope["namespaces"];
   dispatchScriptSecrets?: DispatchSecretScope["namespaces"];
   dispatchScriptSecretLists?: DispatchSecretScope["namespaces"];
   workerObservabilityScriptNames?: ScriptSettingsScope["observabilityScriptNames"];
@@ -197,6 +199,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(environmentSettingsDescriptor({ accountId, revision, environments: scope.workerEnvironmentSettings ?? [] })),
     metadata(dispatchSettingsDescriptor({ accountId, revision, scripts: scope.dispatchScriptSettings ?? [] })),
     metadata(dispatchScriptDescriptor({ accountId, revision, namespaces: scope.dispatchScriptLists ?? [] })),
+    metadata(dispatchBindingsDescriptor({ accountId, revision, namespaces: scope.dispatchScriptBindings ?? [] })),
     metadata(dispatchSecretDescriptor({ accountId, revision, namespaces: scope.dispatchScriptSecrets ?? [] })),
     metadata(dispatchSecretListDescriptor({ accountId, revision, namespaces: scope.dispatchScriptSecretLists ?? [] })),
     metadata(workerAccount.accountSettingsGet), metadata(workerAccount.accountSubdomainGet),
