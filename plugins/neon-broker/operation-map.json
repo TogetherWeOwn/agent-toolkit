@@ -1467,7 +1467,7 @@
       "id": "updateNeonAuthEmailAndPasswordConfig",
       "apiArea": "auth",
       "tool": "neon.updateNeonAuthEmailAndPasswordConfig",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/auth/email_and_password/disable",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -1475,12 +1475,15 @@
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-email-disable.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Disable-only source: enabled=true preflight then fixed enabled=false PATCH; enabling, verification, sign-up/sign-in and password-reset session-policy overrides unsupported. Source delta review; native exact-plan authority, trusted host/custody, durable journal/recovery and provider effects/entitlement qualification remain. Preflight not atomic CAS; acknowledgement is not independently verified authentication refusal, token/session revocation or fencing. No live grant or enablement."
     },
     {
       "id": "getNeonAuthEmailProvider",

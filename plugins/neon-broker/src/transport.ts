@@ -20,6 +20,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  updateNeonAuthEmailAndPasswordConfig(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   updateProjectBranchTrigger(project: string, branch: string, trigger: string, type: string, options: MetadataRequestOptions): Promise<unknown>;
   updateNeonAuthOAuthClient(project: string, branch: string, client: string, options: MetadataRequestOptions): Promise<unknown>;
   updateNeonAuthOAuthProviderPlugin(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -274,6 +275,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    updateNeonAuthEmailAndPasswordConfig: (project: string, branch: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/email_and_password`, new URLSearchParams(), options,
+        JSON.stringify({ enabled: false }), false, false, true),
     updateProjectBranchTrigger: (project: string, branch: string, trigger: string, type: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/triggers/${identifier.parse(trigger)}`, new URLSearchParams(), options,
         JSON.stringify({ type: oneOf(["schedule", "storage_object_created"] as const).parse(type), enabled: false }), false, false, true),

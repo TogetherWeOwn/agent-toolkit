@@ -1,5 +1,29 @@
 # Source-slice threat model
 
+## Reserved email-and-password authentication disable delta
+
+`updateNeonAuthEmailAndPasswordConfig` is disable-only: copied exact project/branch/
+revision, dedicated email_and_password/disable permission and reserved native
+exact-plan authority. Read, branch-wide, plugin-disable, sibling-target and enable
+permissions cannot substitute. Mandatory exact-path GET requires enabled=true, then
+one PATCH sends only enabled=false. Verification, sign-up/sign-in, automatic sign-in,
+mail and password-reset session-policy overrides refuse before credentials. The
+provider explicitly updates only supplied fields; unused configuration/metadata is
+never evaluated or emitted. Contradictory ancestry/pagination and malformed consumed
+status refuse. Exact false200 echo acknowledges only, not independently observed
+authentication refusal, token/session revocation or fencing. No password reset or
+implicit invocation of its revoke-sessions policy is claimed.
+
+Boolean state is not immutable identity; preflight is not atomic CAS and external
+reconfiguration races remain unresolved. One post-ambiguity observation never proves
+causal completion even on false or absence; no retry. Permanent common journal
+blocks same-request replay/restart, not external writers. Contracts isolate native
+target/expiry/consume negatives, exact grants, identity/resource TOCTOU, tampered
+plans, configuration overrides, status drift, response/cancellation/deadline bounds,
+reflection, ignored-field getters and actual common budgets. Native host/custody/
+authority/durable recovery, provider effects/entitlement and independent reviews
+remain gates. Source/mocks only; no live mutation or runtime registration.
+
 ## Reserved branch-local trigger disable delta
 
 `updateProjectBranchTrigger` is disable-only: copied exact project/branch/trigger ID,
