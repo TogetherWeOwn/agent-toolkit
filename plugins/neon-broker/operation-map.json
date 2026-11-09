@@ -808,10 +808,10 @@
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "unknown",
+      "status": "implemented",
       "tests": [
-        "test/data-api-delete.test.mjs",
-        "test/core.compat.mjs"
+        "plugins/neon-broker/test/data-api-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
       ],
       "implemented": true,
       "reviewed": false,
