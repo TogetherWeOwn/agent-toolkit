@@ -4155,20 +4155,25 @@
       "id": "updateProjectBranchTrigger",
       "apiArea": "functions",
       "tool": "neon.updateProjectBranchTrigger",
-      "scope": "project_id/branch_id/trigger_id",
+      "scope": "project_id/branch_id/trigger_id/disable",
       "sideEffects": [
         "provider-effects-unverified",
+        "branch-local-trigger-disable-request",
+        "committed-invocations-not-cancelled",
         "compute-wake-not-proven"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/trigger-disable.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Disable-only local enabled trigger source/mocks; inherited edits, enabling and configuration replacement unsupported. Exact detail/type/version preflight is not atomic CAS. Valid200 disabled/local/version echo acknowledges only, not independently observed stoppage or committed-invocation cancellation. No retry; permanent common journal and uncertain reconciliation required. Native authority/host/custody, durable recovery, effects/entitlement, beta availability and independent reviews unresolved. No live enablement."
     },
     {
       "id": "deleteProjectBranchTrigger",

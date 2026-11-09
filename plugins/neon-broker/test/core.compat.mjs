@@ -1020,6 +1020,139 @@ test('OAuth client disable: maximum identity selection fits actual common prepar
   safeEnvelope(f, result);
 });
 
+import { triggerDisableFixture, triggerDisableScope, triggerDisableArgs, triggerDisableMetadata } from './helpers.mjs';
+function triggerDisableBroker(value = null, overrides = {}, config = triggerDisableScope) {
+  const provider = triggerDisableFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId, trigger_id: config.triggerId };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('updateProjectBranchTrigger').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.updateProjectBranchTrigger', args, context, key);
+  } };
+}
+
+test('Trigger disable: reserved exact-plan authority and exact disable AND agent grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = triggerDisableBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = 'neon/projects/project-a/branches/br-a/triggers/tr-a/disable';
+  for (const resource of [target.replace('/disable', ''), target.replace('br-a', 'other'), target.replace('project-a', 'other'),
+    target.replace('tr-a', 'other'), target.replace('/disable', '/enable'), target.replace('/disable', '/delete'), 'neon/projects/project-a/branches/br-a']) {
+    const f = triggerDisableBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = triggerDisableBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = triggerDisableBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { accepted: true });
+  assert.equal(f.common.calls.consumed, 1);
+  safeEnvelope(f, result);
+});
+
+test('Trigger disable: stale, wrong-target and unconsumable native evidence are isolated negative controls', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = triggerDisableBroker();
+    const base = f.common.authority;
+    let consumeCalls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.updateProjectBranchTrigger', triggerDisableArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Trigger disable: host identity/resource TOCTOU and enable/configuration overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = triggerDisableBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = triggerDisableBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.updateProjectBranchTrigger', triggerDisableArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { project_id: 'other' }, { branch_id: 'other' }, { trigger_id: 'other' }, { enabled: true }, { enabled: false },
+    { inherited: false }, { type: 'schedule' }, { function_slug: 'other' }, { function_path: '/other' }, { name: 'other' }, { schedule: {} }, { storage_object_created: {} }, { retry: true }]) {
+    const g = triggerDisableBroker();
+    assert.equal((await g.common.broker().call('neon.updateProjectBranchTrigger', { ...triggerDisableArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('Trigger disable: complete/uncertain permanent journal blocks restart replay without committed-invocation cancellation', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = triggerDisableBroker((url, init, n) => {
+      if (init.method === 'PATCH' && ambiguous) throw Error(credentialCanary);
+      return response({ trigger: { ...triggerDisableMetadata, enabled: n === 1, version: n === 1 ? 1 : 2 } });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'PATCH').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Trigger disable: identity/version/local-enabled drift and reflected lease strings cannot enter safe envelopes', async () => {
+  for (const change of [{ project_id: 'other' }, { branch_id: credentialCanary }, { trigger_id: 'other' }, { version: 2 }, { inherited: true },
+    { enabled: false }, { enabled: credentialCanary }, { pagination: {} }]) {
+    const f = triggerDisableBroker(() => response({ trigger: { ...triggerDisableMetadata, ...change } }));
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'PATCH').length, 0);
+    safeEnvelope(f, result);
+  }
+  const f = triggerDisableBroker((url, init) => response({ trigger: { ...triggerDisableMetadata,
+    enabled: init.method === 'PATCH' ? credentialCanary : true, version: init.method === 'PATCH' ? 2 : 1 } }));
+  const result = await f.call();
+  assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+  safeEnvelope(f, result);
+  const g = triggerDisableBroker((url, init) => response({ trigger: { ...triggerDisableMetadata,
+    enabled: init.method !== 'PATCH', version: init.method === 'PATCH' ? 2 : 1,
+    name: credentialCanary, function_path: derivedCanary, schedule: { cron: credentialCanary }, storage_object_created: credentialCanary, secret: credentialCanary } }));
+  const clean = await g.call();
+  assert.equal(clean.ok, true);
+  assert.deepEqual(clean.value, { accepted: true });
+  safeEnvelope(g, clean);
+});
+
+test('Trigger disable: maximum identity selection fits actual common prepared budgets for both types', async () => {
+  for (const expectedType of ['schedule', 'storage_object_created']) {
+    const config = { ...triggerDisableScope, projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), triggerId: 't'.repeat(80), functionSlug: 'f'.repeat(20),
+      expectedType, expectedVersion: Number.MAX_SAFE_INTEGER - 1, revision: 'r'.repeat(80) };
+    const f = triggerDisableBroker(null, {}, config);
+    const result = await f.call();
+    assert.equal(result.ok, true);
+    safeEnvelope(f, result);
+  }
+});
+
 import { authOAuthDisableFixture, authOAuthDisableScope, authOAuthDisableArgs } from './helpers.mjs';
 function authOAuthDisableBroker(value = null, overrides = {}, config = authOAuthDisableScope) {
   const provider = authOAuthDisableFixture(value, config);

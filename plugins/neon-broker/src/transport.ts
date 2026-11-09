@@ -20,6 +20,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  updateProjectBranchTrigger(project: string, branch: string, trigger: string, type: string, options: MetadataRequestOptions): Promise<unknown>;
   updateNeonAuthOAuthClient(project: string, branch: string, client: string, options: MetadataRequestOptions): Promise<unknown>;
   updateNeonAuthOAuthProviderPlugin(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   updateNeonAuthPhoneNumberPlugin(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -273,6 +274,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    updateProjectBranchTrigger: (project: string, branch: string, trigger: string, type: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/triggers/${identifier.parse(trigger)}`, new URLSearchParams(), options,
+        JSON.stringify({ type: oneOf(["schedule", "storage_object_created"] as const).parse(type), enabled: false }), false, false, true),
     updateNeonAuthOAuthClient: (project: string, branch: string, client: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/oauth-provider/clients/${authClientId(client)}`, new URLSearchParams(), options,
         JSON.stringify({ disabled: true }), false, false, true),

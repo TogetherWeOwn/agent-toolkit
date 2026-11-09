@@ -1,5 +1,28 @@
 # Source-slice threat model
 
+## Reserved branch-local trigger disable delta
+
+`updateProjectBranchTrigger` is disable-only: copied exact project/branch/trigger ID,
+function slug/type/version/revision, dedicated disable permission and reserved native
+exact-plan authority. Read, delete, enable, branch-wide or sibling permissions cannot
+substitute. Mandatory detail GET requires exact binding/version and local enabled
+state; inherited edits refuse before mutation. One PATCH contains only the existing
+type discriminator and enabled=false. No function/path/name/schedule/storage overrides.
+Exact HTTP200 target/type/local-disabled/version echo acknowledges only, not independent
+stoppage, committed-invocation cancellation, sessions or fencing. Schedule versions
+must advance; storage cannot regress. Unused names/configuration/timestamps never
+evaluate or escape, while consumed ancestry/pagination is validated.
+
+Preflight is not atomic CAS; external writers can reconfigure between requests.
+One post-ambiguity detail observation never establishes causal success even on
+disabled/absence; no retry. Permanent common journal blocks same-request replay,
+not external writers. Source/common contracts isolate exact grants, native target/
+expiry/consume negatives, identity/resource TOCTOU, tampered plans, inherited/enable/
+configuration refusals, consumed-field drift, cancellation/deadline/response bounds,
+reflection and actual common budgets. Conservative write-to-reserved classification
+adds authority; native host/custody/durable recovery, effects/Beta entitlement and
+independent reviews remain gates. Source/mocks only; no scheduler or live mutation.
+
 ## Reserved OAuth client disable delta
 
 `updateNeonAuthOAuthClient` is disable-only: copied exact project/branch/client ID,
