@@ -904,7 +904,7 @@
       "id": "disableNeonAuth",
       "apiArea": "auth",
       "tool": "neon.disableNeonAuth",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/auth/disable",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -912,12 +912,15 @@
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-disable.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Connection-only source with fixed delete_data=false; data erasure unsupported. Source delta review; native exact-plan authority, host/policy/permanent journal/custody integration and provider effects/entitlement qualification unresolved. Preflight not atomic CAS; no independent authentication refusal, token/session revocation or fencing proof. No live grant or enablement."
     },
     {
       "id": "listNeonAuthRedirectURIWhitelistDomains",

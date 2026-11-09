@@ -1337,6 +1337,26 @@ writers. Negative native-authority, TOCTOU, bounds/deadline, ignored-field and s
 contracts are source/mocks, not runtime qualification. Host/custody, durable recovery,
 effects/entitlement, actual authority and independent reviews remain unresolved.
 
+## Reserved connection-only Neon Auth disable delta
+
+`disableNeonAuth` copies exact project/branch/expected provider/ownership/revision.
+Dedicated auth/disable grant and reserved native exact-plan authorization precede
+credentials. Mandatory detail GET binds branch/provider/ownership and refuses a pending
+ownership transfer before one DELETE sends fixed `delete_data:false`. The provider's
+optional true value would erase the neon_auth schema and tables; it is unsupported
+and never sent. No re-enable, legacy, database/SQL or live mutation fallback.
+
+Only documented empty200 acknowledges; not independently observed authentication
+refusal, data preservation, token/session revocation, completeness or connection
+fencing. Provider/ownership metadata is not immutable identity; preflight is not
+atomic CAS and replacement races remain unresolved. Database name, external provider
+project IDs, names, URLs and timestamps are never consumed. Ambiguity gets one bounded
+detail observation then stays uncertain even on absence/replacement; no retry.
+Permanent common journal blocks same-request restart/replay, not external writers.
+Source/mocks and native-authority/TOCTOU/deadline/malformed/ignored-accessor/safe-envelope
+contracts are not runtime qualification. All actual native authority, host/custody,
+durable recovery, effects/entitlement and independent reviews remain unresolved.
+
 ## Reserved Realtime disable delta
 
 `disableProjectBranchRealtime` copies exact project/branch/expected deployment revision
