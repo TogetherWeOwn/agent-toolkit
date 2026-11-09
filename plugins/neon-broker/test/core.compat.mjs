@@ -5383,6 +5383,112 @@ test('project rename: maximal copied target and labels fit common budgets', asyn
   safeEnvelope(f, result);
 });
 
+import { databaseCreateFixture, databaseCreateArgs, databaseCreateScope, databaseCreateReceipt } from './helpers.mjs';
+function databaseCreateBroker(value = null, overrides = {}, config = databaseCreateScope) {
+  const provider = databaseCreateFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId, database_name: config.databaseName, owner_name: config.ownerName };
+  const common = providerFixture(overrides);
+  common.vector.policy.resources = [provider.operation('createProjectBranchDatabase').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.createProjectBranchDatabase', args, context, key);
+  } };
+}
+
+test('database create: agent AND exact create grant precede credentials; closed acknowledgement only', async () => {
+  const target = 'neon/projects/project-a/branches/br-a/databases/newdb';
+  for (const resource of ['neon/projects/project-a', 'neon/projects/project-a/branches/br-a/databases', target,
+    target + '/delete', target.replace('br-a', 'br-b') + '/create', target.replace('newdb', 'other') + '/create']) {
+    const f = databaseCreateBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = databaseCreateBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.common.calls.secret, 0);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = databaseCreateBroker({ ...databaseCreateReceipt, database: { ...databaseCreateReceipt.database, created_at: credentialCanary, password: derivedCanary } });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { id: 123, branch_id: 'br-a', acknowledged: true,
+    operations: databaseCreateReceipt.operations.map(({ id, status }) => ({ id, status })) });
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('database create: identity/resource TOCTOU and owner/body/authority overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = databaseCreateBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = databaseCreateBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.createProjectBranchDatabase', databaseCreateArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ owner_name: 'other' }, { database: { name: 'newdb' } }, { database_name: 'other' }, { approved: true },
+    { project_id: 'other' }, { branch_id: 'br-b' }, { retry: true }, { password: 'unused' }]) {
+    const g = databaseCreateBroker();
+    assert.equal((await g.common.broker().call('neon.createProjectBranchDatabase', { ...databaseCreateArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+    assert.equal(g.provider.requests.length, 0);
+  }
+});
+
+test('database create: permanent journal blocks complete/uncertain replay after restart without retrying POST', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = databaseCreateBroker((url, init, n) => {
+      if (init.method === 'POST') {
+        if (ambiguous) throw Error(credentialCanary);
+        return response(databaseCreateReceipt, { status: 201 });
+      }
+      return response({ databases: n === 1 ? [] : [databaseCreateReceipt.database] });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const count = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, count);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'POST').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('database create: existing/foreign lists never mutate; reflected receipt remains uncertain and redacted', async () => {
+  for (const raw of [{ databases: [databaseCreateReceipt.database] }, { databases: [], branch_id: 'other' },
+    { databases: [{ id: 1, name: 'other', branch_id: 'br-b' }] }]) {
+    const f = databaseCreateBroker(() => response(raw));
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 1);
+  }
+  for (const raw of [{ ...databaseCreateReceipt, database: { ...databaseCreateReceipt.database, owner_name: credentialCanary } },
+    { ...databaseCreateReceipt, operations: [{ ...databaseCreateReceipt.operations[0], project_id: credentialCanary }] }]) {
+    const f = databaseCreateBroker(raw);
+    const result = await f.call();
+    assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, 'uncertain');
+    safeEnvelope(f, result);
+  }
+});
+
+test('database create: maximal copied target fits actual common budgets', async () => {
+  const config = { projectId: 'p'.repeat(60), branchId: 'br-' + 'b'.repeat(57), databaseName: 'd'.repeat(63), ownerName: 'o'.repeat(63), revision: 'r'.repeat(80) };
+  const f = databaseCreateBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { id: 123, branch_id: config.branchId, acknowledged: true, operations: [] });
+  safeEnvelope(f, result);
+});
+
 function privateBucketCreateBroker(value = null, overrides = {}, config = bucketCreateScope) {
   const provider = bucketCreateFixture(value, config);
   const args = { project_id: config.projectId, branch_id: config.branchId, bucket_name: config.bucketName };

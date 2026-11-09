@@ -1706,6 +1706,25 @@ retry; permanent common journal blocks restart/replay, not external writers. Str
 arguments/plan, response bounds, cancellation/deadline, ignored-field, native authority,
 TOCTOU, safe-envelope and replay tests remain source/mocks, not live qualification.
 
+## Exact-owner database creation delta
+
+`createProjectBranchDatabase` copies one exact project/branch/database/owner/revision
+and requires a distinct database/create grant. A bounded complete database-list GET
+must establish selected-name absence before one POST containing only database.name
+and owner_name. Existing names refuse regardless of owner. Whole-list ID/name/branch,
+duplicate, pagination and size validation precedes the absence decision. Provider
+validates owner existence and permissions; no role/password read or creation occurs.
+Only exact HTTP201 branch/name/owner echo with a safe numeric ID and bounded operation
+observations acknowledges the request. Timestamps, secrets and diagnostics are never
+evaluated or emitted. Operations may still be pending or failed; no completed creation,
+readiness, persistence or independent access-enforcement claim is supplied.
+
+Preflight is not atomic CAS; external same-name creation or owner-role replacement
+races remain unresolved. Ambiguity gets one bounded list observation and remains
+uncertain even on desired presence or absence. No retry; the common permanent journal
+blocks same-request replay, not external writers. Source/mocks, not live creation or
+spend authority; native effects/entitlement, host/custody and independent gates remain.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.

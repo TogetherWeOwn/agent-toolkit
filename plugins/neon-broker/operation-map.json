@@ -2352,20 +2352,24 @@
       "id": "createProjectBranchDatabase",
       "apiArea": "branch",
       "tool": "neon.createProjectBranchDatabase",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/database_name/create",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "database-creation"
       ],
       "tier": "write",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/database-create.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only; exact-owner database creation after bounded name-absence preflight. HTTP201 acknowledges only, not completed creation, persistence, readiness or access enforcement. Preflight not atomic CAS; ambiguity remains uncertain after one list observation, no retry, permanent common journal. Provider owner validation, entitlement/effects, native host/custody, integration and independent reviews unresolved; no live creation or spend."
     },
     {
       "id": "getProjectBranchDatabase",

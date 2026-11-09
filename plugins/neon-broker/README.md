@@ -2048,13 +2048,27 @@ candidate and synthetic host/policy/journal/audit/credential adapters. It does
 not establish durable/native grants, acceptance of core or safe live integration.
 There is no test-time network fallback if the fixture is missing.
 
+## Exact-owner database creation source
+
+`createNeonDatabaseCreateOperations` copies one project/branch/database name/owner
+role/revision and requires an exact database/create grant. A bounded complete
+nonpaginated database-list absence preflight precedes one POST with database.name
+and owner_name only. Existing names refuse regardless of owner; owner validity is
+provider-enforced, with no role/password read. Exact201 target/owner echo yields
+closed numeric database ID, branch ID, acknowledgement and bounded operation
+observations only. It does not prove operation completion, persistence, readiness
+or access enforcement. External name/role races remain unresolved; preflight is not
+atomic CAS. Ambiguity stays uncertain after one bounded list observation, no retry;
+common permanent journal prevents same-request replay. Source/mocks only, not live
+creation, spend authority or runtime qualification.
+
 ## Coverage and verification
 
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 122 implemented
-source adapters, 72 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 123 implemented
+source adapters, 71 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

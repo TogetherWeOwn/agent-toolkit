@@ -22,6 +22,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  createProjectBranchDatabase(project: string, branch: string, database: string, owner: string, options: MetadataRequestOptions): Promise<unknown>;
   setProjectMemberRole(project: string, member: string, options: MetadataRequestOptions): Promise<unknown>;
   updateOrganizationMember(organization: string, member: string, options: MetadataRequestOptions): Promise<unknown>;
   updateNeonAuthWebhookConfig(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -296,6 +297,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     updateNeonAuthWebhookConfig: (project: string, branch: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/webhooks`, new URLSearchParams(), options,
         JSON.stringify({ enabled: false }), false, false, false, false, false, 200, true),
+    createProjectBranchDatabase: (project: string, branch: string, database: string, owner: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/databases`, new URLSearchParams(), options,
+        JSON.stringify({ database: { name: databaseUpdateName.parse(database), owner_name: databaseUpdateName.parse(owner) } }), false, false, false, false, false, 201),
     createProjectBranchBucket: (project: string, branch: string, bucket: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/buckets`, new URLSearchParams(), options,
         JSON.stringify({ name: bucketDeleteName.parse(bucket), access_level: "private" }), false, false, false, false, false, 201),

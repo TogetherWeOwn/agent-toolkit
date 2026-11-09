@@ -515,6 +515,15 @@ export function authWebhookDisableFixture(value = null, config = authWebhookDisa
     response({ enabled: init.method !== 'PUT', webhook_url: 'https://example.invalid/hook',
       enabled_events: ['send.otp'], timeout_seconds: 5 }), config, createNeonAuthWebhookDisableOperations);
 }
+import { createNeonDatabaseCreateOperations } from '../dist/plugins/neon-broker/src/database-create.js';
+export const databaseCreateScope = { projectId: 'project-a', branchId: 'br-a', databaseName: 'newdb', ownerName: 'owner_a', revision: 'scope-v1' };
+export const databaseCreateArgs = { project_id: 'project-a', branch_id: 'br-a', database_name: 'newdb', owner_name: 'owner_a' };
+export const databaseCreateReceipt = { database: { id: 123, branch_id: 'br-a', name: 'newdb', owner_name: 'owner_a' }, operations: [{ ...operation, status: 'running' }] };
+export function databaseCreateFixture(value = null, config = databaseCreateScope) {
+  return fixture((url, init, n) => typeof value === 'function' ? value(url, init, n) :
+    init.method === 'POST' ? response(value ?? { database: { id: 123, branch_id: config.branchId, name: config.databaseName, owner_name: config.ownerName }, operations: [] }, { status: 201 }) :
+      response({ databases: [] }), config, createNeonDatabaseCreateOperations);
+}
 import { createNeonBucketCreateOperations } from '../dist/plugins/neon-broker/src/bucket-create.js';
 export const bucketCreateScope = { projectId: 'project-a', branchId: 'br-a', bucketName: 'assets', revision: 'scope-v1' };
 export const bucketCreateArgs = { project_id: 'project-a', branch_id: 'br-a', bucket_name: 'assets' };
