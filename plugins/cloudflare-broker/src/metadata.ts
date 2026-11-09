@@ -48,6 +48,7 @@ export interface MetadataScope {
   workerVersions?: readonly { scriptName: string; versionIds: readonly string[] }[];
   workerControlScriptNames?: readonly string[];
   workerBindingScripts?: readonly { scriptName: string; bindings: readonly BindingIdentity[] }[];
+  workerVersionBindings?: readonly { scriptName: string; versionId: string; bindings: readonly BindingIdentity[] }[];
   workerAttributionScriptNames?: readonly string[];
   workerVersionDetailScriptNames?: readonly string[];
 }
@@ -124,7 +125,14 @@ interface VersionMetadata {
   attribution?: { createdOn: { status: "provider-reported"; value: string } | { status: "unavailable"; reason: "not-returned" } };
 }
 type ConfiguredCpu = { status: "configured"; value: number } | { status: "unavailable"; reason: "not-returned" };
+type WorkerBindingMetadata = "unavailable" | {
+  readonly subject: "configured-worker-binding-identities";
+  readonly items: readonly BindingIdentity[];
+  readonly complete: false;
+  readonly effectiveAvailability: "not-established";
+};
 interface VersionDetailMetadata extends VersionMetadata {
+  bindings?: WorkerBindingMetadata;
   detail?: {
     subject: "provider-version-detail";
     scriptContentTag: { status: "provider-reported"; value: string; algorithm: "not-established" } | { status: "unavailable"; reason: "not-returned" };
@@ -149,12 +157,7 @@ function providerTimestamp(value: unknown): string {
   return stamp;
 }
 interface WorkerBudgetMetadata {
-  bindings?: "unavailable" | {
-    readonly subject: "configured-worker-binding-identities";
-    readonly items: readonly BindingIdentity[];
-    readonly complete: false;
-    readonly effectiveAvailability: "not-established";
-  };
+  bindings?: WorkerBindingMetadata;
   cpuMs: ConfiguredCpu;
   bodyBytes: UnavailableControl;
   memoryBytes: UnavailableControl;
@@ -206,20 +209,39 @@ export function metadataDescriptors(scope: MetadataScope) {
   requireThat(Array.isArray(workerBindingScripts) && workerBindingScripts.length <= maxRows, "cap");
   const bindingScripts = new Map<string, Map<string, BindingType>>();
   const bindingName = text(128, /^[A-Za-z_][A-Za-z0-9_]*$(?![\s\S])/);
-  for (const entry of workerBindingScripts) {
-    requireThat(entry !== null && typeof entry === "object", "schema");
-    const name = scriptName.parse(entry.scriptName);
-    requireThat(controlScripts.has(name), "scope");
-    requireThat(!bindingScripts.has(name), "schema");
-    requireThat(Array.isArray(entry.bindings) && entry.bindings.length > 0 && entry.bindings.length <= maxRows, "cap");
+  function bindingSelection(values: readonly BindingIdentity[]): Map<string, BindingType> {
+    requireThat(Array.isArray(values) && values.length > 0 && values.length <= maxRows, "cap");
     const bindings = new Map<string, BindingType>();
-    for (const value of entry.bindings) {
+    for (const value of values) {
       requireThat(value !== null && typeof value === "object", "schema");
       const key = bindingName.parse(value.name);
       requireThat(!bindings.has(key) && dispatchBindingTypes.includes(value.type), "schema");
       bindings.set(key, value.type);
     }
-    bindingScripts.set(name, bindings);
+    return bindings;
+  }
+  function bindingMetadata(value: unknown, selected: Map<string, BindingType>, name: string, id?: string): WorkerBindingMetadata {
+    if (value === undefined) return "unavailable";
+    const items: BindingIdentity[] = [], seen = new Set<string>();
+    for (const binding of rows(value)) {
+      requireThat(binding.account_id === undefined || binding.account_id === account, "scope");
+      requireThat(binding.script_name === undefined || binding.script_name === name, "scope");
+      if (id !== undefined) requireThat(binding.version_id === undefined || binding.version_id === id, "scope");
+      requireThat(typeof binding.name === "string", "upstream");
+      const type = selected.get(binding.name);
+      if (type === undefined) continue;
+      requireThat(binding.type === type && !seen.has(binding.name), "scope"); seen.add(binding.name);
+      items.push(Object.freeze({ name: binding.name, type }));
+    }
+    return Object.freeze({ subject: "configured-worker-binding-identities", items: Object.freeze(items),
+      complete: false, effectiveAvailability: "not-established" });
+  }
+  for (const entry of workerBindingScripts) {
+    requireThat(entry !== null && typeof entry === "object", "schema");
+    const name = scriptName.parse(entry.scriptName);
+    requireThat(controlScripts.has(name), "scope");
+    requireThat(!bindingScripts.has(name), "schema");
+    bindingScripts.set(name, bindingSelection(entry.bindings));
   }
   const workerAttributionScriptNames = scope.workerAttributionScriptNames ?? [];
   requireThat(Array.isArray(workerAttributionScriptNames) && workerAttributionScriptNames.length <= maxRows, "cap");
@@ -286,6 +308,17 @@ export function metadataDescriptors(scope: MetadataScope) {
     requireThat(!versions.has(name), "schema");
     requireThat(Array.isArray(entry.versionIds) && entry.versionIds.length <= maxRows, "cap");
     versions.set(name, new Set<string>(entry.versionIds.map((value: unknown) => versionId.parse(value))));
+  }
+  const workerVersionBindings = scope.workerVersionBindings === undefined ? [] : scope.workerVersionBindings;
+  requireThat(Array.isArray(workerVersionBindings) && workerVersionBindings.length <= maxRows, "cap");
+  const versionBindings = new Map<string, Map<string, BindingType>>();
+  for (const entry of workerVersionBindings) {
+    requireThat(entry !== null && typeof entry === "object", "schema");
+    const name = scriptName.parse(entry.scriptName), id = versionId.parse(entry.versionId);
+    requireThat(versions.get(name)?.has(id) === true, "scope");
+    const key = `${name}:${id}`;
+    requireThat(!versionBindings.has(key), "schema");
+    versionBindings.set(key, bindingSelection(entry.bindings));
   }
   const root = `/accounts/${account}`;
   function prepared<A>(args: A, resource: string, path: string): PreparedMetadata<A> {
@@ -605,19 +638,32 @@ export function metadataDescriptors(scope: MetadataScope) {
       return bounded({ items, complete: false as const });
     },
   });
+  const versionPreparations = new WeakSet<object>();
   const versionGet: MetadataDescriptor<ReturnType<typeof workerVersion.parse>, VersionDetailMetadata> = Object.freeze({
     name: "cloudflare.workers.versions.get", version: "1", tier: "read", providerOperationId: "worker-versions-get-version-detail",
     prepare(raw: unknown) {
       const args = workerVersion.parse(raw);
       versionScope(args.scriptName, args.versionId);
-      return prepared(args, `worker:${args.scriptName}:version:${args.versionId}`, `${root}/workers/scripts/${encodeURIComponent(args.scriptName)}/versions/${args.versionId}`);
+      const suffix = versionBindings.has(`${args.scriptName}:${args.versionId}`) ? ":binding-identities" : "";
+      const value = prepared(args, `worker:${args.scriptName}:version:${args.versionId}${suffix}`, `${root}/workers/scripts/${encodeURIComponent(args.scriptName)}/versions/${args.versionId}`);
+      versionPreparations.add(value); return value;
     },
     project(raw: string, input: PreparedMetadata<ReturnType<typeof workerVersion.parse>>) {
+      requireThat(versionPreparations.has(input), "scope");
       const args = workerVersion.parse(input.arguments);
       versionScope(args.scriptName, args.versionId);
       const row = object(envelope(raw).result);
       requireThat(row.id === args.versionId, "scope");
-      const output = versionMetadata(row, args.scriptName);
+      const output: VersionDetailMetadata = versionMetadata(row, args.scriptName);
+      const selected = versionBindings.get(`${args.scriptName}:${args.versionId}`);
+      if (selected !== undefined) {
+        attributionIdentity(row, args.scriptName);
+        const resources = row.resources === undefined ? {} : object(row.resources);
+        requireThat(resources.account_id === undefined || resources.account_id === account, "scope");
+        requireThat(resources.script_name === undefined || resources.script_name === args.scriptName, "scope");
+        requireThat(resources.version_id === undefined || resources.version_id === args.versionId, "scope");
+        output.bindings = bindingMetadata(resources.bindings, selected, args.scriptName, args.versionId);
+      }
       if (!versionDetailScripts.has(args.scriptName)) return bounded(output);
       attributionIdentity(row, args.scriptName);
       const resources = row.resources === undefined ? {} : object(row.resources);
@@ -763,23 +809,7 @@ export function metadataDescriptors(scope: MetadataScope) {
         workerFirst: { status: "unavailable", reason: "not-in-response-schema" },
       };
       const selected = bindingScripts.get(input.arguments.scriptName);
-      if (selected !== undefined) {
-        if (row.bindings === undefined) output.bindings = "unavailable";
-        else {
-          const items: BindingIdentity[] = [], seen = new Set<string>();
-          for (const binding of rows(row.bindings)) {
-            requireThat(binding.account_id === undefined || binding.account_id === account, "scope");
-            requireThat(binding.script_name === undefined || binding.script_name === input.arguments.scriptName, "scope");
-            requireThat(typeof binding.name === "string", "upstream");
-            const type = selected.get(binding.name);
-            if (type === undefined) continue;
-            requireThat(binding.type === type && !seen.has(binding.name), "scope"); seen.add(binding.name);
-            items.push(Object.freeze({ name: binding.name, type }));
-          }
-          output.bindings = Object.freeze({ subject: "configured-worker-binding-identities", items: Object.freeze(items),
-            complete: false, effectiveAvailability: "not-established" });
-        }
-      }
+      if (selected !== undefined) output.bindings = bindingMetadata(row.bindings, selected, input.arguments.scriptName);
       return bounded(output);
     },
   });
