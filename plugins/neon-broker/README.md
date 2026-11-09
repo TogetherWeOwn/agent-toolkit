@@ -7,6 +7,17 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonLegacyOAuthProviderDeleteOperations` adds reserved
+`deleteNeonAuthOauthProvider` with a strictly project-only scope: exact known
+provider ID/expected type/revision, no branch argument or fallback. Its dedicated
+`neon/projects/<project>/auth/legacy/oauth_providers/<provider>/delete` grant is
+separate from branch and list authority. It shares the bounded presence/type
+preflight, one bodyless DELETE, empty200 acknowledgement, ignored metadata and
+uncertain/no-retry contracts below. The legacy route is deprecated with documented
+sunset 2026-03-01; actual availability remains UNKNOWN. Preflight 404/410 refuses
+without mutation, never switching to a branch endpoint. No live removal or native
+qualification is supplied.
+
 `createNeonOAuthProviderDeleteOperations` adds reserved
 `deleteBranchNeonAuthOauthProvider` source for one copied project/branch/known
 provider ID/expected standard-or-shared type/revision. Dedicated provider/delete
@@ -1700,8 +1711,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 103 implemented
-source adapters, 91 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 104 implemented
+source adapters, 90 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

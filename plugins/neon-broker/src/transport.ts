@@ -20,6 +20,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  deleteNeonAuthOauthProvider(project: string, provider: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteBranchNeonAuthOauthProvider(project: string, branch: string, provider: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteNeonAuthDomainFromRedirectURIWhitelist(project: string, provider: string, domain: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteBranchNeonAuthTrustedDomain(project: string, branch: string, provider: string, domain: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -262,6 +263,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    deleteNeonAuthOauthProvider: (project: string, provider: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/auth/oauth_providers/${providerId.parse(provider)}`,
+        new URLSearchParams(), options, undefined, false, 200, false, false, true),
     deleteBranchNeonAuthOauthProvider: (project: string, branch: string, provider: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/oauth_providers/${providerId.parse(provider)}`,
         new URLSearchParams(), options, undefined, false, 200, false, false, true),

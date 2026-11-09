@@ -4,26 +4,37 @@ import { providerId, providerType } from "./oauth-providers.js";
 import { check, field, optional, rows } from "./projection.js";
 import type { NeonMetadataTransport } from "./transport.js";
 
-export interface NeonOAuthProviderDeleteScope {
+export interface NeonLegacyOAuthProviderDeleteScope {
   readonly projectId: string;
-  readonly branchId: string;
   readonly oauthProviderId: "google" | "github" | "microsoft" | "vercel" | "apple";
   readonly expectedType: "standard" | "shared";
   readonly revision: string;
 }
+export interface NeonOAuthProviderDeleteScope extends NeonLegacyOAuthProviderDeleteScope {
+  readonly branchId: string;
+}
 const pathId = text(60, /^[a-z0-9][a-z0-9-]*$/);
-const argumentsSchema = closed({ project_id: pathId, branch_id: pathId, oauth_provider_id: providerId });
+const targetFields = { project_id: pathId, oauth_provider_id: providerId };
+const projectArguments = closed(targetFields);
+const argumentsSchema = closed({ ...targetFields, branch_id: pathId });
+const scopeFields = { projectId: pathId, oauthProviderId: providerId, expectedType: providerType, revision: identifier };
 const acknowledgement = closed({ acknowledged: { parse(value: unknown): true { check(value === true); return true; } } });
 
 export function createNeonOAuthProviderDeleteOperations(scope: NeonOAuthProviderDeleteScope, transport: NeonMetadataTransport): readonly ProviderOperation[] {
-  const config = closed({ projectId: pathId, branchId: pathId, oauthProviderId: providerId,
-    expectedType: providerType, revision: identifier }).parse(scope);
-  const name = "deleteBranchNeonAuthOauthProvider";
-  const resourceId = `neon/projects/${config.projectId}/branches/${config.branchId}/auth/oauth_providers/${config.oauthProviderId}/delete`;
+  return createOperations(closed({ ...scopeFields, branchId: pathId }).parse(scope), transport);
+}
+export function createNeonLegacyOAuthProviderDeleteOperations(scope: NeonLegacyOAuthProviderDeleteScope, transport: NeonMetadataTransport): readonly ProviderOperation[] {
+  return createOperations(closed(scopeFields).parse(scope), transport);
+}
+function createOperations(config: NeonLegacyOAuthProviderDeleteScope & { readonly branchId?: string }, transport: NeonMetadataTransport): readonly ProviderOperation[] {
+  const name = config.branchId === undefined ? "deleteNeonAuthOauthProvider" : "deleteBranchNeonAuthOauthProvider";
+  const parent = config.branchId === undefined ? "/auth/legacy/oauth_providers" : `/branches/${config.branchId}/auth/oauth_providers`;
+  const resourceId = `neon/projects/${config.projectId}${parent}/${config.oauthProviderId}/delete`;
   check(resourceId.length <= 256);
   function prepare(raw: unknown): Prepared {
-    const args = argumentsSchema.parse(raw);
-    check(args.project_id === config.projectId && args.branch_id === config.branchId && args.oauth_provider_id === config.oauthProviderId);
+    const args = config.branchId === undefined ? projectArguments.parse(raw) : argumentsSchema.parse(raw);
+    check(args.project_id === config.projectId && ("branch_id" in args ? args.branch_id : undefined) === config.branchId &&
+      args.oauth_provider_id === config.oauthProviderId);
     return { resource: { id: resourceId, revision: config.revision }, arguments: args,
       plan: { operation: name, ...args, expectedType: config.expectedType,
         effect: "request_single_oauth_provider_removal", preflight: "bounded_exact_provider_presence_and_type",
@@ -69,13 +80,16 @@ export function createNeonOAuthProviderDeleteOperations(scope: NeonOAuthProvider
       const options = { credential, signal };
       async function observe(): Promise<void> {
         if (signal.aborted) throw Error("UPSTREAM_UNAVAILABLE");
-        present(await transport.listBranchNeonAuthOauthProviders(config.projectId, config.branchId, options));
+        present(config.branchId === undefined ? await transport.listNeonAuthOauthProviders(config.projectId, options) :
+          await transport.listBranchNeonAuthOauthProviders(config.projectId, config.branchId, options));
         if (signal.aborted) throw Error("UPSTREAM_UNAVAILABLE");
       }
       await observe();
       if (signal.aborted) throw Error("UPSTREAM_UNAVAILABLE");
       try {
-        const raw = await transport.deleteBranchNeonAuthOauthProvider(config.projectId, config.branchId, config.oauthProviderId, options);
+        const raw = config.branchId === undefined ?
+          await transport.deleteNeonAuthOauthProvider(config.projectId, config.oauthProviderId, options) :
+          await transport.deleteBranchNeonAuthOauthProvider(config.projectId, config.branchId, config.oauthProviderId, options);
         receipt(raw);
         if (signal.aborted) throw Error("UPSTREAM_UNAVAILABLE");
         return raw;

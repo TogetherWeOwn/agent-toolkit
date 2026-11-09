@@ -1,5 +1,27 @@
 # Source-slice threat model
 
+## Reserved legacy OAuth-provider deletion delta
+
+`deleteNeonAuthOauthProvider` shares the branch implementation's strict known
+provider/type parsing, full bounded presence preflight, empty200 acknowledgement
+and uncertain/no-retry behavior. A separate project-only factory rejects branch
+arguments and scope fields; its dedicated legacy provider/delete grant cannot be
+replaced by branch, collection or another-provider permission. Native exact-plan
+authorization precedes credential resolution. Both preflight and one bodyless
+DELETE use the project legacy path only; no branch fallback is available.
+
+The pinned schema deprecates the route with sunset 2026-03-01. Source coverage
+is not availability: 404/410 preflight refuses before mutation. Empty200 proves
+only acknowledgement, not independent authentication refusal, token/session
+revocation, fencing or completeness. Provider ID/type are not immutable identity;
+preflight is not atomic CAS and replacement races remain unresolved. One bounded
+observation cannot upgrade ambiguous effects even on absence/replacement. Common
+permanent journal blocks same-request restart/replay. Client identities, masked
+secrets and arbitrary provider metadata remain unevaluated. Fixed transport bounds
+and all native custody/authority/entitlement/effects/review gaps remain. Source and
+common regressions cover legacy/branch separation, authority, malformed responses,
+ignored metadata, deadlines, safe envelopes and replay. No live change is supplied.
+
 ## Reserved branch OAuth-provider deletion delta
 
 `deleteBranchNeonAuthOauthProvider` copies one exact project/branch/known provider

@@ -59,6 +59,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   authDomainDeleteFixture, authDomainDeleteArgs, authDomainDeleteScope, authDomainDeleteMetadata,
   legacyAuthDomainDeleteFixture, legacyAuthDomainDeleteArgs, legacyAuthDomainDeleteScope,
   oauthProviderDeleteFixture, oauthProviderDeleteArgs, oauthProviderDeleteScope, oauthProviderDeleteMetadata,
+  legacyOAuthProviderDeleteFixture, legacyOAuthProviderDeleteArgs, legacyOAuthProviderDeleteScope,
   bucketDeleteFixture, bucketDeleteArgs, bucketDeleteScope, bucketDeleteMetadata,
   functionDeleteFixture, functionDeleteArgs, functionDeleteScope, functionDeleteMetadata,
   permissionRevokeFixture, permissionRevokeArgs, permissionRevokeScope, permissionRevokeReceipt,
@@ -517,6 +518,129 @@ test('OAuth provider delete: maximum identity selection fits actual common prepa
   const config = { ...oauthProviderDeleteScope, projectId: 'p'.repeat(60), branchId: 'b'.repeat(60),
     oauthProviderId: 'microsoft', revision: 'r'.repeat(80) };
   const f = oauthProviderDeletionBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
+function legacyOAuthProviderDeletionBroker(value = null, overrides = {}, config = legacyOAuthProviderDeleteScope) {
+  const provider = legacyOAuthProviderDeleteFixture(value, config);
+  const args = { project_id: config.projectId, oauth_provider_id: config.oauthProviderId };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('deleteNeonAuthOauthProvider').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.deleteNeonAuthOauthProvider', args, context, key);
+  } };
+}
+const legacyOAuthProviderDeletionList = { providers: [oauthProviderDeleteMetadata] };
+
+test('legacy OAuth provider delete: reserved exact-plan authority and exact provider/delete AND agent grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = legacyOAuthProviderDeletionBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = 'neon/projects/project-a/auth/legacy/oauth_providers/google/delete';
+  for (const resource of [target.replace('/delete', ''), target.replace('/auth/legacy', '/branches/br-a/auth'), target.replace('project-a', 'other'),
+    target.replace('google', 'github'), target.replace('/legacy', ''), 'neon/projects/project-a/branches/br-a/auth/oauth_providers']) {
+    const f = legacyOAuthProviderDeletionBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = legacyOAuthProviderDeletionBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = legacyOAuthProviderDeletionBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { acknowledged: true });
+  assert.equal(f.common.calls.consumed, 1);
+  safeEnvelope(f, result);
+});
+
+test('legacy OAuth provider delete: stale, wrong-target and unconsumable native evidence are isolated negative controls', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = legacyOAuthProviderDeletionBroker();
+    const base = f.common.authority;
+    let consumeCalls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.deleteNeonAuthOauthProvider', legacyOAuthProviderDeleteArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('legacy OAuth provider delete: host identity/resource TOCTOU and authority/target overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = legacyOAuthProviderDeletionBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = legacyOAuthProviderDeletionBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.call()).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { project_id: 'other' }, { branch_id: 'other' }, { oauth_provider_id: 'github' },
+    { expectedType: 'shared' }, { retry: true }]) {
+    const g = legacyOAuthProviderDeletionBroker();
+    assert.equal((await g.common.broker().call('neon.deleteNeonAuthOauthProvider', { ...legacyOAuthProviderDeleteArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('legacy OAuth provider delete: complete/uncertain permanent journal blocks restart replay without enforcement proof', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = legacyOAuthProviderDeletionBroker((url, init, n) => {
+      if (init.method === 'DELETE') { if (ambiguous) throw Error(credentialCanary); return new Response(null, { status: 200 }); }
+      return response(ambiguous && n > 2 ? { providers: [] } : legacyOAuthProviderDeletionList);
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('legacy OAuth provider delete: malformed/foreign/type drift and reflected lease strings cannot enter safe envelopes', async () => {
+  for (const change of [{ project_id: 'other' }, { branch_id: 'other' }, { id: credentialCanary },
+    { type: 'shared' }, { pagination: {} }]) {
+    const f = legacyOAuthProviderDeletionBroker(() => response({ providers: [{ ...oauthProviderDeleteMetadata, ...change }] }));
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 0);
+    safeEnvelope(f, result);
+  }
+  const f = legacyOAuthProviderDeletionBroker((url, init) => init.method === 'DELETE' ? response({ acknowledged: true, error: credentialCanary }) : response(legacyOAuthProviderDeletionList));
+  const result = await f.call();
+  assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+  safeEnvelope(f, result);
+});
+
+test('legacy OAuth provider delete: maximum identity selection fits actual common prepared budgets', async () => {
+  const config = { ...legacyOAuthProviderDeleteScope, projectId: 'p'.repeat(60),
+    oauthProviderId: 'microsoft', revision: 'r'.repeat(80) };
+  const f = legacyOAuthProviderDeletionBroker(null, {}, config);
   const result = await f.call();
   assert.equal(result.ok, true);
   safeEnvelope(f, result);
