@@ -1,4 +1,8 @@
 import { closed, integer, requireThat, text } from "../../../packages/core/src/index.js";
+import { dispatchBindingTypes } from "./dispatch-bindings.js";
+
+type BindingType = typeof dispatchBindingTypes[number];
+type BindingIdentity = Readonly<{ name: string; type: BindingType }>;
 
 const accountId = text(32, /^[a-f0-9]{32}$/);
 const resourceId = text(32, /^[a-f0-9]{32}$/);
@@ -43,6 +47,7 @@ export interface MetadataScope {
   workerDeployments?: readonly { scriptName: string; deploymentIds: readonly string[] }[];
   workerVersions?: readonly { scriptName: string; versionIds: readonly string[] }[];
   workerControlScriptNames?: readonly string[];
+  workerBindingScripts?: readonly { scriptName: string; bindings: readonly BindingIdentity[] }[];
   workerAttributionScriptNames?: readonly string[];
   workerVersionDetailScriptNames?: readonly string[];
 }
@@ -144,6 +149,12 @@ function providerTimestamp(value: unknown): string {
   return stamp;
 }
 interface WorkerBudgetMetadata {
+  bindings?: "unavailable" | {
+    readonly subject: "configured-worker-binding-identities";
+    readonly items: readonly BindingIdentity[];
+    readonly complete: false;
+    readonly effectiveAvailability: "not-established";
+  };
   cpuMs: ConfiguredCpu;
   bodyBytes: UnavailableControl;
   memoryBytes: UnavailableControl;
@@ -191,6 +202,25 @@ export function metadataDescriptors(scope: MetadataScope) {
   requireThat(Array.isArray(workerControlScriptNames) && workerControlScriptNames.length <= maxRows, "cap");
   const controlScripts = new Set(workerControlScriptNames.map(value => scriptName.parse(value)));
   for (const name of controlScripts) requireThat(scripts.has(name), "scope");
+  const workerBindingScripts = scope.workerBindingScripts === undefined ? [] : scope.workerBindingScripts;
+  requireThat(Array.isArray(workerBindingScripts) && workerBindingScripts.length <= maxRows, "cap");
+  const bindingScripts = new Map<string, Map<string, BindingType>>();
+  const bindingName = text(128, /^[A-Za-z_][A-Za-z0-9_]*$(?![\s\S])/);
+  for (const entry of workerBindingScripts) {
+    requireThat(entry !== null && typeof entry === "object", "schema");
+    const name = scriptName.parse(entry.scriptName);
+    requireThat(controlScripts.has(name), "scope");
+    requireThat(!bindingScripts.has(name), "schema");
+    requireThat(Array.isArray(entry.bindings) && entry.bindings.length > 0 && entry.bindings.length <= maxRows, "cap");
+    const bindings = new Map<string, BindingType>();
+    for (const value of entry.bindings) {
+      requireThat(value !== null && typeof value === "object", "schema");
+      const key = bindingName.parse(value.name);
+      requireThat(!bindings.has(key) && dispatchBindingTypes.includes(value.type), "schema");
+      bindings.set(key, value.type);
+    }
+    bindingScripts.set(name, bindings);
+  }
   const workerAttributionScriptNames = scope.workerAttributionScriptNames ?? [];
   requireThat(Array.isArray(workerAttributionScriptNames) && workerAttributionScriptNames.length <= maxRows, "cap");
   const attributionScripts = new Set(workerAttributionScriptNames.map(value => scriptName.parse(value)));
@@ -713,21 +743,44 @@ export function metadataDescriptors(scope: MetadataScope) {
       return bounded({ enabled: row.enabled, previewsEnabled: row.previews_enabled });
     },
   });
+  const settingsPreparations = new WeakSet<object>();
   const workerSettingsGet: MetadataDescriptor<ReturnType<typeof script.parse>, WorkerBudgetMetadata> = Object.freeze({
     name: "cloudflare.workers.settings.get", version: "1", tier: "read", providerOperationId: "worker-script-get-settings",
     prepare(raw: unknown) {
       const args = script.parse(raw);
       controlScope(args.scriptName);
-      return prepared(args, `worker:${args.scriptName}:controls`, `${root}/workers/scripts/${encodeURIComponent(args.scriptName)}/settings`);
+      const suffix = bindingScripts.has(args.scriptName) ? "controls:binding-identities" : "controls";
+      const value = prepared(args, `worker:${args.scriptName}:${suffix}`, `${root}/workers/scripts/${encodeURIComponent(args.scriptName)}/settings`);
+      settingsPreparations.add(value); return value;
     },
     project(raw: string, input: PreparedMetadata<ReturnType<typeof script.parse>>) {
+      requireThat(settingsPreparations.has(input), "scope");
       const row = controlResponse(raw, input);
-      return bounded<WorkerBudgetMetadata>({
+      const output: WorkerBudgetMetadata = {
         cpuMs: configuredCpu(row.limits),
         bodyBytes: { status: "unavailable", reason: "not-in-response-schema" },
         memoryBytes: { status: "unavailable", reason: "not-in-response-schema" },
         workerFirst: { status: "unavailable", reason: "not-in-response-schema" },
-      });
+      };
+      const selected = bindingScripts.get(input.arguments.scriptName);
+      if (selected !== undefined) {
+        if (row.bindings === undefined) output.bindings = "unavailable";
+        else {
+          const items: BindingIdentity[] = [], seen = new Set<string>();
+          for (const binding of rows(row.bindings)) {
+            requireThat(binding.account_id === undefined || binding.account_id === account, "scope");
+            requireThat(binding.script_name === undefined || binding.script_name === input.arguments.scriptName, "scope");
+            requireThat(typeof binding.name === "string", "upstream");
+            const type = selected.get(binding.name);
+            if (type === undefined) continue;
+            requireThat(binding.type === type && !seen.has(binding.name), "scope"); seen.add(binding.name);
+            items.push(Object.freeze({ name: binding.name, type }));
+          }
+          output.bindings = Object.freeze({ subject: "configured-worker-binding-identities", items: Object.freeze(items),
+            complete: false, effectiveAvailability: "not-established" });
+        }
+      }
+      return bounded(output);
     },
   });
   return Object.freeze({ workersList, secretNames, hyperdriveList, hyperdriveGet, d1List, d1Get, r2List, r2Get, r2LocksGet, deploymentsList, deploymentGet, versionsList, versionGet, kvNamespacesList, kvNamespaceGet, queuesList, queueGet, workerSubdomainGet, workerSettingsGet });
