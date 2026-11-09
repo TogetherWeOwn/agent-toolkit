@@ -12,6 +12,7 @@ import { providerId } from "./oauth-providers.js";
 import { databaseUpdateName } from "./database-update.js";
 import { functionLabel } from "./function-update.js";
 import { snapshotCreateTime } from "./snapshot-create.js";
+import { snapshotScheduleHour, snapshotScheduleRetention } from "./snapshot-schedule-update.js";
 
 export const NEON_ORIGIN = "https://console.neon.tech";
 export const RESPONSE_BYTES = 65_536;
@@ -23,6 +24,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  setSnapshotSchedule(project: string, branch: string, hour: number, retentionSeconds: number, options: MetadataRequestOptions): Promise<unknown>;
   createSnapshot(project: string, branch: string, name: string, timestamp: string, expiresAt: string, options: MetadataRequestOptions): Promise<unknown>;
   createProjectBranchDatabase(project: string, branch: string, database: string, owner: string, options: MetadataRequestOptions): Promise<unknown>;
   setProjectMemberRole(project: string, member: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -286,6 +288,10 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    setSnapshotSchedule: (project: string, branch: string, hour: number, retentionSeconds: number, options: MetadataRequestOptions) =>
+      request(`/projects/${id(project)}/branches/${id(branch)}/backup_schedule`, new URLSearchParams(), options,
+        JSON.stringify({ schedule: [{ frequency: "daily", hour: snapshotScheduleHour.parse(hour), retention_seconds: snapshotScheduleRetention.parse(retentionSeconds) }] }),
+        false, false, false, false, false, 200, true),
     createSnapshot: (project: string, branch: string, name: string, timestamp: string, expiresAt: string, options: MetadataRequestOptions) => {
       const capture = snapshotCreateTime.parse(timestamp);
       const expiry = snapshotCreateTime.parse(expiresAt);

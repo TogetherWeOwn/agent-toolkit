@@ -1,5 +1,21 @@
 # Source-slice threat model
 
+## Existing daily snapshot schedule hour-update delta
+
+`setSnapshotSchedule` copies the exact target, expected/desired hours and explicit
+unchanged retention. Dedicated backup_schedule/hour grant and conservative reserved
+native exact-plan authority precede credentials. Mandatory exact single-daily-entry
+preflight then one fixed PUT cannot request empty/multiple/nondaily schedules or
+retention changes. Unknown/extended entries refuse rather than being silently lost
+on replacement. Paid-plan entitlement remains provider-enforced. Empty200 JSON is
+acknowledgement only, not a schedule echo, scheduled execution, snapshot creation,
+recoverability, persistence or guaranteed expiry teardown. Preflight is not atomic
+CAS; external schedule races remain unresolved. Ambiguity gets one observation and
+stays uncertain at desired/old/absent state, no retry; permanent common journal blocks
+same-request replay, not external writers. No scheduler, live scheduling/spend,
+credential placement or runtime registration is supplied. Native custody/host/durable
+recovery, effects/entitlement and independent reviews remain gates.
+
 ## Explicit-time snapshot creation delta
 
 `createSnapshot` binds one copied project/branch/name/capture/expiry/revision and

@@ -3614,20 +3614,23 @@
       "id": "setSnapshotSchedule",
       "apiArea": "snapshot",
       "tool": "neon.setSnapshotSchedule",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/backup_schedule/hour",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/snapshot-schedule-update.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only. Existing single-daily-entry hour-only change, copied exact target/hours/explicit unchanged retention; dedicated backup_schedule/hour grant and reserved native exact-plan authority. Exact full-schedule preflight then one fixed PUT. Other schedule shapes, enabling/disabling and retention changes unsupported. Empty200 JSON acknowledges only, not scheduled execution, snapshot creation, recoverability or enforced expiry teardown. Preflight not atomic CAS; ambiguity remains uncertain after one observation, no retry, permanent common journal. Paid-plan entitlement/effects, native custody/host/durable recovery and independent reviews unresolved; no live scheduling or enablement."
     },
     {
       "id": "createProjectBranchBucket",

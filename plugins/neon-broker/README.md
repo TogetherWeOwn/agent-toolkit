@@ -7,6 +7,20 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonSnapshotScheduleUpdateOperations` supplies `setSnapshotSchedule` source
+for changing only the hour of an existing single daily entry. Copied exact target,
+expected/desired hour and explicit unchanged retention require a dedicated
+backup_schedule/hour grant and reserved native exact-plan authority. Complete exact
+schedule preflight precedes one PUT with daily/desired hour/unchanged retention.
+Empty, multiple, weekly/monthly, default-retention and extended entries refuse;
+enabling/disabling and retention/configuration overrides are unsupported. Paid-plan
+entitlement remains provider-enforced. Only empty HTTP200 JSON acknowledges, not a
+schedule echo, execution, created snapshot, recoverability, persistence or guaranteed
+expiry teardown. Preflight is not atomic CAS; concurrent changes remain unresolved.
+Ambiguity gets one bounded observation and remains uncertain even at the desired
+hour; no retry, permanent common journal blocks same-request replay, not external
+writers. Source/mocks only, no live scheduling, spend or runtime registration.
+
 `createNeonSnapshotCreateOperations` supplies `createSnapshot` source for one copied
 project/source branch/name/explicit UTC-second capture and expiry/revision. Dedicated
 snapshot/create grant and exact plan precede credentials. Mandatory branch identity
@@ -2084,8 +2098,8 @@ creation, spend authority or runtime qualification.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 124 implemented
-source adapters, 70 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 125 implemented
+source adapters, 69 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

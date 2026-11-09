@@ -1158,6 +1158,131 @@ test('Trigger disable: maximum identity selection fits actual common prepared bu
   }
 });
 
+import { snapshotScheduleUpdateFixture, snapshotScheduleUpdateScope, snapshotScheduleUpdateArgs, snapshotScheduleUpdateMetadata } from './helpers.mjs';
+function snapshotScheduleUpdateBroker(value = null, overrides = {}, config = snapshotScheduleUpdateScope) {
+  const provider = snapshotScheduleUpdateFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId, hour: config.hour };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('setSnapshotSchedule').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.setSnapshotSchedule', args, context, key);
+  } };
+}
+
+test('Snapshot schedule hour: native exact-plan authority and exact agent AND hour grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = snapshotScheduleUpdateBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = 'neon/projects/project-a/branches/br-a/backup_schedule/hour';
+  for (const resource of [target.replace('/hour', ''), target.replace('br-a', 'br-b'), target.replace('project-a', 'other'),
+    target.replace('/hour', '/delete'), target.replace('/backup_schedule/hour', '/snapshots'), 'neon/projects/project-a/branches/br-a']) {
+    const f = snapshotScheduleUpdateBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = snapshotScheduleUpdateBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.common.calls.secret, 0);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = snapshotScheduleUpdateBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { acknowledged: true });
+  assert.equal(f.common.calls.consumed, 1);
+  safeEnvelope(f, result);
+});
+
+test('Snapshot schedule hour: stale, wrong-target and consume failures are independent negative controls', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = snapshotScheduleUpdateBroker();
+    const base = f.common.authority;
+    let consumeCalls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.setSnapshotSchedule', snapshotScheduleUpdateArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Snapshot schedule hour: identity/resource TOCTOU and schedule/retention/authority overrides refuse', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = snapshotScheduleUpdateBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = snapshotScheduleUpdateBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.setSnapshotSchedule', snapshotScheduleUpdateArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { project_id: 'other' }, { branch_id: 'other' }, { hour: 4 },
+    { schedule: [] }, { retention_seconds: 3600 }, { frequency: 'weekly' }, { retry: true }]) {
+    const g = snapshotScheduleUpdateBroker();
+    assert.equal((await g.common.broker().call('neon.setSnapshotSchedule', { ...snapshotScheduleUpdateArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+    assert.equal(g.provider.requests.length, 0);
+  }
+});
+
+test('Snapshot schedule hour: permanent complete/uncertain journal blocks restart replay without retrying PUT', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = snapshotScheduleUpdateBroker((url, init, n) => {
+      if (init.method === 'PUT') { if (ambiguous) throw Error(credentialCanary); return response({}); }
+      return response({ schedule: [{ frequency: 'daily', hour: n === 1 ? 2 : 3, retention_seconds: 86400 }] });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'PUT').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Snapshot schedule hour: preflight drift and reflected receipt cannot enter safe envelopes', async () => {
+  for (const raw of [{ schedule: [] }, { ...snapshotScheduleUpdateMetadata, branch_id: 'other' },
+    { schedule: [{ frequency: credentialCanary, hour: 2, retention_seconds: 86400 }] }]) {
+    const f = snapshotScheduleUpdateBroker(() => response(raw));
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'PUT').length, 0);
+    safeEnvelope(f, result);
+  }
+  const f = snapshotScheduleUpdateBroker({ error: credentialCanary });
+  const result = await f.call();
+  assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+  assert.equal([...f.common.journal.values()][0].outcome, 'uncertain');
+  safeEnvelope(f, result);
+});
+
+test('Snapshot schedule hour: maximal copied target fits actual pinned common budgets', async () => {
+  const config = { ...snapshotScheduleUpdateScope, projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), revision: 'r'.repeat(80), hour: 23, retentionSeconds: 3024000 };
+  const f = snapshotScheduleUpdateBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
 import { authWebhookDisableFixture, authWebhookDisableScope, authWebhookDisableArgs } from './helpers.mjs';
 function authWebhookDisableBroker(value = null, overrides = {}, config = authWebhookDisableScope) {
   const provider = authWebhookDisableFixture(value, config);
