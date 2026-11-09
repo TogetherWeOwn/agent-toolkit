@@ -1,5 +1,31 @@
 # Source-slice threat model
 
+## Auth webhook disable-only delta
+
+`updateNeonAuthWebhookConfig` binds copied exact project/branch/revision, dedicated
+webhooks/disable grant and reserved native exact-plan authority. Read/parent/sibling
+and enabling grants do not substitute. Mandatory enabled=true GET precedes one PUT
+with fixed enabled:false. Caller destination/events/timeout, body and authority
+fields refuse. PUT omission semantics are provider-defined: the source neither
+copies sensitive configuration nor promises it is retained. The plan explicitly
+records that uncertainty. Unused destination/events/timeout and diagnostic fields
+are never evaluated/emitted; no destination fetch, delivery/test or redirect follow.
+Disabling can disrupt auth-event, OTP, magic-link and invitation delivery. Exact
+false200 echo acknowledges only, not independent delivery stoppage, queued/in-flight
+cancellation, configuration preservation, token/session revocation or fencing.
+
+Preflight is not atomic CAS; boolean state is not deployment identity and external
+reconfiguration races remain unresolved. One post-ambiguity observation never
+changes uncertainty even on false or absence; no retry. Permanent common journal
+blocks same-request replay/restart, not external writers. Source/common contracts
+isolate stale/wrong-target/unconsumable authority negatives and cover exact grants,
+identity/resource TOCTOU, strict copied scope, tampered plans, malformed/reflected
+responses, transport bounds/cancellation and actual common budgets. The transport's
+new internal PUT selector is fixed only at this operation; prior methods/status
+contracts are unchanged. Conservative reserved classification does not supply
+production authority. Native effects/entitlement/host/custody/durable recovery and
+independent reviews remain gates. Source/mocks only; no live change or registration.
+
 ## Private-only bucket creation delta
 
 `createProjectBranchBucket` binds copied project/branch/bounded bucket name/revision.

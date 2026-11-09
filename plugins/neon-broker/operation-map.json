@@ -1947,20 +1947,24 @@
       "id": "updateNeonAuthWebhookConfig",
       "apiArea": "auth",
       "tool": "neon.updateNeonAuthWebhookConfig",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/auth/webhooks/disable",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "auth-webhook-disable-request"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-webhook-disable.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Disable-only source/mocks; dedicated exact webhooks/disable grant and reserved native exact-plan authority, enabled-state preflight then one fixed false PUT. Omitted destination/events/timeout retention is not promised. Acknowledgement only, not independent delivery stoppage, queued/in-flight cancellation, session revocation or fencing. No enabling/configuration override, URL follow or live call. Preflight not atomic CAS; ambiguity stays uncertain after one observation, no retry, permanent common replay journal. Native host/custody/durable recovery, effects/entitlement and independent reviews remain unresolved."
     },
     {
       "id": "createProjectBranch",

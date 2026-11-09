@@ -1156,6 +1156,131 @@ test('Trigger disable: maximum identity selection fits actual common prepared bu
   }
 });
 
+import { authWebhookDisableFixture, authWebhookDisableScope, authWebhookDisableArgs } from './helpers.mjs';
+function authWebhookDisableBroker(value = null, overrides = {}, config = authWebhookDisableScope) {
+  const provider = authWebhookDisableFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('updateNeonAuthWebhookConfig').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.updateNeonAuthWebhookConfig', args, context, key);
+  } };
+}
+
+test('Webhook disable: reserved exact-plan authority and exact disable AND agent grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = authWebhookDisableBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = 'neon/projects/project-a/branches/br-a/auth/webhooks/disable';
+  for (const resource of [target.replace('/disable', ''), target.replace('br-a', 'other'), target.replace('project-a', 'other'),
+    target.replace('/disable', '/enable'), target.replace('/webhooks/disable', '/disable'),
+    target.replace('/webhooks', '/email_and_password'), 'neon/projects/project-a/branches/br-a']) {
+    const f = authWebhookDisableBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = authWebhookDisableBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.common.calls.secret, 0);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = authWebhookDisableBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { accepted: true });
+  assert.equal(f.common.calls.consumed, 1);
+  safeEnvelope(f, result);
+});
+
+test('Webhook disable: stale, wrong-target and unconsumable native evidence are isolated negative controls', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = authWebhookDisableBroker();
+    const base = f.common.authority;
+    let consumeCalls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.updateNeonAuthWebhookConfig', authWebhookDisableArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Webhook disable: host identity/resource TOCTOU and enabling/destination/events/timeout overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = authWebhookDisableBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = authWebhookDisableBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.updateNeonAuthWebhookConfig', authWebhookDisableArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { project_id: 'other' }, { branch_id: 'other' }, { enabled: true }, { enabled: false },
+    { webhook_url: 'https://example.invalid' }, { enabled_events: [] }, { timeout_seconds: 1 }, { retry: true }]) {
+    const g = authWebhookDisableBroker();
+    assert.equal((await g.common.broker().call('neon.updateNeonAuthWebhookConfig', { ...authWebhookDisableArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+    assert.equal(g.provider.requests.length, 0);
+  }
+});
+
+test('Webhook disable: complete/uncertain permanent journal blocks restart replay without delivery stoppage proof', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = authWebhookDisableBroker((url, init, n) => {
+      if (init.method === 'PUT') { if (ambiguous) throw Error(credentialCanary); return response({ enabled: false }); }
+      return response({ enabled: n === 1 });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'PUT').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Webhook disable: status drift and reflected lease strings cannot enter safe envelopes', async () => {
+  for (const change of [{ project_id: 'other' }, { branch_id: credentialCanary }, { enabled: false },
+    { enabled: credentialCanary }, { pagination: {} }]) {
+    const f = authWebhookDisableBroker(() => response({ enabled: true, ...change }));
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'PUT').length, 0);
+    safeEnvelope(f, result);
+  }
+  const f = authWebhookDisableBroker((url, init) => response(init.method === 'PUT' ? { enabled: credentialCanary } : { enabled: true }));
+  const result = await f.call();
+  assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+  safeEnvelope(f, result);
+});
+
+test('Webhook disable: maximum identity selection fits actual common prepared budgets', async () => {
+  const config = { ...authWebhookDisableScope, projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), revision: 'r'.repeat(80) };
+  const f = authWebhookDisableBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
 import { authEmailDisableFixture, authEmailDisableScope, authEmailDisableArgs } from './helpers.mjs';
 function authEmailDisableBroker(value = null, overrides = {}, config = authEmailDisableScope) {
   const provider = authEmailDisableFixture(value, config);

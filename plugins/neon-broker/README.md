@@ -7,6 +7,28 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonAuthWebhookDisableOperations` supplies reserved, disable-only
+`updateNeonAuthWebhookConfig` source for one copied project/branch/revision.
+Dedicated `neon/projects/<project>/branches/<branch>/auth/webhooks/disable` grant
+and native exact-plan authority precede credentials. Mandatory enabled=true GET
+preflight then one PUT sends only `{enabled: false}`; enabling and caller destination,
+events or timeout overrides refuse. This endpoint is PUT, not PATCH: the pinned
+schema does not promise retention of omitted configuration. The plan records
+provider-defined omission semantics and no configuration-preservation proof.
+Destination/event/timeout fields are never evaluated/emitted or copied into the PUT;
+there is no URL following, webhook delivery/test or fallback. Exact false HTTP200
+echo yields closed `{accepted: true}` acknowledgement only, not independent delivery
+stoppage, queued/in-flight cancellation, session revocation or fencing. Disabling
+may disrupt auth-event, OTP, magic-link and organization invitation delivery.
+
+Preflight is not atomic CAS; boolean state is not immutable identity and external
+reconfiguration races remain unresolved. Ambiguity gets one bounded status observation
+and stays uncertain even on false or absence; no retry. Permanent common journal
+blocks same-request replay, not external writers. Inventory conservatively promotes
+this auth mutation from write to reserved/native. Fixed transport bounds, unknown
+effects/entitlement, native host/custody/durable recovery and independent review gates
+remain. Source/mocks only; no live change or runtime registration.
+
 `createNeonBucketCreateOperations` supplies private-only `createProjectBranchBucket`
 source for one copied project/branch/bounded bucket name/revision. A dedicated
 `neon/projects/<project>/branches/<branch>/buckets/<name>/create` grant and exact
@@ -1982,8 +2004,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 119 implemented
-source adapters, 75 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 120 implemented
+source adapters, 74 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

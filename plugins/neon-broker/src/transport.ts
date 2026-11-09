@@ -22,6 +22,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  updateNeonAuthWebhookConfig(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   createProjectBranchBucket(project: string, branch: string, bucket: string, options: MetadataRequestOptions): Promise<unknown>;
   updateProjectBranchFunction(project: string, branch: string, slug: string, name: string, options: MetadataRequestOptions): Promise<unknown>;
   updateProjectBranchDatabase(project: string, branch: string, database: string, name: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -182,7 +183,7 @@ function cursorQuery(cursor: string | null): URLSearchParams {
 // Construction is a source/test seam, not an installed or enabled runtime tool.
 export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadataTransport {
   const get = (path: string, query: URLSearchParams, options: MetadataRequestOptions) => request(path, query, options);
-  async function request(path: string, query: URLSearchParams, options: MetadataRequestOptions, body?: string, binary = false, deleteStatus: 200 | 202 | 204 | false = false, patch = false, suspend = false, emptyDelete = false, successStatus: 200 | 201 = 200): Promise<unknown> {
+  async function request(path: string, query: URLSearchParams, options: MetadataRequestOptions, body?: string, binary = false, deleteStatus: 200 | 202 | 204 | false = false, patch = false, suspend = false, emptyDelete = false, successStatus: 200 | 201 = 200, put = false): Promise<unknown> {
     if (/[\r\n]/.test(options.credential)) throw Error("UPSTREAM_UNAVAILABLE");
     const expiresAt = performance.now() + REQUEST_TIMEOUT_MS;
     const controller = new AbortController();
@@ -203,7 +204,7 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       if (expired()) throw Error("UPSTREAM_UNAVAILABLE");
       const suffix = query.size ? `?${query.toString()}` : "";
       const response = await fetcher(`${NEON_ORIGIN}/api/v2${path}${suffix}`, {
-        method: deleteStatus !== false ? "DELETE" : patch ? "PATCH" : suspend ? "POST" : body === undefined ? "GET" : "POST", redirect: "error", signal: controller.signal,
+        method: deleteStatus !== false ? "DELETE" : patch ? "PATCH" : put ? "PUT" : suspend ? "POST" : body === undefined ? "GET" : "POST", redirect: "error", signal: controller.signal,
         headers: { Authorization: `Bearer ${options.credential}`, Accept: binary ? "application/octet-stream" : "application/json",
           ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
         ...(body === undefined ? {} : { body }),
@@ -280,6 +281,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    updateNeonAuthWebhookConfig: (project: string, branch: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/webhooks`, new URLSearchParams(), options,
+        JSON.stringify({ enabled: false }), false, false, false, false, false, 200, true),
     createProjectBranchBucket: (project: string, branch: string, bucket: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/buckets`, new URLSearchParams(), options,
         JSON.stringify({ name: bucketDeleteName.parse(bucket), access_level: "private" }), false, false, false, false, false, 201),
