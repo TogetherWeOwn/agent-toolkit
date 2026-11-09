@@ -36,7 +36,7 @@ function joinRecordedCoverage<T extends ReturnType<typeof summarizePagesCoverage
 ) {
   const principalHash = digest.parse(scope.principalHash);
   const policyRevision = text(80, /^[A-Za-z0-9][A-Za-z0-9_.-]*$/).parse(scope.policyRevision);
-  const projects = /:pages:projects(?::inventory)?$/.test(summary.resource.id);
+  const projects = /:pages:projects(?::inventory|(?::provenance)?:pagination)$/.test(summary.resource.id);
   const deploymentProjectName = projects ? undefined : text(63, /^[a-z0-9][a-z0-9-]*$/).parse(scope.deploymentProjectName);
   requireThat(!projects || scope.deploymentProjectName === undefined, "scope");
   const tool = projects ? "cloudflare.pages.projects.list" : "cloudflare.pages.deployments.list";

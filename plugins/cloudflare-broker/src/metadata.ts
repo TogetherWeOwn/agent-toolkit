@@ -1547,7 +1547,9 @@ export function pagesMetadataDescriptors(scope: PagesMetadataScope) {
     name: "cloudflare.pages.projects.list", version: "1", tier: "read", providerOperationId: "pages-project-get-projects",
     prepare(raw: unknown) {
       const args = page.parse(raw);
-      return prepared(args, projectInventory ? ":projects:inventory" : ":projects", `${root}?page=${args.page}&per_page=${args.perPage}`);
+      return prepared(args, projectInventory ? ":projects:inventory"
+        : `:projects${provenance.size > 0 ? ":provenance" : ""}${projectPagination ? ":pagination" : ""}`,
+        `${root}?page=${args.page}&per_page=${args.perPage}`);
     },
     project(raw: string, input: PreparedMetadata<ReturnType<typeof page.parse>>) {
       const args = page.parse(input.arguments);
@@ -1572,7 +1574,7 @@ export function pagesMetadataDescriptors(scope: PagesMetadataScope) {
     prepare(raw: unknown) {
       const args = pagesProject.parse(raw);
       const project = projectScope(args.projectName);
-      return prepared(args, `:project:${project.id}`, `${root}/${args.projectName}`);
+      return prepared(args, `:project:${project.id}${provenance.has(args.projectName) ? ":provenance" : ""}`, `${root}/${args.projectName}`);
     },
     project(raw: string, input: PreparedMetadata<ReturnType<typeof pagesProject.parse>>) {
       const args = pagesProject.parse(input.arguments);
@@ -1584,7 +1586,9 @@ export function pagesMetadataDescriptors(scope: PagesMetadataScope) {
     prepare(raw: unknown) {
       const args = pagesDeploymentsPage.parse(raw);
       const project = projectScope(args.projectName);
-      return prepared(args, `:project:${project.id}:deployments${deploymentInventory.has(args.projectName) ? ":inventory" : ""}`,
+      const projection = deploymentInventory.has(args.projectName) ? ":inventory"
+        : `${provenance.has(args.projectName) ? ":provenance" : ""}${deploymentPagination.has(args.projectName) ? ":pagination" : ""}`;
+      return prepared(args, `:project:${project.id}:deployments${projection}`,
         `${root}/${args.projectName}/deployments?page=${args.page}&per_page=${args.perPage}`);
     },
     project(raw: string, input: PreparedMetadata<ReturnType<typeof pagesDeploymentsPage.parse>>) {
@@ -1612,7 +1616,8 @@ export function pagesMetadataDescriptors(scope: PagesMetadataScope) {
       const args = pagesDeployment.parse(raw);
       const project = projectScope(args.projectName);
       requireThat(project.deployments.has(args.deploymentId), "scope");
-      return prepared(args, `:project:${project.id}:deployment:${args.deploymentId}`, `${root}/${args.projectName}/deployments/${args.deploymentId}`);
+      return prepared(args, `:project:${project.id}:deployment:${args.deploymentId}${provenance.has(args.projectName) ? ":provenance" : ""}`,
+        `${root}/${args.projectName}/deployments/${args.deploymentId}`);
     },
     project(raw: string, input: PreparedMetadata<ReturnType<typeof pagesDeployment.parse>>) {
       const args = pagesDeployment.parse(input.arguments);

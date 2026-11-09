@@ -69,7 +69,7 @@ export function summarizePagesInventoryCoverage(scope: PagesInventoryCoverageSco
 function summarizeCoverage(scope: PagesCoverageScope, observations: readonly PagesCoverageObservation[], inventory: boolean) {
   const pattern = inventory
     ? /^cloudflare:account:[a-f0-9]{32}:pages:(?:projects|project:[a-z0-9][a-z0-9-]{0,63}:deployments):inventory$/
-    : /^cloudflare:account:[a-f0-9]{32}:pages:(?:projects|project:[a-z0-9][a-z0-9-]{0,63}:deployments)$/;
+    : /^cloudflare:account:[a-f0-9]{32}:pages:(?:projects|project:[a-z0-9][a-z0-9-]{0,63}:deployments)(?::provenance)?:pagination$/;
   const id = text(200, pattern).parse(scope.resource.id);
   const revision = text(80, /^[A-Za-z0-9][A-Za-z0-9_.-]*$/).parse(scope.resource.revision);
   const perPage = integer(scope.perPage, 1, 100);

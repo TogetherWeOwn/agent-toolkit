@@ -8,7 +8,7 @@ import { cloudflareReadOperations } from "../dist/plugins/cloudflare-broker/src/
 import { providerFixture, credentialCanary, derivedCanary } from "../packages/core/testing/provider-fixture.mjs";
 
 const accountId = "a".repeat(32);
-const resource = { id: `cloudflare:account:${accountId}:pages:projects`, revision: "resource-1" };
+const resource = { id: `cloudflare:account:${accountId}:pages:projects:pagination`, revision: "resource-1" };
 const scope = { resource, perPage: 10 };
 const unavailable = { status: "unavailable", reason: "not-returned" };
 const observation = (page = 1, total = 3, items = []) => {

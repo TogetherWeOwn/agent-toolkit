@@ -56,7 +56,7 @@ test("Cloudflare Pages deployment inventory is independently scoped, copied, pag
   for (const selected of [undefined, []]) {
     const legacy = pagesMetadataDescriptors({ ...scope(), deploymentInventoryProjects: selected });
     const prepared = legacy.pagesDeploymentsList.prepare(args);
-    assert.equal(prepared.resource.id, `cloudflare:account:${accountId}:pages:project:id-1:deployments`);
+    assert.equal(prepared.resource.id, `cloudflare:account:${accountId}:pages:project:id-1:deployments:pagination`);
     assert.deepEqual(legacy.pagesDeploymentsList.project(body([row()]), prepared).items, []);
   }
   for (const selected of [null, true, ["other"], ["project-1", "project-1"], Array(101).fill("project-1")])

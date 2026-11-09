@@ -56,7 +56,7 @@ test("Cloudflare Pages inventory is independently default-denied, copied, and re
   assert.equal(d.pagesProjectsList.project(body([row()]), p).items.length, 1);
   for (const selected of [undefined, false]) {
     const legacy = pagesMetadataDescriptors({ ...scope(), projectInventoryReadAllowed: selected });
-    assert.equal(legacy.pagesProjectsList.prepare(args).resource.id, `cloudflare:account:${accountId}:pages:projects`);
+    assert.equal(legacy.pagesProjectsList.prepare(args).resource.id, `cloudflare:account:${accountId}:pages:projects:pagination`);
     assert.deepEqual(legacy.pagesProjectsList.project(body([row()]), legacy.pagesProjectsList.prepare(args)).items, []);
   }
   for (const invalid of [null, "true", 1]) assert.throws(() => pagesMetadataDescriptors({ ...scope(), projectInventoryReadAllowed: invalid }), /schema/);
