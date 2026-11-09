@@ -54,6 +54,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   authClientDeleteFixture, authClientDeleteArgs, authClientDeleteScope, authClientDeleteMetadata,
   jwksDeleteFixture, jwksDeleteArgs, jwksDeleteScope, jwksDeleteMetadata,
   triggerDeleteFixture, triggerDeleteArgs, triggerDeleteScope, triggerDeleteMetadata,
+  bucketDeleteFixture, bucketDeleteArgs, bucketDeleteScope, bucketDeleteMetadata,
   functionDeleteFixture, functionDeleteArgs, functionDeleteScope, functionDeleteMetadata,
   permissionRevokeFixture, permissionRevokeArgs, permissionRevokeScope, permissionRevokeReceipt,
   roleDeleteFixture, roleDeleteArgs, roleDeleteScope, roleDeleteReceipt,
@@ -133,6 +134,129 @@ function safeEnvelope(f, result) {
     assert(!serialized.includes(secret), `secret in output/audit/journal: ${secret}`);
   }
 }
+
+function bucketDeletionBroker(value = null, overrides = {}, config = bucketDeleteScope) {
+  const provider = bucketDeleteFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId, bucket_name: config.bucketName };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('deleteProjectBranchBucket').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.deleteProjectBranchBucket', args, context, key);
+  } };
+}
+
+test('Bucket delete: reserved authority and exact bucket/delete AND agent grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = bucketDeletionBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = 'neon/projects/project-a/branches/br-a/buckets/assets';
+  for (const resource of [target, target + '/reveal', target.replace('br-a', 'other') + '/delete',
+    target.replace('project-a', 'other') + '/delete', target.replace('assets', 'other') + '/delete',
+    'neon/projects/project-a/branches/br-a/credentials']) {
+    const f = bucketDeletionBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = bucketDeletionBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = bucketDeletionBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { acknowledged: true });
+  assert.equal(f.common.calls.consumed, 1);
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('Bucket delete: native authorization rejects stale, wrong-target and unconsumable evidence', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = bucketDeletionBroker();
+    const base = f.common.authority;
+    let consumeCalls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.deleteProjectBranchBucket', bucketDeleteArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.ok, false);
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Bucket delete: identity/resource TOCTOU and caller authority/target overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = bucketDeletionBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = bucketDeletionBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.deleteProjectBranchBucket', bucketDeleteArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { project_id: 'other' }, { branch_id: 'other' }, { bucket_name: 'other' }, { token: 'not-a-token' }, { retry: true }]) {
+    const g = bucketDeletionBroker();
+    assert.equal((await g.common.broker().call('neon.deleteProjectBranchBucket', { ...bucketDeleteArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('Bucket delete: permanent journal blocks complete and uncertain replay after restart without claiming independent deletion', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = bucketDeletionBroker((url, init) => {
+      if (init.method === 'DELETE') { if (ambiguous) throw Error(credentialCanary); return new Response(null, { status: 204 }); }
+      return response({ buckets: [bucketDeleteMetadata] });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Bucket delete: malformed/foreign list refuses before deletion; secrets never enter envelopes', async () => {
+  for (const change of [{ branch_id: 'other' }, { project_id: 'other' }, { name: credentialCanary }, { pagination: {} }]) {
+    const f = bucketDeletionBroker(() => response({ buckets: [{ ...bucketDeleteMetadata, ...change }] }));
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 0);
+    safeEnvelope(f, result);
+  }
+  const f = bucketDeletionBroker((url, init) => init.method === 'DELETE' ? new Response(null, { status: 204 }) :
+    response({ buckets: [{ ...bucketDeleteMetadata, created_at: derivedCanary, objects: credentialCanary, error: credentialCanary }] }));
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
+test('Bucket delete: maximum copied project/branch/bucket names fit common budgets', async () => {
+  const config = { ...bucketDeleteScope, projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), bucketName: 's'.repeat(60), revision: 'r'.repeat(80) };
+  const f = bucketDeletionBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
 
 function functionDeletionBroker(value = null, overrides = {}, config = functionDeleteScope) {
   const provider = functionDeleteFixture(value, config);

@@ -19,6 +19,25 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
 
+## Reserved branch bucket-deletion source delta
+
+Copied exact project/effective branch/bucket name/expected access level/revision,
+dedicated bucket/delete grant and reserved native exact-plan authority precede
+credentials. Mandatory bounded nonpaginated list preflight validates all names,
+access levels, duplicates and optional ancestry before one bodyless DELETE.
+Selected names are a conservative bounded subset; no force/cascade/object-delete
+or ancestor fallback. Inherited visibility is not origin ownership or deletion
+propagation proof. Names are not immutable IDs; preflight is not atomic CAS and
+same-name replacement race remains unresolved. No emptiness/completeness claim.
+
+Only empty HTTP204 acknowledges; not independently observed deletion, sessions,
+fencing or lifecycle enforcement. Creation times/object metadata/diagnostics are
+never evaluated/emitted. Ambiguity gets one bounded list observation then stays
+uncertain even on absence/access drift; no retry. Permanent common journal blocks
+restart/replay, not external writers. Native authority/host/custody/durable recovery,
+effects/entitlement/Beta availability and independent reviews remain unresolved.
+Source/mocks only; no live deletion, installation or enablement.
+
 ## Reserved explicit project-grant removal source delta
 
 Exact copied project/member UUID/user UUID/expected org-role/explicit permission and

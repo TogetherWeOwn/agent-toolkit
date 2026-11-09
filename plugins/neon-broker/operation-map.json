@@ -3603,7 +3603,7 @@
       "id": "deleteProjectBranchBucket",
       "apiArea": "buckets",
       "tool": "neon.deleteProjectBranchBucket",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/bucket_name/delete",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3611,12 +3611,15 @@
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/bucket-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only. Reserved native exact-plan authority and dedicated bucket/delete grant required. Bounded list presence/access preflight is not atomic CAS; names are not immutable identity and inherited visibility proves no origin ownership or deletion propagation. Empty204 acknowledges only; ambiguity remains uncertain after one list observation, no retry. Permanent common journal blocks restart/replay. Native host/custody/durable recovery, entitlement/effects and independent review unresolved; no live deletion or enablement."
     },
     {
       "id": "getProjectBranchStorage",
