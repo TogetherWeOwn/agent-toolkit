@@ -19,6 +19,26 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
 
+## Reserved organization-key revocation source delta
+
+Exact copied organization/numeric key ID/revision and a dedicated organization/key/revoke
+grant require reserved native exact-plan authority before credentials. A fixed
+organization-specific 30-row key-list preflight validates all IDs/duplicates/ancestry
+and requires the selected numeric ID before one bodyless DELETE. No account-wide
+or user-key fallback is allowed. Numeric IDs are not tokens. HTTP200 exact ID plus
+explicit revoked=true acknowledge only, not independently observed enforcement,
+credential completeness, session closure, expiry or cutover fencing. Legitimate
+project-scope metadata, profile/usage data and credential extras are never evaluated
+or emitted. Preflight is not atomic CAS or protection against external writers.
+
+Ambiguity gets at most one bounded same-credential organization-key-list observation
+and stays uncertain even on absence or observed revoked state; no retry, alternate
+identity or invented idempotency header. Three requests have a 3.5s operation ceiling
+with per-request 64KiB/1s bounds. Common permanent journal blocks same-request
+restart/replay. Native credential authority, host/policy/custody, durable recovery,
+effects/entitlement and independent reviews remain gates. Source/mocks only, no live
+revoke, credential retrieval, runtime registration or enablement.
+
 ## Reserved user-key revocation source delta
 
 Exact copied user/numeric key ID/revision and a dedicated user/key/revoke grant

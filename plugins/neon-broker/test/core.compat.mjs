@@ -47,6 +47,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   projectDeleteFixture, projectDeleteArgs, projectDeleteScope, projectDeleteReceipt,
   databaseDeleteFixture, databaseDeleteArgs, databaseDeleteScope, databaseDeleteReceipt,
   userKeyRevokeFixture, userKeyRevokeArgs, userKeyRevokeScope, userKeyRevokeReceipt,
+  organizationKeyRevokeFixture, organizationKeyRevokeArgs, organizationKeyRevokeScope, organizationKeyRevokeReceipt,
   roleDeleteFixture, roleDeleteArgs, roleDeleteScope, roleDeleteReceipt,
   branchDeleteFixture, branchDeleteArgs, branchDeleteScope, branchDeleteReceipt,
   endpointStartFixture, endpointStartArgs, endpointStartScope, endpointStartReceipt,
@@ -124,6 +125,124 @@ function safeEnvelope(f, result) {
     assert(!serialized.includes(secret), `secret in output/audit/journal: ${secret}`);
   }
 }
+
+function organizationKeyRevocationBroker(value = organizationKeyRevokeReceipt, overrides = {}, config = organizationKeyRevokeScope) {
+  const provider = organizationKeyRevokeFixture(value, config);
+  const args = { org_id: config.organizationId, key_id: config.keyId };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('revokeOrgApiKey').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.revokeOrgApiKey', args, context, key);
+  } };
+}
+
+test('organization key revoke: reserved authority and exact organization/key/revoke AND agent grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = organizationKeyRevocationBroker(undefined, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  for (const resource of ['neon/organizations/org-a/api_keys', 'neon/organizations/org-a/api_keys/123',
+    'neon/organizations/other/api_keys/123/revoke', 'neon/organizations/org-a/api_keys/456/revoke', 'neon/users/org-a/api_keys/123/revoke']) {
+    const f = organizationKeyRevocationBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = organizationKeyRevocationBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = organizationKeyRevocationBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { id: 123, acknowledged: true });
+  assert.equal(f.common.calls.consumed, 1);
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('organization key revoke: native authorization rejects stale, wrong-target and unconsumable evidence', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = organizationKeyRevocationBroker();
+    const base = f.common.authority;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { return false; } };
+    const result = await f.common.broker().call('neon.revokeOrgApiKey', organizationKeyRevokeArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('organization key revoke: identity/resource TOCTOU and caller authority/key overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = organizationKeyRevocationBroker(undefined, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = organizationKeyRevocationBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.revokeOrgApiKey', organizationKeyRevokeArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { org_id: 'other' }, { key_id: 456 }, { user_id: 'user-a' }, { key: 'not-a-token' }, { retry: true }]) {
+    const g = organizationKeyRevocationBroker();
+    assert.equal((await g.common.broker().call('neon.revokeOrgApiKey', { ...organizationKeyRevokeArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('organization key revoke: permanent journal blocks complete and uncertain replay after restart', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = organizationKeyRevocationBroker((url, init) => {
+      if (init.method === 'DELETE') { if (ambiguous) throw Error(credentialCanary); return response(organizationKeyRevokeReceipt); }
+      return response([{ id: 123 }]);
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('organization key revoke: reassociated and unconfirmed echoes stay uncertain; secrets never enter envelopes', async () => {
+  for (const raw of [{ ...organizationKeyRevokeReceipt, id: credentialCanary }, { ...organizationKeyRevokeReceipt, org_id: 'other' },
+    { ...organizationKeyRevokeReceipt, user_id: credentialCanary }, { ...organizationKeyRevokeReceipt, revoked: false }]) {
+    const f = organizationKeyRevocationBroker(raw);
+    const result = await f.call();
+    assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, 'uncertain');
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 1);
+    safeEnvelope(f, result);
+  }
+  const f = organizationKeyRevocationBroker({ ...organizationKeyRevokeReceipt, key: credentialCanary, name: derivedCanary, created_by: credentialCanary });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
+test('organization key revoke: maximum copied organization/key IDs fit common budgets', async () => {
+  const config = { organizationId: 'o'.repeat(60), keyId: Number.MAX_SAFE_INTEGER, revision: 'r'.repeat(80) };
+  const f = organizationKeyRevocationBroker({ id: config.keyId, revoked: true }, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
 
 function userKeyRevocationBroker(value = userKeyRevokeReceipt, overrides = {}, config = userKeyRevokeScope) {
   const provider = userKeyRevokeFixture(value, config);

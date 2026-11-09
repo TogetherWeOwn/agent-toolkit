@@ -15,6 +15,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  revokeOrgApiKey(organization: string, key: number, options: MetadataRequestOptions): Promise<unknown>;
   revokeApiKey(key: number, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchRole(project: string, branch: string, role: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchDatabase(project: string, branch: string, database: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -215,6 +216,10 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    revokeOrgApiKey: (organization: string, key: number, options: MetadataRequestOptions) => {
+      if (!Number.isSafeInteger(key) || key < 0 || Object.is(key, -0)) throw Error("INVALID_ARGUMENTS");
+      return request(`/organizations/${authPathId(organization)}/api_keys/${key}`, new URLSearchParams(), options, undefined, false, 200);
+    },
     revokeApiKey: (key: number, options: MetadataRequestOptions) => {
       if (!Number.isSafeInteger(key) || key < 0 || Object.is(key, -0)) throw Error("INVALID_ARGUMENTS");
       return request(`/api_keys/${key}`, new URLSearchParams(), options, undefined, false, 200);

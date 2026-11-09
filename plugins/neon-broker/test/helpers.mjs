@@ -50,6 +50,7 @@ import { createNeonEndpointRestartOperations } from '../dist/plugins/neon-broker
 import { createNeonEndpointSuspendOperations } from '../dist/plugins/neon-broker/src/endpoint-suspend.js';
 import { createNeonEndpointDeleteOperations } from '../dist/plugins/neon-broker/src/endpoint-delete.js';
 import { createNeonDatabaseDeleteOperations } from '../dist/plugins/neon-broker/src/database-delete.js';
+import { createNeonOrganizationKeyRevokeOperations } from '../dist/plugins/neon-broker/src/organization-key-revoke.js';
 import { createNeonUserKeyRevokeOperations } from '../dist/plugins/neon-broker/src/user-key-revoke.js';
 import { createNeonRoleDeleteOperations } from '../dist/plugins/neon-broker/src/role-delete.js';
 import { createNeonProjectDeleteOperations } from '../dist/plugins/neon-broker/src/project-delete.js';
@@ -471,7 +472,15 @@ export function objectDownloadFixture(value, config = objectDownloadScope) {
   return fixture(typeof value === 'function' ? value : () => binaryResponse(value.bytes), config, createNeonObjectDownloadOperations);
 }
 export const allCases = [...objectDownloadCases, ...oauthProviderCases, ...logQueryCases, ...schemaComparisonCases, ...logValueCases, ...branchSchemaCases, ...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
-export const sourceNames = [...allCases.map(([name]) => name), 'deleteSnapshot', 'updateSnapshot', 'updateProjectBranch', 'updateProject', 'updateProjectEndpoint', 'suspendProjectEndpoint', 'deleteProjectEndpoint', 'startProjectEndpoint', 'restartProjectEndpoint', 'deleteProjectBranch', 'deleteProject', 'deleteProjectBranchDatabase', 'deleteProjectBranchRole', 'revokeApiKey'];
+export const sourceNames = [...allCases.map(([name]) => name), 'deleteSnapshot', 'updateSnapshot', 'updateProjectBranch', 'updateProject', 'updateProjectEndpoint', 'suspendProjectEndpoint', 'deleteProjectEndpoint', 'startProjectEndpoint', 'restartProjectEndpoint', 'deleteProjectBranch', 'deleteProject', 'deleteProjectBranchDatabase', 'deleteProjectBranchRole', 'revokeApiKey', 'revokeOrgApiKey'];
+export const organizationKeyRevokeScope = { organizationId: 'org-a', keyId: 123, revision: 'scope-v1' };
+export const organizationKeyRevokeArgs = { org_id: 'org-a', key_id: 123 };
+export const organizationKeyRevokeReceipt = { id: 123, revoked: true };
+export function organizationKeyRevokeFixture(value = organizationKeyRevokeReceipt, config = organizationKeyRevokeScope) {
+  return fixture((url, init, n) => typeof value === 'function' ? value(url, init, n) :
+    init.method === 'DELETE' ? response(value) : response([{ id: config.keyId }]),
+  config, createNeonOrganizationKeyRevokeOperations);
+}
 export const userKeyRevokeScope = { userId: 'user-a', keyId: 123, revision: 'scope-v1' };
 export const userKeyRevokeArgs = { user_id: 'user-a', key_id: 123 };
 export const userKeyRevokeReceipt = { id: 123, revoked: true };
