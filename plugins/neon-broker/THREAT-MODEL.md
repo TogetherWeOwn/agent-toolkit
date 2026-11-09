@@ -1222,6 +1222,30 @@ not external writers. Native host/authority/custody, durable recovery, Beta effe
 entitlement and independent reviews remain gates. Source/mocks only, zero enabled;
 no DNS following, live deletion or lifecycle enforcement.
 
+## Reserved legacy trusted-redirect deletion delta
+
+`deleteNeonAuthDomainFromRedirectURIWhitelist` copies exact project/provider/single
+canonical HTTPS origin/revision through a separate closed factory without branch
+arguments. Its dedicated legacy domain/delete resource is disjoint from branch and
+read resources; authenticated agent AND exact grant plus reserved native exact-plan
+authority remain mandatory. Shared branch-deletion parsers/preflight/receipt logic
+retain bounds without a caller-selectable endpoint or fallback. Every at-most30-row
+legacy list is validated for duplicates, provider, optional project ancestry and
+absence of branch/pagination before requiring exact origin/provider presence.
+One singleton-body DELETE targets only the fixed project-legacy path.
+
+Pinned schema deprecates both endpoints with sunset2026-03-01: native availability
+remains UNKNOWN; 404/410 preflight refuses before DELETE, not empty success or a
+branch fallback. Empty200 acknowledges only, never effective redirect enforcement,
+token/session revocation or fencing. No origin is followed or emitted. Origin names
+are not immutable IDs; preflight not atomic CAS. Ambiguity gets one bounded legacy
+list observation and stays uncertain even on absence; no mutation retry. Permanent
+common journal blocks same-request replay/restart, not external writers. Contracts
+cover exact legacy/branch separation, canonical arguments, poisoned metadata,
+response status/body bounds, abort/deadlines and common native identity/authority,
+TOCTOU, replay and safe envelopes. Source/mocks only; native host/custody, durable
+recovery, effects/entitlement and independent reviews remain unresolved.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.

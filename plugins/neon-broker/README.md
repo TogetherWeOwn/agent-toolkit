@@ -1633,6 +1633,31 @@ same-request restart/replay, not external writers. Source/mocks only: session/Be
 entitlement, native host/authority/custody, durable recovery, effects and independent
 reviews remain unresolved. No live deletion, download, presign or runtime enablement.
 
+## Reserved legacy trusted-redirect deletion source
+
+`createNeonLegacyAuthDomainDeleteOperations` exposes only
+`deleteNeonAuthDomainFromRedirectURIWhitelist`. Its separate closed scope copies
+project/provider/single canonical HTTPS origin/revision and rejects branch fields.
+The dedicated `neon/projects/<project>/auth/legacy/domains/<provider>/<hostname>/delete`
+grant is not interchangeable with branch, collection-read or parent authority.
+Reserved common-core native exact-plan verification/consumption is required before
+mutation. The shared implementation preserves branch deletion's bounds and refusal
+semantics, but never registers the other factory's tool or falls back between paths.
+
+The pinned endpoint is deprecated with sunset 2026-03-01; native availability is
+UNKNOWN, not proved available or enabled by source coverage. Mandatory bounded
+project-legacy list presence preflight precedes one DELETE to the same fixed
+`/projects/<project>/auth/domains` path, containing only auth_provider and one
+`domains: [{domain}]` item. A failed/sunset preflight refuses before mutation. Bulk,
+wildcard, port, path, query and fragment targets remain unsupported. Empty HTTP200
+acknowledges only; no independent effective removal, token/session revocation or
+fencing proof is returned. Preflight is not atomic CAS, and origin names are not
+immutable IDs. Ambiguity receives one bounded legacy-list observation then remains
+uncertain even on absence; no retry or branch fallback. The permanent common
+journal blocks same-request restart/replay, not external writers. Native host,
+authority/custody, durable recovery, effects/entitlement and independent reviews
+remain gates. Source/mocks only, no live provider calls or runtime enablement.
+
 ## Shared contract and candidate compatibility
 
 Contract: `toolkit.provider-broker/v1`. Merged core: [PR #17](https://github.com/TogetherWeOwn/agent-toolkit/pull/17),
@@ -1658,8 +1683,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 101 implemented
-source adapters, 93 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 102 implemented
+source adapters, 92 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

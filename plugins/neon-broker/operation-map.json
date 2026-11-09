@@ -961,20 +961,21 @@
       "id": "deleteNeonAuthDomainFromRedirectURIWhitelist",
       "apiArea": "auth-legacy",
       "tool": "neon.deleteNeonAuthDomainFromRedirectURIWhitelist",
-      "scope": "project_id",
+      "scope": "project_id/auth/legacy/domains/auth_provider/origin/delete",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "trusted-redirect-origin-removal-request"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": ["plugins/neon-broker/test/legacy-auth-domain-delete.test.mjs", "plugins/neon-broker/test/core.compat.mjs"],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only: copied exact project/provider/single HTTPS origin, separate legacy grant, native exact-plan authority, bounded list presence preflight and one singleton DELETE. Empty HTTP200 acknowledges only, not independent enforcement or token/session revocation. Preflight not atomic CAS; ambiguity stays uncertain after one observation, no retry; permanent common journal blocks replay. Deprecated endpoint sunset 2026-03-01: availability UNKNOWN; no branch fallback. Native entitlement, effects, custody/host integration and independent reviews remain unresolved."
     },
     {
       "id": "listBranchNeonAuthTrustedDomains",

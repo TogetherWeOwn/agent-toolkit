@@ -19,6 +19,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  deleteNeonAuthDomainFromRedirectURIWhitelist(project: string, provider: string, domain: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteBranchNeonAuthTrustedDomain(project: string, branch: string, provider: string, domain: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchBucketObject(project: string, branch: string, bucket: string, key: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchCustomDomain(project: string, branch: string, domain: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -259,6 +260,10 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    deleteNeonAuthDomainFromRedirectURIWhitelist: (project: string, provider: string, domain: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/auth/domains`, new URLSearchParams(), options,
+        JSON.stringify({ auth_provider: authDomainDeleteProvider.parse(provider), domains: [{ domain: authDomainDeleteOrigin.parse(domain) }] }),
+        false, 200, false, false, true),
     deleteBranchNeonAuthTrustedDomain: (project: string, branch: string, provider: string, domain: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/domains`, new URLSearchParams(), options,
         JSON.stringify({ auth_provider: authDomainDeleteProvider.parse(provider), domains: [{ domain: authDomainDeleteOrigin.parse(domain) }] }),

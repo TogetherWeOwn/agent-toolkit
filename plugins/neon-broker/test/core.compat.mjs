@@ -57,6 +57,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   customDomainDeleteFixture, customDomainDeleteArgs, customDomainDeleteScope, customDomainDeleteMetadata,
   objectDeleteFixture, objectDeleteArgs, objectDeleteScope, objectDeleteMetadata,
   authDomainDeleteFixture, authDomainDeleteArgs, authDomainDeleteScope, authDomainDeleteMetadata,
+  legacyAuthDomainDeleteFixture, legacyAuthDomainDeleteArgs, legacyAuthDomainDeleteScope,
   bucketDeleteFixture, bucketDeleteArgs, bucketDeleteScope, bucketDeleteMetadata,
   functionDeleteFixture, functionDeleteArgs, functionDeleteScope, functionDeleteMetadata,
   permissionRevokeFixture, permissionRevokeArgs, permissionRevokeScope, permissionRevokeReceipt,
@@ -269,6 +270,129 @@ test('Custom domain delete: schema-backed pagination sort metadata reaches ackno
 test('Custom domain delete: maximum copied project/branch/domain names fit common budgets', async () => {
   const config = { ...customDomainDeleteScope, projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), domain: 's'.repeat(63) + '.invalid', revision: 'r'.repeat(80) };
   const f = customDomainDeletionBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
+function legacyAuthDomainDeletionBroker(value = null, overrides = {}, config = legacyAuthDomainDeleteScope) {
+  const provider = legacyAuthDomainDeleteFixture(value, config);
+  const args = { project_id: config.projectId, auth_provider: config.authProvider, domain: config.domain };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('deleteNeonAuthDomainFromRedirectURIWhitelist').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.deleteNeonAuthDomainFromRedirectURIWhitelist', args, context, key);
+  } };
+}
+const legacyAuthDomainDeletionList = { domains: [authDomainDeleteMetadata] };
+
+test('Legacy auth domain delete: reserved exact-plan authority and exact provider/origin/delete AND agent grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = legacyAuthDomainDeletionBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = 'neon/projects/project-a/auth/legacy/domains/better_auth/app.example.invalid/delete';
+  for (const resource of [target.replace('/delete', ''), target.replace('/auth/legacy/domains', '/branches/br-a/auth/domains'), target.replace('project-a', 'other'),
+    target.replace('better_auth', 'stack'), target.replace('app.example.invalid', 'other.invalid'), 'neon/projects/project-a/auth/legacy/domains']) {
+    const f = legacyAuthDomainDeletionBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = legacyAuthDomainDeletionBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = legacyAuthDomainDeletionBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { acknowledged: true });
+  assert.equal(f.common.calls.consumed, 1);
+  safeEnvelope(f, result);
+});
+
+test('Legacy auth domain delete: stale, wrong-target and unconsumable native evidence are isolated negative controls', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = legacyAuthDomainDeletionBroker();
+    const base = f.common.authority;
+    let consumeCalls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.deleteNeonAuthDomainFromRedirectURIWhitelist', legacyAuthDomainDeleteArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Legacy auth domain delete: host identity/resource TOCTOU and authority/target overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = legacyAuthDomainDeletionBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = legacyAuthDomainDeletionBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.call()).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { project_id: 'other' }, { branch_id: 'other' }, { auth_provider: 'stack' },
+    { domain: 'https://other.invalid' }, { domains: [] }, { retry: true }]) {
+    const g = legacyAuthDomainDeletionBroker();
+    assert.equal((await g.common.broker().call('neon.deleteNeonAuthDomainFromRedirectURIWhitelist', { ...legacyAuthDomainDeleteArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('Legacy auth domain delete: complete/uncertain permanent journal blocks restart replay without enforcement proof', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = legacyAuthDomainDeletionBroker((url, init, n) => {
+      if (init.method === 'DELETE') { if (ambiguous) throw Error(credentialCanary); return new Response(null, { status: 200 }); }
+      return response(ambiguous && n > 2 ? { domains: [] } : legacyAuthDomainDeletionList);
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Legacy auth domain delete: malformed/foreign/provider drift and reflected lease strings cannot enter safe envelopes', async () => {
+  for (const change of [{ project_id: 'other' }, { branch_id: 'other' }, { domain: credentialCanary },
+    { auth_provider: 'stack' }, { pagination: {} }]) {
+    const f = legacyAuthDomainDeletionBroker(() => response({ domains: [{ ...authDomainDeleteMetadata, ...change }] }));
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 0);
+    safeEnvelope(f, result);
+  }
+  const f = legacyAuthDomainDeletionBroker((url, init) => init.method === 'DELETE' ? response({ acknowledged: true, error: credentialCanary }) : response(legacyAuthDomainDeletionList));
+  const result = await f.call();
+  assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+  safeEnvelope(f, result);
+});
+
+test('Legacy auth domain delete: maximum origin and identity selection fits actual common prepared budgets', async () => {
+  const config = { ...legacyAuthDomainDeleteScope, projectId: 'p'.repeat(60),
+    domain: 'https://' + 'a'.repeat(60) + '.' + 'b'.repeat(59), revision: 'r'.repeat(80) };
+  const f = legacyAuthDomainDeletionBroker(null, {}, config);
   const result = await f.call();
   assert.equal(result.ok, true);
   safeEnvelope(f, result);
