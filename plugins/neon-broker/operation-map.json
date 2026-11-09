@@ -3160,18 +3160,22 @@
       "tool": "neon.updateOrganizationMember",
       "scope": "org_id/member_id",
       "sideEffects": [
+        "organization-member-viewer-role-request",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/organization-member-update.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Viewer-only role update source from exact expected member/editor state; other source roles, promotions and arbitrary role selection unsupported. Mandatory organization/member/user/role preflight then one viewer PATCH; exact HTTP200 echo acknowledges only, not independent effective-access reduction, sessions or fencing. Provider enforces caller admin and role availability. Preflight not atomic CAS; ambiguity stays uncertain after one observation, no retry, permanent common replay journal. Native authority/host/policy/custody/durable recovery/effects/entitlement and independent reviews unresolved."
     },
     {
       "id": "removeOrganizationMember",

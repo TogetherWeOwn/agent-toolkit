@@ -1,5 +1,29 @@
 # Source-slice threat model
 
+## Viewer-only organization-member role update delta
+
+`updateOrganizationMember` binds copied organization/member UUID/user UUID/expected
+member-or-editor role/revision. Dedicated member/role/viewer grant and reserved
+native exact-plan authority do not inherit read/remove/parent/other-role grants.
+Mandatory exact detail identity/current-role preflight precedes one PATCH containing
+only role:viewer. Admin/viewer/collaborator starting states, promotions, caller role,
+body and authority overrides refuse. Provider owns admin-caller enforcement and
+organization role availability. Consumed identities/role/ancestry are validated;
+profiles, email, timestamps and diagnostics never evaluate or project. Exact200
+identity/viewer echo acknowledges only, not independent effective-access reduction,
+token/session revocation, persistence or connection fencing. Role names alone do not
+establish a complete ordering of effective privileges.
+
+Preflight is not atomic CAS; external membership/permission reconfiguration races
+remain unresolved. Ambiguity gets one bounded detail observation and stays uncertain
+even on viewer/absence; no retry, permanent common journal blocks same-request
+restart/replay, not external writers. Source/common tests cover strict copied scope,
+plan tampering, exact grants, independently isolated stale/wrong-target/unconsumable
+native authority, identity/resource TOCTOU, reflected/invalid echoes, cancellation,
+transport bounds and actual common budgets. Conservative reserved classification
+supplies no live permission-change authority. Native host/custody/durable recovery,
+effects/entitlement and independent reviews remain gates. Source/mocks only.
+
 ## Auth webhook disable-only delta
 
 `updateNeonAuthWebhookConfig` binds copied exact project/branch/revision, dedicated

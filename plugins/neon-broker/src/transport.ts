@@ -22,6 +22,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  updateOrganizationMember(organization: string, member: string, options: MetadataRequestOptions): Promise<unknown>;
   updateNeonAuthWebhookConfig(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   createProjectBranchBucket(project: string, branch: string, bucket: string, options: MetadataRequestOptions): Promise<unknown>;
   updateProjectBranchFunction(project: string, branch: string, slug: string, name: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -281,6 +282,11 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    updateOrganizationMember: (organization: string, member: string, options: MetadataRequestOptions) => {
+      if (typeof member !== "string" || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(member) || /[^a-f0-9-]/.test(member)) throw Error("INVALID_ARGUMENTS");
+      return request(`/organizations/${authPathId(organization)}/members/${member}`, new URLSearchParams(), options,
+        JSON.stringify({ role: "viewer" }), false, false, true);
+    },
     updateNeonAuthWebhookConfig: (project: string, branch: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/webhooks`, new URLSearchParams(), options,
         JSON.stringify({ enabled: false }), false, false, false, false, false, 200, true),

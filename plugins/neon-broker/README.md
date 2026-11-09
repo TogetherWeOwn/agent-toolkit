@@ -1979,6 +1979,28 @@ journal blocks same-request restart/replay, not external writers. Native host,
 authority/custody, durable recovery, effects/entitlement and independent reviews
 remain gates. Source/mocks only, no live provider calls or runtime enablement.
 
+## Viewer-only organization-member update source
+
+`updateOrganizationMember` accepts only copied exact organization/member UUID/user
+UUID/revision and expected `member` or `editor` role. A dedicated
+`neon/organizations/<org>/members/<member>/role/viewer` grant and reserved native
+exact-plan authorization are required; parent/read/remove/other-role grants do not
+substitute. Mandatory detail GET validates the exact organization/member/user and
+expected role before one PATCH sends only `role: viewer`. Starting admin, viewer or
+collaborator states, promotions, arbitrary role/body overrides and member removal
+are unsupported. The provider enforces admin callers and organization-specific role
+availability; this source does not infer entitlement or promise effective access
+reduction from the role name.
+
+Exact HTTP200 identity and viewer echo yields closed member-ID/acknowledgement only,
+not independently verified ACL reduction, token/session revocation, persistence or
+fencing. Profiles, email and timestamps are never evaluated/emitted. Preflight is
+not atomic CAS; membership or permission reconfiguration races remain unresolved.
+Ambiguity gets one bounded detail observation and stays uncertain even on viewer or
+absence; no retry. Permanent common journal blocks same-request restart/replay, not
+external writers. Native host/authority/custody/durable recovery, provider effects,
+entitlement and independent reviews remain gates. Source/mocks only, no live change.
+
 ## Shared contract and candidate compatibility
 
 Contract: `toolkit.provider-broker/v1`. Merged core: [PR #17](https://github.com/TogetherWeOwn/agent-toolkit/pull/17),
@@ -2004,8 +2026,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 120 implemented
-source adapters, 74 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 121 implemented
+source adapters, 73 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable
