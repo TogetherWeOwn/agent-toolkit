@@ -211,6 +211,46 @@ atomic audit/journal/capture join. The host-client factory declares separate
 103–105); tests of the worker do not establish that those grants exist or that the
 installed host enforces them. Actual Actions results must be recorded separately.
 
+## Published SDK HTTP is not the bounded Cloudflare transport
+
+Static inspection of the same locked `worker-rpc-host.js`, lines 376–411,
+shows that `ctx.http.fetch` serializes only method, headers and body. It drops
+`redirect`, `signal`, `credentials`, `cache` and `referrerPolicy`, then reconstructs
+a new `Response` from one complete host result. Its reconstructed URL is empty
+and `redirected` is false; host-provided fields with those names are not copied.
+Consequently, those local response fields cannot attest that the host did not
+follow a redirect. A local abort does not send host cancellation through this
+SDK method, even when the signal was already aborted before dispatch.
+
+Three additional real-SDK/synthetic-host contracts in
+`test/cloudflare-native-sdk.test.mjs` characterize the dropped request controls,
+in-flight abort followed by an accepted late reply, UTF-8 reconstruction of a
+host-supplied text body and the pinned empty-204 `Response` construction failure.
+The fixture sends no provider request and makes no claim that the installed host
+follows redirects or corrupts bytes. A synthetic host string does not establish
+original provider-byte fidelity; it only establishes what the worker reconstructs.
+Exact Actions results must be recorded separately.
+
+Do **not** pass `ctx.http.fetch` directly as the fetcher to
+`metadata-transport.ts`. The transport's streamed 128 KiB cap and 10-second
+maximum timeout cannot retrospectively bound the host's download or buffering,
+and cancelling a reconstructed local body cannot establish native settlement.
+Strict UTF-8 decoding and CURRENT response/part-byte digests require qualified
+byte fidelity before any text decoding, not a re-encoding of an unqualified host
+string. The reviewed GitHub adapter already documents separate host guarantees
+and quarantines uncertain host calls; its larger response cap and deadlines are
+not the Cloudflare transport contract and are not inherited here.
+
+SE1's native transport prerequisite is an exact-host, reviewed byte-preserving
+and resource-bounded path: fixed Cloudflare origin/no redirects, broker-only
+credential handling, bounded native response bytes/time/concurrency, proven
+cancellation or bounded detached-work accounting, and actual media/correlation
+qualification. Any buffered alternative needs an explicitly reviewed equivalent
+contract rather than a cast or wrapper around the SDK signature. No host change,
+SDK upgrade, direct-network escape hatch, native wiring or runtime grant is
+supplied by these characterization tests. Current metadata and reserved content
+ports remain unconnected and unqualified; the other native seams remain open.
+
 ## Source tests versus native acceptance
 
 `test/cloudflare-native-journal.test.mjs` executes the candidate statements on

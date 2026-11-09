@@ -35,7 +35,7 @@ async function fixture(t, { namespace = "main", wrap = host => host } = {}) {
   const worker = startWorkerRpcHost({ stdin: input, stdout: output, plugin: definePlugin({ async setup(ctx) {
     ports = { journal: createCloudflareNativeJournal(ctx.db), journalReader: createCloudflareNativeJournalReader(ctx.db),
       capture: createCloudflareNativeCaptureSink(ctx.db), captureReader: createCloudflareNativeCaptureReader(ctx.db),
-      audit: createCloudflareNativeAuditSink(ctx.db), auditReader: createCloudflareNativeAuditReader(ctx.db) };
+      audit: createCloudflareNativeAuditSink(ctx.db), auditReader: createCloudflareNativeAuditReader(ctx.db), http: ctx.http };
   } }) });
   lines.on("line", line => {
     try {
@@ -82,6 +82,59 @@ test("Cloudflare real SDK captures initialize namespace and forwards fixed SQL a
   assert.ok(f.calls.every(call => call.sql.includes('"main"."cloudflare_')));
   assert.ok(f.calls.every(call => !call.sql.includes(key) && !call.sql.includes(audit.event)));
   assert.ok(f.calls.every(call => !/CREATE|ALTER|DROP|DELETE|TRUNCATE/i.test(call.sql)));
+});
+
+test("Cloudflare real SDK HTTP drops redirect and even a pre-aborted signal before host dispatch", { timeout: 5000 }, async t => {
+  const f = await fixture(t, { wrap: () => async method => {
+    assert.equal(method, "http.fetch");
+    return { status: 302, statusText: "Found", headers: { location: "https://other.invalid/" }, body: "redirect",
+      url: "https://other.invalid/", redirected: true };
+  } });
+  const controller = new AbortController(); controller.abort();
+  const response = await f.ports.http.fetch("https://api.cloudflare.com/client/v4/accounts", {
+    method: "GET", headers: new Headers({ accept: "application/json" }), redirect: "error", signal: controller.signal,
+    credentials: "omit", cache: "no-store", referrerPolicy: "no-referrer",
+  });
+  assert.deepEqual(f.calls, [{ method: "http.fetch", url: "https://api.cloudflare.com/client/v4/accounts",
+    init: { method: "GET", headers: { accept: "application/json" } } }]);
+  assert.equal(response.status, 302); assert.equal(response.headers.get("location"), "https://other.invalid/");
+  assert.equal(response.redirected, false); assert.equal(response.url, ""); assert.equal(await response.text(), "redirect");
+  // Only a synthetic host reply: this proves neither host redirect handling nor a provider call.
+});
+
+test("Cloudflare real SDK HTTP in-flight abort sends no cancellation and still accepts the host reply", { timeout: 5000 }, async t => {
+  let arrive, release;
+  const arrived = new Promise(resolve => { arrive = resolve; });
+  const reply = new Promise(resolve => { release = resolve; });
+  const f = await fixture(t, { wrap: () => async method => {
+    assert.equal(method, "http.fetch"); arrive(); return reply;
+  } });
+  const controller = new AbortController();
+  const pending = f.ports.http.fetch("https://api.cloudflare.com/client/v4/accounts", { signal: controller.signal });
+  try {
+    await arrived; controller.abort();
+    assert.deepEqual(f.calls, [{ method: "http.fetch", url: "https://api.cloudflare.com/client/v4/accounts" }]);
+  } finally { release({ status: 200, statusText: "OK", headers: {}, body: "late synthetic reply" }); }
+  assert.equal(await (await pending).text(), "late synthetic reply");
+  assert.equal(f.calls.length, 1);
+});
+
+test("Cloudflare real SDK HTTP reconstructs a buffered text body and refuses serialized empty 204", { timeout: 5000 }, async t => {
+  const body = "synthetic module: � é";
+  let status = 200;
+  const f = await fixture(t, { wrap: () => async method => {
+    assert.equal(method, "http.fetch");
+    return { status, statusText: status === 200 ? "OK" : "No Content", headers: { "content-type": "application/octet-stream" },
+      body: status === 200 ? body : "" };
+  } });
+  const response = await f.ports.http.fetch("https://api.cloudflare.com/client/v4/accounts");
+  assert.deepEqual(new Uint8Array(await response.arrayBuffer()), new TextEncoder().encode(body));
+  // The returned bytes are UTF-8 encoding of the host string, not proof of original wire bytes.
+  status = 204;
+  await assert.rejects(f.ports.http.fetch("https://api.cloudflare.com/client/v4/accounts"), error => {
+    assert.ok(error instanceof TypeError); assert.match(error.message, /Invalid response status code 204/); return true;
+  });
+  assert.equal(f.calls.length, 2);
 });
 
 test("Cloudflare real SDK missing or malformed namespace fails bootstrap without database access", async t => {
