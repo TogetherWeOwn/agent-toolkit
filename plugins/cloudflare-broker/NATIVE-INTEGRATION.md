@@ -187,6 +187,30 @@ corruption/redaction/lost acknowledgment and actual-core Pages capture, intent
 outage, outcome outage, delayed acknowledgment and uncertain replay behavior.
 These source contracts do not qualify a native host or enable a consumer tool.
 
+## Published SDK wire contracts
+
+`test/cloudflare-native-sdk.test.mjs` constructs all six candidate writer/reader
+ports from the real locked SDK's `startWorkerRpcHost` setup context. Static
+inspection of that same integrity-verified artifact shows that initialize supplies
+`databaseNamespace` before setup (`worker-rpc-host.js`, lines 1354–1358), the
+namespace getter exposes that value, and query/execute forward `{sql, params}`
+through JSON-RPC (lines 362–371). The test uses the SDK implementation, not a
+replacement context or RPC decoder. Only the host is a synthetic SQLite fixture.
+No Cloudflare tool is registered, credential resolved or provider contacted.
+
+The contracts check missing/malformed namespace bootstrap refusal, exact fixed
+SQL/positional parameters, concurrent claim-response correlation, absorbing
+uncertainty, safe-integer/null audit round trips, rejection of a host-supplied
+string-valued timestamp, and redaction/no retry after explicit host errors or a
+committed write's lost acknowledgment. They establish only the published worker's
+wire behavior for the supplied synthetic responses. They do not identify the
+installed host version, qualify its SQL parser or PostgreSQL decoder, prove caller
+or namespace authorization, exercise durable restart/retention, or accept an
+atomic audit/journal/capture join. The host-client factory declares separate
+`database.namespace.read` and `database.namespace.write` capabilities (lines
+103–105); tests of the worker do not establish that those grants exist or that the
+installed host enforces them. Actual Actions results must be recorded separately.
+
 ## Source tests versus native acceptance
 
 `test/cloudflare-native-journal.test.mjs` executes the candidate statements on
