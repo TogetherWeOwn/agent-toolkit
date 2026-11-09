@@ -768,6 +768,127 @@ test('Project VPC removal: maximum identity selection fits actual common prepare
   safeEnvelope(f, result);
 });
 
+import { authIntegrationDeleteFixture, authIntegrationDeleteScope, authIntegrationDeleteArgs, authIntegrationDeleteMetadata } from './helpers.mjs';
+function authIntegrationDeleteBroker(value = null, overrides = {}, config = authIntegrationDeleteScope) {
+  const provider = authIntegrationDeleteFixture(value, config);
+  const args = { project_id: config.projectId, auth_provider: config.authProvider };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('deleteNeonAuthIntegration').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.deleteNeonAuthIntegration', args, context, key);
+  } };
+}
+
+test('Legacy integration delete: reserved exact-plan authority and exact legacy delete AND agent grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = authIntegrationDeleteBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = 'neon/projects/project-a/auth/integration/better_auth/delete';
+  for (const resource of [target.replace('/delete', ''), target.replace('better_auth', 'stack'), target.replace('project-a', 'other'),
+    target.replace('/delete', '/create'), 'neon/projects/project-a/branches/br-a/auth/disable', 'neon/projects/project-a/auth/integrations']) {
+    const f = authIntegrationDeleteBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = authIntegrationDeleteBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = authIntegrationDeleteBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { accepted: true });
+  assert.equal(f.common.calls.consumed, 1);
+  safeEnvelope(f, result);
+});
+
+test('Legacy integration delete: stale, wrong-target and unconsumable native evidence are isolated negative controls', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = authIntegrationDeleteBroker();
+    const base = f.common.authority;
+    let consumeCalls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.deleteNeonAuthIntegration', authIntegrationDeleteArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Legacy integration delete: host identity/resource TOCTOU and data-erasure overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = authIntegrationDeleteBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = authIntegrationDeleteBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.call()).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { project_id: 'other' }, { auth_provider: 'stack' }, { branch_id: 'br-a' }, { delete_data: true }, { delete_data: false }, { retry: true }]) {
+    const g = authIntegrationDeleteBroker();
+    assert.equal((await g.common.broker().call('neon.deleteNeonAuthIntegration', { ...authIntegrationDeleteArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('Legacy integration delete: complete/uncertain permanent journal blocks restart replay without completion proof', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = authIntegrationDeleteBroker((url, init, n) => {
+      if (init.method === 'DELETE') { if (ambiguous) throw Error(credentialCanary); return new Response(null, { status: 200 }); }
+      return response(n > 2 ? { data: [] } : authIntegrationDeleteMetadata, { status: n > 2 ? 404 : 200 });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Legacy integration delete: integration drift and reflected lease strings cannot enter safe envelopes', async () => {
+  for (const change of [{ branch_id: credentialCanary }, { auth_provider: 'stack' },
+    { owned_by: 'user' }, { transfer_status: 'initiated' }, { pagination: {} }]) {
+    const f = authIntegrationDeleteBroker(() => response({ data: [{ ...authIntegrationDeleteMetadata.data[0], ...change }] }));
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 0);
+    safeEnvelope(f, result);
+  }
+  const f = authIntegrationDeleteBroker((url, init) => response(init.method === 'DELETE' ? { error: credentialCanary } : authIntegrationDeleteMetadata));
+  const result = await f.call();
+  assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+  safeEnvelope(f, result);
+});
+
+test('Legacy integration delete: maximum identity selection fits actual common prepared budgets', async () => {
+  const config = { ...authIntegrationDeleteScope, projectId: 'p'.repeat(60), expectedBranchId: 'b'.repeat(60), revision: 'r'.repeat(80) };
+  const f = authIntegrationDeleteBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
 import { authDisableFixture, authDisableScope, authDisableArgs, authDisableMetadata } from './helpers.mjs';
 function authDisableBroker(value = null, overrides = {}, config = authDisableScope) {
   const provider = authDisableFixture(value, config);

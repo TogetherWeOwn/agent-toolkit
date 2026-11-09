@@ -1,4 +1,4 @@
-import { identifier } from "../../../packages/core/src/schema.js";
+import { identifier, oneOf } from "../../../packages/core/src/schema.js";
 import { parseLogValueQuery, parseLogWindow } from "./log-value-query.js";
 import { downloadBucketName, downloadObjectKey } from "./object-key.js";
 import { snapshotLabel } from "./snapshot-update.js";
@@ -20,6 +20,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  deleteNeonAuthIntegration(project: string, provider: string, options: MetadataRequestOptions): Promise<unknown>;
   disableNeonAuth(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteOrganizationVPCEndpoint(organization: string, region: string, endpoint: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectVPCEndpoint(project: string, endpoint: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -268,6 +269,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    deleteNeonAuthIntegration: (project: string, provider: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/auth/integration/${oneOf(["mock", "stack", "better_auth"] as const).parse(provider)}`,
+        new URLSearchParams(), options, JSON.stringify({ delete_data: false }), false, 200, false, false, true),
     disableNeonAuth: (project: string, branch: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth`, new URLSearchParams(), options,
         JSON.stringify({ delete_data: false }), false, 200, false, false, true),

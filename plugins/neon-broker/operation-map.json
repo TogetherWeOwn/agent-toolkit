@@ -1524,20 +1524,25 @@
       "id": "deleteNeonAuthIntegration",
       "apiArea": "auth-legacy",
       "tool": "neon.deleteNeonAuthIntegration",
-      "scope": "project_id",
+      "scope": "project_id/auth_provider/expected_branch_id/expected_owned_by",
       "sideEffects": [
+        "auth-provider-connection-removal-requested",
+        "data-erasure-not-requested",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-integration-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only; sunset legacy availability unknown. Fixed delete_data=false; schema erasure unsupported. Unique-provider bounded list preflight is not atomic CAS; empty200 acknowledges only, ambiguity remains uncertain without retry. Actual native authority, host/custody, durable recovery, effects/entitlement and independent review gates unresolved."
     },
     {
       "id": "getConnectionURI",

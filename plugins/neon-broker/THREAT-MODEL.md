@@ -1337,6 +1337,28 @@ writers. Negative native-authority, TOCTOU, bounds/deadline, ignored-field and s
 contracts are source/mocks, not runtime qualification. Host/custody, durable recovery,
 effects/entitlement, actual authority and independent reviews remain unresolved.
 
+## Reserved legacy connection-only Auth integration deletion delta
+
+`deleteNeonAuthIntegration` copies exact project/provider/expected branch/ownership
+and revision. Dedicated legacy integration/delete grant and reserved native exact-plan
+authority precede credentials. Mandatory full-list preflight validates at most30rows,
+rejects duplicate branch/provider pairs and requires exactly one selected-provider row
+matching expected branch/ownership with no pending transfer. The DELETE path has no
+branch selector: multiple same-provider rows refuse, never choose one. This preflight
+is not atomic CAS; provider/branch/ownership are not immutable integration identity and
+replacement races remain unresolved. Legacy sunset2026-03-01 availability UNKNOWN;
+404/410 refuses without branch fallback. One DELETE sends fixed `delete_data:false`;
+optional schema/table erasure is unsupported and never sent.
+
+Only documented empty200 acknowledges, not independently observed authentication
+refusal, data preservation, token/session revocation, completeness or connection fencing.
+Sensitive database/provider-project/URL/timestamp fields are never consumed. Ambiguity
+gets one bounded list observation then stays uncertain even on absence/replacement;
+no retry, permanent common journal blocks same-request restart/replay, not external
+writers. Source/mocks and native-authority/TOCTOU/bounds/ignored-accessor/safe-envelope
+contracts are not runtime qualification. Actual native authority, host/custody, durable
+recovery, effects/entitlement and independent reviews remain unresolved.
+
 ## Reserved connection-only Neon Auth disable delta
 
 `disableNeonAuth` copies exact project/branch/expected provider/ownership/revision.
