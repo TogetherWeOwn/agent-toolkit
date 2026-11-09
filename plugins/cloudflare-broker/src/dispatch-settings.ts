@@ -1,6 +1,7 @@
 import { closed, requireThat, text } from "../../../packages/core/src/index.js";
 import type { MetadataDescriptor, PreparedMetadata } from "./metadata.js";
 import { configuredScriptSettings } from "./script-settings.js";
+import { configuredDispatchBindings, snapshotDispatchBindings, type DispatchBindingScope } from "./dispatch-bindings.js";
 
 const accountId = text(32, /^[a-f0-9]{32}$(?![\s\S])/);
 const name = text(63, /^[A-Za-z0-9][A-Za-z0-9_-]*$(?![\s\S])/);
@@ -13,11 +14,14 @@ interface DispatchSettings extends ReturnType<typeof configuredScriptSettings> {
   readonly scriptName: string;
   readonly subject: "configured-dispatch-script-settings";
   readonly effectiveCollection: "not-established";
+  readonly bindings?: "unavailable" | Readonly<{ items: ReturnType<typeof configuredDispatchBindings>;
+    complete: false; effectiveAvailability: "not-established" }>;
 }
 export interface DispatchSettingsScope {
   accountId: string;
   revision: string;
   scripts?: readonly { namespaceId: string; namespaceName: string; scriptNames: readonly string[] }[];
+  bindingScripts?: DispatchBindingScope["namespaces"];
 }
 function object(value: unknown): Row {
   requireThat(value !== null && typeof value === "object" && !Array.isArray(value), "upstream");
@@ -42,6 +46,13 @@ export function dispatchSettingsDescriptor(scope: DispatchSettingsScope): Metada
     }
     ids.add(id); selected.set(namespace, { id, scripts: names });
   }
+  const bindingScripts = snapshotDispatchBindings(scope.bindingScripts);
+  for (const [namespace, entry] of bindingScripts) {
+    const settings = selected.get(namespace);
+    requireThat(settings !== undefined && settings.id === entry.id && entry.scripts.size > 0, "scope");
+    for (const [script, bindings] of entry.scripts)
+      requireThat(settings.scripts.has(script) && bindings.size > 0, "scope");
+  }
   const preparations = new WeakSet<object>();
   function context(row: Row, args: Arguments): void {
     requireThat(row.account_id === undefined || row.account_id === account, "scope");
@@ -56,8 +67,9 @@ export function dispatchSettingsDescriptor(scope: DispatchSettingsScope): Metada
       const args = input.parse(raw);
       const namespace = selected.get(args.namespaceName);
       requireThat(namespace !== undefined && namespace.scripts.has(args.scriptName), "scope");
+      const suffix = bindingScripts.get(args.namespaceName)?.scripts.has(args.scriptName) ? ":binding-identities" : "";
       const prepared = Object.freeze({ arguments: args,
-        resource: Object.freeze({ id: `cloudflare:account:${account}:dispatch-namespace:${namespace.id}:script:${args.scriptName}:settings`, revision }),
+        resource: Object.freeze({ id: `cloudflare:account:${account}:dispatch-namespace:${namespace.id}:script:${args.scriptName}:settings${suffix}`, revision }),
         request: Object.freeze({ method: "GET" as const,
           path: `/accounts/${account}/workers/dispatch/namespaces/${args.namespaceName}/scripts/${args.scriptName}/settings`,
           maxResponseBytes: 131072, timeoutMs: 10000, maxRequests: 1 as const, redirects: "deny" as const }) });
@@ -75,8 +87,14 @@ export function dispatchSettingsDescriptor(scope: DispatchSettingsScope): Metada
       context(row, prepared.arguments);
       // Unlike script-settings-item, the dispatch schema does not allow null here.
       requireThat(row.observability !== null, "upstream");
-      return Object.freeze({ namespaceName: prepared.arguments.namespaceName, scriptName: prepared.arguments.scriptName,
-        ...configuredScriptSettings(row), subject: "configured-dispatch-script-settings", effectiveCollection: "not-established" });
+      const bindings = bindingScripts.get(prepared.arguments.namespaceName)?.scripts.get(prepared.arguments.scriptName);
+      const out: DispatchSettings = Object.freeze({ namespaceName: prepared.arguments.namespaceName, scriptName: prepared.arguments.scriptName,
+        ...configuredScriptSettings(row), ...(bindings === undefined ? {} : { bindings: row.bindings === undefined ? "unavailable" as const :
+          Object.freeze({ items: configuredDispatchBindings(row.bindings, bindings, item => context(item, prepared.arguments)),
+            complete: false as const, effectiveAvailability: "not-established" as const }) }),
+        subject: "configured-dispatch-script-settings", effectiveCollection: "not-established" });
+      requireThat(Buffer.byteLength(JSON.stringify(out), "utf8") <= 32768, "cap");
+      return out;
     },
   });
 }

@@ -99,6 +99,7 @@ export interface CloudflareReadScope extends MetadataScope {
   workerAccountExpectedSubdomain?: WorkerAccountScope["expectedSubdomain"];
   workerEnvironmentSettings?: EnvironmentSettingsScope["environments"];
   dispatchScriptSettings?: DispatchSettingsScope["scripts"];
+  dispatchSettingsBindings?: DispatchSettingsScope["bindingScripts"];
   dispatchScriptLists?: DispatchScriptScope["namespaces"];
   dispatchScriptBindings?: DispatchBindingScope["namespaces"];
   dispatchScriptSecrets?: DispatchSecretScope["namespaces"];
@@ -197,7 +198,8 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(workerScheduleDescriptor({ accountId, revision, workers: scope.workerSchedules ?? [] })),
     metadata(scriptSettings.scriptSettingsGet), metadata(scriptSettings.usageModelGet),
     metadata(environmentSettingsDescriptor({ accountId, revision, environments: scope.workerEnvironmentSettings ?? [] })),
-    metadata(dispatchSettingsDescriptor({ accountId, revision, scripts: scope.dispatchScriptSettings ?? [] })),
+    metadata(dispatchSettingsDescriptor({ accountId, revision, scripts: scope.dispatchScriptSettings ?? [],
+      bindingScripts: scope.dispatchSettingsBindings ?? [] })),
     metadata(dispatchScriptDescriptor({ accountId, revision, namespaces: scope.dispatchScriptLists ?? [] })),
     metadata(dispatchBindingsDescriptor({ accountId, revision, namespaces: scope.dispatchScriptBindings ?? [] })),
     metadata(dispatchSecretDescriptor({ accountId, revision, namespaces: scope.dispatchScriptSecrets ?? [] })),

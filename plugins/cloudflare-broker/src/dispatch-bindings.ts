@@ -36,10 +36,8 @@ function object(value: unknown): Row {
   return value as Row;
 }
 
-export function dispatchBindingsDescriptor(scope: DispatchBindingScope): MetadataDescriptor<Arguments, DispatchBindings> {
-  const account = accountId.parse(scope.accountId);
-  const revision = text(80, /^[A-Za-z0-9][A-Za-z0-9_.-]*$(?![\s\S])/).parse(scope.revision);
-  const namespaces = scope.namespaces === undefined ? [] : scope.namespaces;
+export function snapshotDispatchBindings(values: DispatchBindingScope["namespaces"]) {
+  const namespaces = values === undefined ? [] : values;
   requireThat(Array.isArray(namespaces) && namespaces.length <= 100, "cap");
   const selected = new Map<string, { id: string; scripts: Map<string, Map<string, BindingType>> }>(), ids = new Set<string>();
   for (const entry of namespaces) {
@@ -64,6 +62,28 @@ export function dispatchBindingsDescriptor(scope: DispatchBindingScope): Metadat
     }
     ids.add(id); selected.set(namespace, { id, scripts });
   }
+  return selected;
+}
+
+export function configuredDispatchBindings(value: unknown, selected: ReadonlyMap<string, BindingType>, context: (row: Row) => void) {
+  requireThat(Array.isArray(value) && value.length <= 100, "cap");
+  const items: Readonly<{ name: string; type: BindingType }>[] = [], seen = new Set<string>();
+  for (const raw of value) {
+    const row = object(raw); context(row);
+    requireThat(typeof row.name === "string", "upstream");
+    const expected = selected.get(row.name);
+    if (expected === undefined) continue;
+    requireThat(row.type === expected && !seen.has(row.name), "scope"); seen.add(row.name);
+    // Never copy values, target associations or other binding configuration.
+    items.push(Object.freeze({ name: row.name, type: expected }));
+  }
+  return Object.freeze(items);
+}
+
+export function dispatchBindingsDescriptor(scope: DispatchBindingScope): MetadataDescriptor<Arguments, DispatchBindings> {
+  const account = accountId.parse(scope.accountId);
+  const revision = text(80, /^[A-Za-z0-9][A-Za-z0-9_.-]*$(?![\s\S])/).parse(scope.revision);
+  const selected = snapshotDispatchBindings(scope.namespaces);
   const preparations = new WeakSet<object>();
   function context(row: Row, args: Arguments): void {
     requireThat(row.account_id === undefined || row.account_id === account, "scope");
@@ -91,18 +111,8 @@ export function dispatchBindingsDescriptor(scope: DispatchBindingScope): Metadat
       try { parsed = JSON.parse(raw); } catch { requireThat(false, "upstream"); }
       const body = object(parsed), args = prepared.arguments; context(body, args);
       requireThat(body.success === true && Array.isArray(body.errors) && body.errors.length === 0 && Object.hasOwn(body, "result"), "upstream");
-      requireThat(Array.isArray(body.result) && body.result.length <= 100, "cap");
-      const bindings = selected.get(args.namespaceName)!.scripts.get(args.scriptName)!, seen = new Set<string>();
-      const items: Readonly<{ name: string; type: BindingType }>[] = [];
-      for (const raw of body.result) {
-        const row = object(raw); context(row, args);
-        requireThat(typeof row.name === "string", "upstream");
-        const expected = bindings.get(row.name);
-        if (expected === undefined) continue;
-        requireThat(row.type === expected && !seen.has(row.name), "scope"); seen.add(row.name);
-        // Never copy values, target associations or other binding configuration.
-        items.push(Object.freeze({ name: row.name, type: expected }));
-      }
+      const bindings = selected.get(args.namespaceName)!.scripts.get(args.scriptName)!;
+      const items = configuredDispatchBindings(body.result, bindings, row => context(row, args));
       const out = Object.freeze({ namespaceName: args.namespaceName, scriptName: args.scriptName, items: Object.freeze(items),
         subject: "configured-dispatch-script-binding-identities" as const, complete: false as const,
         effectiveAvailability: "not-established" as const });
