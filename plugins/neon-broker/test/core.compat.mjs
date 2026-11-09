@@ -176,13 +176,17 @@ test('project member role remove: native authorization rejects stale, wrong-targ
   for (const change of ['target', 'expiry', 'consume']) {
     const f = projectMemberRoleRemovalBroker();
     const base = f.common.authority;
+    let consumeCalls = 0;
     f.common.dependencies.authority = { async verify(target) {
       const evidence = await base.verify(target);
       return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
         change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
-    }, async consume() { return false; } };
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
     const result = await f.common.broker().call('neon.removeProjectMemberRole', projectMemberRoleRemoveArgs, 'verified-runtime', 'request-a');
     assert.equal(result.ok, false);
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
     assert.equal(f.provider.requests.length, 0);
     safeEnvelope(f, result);
   }
@@ -297,13 +301,17 @@ test('organization member remove: native authorization rejects stale, wrong-targ
   for (const change of ['target', 'expiry', 'consume']) {
     const f = organizationMemberRemovalBroker();
     const base = f.common.authority;
+    let consumeCalls = 0;
     f.common.dependencies.authority = { async verify(target) {
       const evidence = await base.verify(target);
       return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
         change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
-    }, async consume() { return false; } };
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
     const result = await f.common.broker().call('neon.removeOrganizationMember', organizationMemberRemoveArgs, 'verified-runtime', 'request-a');
     assert.equal(result.ok, false);
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
     assert.equal(f.provider.requests.length, 0);
     safeEnvelope(f, result);
   }
@@ -415,13 +423,17 @@ test('permission revoke: native authorization rejects stale, wrong-target and un
   for (const change of ['target', 'expiry', 'consume']) {
     const f = permissionRevocationBroker();
     const base = f.common.authority;
+    let consumeCalls = 0;
     f.common.dependencies.authority = { async verify(target) {
       const evidence = await base.verify(target);
       return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
         change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
-    }, async consume() { return false; } };
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
     const result = await f.common.broker().call('neon.revokePermissionFromProject', permissionRevokeArgs, 'verified-runtime', 'request-a');
     assert.equal(result.ok, false);
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
     assert.equal(f.provider.requests.length, 0);
     safeEnvelope(f, result);
   }
@@ -535,13 +547,17 @@ test('credential revoke: native authorization rejects stale, wrong-target and un
   for (const change of ['target', 'expiry', 'consume']) {
     const f = credentialRevocationBroker();
     const base = f.common.authority;
+    let consumeCalls = 0;
     f.common.dependencies.authority = { async verify(target) {
       const evidence = await base.verify(target);
       return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
         change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
-    }, async consume() { return false; } };
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
     const result = await f.common.broker().call('neon.revokeCredential', credentialRevokeArgs, 'verified-runtime', 'request-a');
     assert.equal(result.ok, false);
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
     assert.equal(f.provider.requests.length, 0);
     safeEnvelope(f, result);
   }
@@ -652,13 +668,17 @@ test('organization key revoke: native authorization rejects stale, wrong-target 
   for (const change of ['target', 'expiry', 'consume']) {
     const f = organizationKeyRevocationBroker();
     const base = f.common.authority;
+    let consumeCalls = 0;
     f.common.dependencies.authority = { async verify(target) {
       const evidence = await base.verify(target);
       return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
         change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
-    }, async consume() { return false; } };
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
     const result = await f.common.broker().call('neon.revokeOrgApiKey', organizationKeyRevokeArgs, 'verified-runtime', 'request-a');
     assert.equal(result.ok, false);
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
     assert.equal(f.provider.requests.length, 0);
     safeEnvelope(f, result);
   }
@@ -770,13 +790,17 @@ test('user key revoke: native authorization rejects stale, wrong-target and unco
   for (const change of ['target', 'expiry', 'consume']) {
     const f = userKeyRevocationBroker();
     const base = f.common.authority;
+    let consumeCalls = 0;
     f.common.dependencies.authority = { async verify(target) {
       const evidence = await base.verify(target);
       return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
         change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
-    }, async consume() { return false; } };
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
     const result = await f.common.broker().call('neon.revokeApiKey', userKeyRevokeArgs, 'verified-runtime', 'request-a');
     assert.equal(result.ok, false);
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
     assert.equal(f.provider.requests.length, 0);
     safeEnvelope(f, result);
   }
@@ -890,13 +914,17 @@ test('role deletion: native authorization rejects stale, wrong target or unconsu
   for (const change of ['target', 'expiry', 'consume']) {
     const f = roleDeletionBroker();
     const base = f.common.authority;
+    let consumeCalls = 0;
     f.common.dependencies.authority = { async verify(target) {
       const evidence = await base.verify(target);
       return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
         change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
-    }, async consume() { return false; } };
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
     const result = await f.common.broker().call('neon.deleteProjectBranchRole', roleDeleteArgs, 'verified-runtime', 'request-a');
     assert.equal(result.ok, false);
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
     assert.equal(f.provider.requests.length, 0);
     safeEnvelope(f, result);
   }
@@ -1014,13 +1042,17 @@ test('database deletion: native authorization rejects stale, wrong target or unc
   for (const change of ['target', 'expiry', 'consume']) {
     const f = databaseDeletionBroker();
     const base = f.common.authority;
+    let consumeCalls = 0;
     f.common.dependencies.authority = { async verify(target) {
       const evidence = await base.verify(target);
       return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
         change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
-    }, async consume() { return false; } };
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
     const result = await f.common.broker().call('neon.deleteProjectBranchDatabase', databaseDeleteArgs, 'verified-runtime', 'request-a');
     assert.equal(result.ok, false);
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
     assert.equal(f.provider.requests.length, 0);
     safeEnvelope(f, result);
   }
@@ -1135,13 +1167,17 @@ test('project deletion: native authorization rejects stale, wrong target or unco
   for (const change of ['target', 'expiry', 'consume']) {
     const f = projectDeletionBroker();
     const base = f.common.authority;
+    let consumeCalls = 0;
     f.common.dependencies.authority = { async verify(target) {
       const evidence = await base.verify(target);
       return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
         change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
-    }, async consume() { return false; } };
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
     const result = await f.common.broker().call('neon.deleteProject', projectDeleteArgs, 'verified-runtime', 'request-a');
     assert.equal(result.ok, false);
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
     assert.equal(f.provider.requests.length, 0);
     safeEnvelope(f, result);
   }
@@ -1256,13 +1292,17 @@ test('branch deletion: native authorization rejects stale, wrong target or uncon
   for (const change of ['target', 'expiry', 'consume']) {
     const f = branchDeletionBroker();
     const base = f.common.authority;
+    let consumeCalls = 0;
     f.common.dependencies.authority = { async verify(target) {
       const evidence = await base.verify(target);
       return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
         change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
-    }, async consume() { return false; } };
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
     const result = await f.common.broker().call('neon.deleteProjectBranch', branchDeleteArgs, 'verified-runtime', 'request-a');
     assert.equal(result.ok, false);
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
     assert.equal(f.provider.requests.length, 0);
     safeEnvelope(f, result);
   }
@@ -1382,13 +1422,17 @@ test('endpoint deletion: native authorization rejects wrong target, stale or unc
   for (const change of ['target', 'expiry', 'consume']) {
     const f = endpointDeletionBroker();
     const base = f.common.authority;
+    let consumeCalls = 0;
     f.common.dependencies.authority = { async verify(target) {
       const evidence = await base.verify(target);
       return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
         change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
-    }, async consume() { return false; } };
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
     const result = await f.common.broker().call('neon.deleteProjectEndpoint', endpointDeleteArgs, 'verified-runtime', 'request-a');
     assert.equal(result.ok, false);
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
     assert.equal(f.provider.requests.length, 0);
     safeEnvelope(f, result);
   }
@@ -1508,13 +1552,17 @@ test('endpoint start: native authorization rejects wrong target, stale or uncons
   for (const change of ['target', 'expiry', 'consume']) {
     const f = startBroker();
     const base = f.common.authority;
+    let consumeCalls = 0;
     f.common.dependencies.authority = { async verify(target) {
       const evidence = await base.verify(target);
       return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
         change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
-    }, async consume() { return false; } };
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
     const result = await f.common.broker().call('neon.startProjectEndpoint', endpointStartArgs, 'verified-runtime', 'request-a');
     assert.equal(result.ok, false);
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
     assert.equal(f.provider.requests.length, 0);
     safeEnvelope(f, result);
   }
@@ -1634,13 +1682,17 @@ test('endpoint restart: native authorization rejects wrong target, stale or unco
   for (const change of ['target', 'expiry', 'consume']) {
     const f = restartBroker();
     const base = f.common.authority;
+    let consumeCalls = 0;
     f.common.dependencies.authority = { async verify(target) {
       const evidence = await base.verify(target);
       return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
         change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
-    }, async consume() { return false; } };
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
     const result = await f.common.broker().call('neon.restartProjectEndpoint', endpointRestartArgs, 'verified-runtime', 'request-a');
     assert.equal(result.ok, false);
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
     assert.equal(f.provider.requests.length, 0);
     safeEnvelope(f, result);
   }
@@ -1760,13 +1812,17 @@ test('endpoint suspension: native authorization rejects wrong target, stale or u
   for (const change of ['target', 'expiry', 'consume']) {
     const f = suspensionBroker();
     const base = f.common.authority;
+    let consumeCalls = 0;
     f.common.dependencies.authority = { async verify(target) {
       const evidence = await base.verify(target);
       return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
         change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
-    }, async consume() { return false; } };
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
     const result = await f.common.broker().call('neon.suspendProjectEndpoint', endpointSuspendArgs, 'verified-runtime', 'request-a');
     assert.equal(result.ok, false);
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
     assert.equal(f.provider.requests.length, 0);
     safeEnvelope(f, result);
   }
@@ -2249,14 +2305,18 @@ test('snapshot deletion: native target binds plan/revision and rejects stale, wr
   for (const change of ['target', 'expiry', 'consume']) {
     const f = deletionBroker();
     const base = f.common.authority;
+    let consumeCalls = 0;
     f.common.dependencies.authority = { async verify(target) {
       const evidence = await base.verify(target);
       return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
         change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
-    }, async consume() { return false; } };
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
     const broker = f.common.broker();
     const result = await broker.call('neon.deleteSnapshot', snapshotDeleteArgs, 'verified-runtime', 'request-a');
     assert.equal(result.ok, false);
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
     assert.equal(f.provider.requests.length, 0);
     safeEnvelope(f, result);
   }
