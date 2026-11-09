@@ -7,6 +7,26 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonAuthPhoneDisableOperations` supplies reserved, disable-only
+`updateNeonAuthPhoneNumberPlugin` source for one copied exact project/branch/revision.
+Dedicated `neon/projects/<project>/branches/<branch>/auth/plugins/phone-number/disable`
+grant and native exact-plan authority precede credentials. Mandatory exact-path
+GET requires `enabled: true`, then one PATCH sends only `{enabled: false}`.
+Enabling, OTP lifetime changes and caller body/boolean overrides are unsupported;
+omitted OTP lifetime retains its current value per the provider contract. The
+response's optional OTP lifetime and unrelated metadata are never evaluated/emitted.
+HTTP200 must echo false; closed `{accepted: true}` acknowledges only, not independently
+verified phone authentication refusal, outstanding OTP invalidation, issued-token/session
+revocation or fencing. Contradictory ancestry and pagination refuse.
+
+Boolean state is not immutable deployment identity; preflight is not atomic CAS
+and reconfiguration races remain unresolved. One bounded status observation after
+ambiguity never upgrades false or absence to success; no retry, permanent common
+journal blocks same-request replay, not external writers. Inventory conservatively
+promotes this auth mutation from write to reserved/native. Fixed transport bounds,
+unknown entitlement/effects and native host/custody/authority/durable recovery/review
+gates remain. Source/mocks only, no live change or runtime registration.
+
 `createNeonAuthLocalhostDisableOperations` supplies reserved, disable-only
 `updateNeonAuthAllowLocalhost` source for one copied exact project/branch/revision.
 Dedicated `neon/projects/<project>/branches/<branch>/auth/allow_localhost/disable`
@@ -1835,8 +1855,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 111 implemented
-source adapters, 83 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 112 implemented
+source adapters, 82 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable
