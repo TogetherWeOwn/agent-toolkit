@@ -120,6 +120,8 @@ const allDescriptors = { ...metadataOnly, ...deletionDescriptors, contentDescrip
   rulesetsZoneList: rulesets.zoneList, rulesetsZoneGet: rulesets.zoneGet,
   rulesetsAccountVersionsList: rulesets.accountVersionsList, rulesetsAccountVersionGet: rulesets.accountVersionGet,
   rulesetsZoneVersionsList: rulesets.zoneVersionsList, rulesetsZoneVersionGet: rulesets.zoneVersionGet,
+  rulesetsAccountVersionRulesByTag: rulesets.accountVersionRulesByTag,
+  rulesetsZoneVersionRulesByTag: rulesets.zoneVersionRulesByTag,
   rulesetsAccountEntrypointGet: rulesets.accountEntrypointGet,
   rulesetsAccountEntrypointVersionsList: rulesets.accountEntrypointVersionsList,
   rulesetsAccountEntrypointVersionGet: rulesets.accountEntrypointVersionGet,

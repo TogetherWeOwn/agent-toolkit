@@ -112,6 +112,7 @@ export interface CloudflareReadScope extends MetadataScope {
   accountRulesetIds?: RulesetScope["accountRulesetIds"];
   accountRulesetVersionLists?: RulesetScope["accountVersionLists"];
   accountRulesetVersions?: RulesetScope["accountVersions"];
+  accountRulesetVersionRuleTags?: RulesetScope["accountVersionRuleTags"];
   accountRulesetEntrypoints?: RulesetScope["accountEntrypoints"];
   accountRulesetEntrypointVersionLists?: RulesetScope["accountEntrypointVersionLists"];
   accountRulesetEntrypointVersions?: RulesetScope["accountEntrypointVersions"];
@@ -182,6 +183,7 @@ export interface CloudflareReadScope extends MetadataScope {
     rulesetIds?: RulesetScope["zoneRulesetIds"];
     rulesetVersionLists?: RulesetScope["zoneVersionLists"];
     rulesetVersions?: RulesetScope["zoneVersions"];
+    rulesetVersionRuleTags?: RulesetScope["zoneVersionRuleTags"];
     rulesetEntrypoints?: RulesetScope["zoneEntrypoints"];
     rulesetEntrypointVersionLists?: RulesetScope["zoneEntrypointVersionLists"];
     rulesetEntrypointVersions?: RulesetScope["zoneEntrypointVersions"];
@@ -211,12 +213,14 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
   const rulesets = rulesetDescriptors({ accountId, revision,
     accountListIds: scope.accountRulesetListIds ?? [], accountRulesetIds: scope.accountRulesetIds ?? [],
     accountVersionLists: scope.accountRulesetVersionLists ?? [], accountVersions: scope.accountRulesetVersions ?? [],
+    accountVersionRuleTags: scope.accountRulesetVersionRuleTags ?? [],
     accountEntrypoints: scope.accountRulesetEntrypoints ?? [],
     accountEntrypointVersionLists: scope.accountRulesetEntrypointVersionLists ?? [],
     accountEntrypointVersions: scope.accountRulesetEntrypointVersions ?? [],
     ...(scope.zone === undefined ? {} : { zoneId: scope.zone.zoneId,
       zoneListIds: scope.zone.rulesetListIds ?? [], zoneRulesetIds: scope.zone.rulesetIds ?? [],
       zoneVersionLists: scope.zone.rulesetVersionLists ?? [], zoneVersions: scope.zone.rulesetVersions ?? [],
+      zoneVersionRuleTags: scope.zone.rulesetVersionRuleTags ?? [],
       zoneEntrypoints: scope.zone.rulesetEntrypoints ?? [], zoneEntrypointVersionLists: scope.zone.rulesetEntrypointVersionLists ?? [],
       zoneEntrypointVersions: scope.zone.rulesetEntrypointVersions ?? [] }) });
   const loadBalancing = loadBalancingDescriptors({ accountId, revision,
@@ -284,6 +288,8 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(subscriptions.subscriptionsList), metadata(subscriptions.subscriptionGet),
     metadata(rulesets.accountList), metadata(rulesets.accountGet),
     metadata(rulesets.accountVersionsList), metadata(rulesets.accountVersionGet),
+    metadata(rulesets.accountVersionRulesByTag),
+    ...(rulesets.zoneVersionRulesByTag === undefined ? [] : [metadata(rulesets.zoneVersionRulesByTag)]),
     metadata(rulesets.accountEntrypointGet), metadata(rulesets.accountEntrypointVersionsList), metadata(rulesets.accountEntrypointVersionGet),
     ...(rulesets.zoneEntrypointGet === undefined || rulesets.zoneEntrypointVersionsList === undefined || rulesets.zoneEntrypointVersionGet === undefined ? [] :
       [metadata(rulesets.zoneEntrypointGet), metadata(rulesets.zoneEntrypointVersionsList), metadata(rulesets.zoneEntrypointVersionGet)]),

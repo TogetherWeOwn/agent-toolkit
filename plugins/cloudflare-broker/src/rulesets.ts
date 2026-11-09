@@ -9,6 +9,24 @@ const getInput = closed({ rulesetId: identifier });
 const version = text(32, /^[0-9]+$(?![\s\S])/);
 const versionInput = closed({ rulesetId: identifier, rulesetVersion: version });
 type VersionSelection = Readonly<{ rulesetId: string; versions: readonly string[] }>;
+// Official RuleCategory is any nonempty string. Support only this bounded path-safe subset.
+const ruleTag = text(64, /^[A-Za-z0-9][A-Za-z0-9_-]*$(?![\s\S])/);
+const tagInput = closed({ rulesetId: identifier, rulesetVersion: version, ruleTag });
+type RuleTagSelection = Readonly<{ rulesetId: string; rulesetVersion: string; ruleTag: string; ruleIds: readonly string[] }>;
+type TagArguments = ReturnType<typeof tagInput.parse>;
+const tagKey = (args: TagArguments) => `${args.rulesetId}:versions:${args.rulesetVersion}:by_tag:${args.ruleTag}`;
+function tagSnapshot(raw: readonly RuleTagSelection[] | undefined): ReadonlyMap<string, ReadonlySet<string>> {
+  const rows = raw === undefined ? [] : raw;
+  requireThat(Array.isArray(rows) && rows.length <= 32, "cap");
+  const selected = new Map<string, ReadonlySet<string>>();
+  for (const raw of rows) {
+    const row = object(raw), args = tagInput.parse({ rulesetId: row.rulesetId, rulesetVersion: row.rulesetVersion, ruleTag: row.ruleTag });
+    const key = tagKey(args);
+    requireThat(!selected.has(key), "schema");
+    selected.set(key, snapshot(row.ruleIds as readonly string[] | undefined, 64));
+  }
+  return selected;
+}
 const phases = new Set(["ddos_l4", "ddos_l7", "http_config_settings", "http_custom_errors", "http_log_custom_fields",
   "http_ratelimit", "http_request_cache_settings", "http_request_dynamic_redirect", "http_request_firewall_custom",
   "http_request_firewall_managed", "http_request_late_transform", "http_request_origin", "http_request_redirect",
@@ -35,6 +53,8 @@ export interface RulesetScope {
   accountVersions?: readonly VersionSelection[];
   zoneVersionLists?: readonly VersionSelection[];
   zoneVersions?: readonly VersionSelection[];
+  accountVersionRuleTags?: readonly RuleTagSelection[];
+  zoneVersionRuleTags?: readonly RuleTagSelection[];
   accountEntrypoints?: readonly EntrypointSelection[];
   accountEntrypointVersionLists?: readonly EntrypointVersionSelection[];
   accountEntrypointVersions?: readonly EntrypointVersionSelection[];
@@ -117,6 +137,7 @@ export function rulesetDescriptors(scope: RulesetScope) {
   const zoneList = snapshot(scope.zoneListIds, 64), zoneGet = snapshot(scope.zoneRulesetIds, 100);
   const accountVersionLists = versionSnapshot(scope.accountVersionLists), accountVersions = versionSnapshot(scope.accountVersions);
   const zoneVersionLists = versionSnapshot(scope.zoneVersionLists), zoneVersions = versionSnapshot(scope.zoneVersions);
+  const accountTags = tagSnapshot(scope.accountVersionRuleTags), zoneTags = tagSnapshot(scope.zoneVersionRuleTags);
   const accountEntrypoints = entrypointSnapshot(scope.accountEntrypoints, false);
   const accountEntrypointVersionLists = entrypointSnapshot(scope.accountEntrypointVersionLists, true);
   const accountEntrypointVersions = entrypointSnapshot(scope.accountEntrypointVersions, true);
@@ -128,6 +149,12 @@ export function rulesetDescriptors(scope: RulesetScope) {
     if (Object.hasOwn(row, "account")) requireThat(object(row.account).id === account, "scope");
     if (Object.hasOwn(row, "zone_id")) requireThat(zone !== undefined && row.zone_id === zone, "scope");
     if (Object.hasOwn(row, "zone")) requireThat(zone !== undefined && object(row.zone).id === zone, "scope");
+  }
+  function tagContext(row: Row, args: TagArguments): void {
+    context(row);
+    if (Object.hasOwn(row, "ruleset_id")) requireThat(row.ruleset_id === args.rulesetId, "scope");
+    if (Object.hasOwn(row, "ruleset_version")) requireThat(row.ruleset_version === args.rulesetVersion, "scope");
+    if (Object.hasOwn(row, "rule_tag")) requireThat(row.rule_tag === args.ruleTag, "scope");
   }
   function identity(raw: unknown, detail: boolean): Identity {
     const row = object(raw); context(row);
@@ -145,7 +172,7 @@ export function rulesetDescriptors(scope: RulesetScope) {
     return Object.freeze({ id: row.id });
   }
   function descriptor<A, O>(parent: "account" | "zone", kind: "list" | "get" | "versions.list" | "versions.get" |
-    "entrypoint.get" | "entrypoint.versions.list" | "entrypoint.versions.get", operation: string,
+    "entrypoint.get" | "entrypoint.versions.list" | "entrypoint.versions.get" | "versions.rules_by_tag.list", operation: string,
     prepare: (raw: unknown) => { arguments: A; suffix: string; resource: string },
     project: (result: unknown, args: A) => O): MetadataDescriptor<A, O> {
     const prepared = new WeakSet<object>();
@@ -167,6 +194,7 @@ export function rulesetDescriptors(scope: RulesetScope) {
         let parsed: unknown;
         try { parsed = JSON.parse(raw); } catch { requireThat(false, "upstream"); }
         const body = object(parsed); context(body);
+        if (kind === "versions.rules_by_tag.list") tagContext(body, tagInput.parse(value.arguments));
         requireThat(body.success === true && Array.isArray(body.errors) && body.errors.length === 0 &&
           Array.isArray(body.messages) && body.messages.length <= 64 && Object.hasOwn(body, "result"), "upstream");
         for (const message of body.messages) {
@@ -247,6 +275,41 @@ export function rulesetDescriptors(scope: RulesetScope) {
     });
     return { list, get };
   }
+  function rulesByTag(parent: "account" | "zone", selections: ReadonlyMap<string, ReadonlySet<string>>) {
+    const title = parent === "account" ? "Account" : "Zone";
+    return descriptor(parent, "versions.rules_by_tag.list", `list${title}RulesetVersionRulesByTag`, raw => {
+      const args = tagInput.parse(raw), key = tagKey(args);
+      requireThat((selections.get(key)?.size ?? 0) > 0, "scope");
+      // The official endpoint has no pagination parameters and returns a Ruleset response.
+      return { arguments: args, suffix: `/${args.rulesetId}/versions/${args.rulesetVersion}/by_tag/${args.ruleTag}`, resource: key };
+    }, (result, args) => {
+      const row = object(result), id = identity(row, true).id; tagContext(row, args);
+      requireThat(id === args.rulesetId && row.version === args.rulesetVersion, "scope");
+      const rules = row.rules;
+      requireThat(Array.isArray(rules) && rules.length <= 64, "cap");
+      const items: Identity[] = [], seen = new Set<string>(), selected = selections.get(tagKey(args))!;
+      for (const raw of rules) {
+        const rule = object(raw); tagContext(rule, args);
+        const id = identifier.parse(rule.id);
+        requireThat(!seen.has(id), "upstream"); seen.add(id);
+        version.parse(rule.version); dateTime(rule.last_updated);
+        // Validate required common response fields, not the action-specific rule union.
+        boundedString(rule.action); boundedString(rule.expression); boundedString(rule.ref);
+        requireThat(typeof rule.enabled === "boolean", "upstream");
+        if (Object.hasOwn(rule, "categories")) {
+          requireThat(Array.isArray(rule.categories) && rule.categories.length > 0 && rule.categories.length <= 64, "upstream");
+          const categories = new Set<string>();
+          for (const category of rule.categories) {
+            boundedString(category); requireThat(!categories.has(category), "upstream"); categories.add(category);
+          }
+          requireThat(categories.has(args.ruleTag), "scope");
+        }
+        if (selected.has(id)) items.push(Object.freeze({ id }));
+      }
+      return { subject: `configured-${parent}-ruleset-version-rule-identities` as const, items: Object.freeze(items), complete: false as const,
+        effectiveProtection: "not-established" as const, serving: "not-established" as const, ownership: "not-established" as const };
+    });
+  }
   function entrypointTriple(parent: "account" | "zone", current: EntrypointSnapshot, lists: EntrypointSnapshot, gets: EntrypointSnapshot) {
     const title = parent === "account" ? "Account" : "Zone";
     const base = { subject: `configured-${parent}-ruleset-entrypoint-identities` as const,
@@ -299,6 +362,8 @@ export function rulesetDescriptors(scope: RulesetScope) {
   const accountVersionPair = versionPair("account", accountVersionLists, accountVersions);
   const zoneVersionPair = zone === undefined ? undefined : versionPair("zone", zoneVersionLists, zoneVersions);
   return Object.freeze({ accountList: accounts.list, accountGet: accounts.get,
+    accountVersionRulesByTag: rulesByTag("account", accountTags),
+    ...(zone === undefined ? {} : { zoneVersionRulesByTag: rulesByTag("zone", zoneTags) }),
     accountVersionsList: accountVersionPair.list, accountVersionGet: accountVersionPair.get,
     accountEntrypointGet: accountEntrypoint.get, accountEntrypointVersionsList: accountEntrypoint.versionsList,
     accountEntrypointVersionGet: accountEntrypoint.versionGet,
