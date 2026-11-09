@@ -23,9 +23,9 @@ function object(value: unknown): Row {
   requireThat(value !== null && typeof value === "object" && !Array.isArray(value), "upstream");
   return value as Row;
 }
-function snapshot(raw: readonly string[] | undefined): ReadonlySet<string> {
+function snapshot(raw: readonly string[] | undefined, max: number): ReadonlySet<string> {
   const rows = raw === undefined ? [] : raw;
-  requireThat(Array.isArray(rows) && rows.length <= 100, "cap");
+  requireThat(Array.isArray(rows) && rows.length <= max, "cap");
   const ids = new Set<string>();
   for (const row of rows) {
     const id = identifier.parse(row);
@@ -36,8 +36,9 @@ function snapshot(raw: readonly string[] | undefined): ReadonlySet<string> {
 
 export function loadBalancingDescriptors(scope: LoadBalancingScope) {
   const account = accountId.parse(scope.accountId), revision = label.parse(scope.revision);
-  const poolList = snapshot(scope.poolListIds), pools = snapshot(scope.poolIds);
-  const monitorList = snapshot(scope.monitorListIds), monitors = snapshot(scope.monitorIds);
+  // Core jsonData permits at most 64 array elements (plus the length key).
+  const poolList = snapshot(scope.poolListIds, 64), pools = snapshot(scope.poolIds, 100);
+  const monitorList = snapshot(scope.monitorListIds, 64), monitors = snapshot(scope.monitorIds, 100);
   function descriptor<A, O>(family: "pools" | "monitors", kind: "list" | "get", operation: string,
     prepare: (raw: unknown) => { arguments: A; suffix: string; resource: string },
     project: (result: unknown, args: A) => O): MetadataDescriptor<A, O> {
