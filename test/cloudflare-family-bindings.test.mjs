@@ -161,7 +161,7 @@ test("Cloudflare family response association mismatches refuse without leaking p
   }
 });
 
-test("Cloudflare family snapshots cannot be widened; absent zone means absent zone/DNS operations", () => {
+test("Cloudflare family snapshots cannot be widened; absent zone omits zone-bound detail/DNS operations", () => {
   const input = scope();
   const operations = cloudflareReadOperations(input, { accountId: account, revision: "resource-1", sourceDigestScriptNames: [] });
   input.secretStores[0].secretIds.push(zone);
@@ -179,7 +179,8 @@ test("Cloudflare family snapshots cannot be widened; absent zone means absent zo
   assert.equal(operations.find(op => op.name === "cloudflare.zones.get").prepare({}).plan.request.path, `/zones/${zone}`);
   const empty = cloudflareReadOperations({ accountId: account, revision: "resource-1", scriptNames: [], hyperdriveIds: [] },
     { accountId: account, revision: "resource-1", sourceDigestScriptNames: [] });
-  assert.ok(!empty.some(op => op.name.startsWith("cloudflare.zones.") || op.name.startsWith("cloudflare.dns.")));
+  assert.ok(!empty.some(op => op.name === "cloudflare.zones.get" || op.name.startsWith("cloudflare.dns.")));
+  assert.throws(() => empty.find(op => op.name === "cloudflare.zones.list").prepare({ page: 1, perPage: 5 }), /scope/);
   for (const [name, args] of [
     ["cloudflare.secrets_store.stores.get", { storeId: store }],
     ["cloudflare.durable_objects.objects.list", { namespaceId: namespace, limit: 10 }],
