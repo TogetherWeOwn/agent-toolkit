@@ -9,7 +9,7 @@ const poison = { email: canary, name: canary, granted_to_email: canary, granted_
   password: canary, connection_uri: canary, diagnostics: canary };
 test('members accept documented terminal and continuing sorting metadata; malformed or changing order refuses', async () => {
   const [name, args, raw, expected] = cases.find(([name]) => name === 'listProjectMembers');
-  for (const pagination of [{ sort_order: 'asc' }, { sort_order: 'desc' }, { sort_by: 'member_id' }]) {
+  for (const pagination of [{ sort_order: 'asc' }, { sort_order: 'desc' }, { sort_by: 'member_id' }, { sort_by: 'name' }]) {
     const f = fixture({ ...raw, pagination });
     assert.deepEqual(await f.run(name, args), expected);
     assert.equal(f.requests.length, 1);
@@ -153,7 +153,7 @@ test('members follow encoded pagination.next, accept empty terminal pagination, 
   assert.equal(query.get('cursor'), cursor);
   assert.equal(query.get('limit'), '10');
   assert.equal(query.size, 2);
-  for (const pagination of [{ cursor: 'wrong' }, { sort_by: 'name' }, null, { next: null }, { next: '' }, { next: 'x\n' }, { next: 'x'.repeat(257) }]) {
+  for (const pagination of [{ cursor: 'wrong' }, { sort_by: 42 }, null, { next: null }, { next: '' }, { next: 'x\n' }, { next: 'x'.repeat(257) }]) {
     const bad = fixture({ project_members: [member], pagination });
     await assert.rejects(bad.run(name, args));
     assert.equal(bad.requests.length, 1);
