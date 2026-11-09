@@ -1,3 +1,4 @@
+import { identifier } from "../../../packages/core/src/schema.js";
 import { parseLogValueQuery, parseLogWindow } from "./log-value-query.js";
 import { downloadBucketName, downloadObjectKey } from "./object-key.js";
 import { snapshotLabel } from "./snapshot-update.js";
@@ -15,6 +16,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  revokeCredential(project: string, branch: string, token: string, options: MetadataRequestOptions): Promise<unknown>;
   revokeOrgApiKey(organization: string, key: number, options: MetadataRequestOptions): Promise<unknown>;
   revokeApiKey(key: number, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchRole(project: string, branch: string, role: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -145,7 +147,7 @@ function cursorQuery(cursor: string | null): URLSearchParams {
 // Construction is a source/test seam, not an installed or enabled runtime tool.
 export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadataTransport {
   const get = (path: string, query: URLSearchParams, options: MetadataRequestOptions) => request(path, query, options);
-  async function request(path: string, query: URLSearchParams, options: MetadataRequestOptions, body?: string, binary = false, deleteStatus: 200 | 202 | false = false, patch = false, suspend = false): Promise<unknown> {
+  async function request(path: string, query: URLSearchParams, options: MetadataRequestOptions, body?: string, binary = false, deleteStatus: 200 | 202 | 204 | false = false, patch = false, suspend = false): Promise<unknown> {
     if (/[\r\n]/.test(options.credential)) throw Error("UPSTREAM_UNAVAILABLE");
     const expiresAt = performance.now() + REQUEST_TIMEOUT_MS;
     const controller = new AbortController();
@@ -171,6 +173,16 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
           ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
         ...(body === undefined ? {} : { body }),
       });
+      if (deleteStatus === 204) {
+        const length = response.headers.get("content-length");
+        if (expired() || response.status !== 204 || response.redirected || response.body !== null ||
+          (length !== null && length !== "0")) {
+          void response.body?.cancel().catch(() => {});
+          throw Error("UPSTREAM_UNAVAILABLE");
+        }
+        // Normalize this endpoint's documented empty acknowledgement, not an identity echo.
+        return { acknowledged: true };
+      }
       const mime = binary ? /^application\/octet-stream(?:\s*;|$)/i : /^application\/json(?:\s*;|$)/i;
       if (expired() || response.status !== (deleteStatus === false ? 200 : deleteStatus) || response.redirected ||
         !mime.test(response.headers.get("content-type") ?? "") ||
@@ -216,6 +228,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    revokeCredential: (project: string, branch: string, token: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/credentials/${identifier.parse(token)}`,
+        new URLSearchParams(), options, undefined, false, 204),
     revokeOrgApiKey: (organization: string, key: number, options: MetadataRequestOptions) => {
       if (!Number.isSafeInteger(key) || key < 0 || Object.is(key, -0)) throw Error("INVALID_ARGUMENTS");
       return request(`/organizations/${authPathId(organization)}/api_keys/${key}`, new URLSearchParams(), options, undefined, false, 200);

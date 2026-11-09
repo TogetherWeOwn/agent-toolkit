@@ -19,6 +19,26 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
 
+## Reserved branch-credential revocation source delta
+
+Exact copied project/branch/opaque ID/revision and a dedicated credential/revoke
+grant require reserved native exact-plan authority before credentials. A bounded
+branch-list preflight validates IDs/duplicates/ancestry and requires explicit
+matching anchor branch and customer-managed `principal_type: user` for the selected
+ID. Missing anchors, platform-internal and unknown principals refuse. This narrower
+subset does not claim all credential types. Scopes (including future values),
+labels, dates, function identity and secret-like extras are never evaluated/emitted.
+
+One bodyless DELETE accepts only documented empty HTTP204. The transport normalizes
+a closed acknowledgement, not an upstream identity echo, independent enforcement,
+credential completeness, session closure or cutover fencing. Preflight is not atomic
+CAS. Provider idempotence does not authorize retries: ambiguity gets at most one
+bounded same-credential list observation and stays uncertain even on absence or
+revoked metadata. Permanent common journal barriers block restart/replay, not
+external writers. Native authority/custody/host/durable recovery, effects/entitlement
+and independent reviews remain gates. No live revoke, reveal, mint, rotation,
+credential retrieval or enablement is introduced.
+
 ## Reserved organization-key revocation source delta
 
 Exact copied organization/numeric key ID/revision and a dedicated organization/key/revoke

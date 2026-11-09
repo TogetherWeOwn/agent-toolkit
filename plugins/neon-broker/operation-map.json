@@ -3854,20 +3854,24 @@
       "id": "revokeCredential",
       "apiArea": "credentials",
       "tool": "neon.revokeCredential",
-      "scope": "project_id/branch_id/token_id",
+      "scope": "project_id/branch_id/token_id/revoke",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "credential-revocation-request"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/credential-revoke.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only; exact copied project/branch/opaque ID/revision, dedicated revoke grant and reserved native exact-plan authority. Bounded list preflight requires exact ID, explicit anchor branch and customer-managed user principal; one bodyless DELETE. Documented HTTP204 acknowledges only, not independently observed enforcement/session closure/cutover fencing or credential completeness. Preflight not atomic CAS; ambiguity stays uncertain after one observation even on absence, no retry; permanent journal blocks replay/restart. Entitlement/effects, credential authority/custody, native host/durable recovery and independent reviews unresolved. No live revoke or enablement."
     },
     {
       "id": "revealCredential",

@@ -48,6 +48,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   databaseDeleteFixture, databaseDeleteArgs, databaseDeleteScope, databaseDeleteReceipt,
   userKeyRevokeFixture, userKeyRevokeArgs, userKeyRevokeScope, userKeyRevokeReceipt,
   organizationKeyRevokeFixture, organizationKeyRevokeArgs, organizationKeyRevokeScope, organizationKeyRevokeReceipt,
+  credentialRevokeFixture, credentialRevokeArgs, credentialRevokeScope, credentialRevokeMetadata,
   roleDeleteFixture, roleDeleteArgs, roleDeleteScope, roleDeleteReceipt,
   branchDeleteFixture, branchDeleteArgs, branchDeleteScope, branchDeleteReceipt,
   endpointStartFixture, endpointStartArgs, endpointStartScope, endpointStartReceipt,
@@ -125,6 +126,125 @@ function safeEnvelope(f, result) {
     assert(!serialized.includes(secret), `secret in output/audit/journal: ${secret}`);
   }
 }
+
+function credentialRevocationBroker(value = null, overrides = {}, config = credentialRevokeScope) {
+  const provider = credentialRevokeFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId, token_id: config.tokenId };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('revokeCredential').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.revokeCredential', args, context, key);
+  } };
+}
+
+test('credential revoke: reserved authority and exact credential/revoke AND agent grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = credentialRevocationBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = 'neon/projects/project-a/branches/br-a/credentials/credential-id-fixture';
+  for (const resource of [target, target + '/reveal', target.replace('br-a', 'other') + '/revoke',
+    target.replace('project-a', 'other') + '/revoke', target.replace('credential-id-fixture', 'other') + '/revoke',
+    'neon/projects/project-a/branches/br-a/credentials']) {
+    const f = credentialRevocationBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = credentialRevocationBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = credentialRevocationBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { acknowledged: true });
+  assert.equal(f.common.calls.consumed, 1);
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('credential revoke: native authorization rejects stale, wrong-target and unconsumable evidence', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = credentialRevocationBroker();
+    const base = f.common.authority;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { return false; } };
+    const result = await f.common.broker().call('neon.revokeCredential', credentialRevokeArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('credential revoke: identity/resource TOCTOU and caller authority/target overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = credentialRevocationBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = credentialRevocationBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.revokeCredential', credentialRevokeArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { project_id: 'other' }, { branch_id: 'other' }, { token_id: 'other' }, { token: 'not-a-token' }, { retry: true }]) {
+    const g = credentialRevocationBroker();
+    assert.equal((await g.common.broker().call('neon.revokeCredential', { ...credentialRevokeArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('credential revoke: permanent journal blocks complete and uncertain replay after restart despite provider idempotence', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = credentialRevocationBroker((url, init) => {
+      if (init.method === 'DELETE') { if (ambiguous) throw Error(credentialCanary); return new Response(null, { status: 204 }); }
+      return response({ credentials: [credentialRevokeMetadata] });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('credential revoke: missing/foreign anchors and platform principals refuse; secrets never enter envelopes', async () => {
+  for (const change of [{ branch_id: 'other' }, { project_id: 'other' }, { branch_id: undefined }, { principal_type: 'system' }, { token_id: credentialCanary }]) {
+    const f = credentialRevocationBroker(() => response({ credentials: [{ ...credentialRevokeMetadata, ...change }] }));
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 0);
+    safeEnvelope(f, result);
+  }
+  const f = credentialRevocationBroker((url, init) => init.method === 'DELETE' ? new Response(null, { status: 204 }) :
+    response({ credentials: [{ ...credentialRevokeMetadata, api_token: credentialCanary, s3_secret_access_key: derivedCanary, scopes: ['future:scope'] }] }));
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
+test('credential revoke: maximum copied project/branch/opaque IDs fit common budgets', async () => {
+  const config = { projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), tokenId: 'c'.repeat(80), revision: 'r'.repeat(80) };
+  const f = credentialRevocationBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
 
 function organizationKeyRevocationBroker(value = organizationKeyRevokeReceipt, overrides = {}, config = organizationKeyRevokeScope) {
   const provider = organizationKeyRevokeFixture(value, config);
