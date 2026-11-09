@@ -1,0 +1,86 @@
+name: Cloudflare provider contracts
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-contracts-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  cloudflare-postgres-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17.7@sha256:2006493727bd5277eece187319af1ef82b4cf82cf4fc1ed00da0775b646ac2a4
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432/tcp
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Verify runner PostgreSQL client
+        run: psql --version
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: Test candidate SQL against isolated PostgreSQL (not native qualification)
+        env:
+          CLOUDFLARE_POSTGRES_TEST: '1'
+          CLOUDFLARE_POSTGRES_PORT: ${{ job.services.postgres.ports['5432'] }}
+        run: node --test --test-timeout=120000 plugins/cloudflare-broker/testing/postgres-contracts.mjs
+
+  cloudflare-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: Test bounded Pages traversal and evidence manifest
+        run: node --test --test-timeout=30000 test/cloudflare-pages-traversal.test.mjs
+      - run: node --test --test-timeout=30000 test/cloudflare-*.test.mjs
+      - name: Reproduce complete pinned API operation inventory
+        run: |
+          set -euo pipefail
+          schema_dir=$(mktemp -d "$RUNNER_TEMP/cloudflare-schema.XXXXXX")
+          curl -fsS --max-time 120 --max-filesize 60000000 \
+            https://raw.githubusercontent.com/cloudflare/api-schemas/650bd71c22db3b938a4611bf4cc5afd896b400b7/openapi.json \
+            -o "$schema_dir/openapi.json"
+          node plugins/cloudflare-broker/scripts/inventory.mjs "$schema_dir/openapi.json" "$schema_dir/operations.jsonl"
+          cmp plugins/cloudflare-broker/coverage/operations.jsonl "$schema_dir/operations.jsonl"
+          node plugins/cloudflare-broker/scripts/families.mjs "$schema_dir/operations.jsonl" "$schema_dir/families.json"
+          cmp plugins/cloudflare-broker/coverage/families.json "$schema_dir/families.json"
+      - name: Reproduce pinned supplemental R2 S3 compatibility inventory
+        run: |
+          set -euo pipefail
+          docs_dir=$(mktemp -d "$RUNNER_TEMP/cloudflare-docs.XXXXXX")
+          curl -fsS --max-time 120 --max-filesize 1000000 \
+            https://raw.githubusercontent.com/cloudflare/cloudflare-docs/53ce9b502646fdc019b8184b29b9f1054939e1b6/src/content/docs/r2/api/s3/api.mdx \
+            -o "$docs_dir/r2-s3.mdx"
+          node plugins/cloudflare-broker/scripts/supplemental.mjs "$docs_dir/r2-s3.mdx" "$docs_dir/r2-s3.json"
+          cmp plugins/cloudflare-broker/coverage/r2-s3.json "$docs_dir/r2-s3.json"
