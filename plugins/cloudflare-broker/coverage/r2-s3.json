@@ -1,0 +1,4057 @@
+{
+  "manifestVersion": 1,
+  "surface": "R2 S3-compatible API",
+  "complete": false,
+  "source": {
+    "repository": "https://github.com/cloudflare/cloudflare-docs",
+    "revision": "53ce9b502646fdc019b8184b29b9f1054939e1b6",
+    "url": "https://raw.githubusercontent.com/cloudflare/cloudflare-docs/53ce9b502646fdc019b8184b29b9f1054939e1b6/src/content/docs/r2/api/s3/api.mdx",
+    "sha256": "cfa565d89837b4f3ee3ff874dcc71daf86da1f62adeffd4b5fe82e3837df36e7"
+  },
+  "counts": {
+    "operations": 73,
+    "providerSupported": 26,
+    "providerUnsupported": 47,
+    "descriptors": 0,
+    "implementedTools": 0,
+    "reviewedTools": 0,
+    "enabledTools": 0
+  },
+  "note": "Documentary compatibility facts only; provider support is not credential entitlement, a typed adapter, policy classification or authorization. REST v4 descriptors do not implement S3. Missing operations remain incomplete, including provider-unsupported entries.",
+  "constraints": [
+    {
+      "sourceLine": 13,
+      "text": "R2 implements the S3 API to allow users and their applications to migrate with ease. When comparing to AWS S3, Cloudflare has removed some API operations' features and added others. The S3 API operations are listed below with their current implementation status. Feature implementation is currently in progress. Refer back to this page for updates."
+    },
+    {
+      "sourceLine": 14,
+      "text": "The API is available via the `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` endpoint. Find your [account ID in the Cloudflare dashboard](/fundamentals/account/find-account-and-zone-ids/)."
+    },
+    {
+      "sourceLine": 16,
+      "text": "## How to read this page"
+    },
+    {
+      "sourceLine": 18,
+      "text": "This page has two sections: bucket-level operations and object-level operations."
+    },
+    {
+      "sourceLine": 20,
+      "text": "Each section will have two tables: a table of implemented APIs and a table of unimplemented APIs."
+    },
+    {
+      "sourceLine": 22,
+      "text": "Refer the feature column of each table to review which features of an API have been implemented and which have not."
+    },
+    {
+      "sourceLine": 24,
+      "text": "✅ Feature Implemented <br/>"
+    },
+    {
+      "sourceLine": 25,
+      "text": "🚧 Feature Implemented (Experimental) <br/>"
+    },
+    {
+      "sourceLine": 26,
+      "text": "❌ Feature Not Implemented"
+    },
+    {
+      "sourceLine": 28,
+      "text": "## Bucket region"
+    },
+    {
+      "sourceLine": 30,
+      "text": "When using the S3 API, the region for an R2 bucket is `auto`. For compatibility with tools that do not allow you to specify a region, an empty value and `us-east-1` will alias to the `auto` region."
+    },
+    {
+      "sourceLine": 32,
+      "text": "This also applies to the `LocationConstraint` for the `CreateBucket` API."
+    },
+    {
+      "sourceLine": 34,
+      "text": "## Checksum Types"
+    },
+    {
+      "sourceLine": 36,
+      "text": "Checksums have an algorithm and a [type](https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html#ChecksumTypes). Refer to the table below."
+    },
+    {
+      "sourceLine": 38,
+      "text": "| Checksum Algorithm | `FULL_OBJECT` | `COMPOSITE` |"
+    },
+    {
+      "sourceLine": 39,
+      "text": "| ------------------------- | ------------- | ----------- |"
+    },
+    {
+      "sourceLine": 40,
+      "text": "| CRC-64/NVME (`CRC64NVME`) | ✅ | ❌ |"
+    },
+    {
+      "sourceLine": 41,
+      "text": "| CRC-32 (`CRC32`) | ❌ | ✅ |"
+    },
+    {
+      "sourceLine": 42,
+      "text": "| CRC-32C (`CRC32C`) | ❌ | ✅ |"
+    },
+    {
+      "sourceLine": 43,
+      "text": "| SHA-1 (`SHA1`) | ❌ | ✅ |"
+    },
+    {
+      "sourceLine": 44,
+      "text": "| SHA-256 (`SHA256`) | ❌ | ✅ |"
+    },
+    {
+      "sourceLine": 46,
+      "text": "## Bucket-level operations"
+    },
+    {
+      "sourceLine": 48,
+      "text": "The following tables are related to bucket-level operations."
+    },
+    {
+      "sourceLine": 50,
+      "text": "### Implemented bucket-level operations"
+    },
+    {
+      "sourceLine": 52,
+      "text": "Below is a list of implemented bucket-level operations. Refer to the Feature column to review which features have been implemented (✅) and have not been implemented (❌)."
+    },
+    {
+      "sourceLine": 54,
+      "text": "| API Name | Feature |"
+    },
+    {
+      "sourceLine": 55,
+      "text": "| ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |"
+    },
+    {
+      "sourceLine": 68,
+      "text": "### Unimplemented bucket-level operations"
+    },
+    {
+      "sourceLine": 72,
+      "text": "| API Name | Feature |"
+    },
+    {
+      "sourceLine": 73,
+      "text": "| ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |"
+    },
+    {
+      "sourceLine": 121,
+      "text": "## Object-level operations"
+    },
+    {
+      "sourceLine": 123,
+      "text": "The following tables are related to object-level operations."
+    },
+    {
+      "sourceLine": 125,
+      "text": "### Implemented object-level operations"
+    },
+    {
+      "sourceLine": 127,
+      "text": "Below is a list of implemented object-level operations. Refer to the Feature column to review which features have been implemented (✅) and have not been implemented (❌)."
+    },
+    {
+      "sourceLine": 129,
+      "text": "#### Behaviors & Limitations"
+    },
+    {
+      "sourceLine": 131,
+      "text": "**UploadPart:** Uploading to the same part number replaces the previous part. If a subsequent upload to the same part fails, the original part is lost and must be re-uploaded."
+    },
+    {
+      "sourceLine": 133,
+      "text": "**Conditional operations:** The conditional headers on `PutObject` (such as `If-Match` and `If-None-Match`) are evaluated atomically against the committed bucket state, as part of the same write that commits the object. For example, when multiple clients concurrently issue `PutObject` with `If-None-Match: *` for a previously absent key, at most one write succeeds and the others fail with `412 PreconditionFailed`. Refer to [Consistency model](/r2/reference/consistency/#conditional-writes) for details, including how negative reads interact with in-flight writes."
+    },
+    {
+      "sourceLine": 135,
+      "text": "| API Name | Feature |"
+    },
+    {
+      "sourceLine": 136,
+      "text": "| -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |"
+    },
+    {
+      "sourceLine": 153,
+      "text": ":::caution"
+    },
+    {
+      "sourceLine": 155,
+      "text": "Even though `ListObjects` is a supported operation, it is recommended that you use `ListObjectsV2` instead when developing applications. For more information, refer to [ListObjects](https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjects.html)."
+    },
+    {
+      "sourceLine": 157,
+      "text": ":::"
+    },
+    {
+      "sourceLine": 159,
+      "text": "### Unimplemented object-level operations"
+    },
+    {
+      "sourceLine": 163,
+      "text": "| API Name | Feature |"
+    },
+    {
+      "sourceLine": 164,
+      "text": "| ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |"
+    }
+  ],
+  "operations": [
+    {
+      "key": "S3 AbortMultipartUpload",
+      "operationId": "AbortMultipartUpload",
+      "level": "object",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_AbortMultipartUpload.html",
+      "sourceLine": 147,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Request Payer:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-request-payer"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 CompleteMultipartUpload",
+      "operationId": "CompleteMultipartUpload",
+      "level": "object",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_CompleteMultipartUpload.html",
+      "sourceLine": 146,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Request Payer:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-request-payer"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 CopyObject",
+      "operationId": "CopyObject",
+      "level": "object",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_CopyObject.html",
+      "sourceLine": 148,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "supported",
+          "feature": "Operation Metadata:"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-metadata-directive"
+        },
+        {
+          "status": "supported",
+          "feature": "System Metadata:"
+        },
+        {
+          "status": "supported",
+          "feature": "Content-Type"
+        },
+        {
+          "status": "supported",
+          "feature": "Cache-Control"
+        },
+        {
+          "status": "supported",
+          "feature": "Content-Disposition"
+        },
+        {
+          "status": "supported",
+          "feature": "Content-Encoding"
+        },
+        {
+          "status": "supported",
+          "feature": "Content-Language"
+        },
+        {
+          "status": "supported",
+          "feature": "Expires"
+        },
+        {
+          "status": "supported",
+          "feature": "Conditional Operations:"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-copy-source"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-copy-source-if-match"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-copy-source-if-modified-since"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-copy-source-if-none-match"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-copy-source-if-unmodified-since"
+        },
+        {
+          "status": "supported",
+          "feature": "Storage Class:"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-storage-class"
+        },
+        {
+          "status": "supported",
+          "feature": "STANDARD"
+        },
+        {
+          "status": "supported",
+          "feature": "STANDARD_IA"
+        },
+        {
+          "status": "unsupported",
+          "feature": "ACL:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-acl"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-grant-full-control"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-grant-read"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-grant-read-acp"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-grant-write-acp"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Website:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-website-redirect-location"
+        },
+        {
+          "status": "unsupported",
+          "feature": "SSE:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-server-side-encryption"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-server-side-encryption-aws-kms-key-id"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-server-side-encryption-context"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-server-side-encryption-bucket-key-enabled"
+        },
+        {
+          "status": "supported",
+          "feature": "SSE-C:"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-server-side-encryption-customer-algorithm"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-server-side-encryption-customer-key"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-server-side-encryption-customer-key-MD5"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-copy-source-server-side-encryption-customer-algorithm"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-copy-source-server-side-encryption-customer-key"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-copy-source-server-side-encryption-customer-key-MD5"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Request Payer:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-request-payer"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Tagging:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-tagging"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-tagging-directive"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Object Locking:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-object-lock-mode"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-object-lock-retain-until-date"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-object-lock-legal-hold"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-source-expected-bucket-owner"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Checksums:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-checksum-algorithm"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 CreateBucket",
+      "operationId": "CreateBucket",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_CreateBucket.html",
+      "sourceLine": 58,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "ACL:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-acl"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-grant-full-control"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-grant-read"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-grant-read-acp"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-grant-write"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-grant-write-acp"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Object Locking:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-bucket-object-lock-enabled"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 CreateMultipartUpload",
+      "operationId": "CreateMultipartUpload",
+      "level": "object",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_CreateMultipartUpload.html",
+      "sourceLine": 145,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "supported",
+          "feature": "System Metadata:"
+        },
+        {
+          "status": "supported",
+          "feature": "Content-Type"
+        },
+        {
+          "status": "supported",
+          "feature": "Cache-Control"
+        },
+        {
+          "status": "supported",
+          "feature": "Content-Disposition"
+        },
+        {
+          "status": "supported",
+          "feature": "Content-Encoding"
+        },
+        {
+          "status": "supported",
+          "feature": "Content-Language"
+        },
+        {
+          "status": "supported",
+          "feature": "Expires"
+        },
+        {
+          "status": "supported",
+          "feature": "Content-MD5"
+        },
+        {
+          "status": "supported",
+          "feature": "Storage Class:"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-storage-class"
+        },
+        {
+          "status": "supported",
+          "feature": "STANDARD"
+        },
+        {
+          "status": "supported",
+          "feature": "STANDARD_IA"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Website:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-website-redirect-location"
+        },
+        {
+          "status": "unsupported",
+          "feature": "SSE:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-server-side-encryption-aws-kms-key-id"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-server-side-encryption"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-server-side-encryption-context"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-server-side-encryption-bucket-key-enabled"
+        },
+        {
+          "status": "supported",
+          "feature": "SSE-C:"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-server-side-encryption-customer-algorithm"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-server-side-encryption-customer-key"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-server-side-encryption-customer-key-MD5"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Request Payer:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-request-payer"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Tagging:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-tagging"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Object Locking:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-object-lock-mode"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-object-lock-retain-until-date"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-object-lock-legal-hold"
+        },
+        {
+          "status": "unsupported",
+          "feature": "ACL:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-acl"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-grant-full-control"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-grant-read"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-grant-read-acp"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-grant-write-acp"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 DeleteBucket",
+      "operationId": "DeleteBucket",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteBucket.html",
+      "sourceLine": 59,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 DeleteBucketCors",
+      "operationId": "DeleteBucketCors",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteBucketCors.html",
+      "sourceLine": 60,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 DeleteObject",
+      "operationId": "DeleteObject",
+      "level": "object",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteObject.html",
+      "sourceLine": 142,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Multi-factor authentication:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-mfa"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Object Locking:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-bypass-governance-retention"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Request Payer:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-request-payer"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 DeleteObjectTagging",
+      "operationId": "DeleteObjectTagging",
+      "level": "object",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteObjectTagging.html",
+      "sourceLine": 167,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 DeleteObjects",
+      "operationId": "DeleteObjects",
+      "level": "object",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteObjects.html",
+      "sourceLine": 143,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Multi-factor authentication:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-mfa"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Object Locking:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-bypass-governance-retention"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Request Payer:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-request-payer"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetBucketAccelerateConfiguration",
+      "operationId": "GetBucketAccelerateConfiguration",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketAccelerateConfiguration.html",
+      "sourceLine": 74,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetBucketAcl",
+      "operationId": "GetBucketAcl",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketAcl.html",
+      "sourceLine": 75,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetBucketAnalyticsConfiguration",
+      "operationId": "GetBucketAnalyticsConfiguration",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketAnalyticsConfiguration.html",
+      "sourceLine": 76,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "id"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetBucketCors",
+      "operationId": "GetBucketCors",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketCors.html",
+      "sourceLine": 61,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetBucketEncryption",
+      "operationId": "GetBucketEncryption",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketEncryption.html",
+      "sourceLine": 64,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetBucketIntelligentTieringConfiguration",
+      "operationId": "GetBucketIntelligentTieringConfiguration",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketIntelligentTieringConfiguration.html",
+      "sourceLine": 77,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "id"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetBucketInventoryConfiguration",
+      "operationId": "GetBucketInventoryConfiguration",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketInventoryConfiguration.html",
+      "sourceLine": 78,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "id"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetBucketLifecycle",
+      "operationId": "GetBucketLifecycle",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketLifecycle.html",
+      "sourceLine": 79,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetBucketLifecycleConfiguration",
+      "operationId": "GetBucketLifecycleConfiguration",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketLifecycleConfiguration.html",
+      "sourceLine": 62,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetBucketLocation",
+      "operationId": "GetBucketLocation",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketLocation.html",
+      "sourceLine": 63,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetBucketLogging",
+      "operationId": "GetBucketLogging",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketLogging.html",
+      "sourceLine": 80,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetBucketMetricsConfiguration",
+      "operationId": "GetBucketMetricsConfiguration",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketMetricsConfiguration.html",
+      "sourceLine": 81,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "id"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetBucketNotification",
+      "operationId": "GetBucketNotification",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketNotification.html",
+      "sourceLine": 82,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetBucketNotificationConfiguration",
+      "operationId": "GetBucketNotificationConfiguration",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketNotificationConfiguration.html",
+      "sourceLine": 83,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetBucketOwnershipControls",
+      "operationId": "GetBucketOwnershipControls",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketOwnershipControls.html",
+      "sourceLine": 84,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetBucketPolicy",
+      "operationId": "GetBucketPolicy",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketPolicy.html",
+      "sourceLine": 85,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetBucketPolicyStatus",
+      "operationId": "GetBucketPolicyStatus",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketPolicyStatus.html",
+      "sourceLine": 86,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetBucketReplication",
+      "operationId": "GetBucketReplication",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketReplication.html",
+      "sourceLine": 87,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetBucketRequestPayment",
+      "operationId": "GetBucketRequestPayment",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketRequestPayment.html",
+      "sourceLine": 88,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetBucketTagging",
+      "operationId": "GetBucketTagging",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketTagging.html",
+      "sourceLine": 89,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetBucketVersioning",
+      "operationId": "GetBucketVersioning",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketVersioning.html",
+      "sourceLine": 90,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetBucketWebsite",
+      "operationId": "GetBucketWebsite",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketWebsite.html",
+      "sourceLine": 91,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetObject",
+      "operationId": "GetObject",
+      "level": "object",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html",
+      "sourceLine": 140,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "supported",
+          "feature": "Conditional Operations:"
+        },
+        {
+          "status": "supported",
+          "feature": "If-Match"
+        },
+        {
+          "status": "supported",
+          "feature": "If-Modified-Since"
+        },
+        {
+          "status": "supported",
+          "feature": "If-None-Match"
+        },
+        {
+          "status": "supported",
+          "feature": "If-Unmodified-Since"
+        },
+        {
+          "status": "supported",
+          "feature": "Range:"
+        },
+        {
+          "status": "supported",
+          "feature": "Range"
+        },
+        {
+          "status": "supported",
+          "feature": "PartNumber"
+        },
+        {
+          "status": "supported",
+          "feature": "SSE-C:"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-server-side-encryption-customer-algorithm"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-server-side-encryption-customer-key"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-server-side-encryption-customer-key-MD5"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Request Payer:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-request-payer"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetObjectLockConfiguration",
+      "operationId": "GetObjectLockConfiguration",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObjectLockConfiguration.html",
+      "sourceLine": 92,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetObjectTagging",
+      "operationId": "GetObjectTagging",
+      "level": "object",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObjectTagging.html",
+      "sourceLine": 165,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Request Payer:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-request-payer"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 GetPublicAccessBlock",
+      "operationId": "GetPublicAccessBlock",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetPublicAccessBlock.html",
+      "sourceLine": 93,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 HeadBucket",
+      "operationId": "HeadBucket",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadBucket.html",
+      "sourceLine": 57,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 HeadObject",
+      "operationId": "HeadObject",
+      "level": "object",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html",
+      "sourceLine": 137,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "supported",
+          "feature": "Conditional Operations:"
+        },
+        {
+          "status": "supported",
+          "feature": "If-Match"
+        },
+        {
+          "status": "supported",
+          "feature": "If-Modified-Since"
+        },
+        {
+          "status": "supported",
+          "feature": "If-None-Match"
+        },
+        {
+          "status": "supported",
+          "feature": "If-Unmodified-Since"
+        },
+        {
+          "status": "supported",
+          "feature": "Range:"
+        },
+        {
+          "status": "supported",
+          "feature": "Range (has no effect in HeadObject)"
+        },
+        {
+          "status": "supported",
+          "feature": "partNumber"
+        },
+        {
+          "status": "supported",
+          "feature": "SSE-C:"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-server-side-encryption-customer-algorithm"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-server-side-encryption-customer-key"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-server-side-encryption-customer-key-MD5"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Request Payer:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-request-payer"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 ListBucketAnalyticsConfigurations",
+      "operationId": "ListBucketAnalyticsConfigurations",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListBucketAnalyticsConfigurations.html",
+      "sourceLine": 94,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Query Parameters:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "continuation-token"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 ListBucketIntelligentTieringConfigurations",
+      "operationId": "ListBucketIntelligentTieringConfigurations",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListBucketIntelligentTieringConfigurations.html",
+      "sourceLine": 95,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Query Parameters:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "continuation-token"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 ListBucketInventoryConfigurations",
+      "operationId": "ListBucketInventoryConfigurations",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListBucketInventoryConfigurations.html",
+      "sourceLine": 96,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Query Parameters:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "continuation-token"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 ListBucketMetricsConfigurations",
+      "operationId": "ListBucketMetricsConfigurations",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListBucketMetricsConfigurations.html",
+      "sourceLine": 97,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Query Parameters:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "continuation-token"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 ListBuckets",
+      "operationId": "ListBuckets",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListBuckets.html",
+      "sourceLine": 56,
+      "providerSupport": "supported",
+      "features": [],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 ListMultipartUploads",
+      "operationId": "ListMultipartUploads",
+      "level": "object",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListMultipartUploads.html",
+      "sourceLine": 144,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "supported",
+          "feature": "Query Parameters:"
+        },
+        {
+          "status": "supported",
+          "feature": "delimiter"
+        },
+        {
+          "status": "supported",
+          "feature": "encoding-type"
+        },
+        {
+          "status": "supported",
+          "feature": "key-marker"
+        },
+        {
+          "status": "supported",
+          "feature": "max-uploads"
+        },
+        {
+          "status": "supported",
+          "feature": "prefix"
+        },
+        {
+          "status": "supported",
+          "feature": "upload-id-marker"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 ListObjects",
+      "operationId": "ListObjects",
+      "level": "object",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjects.html",
+      "sourceLine": 138,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "heading",
+          "feature": "Query Parameters:"
+        },
+        {
+          "status": "supported",
+          "feature": "delimiter"
+        },
+        {
+          "status": "supported",
+          "feature": "encoding-type"
+        },
+        {
+          "status": "supported",
+          "feature": "marker"
+        },
+        {
+          "status": "supported",
+          "feature": "max-keys"
+        },
+        {
+          "status": "supported",
+          "feature": "prefix"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Request Payer:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-request-payer"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 ListObjectsV2",
+      "operationId": "ListObjectsV2",
+      "level": "object",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjectsV2.html",
+      "sourceLine": 139,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "heading",
+          "feature": "Query Parameters:"
+        },
+        {
+          "status": "supported",
+          "feature": "list-type"
+        },
+        {
+          "status": "supported",
+          "feature": "continuation-token"
+        },
+        {
+          "status": "supported",
+          "feature": "delimiter"
+        },
+        {
+          "status": "supported",
+          "feature": "encoding-type"
+        },
+        {
+          "status": "supported",
+          "feature": "fetch-owner"
+        },
+        {
+          "status": "supported",
+          "feature": "max-keys"
+        },
+        {
+          "status": "supported",
+          "feature": "prefix"
+        },
+        {
+          "status": "supported",
+          "feature": "start-after"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Request Payer:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-request-payer"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 ListParts",
+      "operationId": "ListParts",
+      "level": "object",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListParts.html",
+      "sourceLine": 151,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "heading",
+          "feature": "Query Parameters:"
+        },
+        {
+          "status": "supported",
+          "feature": "max-parts"
+        },
+        {
+          "status": "supported",
+          "feature": "part-number-marker"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Request Payer:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-request-payer"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutBucketAccelerateConfiguration",
+      "operationId": "PutBucketAccelerateConfiguration",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketAccelerateConfiguration.html",
+      "sourceLine": 98,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Checksums:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutBucketAcl",
+      "operationId": "PutBucketAcl",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketAcl.html",
+      "sourceLine": 99,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Permissions:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-grant-full-control"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-grant-read"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-grant-read-acp"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-grant-write"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-grant-write-acp"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Checksums:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-sdk-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutBucketAnalyticsConfiguration",
+      "operationId": "PutBucketAnalyticsConfiguration",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketAnalyticsConfiguration.html",
+      "sourceLine": 100,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "id"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutBucketCors",
+      "operationId": "PutBucketCors",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketCors.html",
+      "sourceLine": 65,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Checksums:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-sdk-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutBucketEncryption",
+      "operationId": "PutBucketEncryption",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketEncryption.html",
+      "sourceLine": 101,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Checksums:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-sdk-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutBucketIntelligentTieringConfiguration",
+      "operationId": "PutBucketIntelligentTieringConfiguration",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketIntelligentTieringConfiguration.html",
+      "sourceLine": 102,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "id"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutBucketInventoryConfiguration",
+      "operationId": "PutBucketInventoryConfiguration",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketInventoryConfiguration.html",
+      "sourceLine": 103,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "id"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutBucketLifecycle",
+      "operationId": "PutBucketLifecycle",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketLifecycle.html",
+      "sourceLine": 104,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Checksums:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-sdk-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutBucketLifecycleConfiguration",
+      "operationId": "PutBucketLifecycleConfiguration",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketLifecycleConfiguration.html",
+      "sourceLine": 66,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Checksums:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-sdk-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutBucketLogging",
+      "operationId": "PutBucketLogging",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketLogging.html",
+      "sourceLine": 105,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Checksums:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Content-MD5"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-sdk-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutBucketMetricsConfiguration",
+      "operationId": "PutBucketMetricsConfiguration",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketMetricsConfiguration.html",
+      "sourceLine": 106,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "id"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutBucketNotification",
+      "operationId": "PutBucketNotification",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketNotification.html",
+      "sourceLine": 107,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Checksums:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Content-MD5"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-sdk-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutBucketNotificationConfiguration",
+      "operationId": "PutBucketNotificationConfiguration",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketNotificationConfiguration.html",
+      "sourceLine": 108,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Validation:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-skip-destination-validation"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutBucketOwnershipControls",
+      "operationId": "PutBucketOwnershipControls",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketOwnershipControls.html",
+      "sourceLine": 109,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Checksums:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Content-MD5"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutBucketPolicy",
+      "operationId": "PutBucketPolicy",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketPolicy.html",
+      "sourceLine": 110,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Validation:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-confirm-remove-self-bucket-access"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Checksums:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Content-MD5"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-sdk-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutBucketReplication",
+      "operationId": "PutBucketReplication",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketReplication.html",
+      "sourceLine": 111,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Object Locking:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-bucket-object-lock-token"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Checksums:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Content-MD5"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-sdk-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutBucketRequestPayment",
+      "operationId": "PutBucketRequestPayment",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketRequestPayment.html",
+      "sourceLine": 112,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Checksums:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Content-MD5"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-sdk-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutBucketTagging",
+      "operationId": "PutBucketTagging",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketTagging.html",
+      "sourceLine": 113,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Checksums:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Content-MD5"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-sdk-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutBucketVersioning",
+      "operationId": "PutBucketVersioning",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketVersioning.html",
+      "sourceLine": 114,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Multi-factor authentication:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-mfa"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Checksums:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Content-MD5"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-sdk-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutBucketWebsite",
+      "operationId": "PutBucketWebsite",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketWebsite.html",
+      "sourceLine": 115,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Checksums:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Content-MD5"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutObject",
+      "operationId": "PutObject",
+      "level": "object",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html",
+      "sourceLine": 141,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "supported",
+          "feature": "Conditional Operations:"
+        },
+        {
+          "status": "supported",
+          "feature": "If-Match"
+        },
+        {
+          "status": "supported",
+          "feature": "If-Modified-Since"
+        },
+        {
+          "status": "supported",
+          "feature": "If-None-Match"
+        },
+        {
+          "status": "supported",
+          "feature": "If-Unmodified-Since"
+        },
+        {
+          "status": "supported",
+          "feature": "System Metadata:"
+        },
+        {
+          "status": "supported",
+          "feature": "Content-Type"
+        },
+        {
+          "status": "supported",
+          "feature": "Cache-Control"
+        },
+        {
+          "status": "supported",
+          "feature": "Content-Disposition"
+        },
+        {
+          "status": "supported",
+          "feature": "Content-Encoding"
+        },
+        {
+          "status": "supported",
+          "feature": "Content-Language"
+        },
+        {
+          "status": "supported",
+          "feature": "Expires"
+        },
+        {
+          "status": "supported",
+          "feature": "Content-MD5"
+        },
+        {
+          "status": "supported",
+          "feature": "Storage Class:"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-storage-class"
+        },
+        {
+          "status": "supported",
+          "feature": "STANDARD"
+        },
+        {
+          "status": "supported",
+          "feature": "STANDARD_IA"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Object Lifecycle"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Website:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-website-redirect-location"
+        },
+        {
+          "status": "unsupported",
+          "feature": "SSE:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-server-side-encryption-aws-kms-key-id"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-server-side-encryption"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-server-side-encryption-context"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-server-side-encryption-bucket-key-enabled"
+        },
+        {
+          "status": "supported",
+          "feature": "SSE-C:"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-server-side-encryption-customer-algorithm"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-server-side-encryption-customer-key"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-server-side-encryption-customer-key-MD5"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Request Payer:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-request-payer"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Tagging:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-tagging"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Object Locking:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-object-lock-mode"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-object-lock-retain-until-date"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-object-lock-legal-hold"
+        },
+        {
+          "status": "unsupported",
+          "feature": "ACL:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-acl"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-grant-full-control"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-grant-read"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-grant-read-acp"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-grant-write-acp"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutObjectLockConfiguration",
+      "operationId": "PutObjectLockConfiguration",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObjectLockConfiguration.html",
+      "sourceLine": 116,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Object Locking:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-bucket-object-lock-token"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Checksums:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Content-MD5"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Request Payer:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-request-payer"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutObjectTagging",
+      "operationId": "PutObjectTagging",
+      "level": "object",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObjectTagging.html",
+      "sourceLine": 166,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Request Payer:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-request-payer"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Checksums:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-sdk-checksum-algorithm"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 PutPublicAccessBlock",
+      "operationId": "PutPublicAccessBlock",
+      "level": "bucket",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutPublicAccessBlock.html",
+      "sourceLine": 117,
+      "providerSupport": "unsupported",
+      "features": [
+        {
+          "status": "unsupported",
+          "feature": "Checksums:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Content-MD5"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-sdk-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-checksum-algorithm"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "provider-operation-support",
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 UploadPart",
+      "operationId": "UploadPart",
+      "level": "object",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_UploadPart.html",
+      "sourceLine": 149,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "supported",
+          "feature": "System Metadata:"
+        },
+        {
+          "status": "supported",
+          "feature": "Content-MD5"
+        },
+        {
+          "status": "unsupported",
+          "feature": "SSE:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-server-side-encryption"
+        },
+        {
+          "status": "supported",
+          "feature": "SSE-C:"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-server-side-encryption-customer-algorithm"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-server-side-encryption-customer-key"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-server-side-encryption-customer-key-MD5"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Request Payer:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-request-payer"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    },
+    {
+      "key": "S3 UploadPartCopy",
+      "operationId": "UploadPartCopy",
+      "level": "object",
+      "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_UploadPartCopy.html",
+      "sourceLine": 150,
+      "providerSupport": "supported",
+      "features": [
+        {
+          "status": "supported",
+          "feature": "Copy Source:"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-copy-source (required)"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Conditional Operations:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-copy-source-if-match"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-copy-source-if-modified-since"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-copy-source-if-none-match"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-copy-source-if-unmodified-since"
+        },
+        {
+          "status": "supported",
+          "feature": "Range:"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-copy-source-range"
+        },
+        {
+          "status": "supported",
+          "feature": "SSE-C:"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-server-side-encryption-customer-algorithm"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-server-side-encryption-customer-key"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-server-side-encryption-customer-key-MD5"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-copy-source-server-side-encryption-customer-algorithm"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-copy-source-server-side-encryption-customer-key"
+        },
+        {
+          "status": "supported",
+          "feature": "x-amz-copy-source-server-side-encryption-customer-key-MD5"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Request Payer:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-request-payer"
+        },
+        {
+          "status": "unsupported",
+          "feature": "Bucket Owner:"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-expected-bucket-owner"
+        },
+        {
+          "status": "unsupported",
+          "feature": "x-amz-source-expected-bucket-owner"
+        }
+      ],
+      "credentialScope": "unknown",
+      "resourceScope": "unclassified",
+      "typedTool": null,
+      "tier": "unclassified",
+      "approvalRoute": "unresolved",
+      "implementation": "missing",
+      "review": "not-reviewed",
+      "enablement": "disabled",
+      "tests": [],
+      "prerequisites": [
+        "credential-protocol-and-scope-attestation",
+        "typed-adapter-and-tier-classification",
+        "compatible-reviewed-core",
+        "native-integration-and-tier-review"
+      ],
+      "prerequisiteOwner": "provider-package-maintainer"
+    }
+  ]
+}
