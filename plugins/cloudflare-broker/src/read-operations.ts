@@ -110,6 +110,8 @@ export interface CloudflareReadScope extends MetadataScope {
   workerSchedules?: WorkerScheduleScope["workers"];
   accountRulesetListIds?: RulesetScope["accountListIds"];
   accountRulesetIds?: RulesetScope["accountRulesetIds"];
+  accountRulesetVersionLists?: RulesetScope["accountVersionLists"];
+  accountRulesetVersions?: RulesetScope["accountVersions"];
   loadBalancingPoolListIds?: LoadBalancingScope["poolListIds"];
   loadBalancingPoolIds?: LoadBalancingScope["poolIds"];
   loadBalancingMonitorListIds?: LoadBalancingScope["monitorListIds"];
@@ -175,6 +177,8 @@ export interface CloudflareReadScope extends MetadataScope {
     loadBalancerIds?: ZoneLoadBalancerScope["balancerIds"];
     rulesetListIds?: RulesetScope["zoneListIds"];
     rulesetIds?: RulesetScope["zoneRulesetIds"];
+    rulesetVersionLists?: RulesetScope["zoneVersionLists"];
+    rulesetVersions?: RulesetScope["zoneVersions"];
     healthCheckListIds?: HealthCheckScope["listIds"];
     healthCheckIds?: HealthCheckScope["healthcheckIds"];
     dnsSettingsReadAllowed?: DnsSettingsScope["readAllowed"];
@@ -200,8 +204,10 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
   const subscriptions = subscriptionDescriptors({ accountId, revision, subscriptions: scope.subscriptions ?? [] });
   const rulesets = rulesetDescriptors({ accountId, revision,
     accountListIds: scope.accountRulesetListIds ?? [], accountRulesetIds: scope.accountRulesetIds ?? [],
+    accountVersionLists: scope.accountRulesetVersionLists ?? [], accountVersions: scope.accountRulesetVersions ?? [],
     ...(scope.zone === undefined ? {} : { zoneId: scope.zone.zoneId,
-      zoneListIds: scope.zone.rulesetListIds ?? [], zoneRulesetIds: scope.zone.rulesetIds ?? [] }) });
+      zoneListIds: scope.zone.rulesetListIds ?? [], zoneRulesetIds: scope.zone.rulesetIds ?? [],
+      zoneVersionLists: scope.zone.rulesetVersionLists ?? [], zoneVersions: scope.zone.rulesetVersions ?? [] }) });
   const loadBalancing = loadBalancingDescriptors({ accountId, revision,
     poolListIds: scope.loadBalancingPoolListIds ?? [], poolIds: scope.loadBalancingPoolIds ?? [],
     monitorListIds: scope.loadBalancingMonitorListIds ?? [], monitorIds: scope.loadBalancingMonitorIds ?? [] });
@@ -266,6 +272,9 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(accountDnsDescriptor({ accountId, revision, readAllowed: scope.accountDnsReadAllowed ?? false })),
     metadata(subscriptions.subscriptionsList), metadata(subscriptions.subscriptionGet),
     metadata(rulesets.accountList), metadata(rulesets.accountGet),
+    metadata(rulesets.accountVersionsList), metadata(rulesets.accountVersionGet),
+    ...(rulesets.zoneVersionsList === undefined || rulesets.zoneVersionGet === undefined ? [] :
+      [metadata(rulesets.zoneVersionsList), metadata(rulesets.zoneVersionGet)]),
     ...(rulesets.zoneList === undefined || rulesets.zoneGet === undefined ? [] : [metadata(rulesets.zoneList), metadata(rulesets.zoneGet)]),
     metadata(loadBalancing.poolsList), metadata(loadBalancing.poolGet),
     metadata(loadBalancing.monitorsList), metadata(loadBalancing.monitorGet),

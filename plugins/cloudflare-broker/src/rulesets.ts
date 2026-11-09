@@ -5,6 +5,10 @@ const identifier = text(32, /^[a-f0-9]{32}$(?![\s\S])/);
 const revisionLabel = text(80, /^[A-Za-z0-9][A-Za-z0-9_.-]*$(?![\s\S])/);
 const listInput = closed({});
 const getInput = closed({ rulesetId: identifier });
+// Official digit-string syntax; never coerce, canonicalize or alias versions.
+const version = text(32, /^[0-9]+$(?![\s\S])/);
+const versionInput = closed({ rulesetId: identifier, rulesetVersion: version });
+type VersionSelection = Readonly<{ rulesetId: string; versions: readonly string[] }>;
 const phases = new Set(["ddos_l4", "ddos_l7", "http_config_settings", "http_custom_errors", "http_log_custom_fields",
   "http_ratelimit", "http_request_cache_settings", "http_request_dynamic_redirect", "http_request_firewall_custom",
   "http_request_firewall_managed", "http_request_late_transform", "http_request_origin", "http_request_redirect",
@@ -21,6 +25,27 @@ export interface RulesetScope {
   accountRulesetIds?: readonly string[];
   zoneListIds?: readonly string[];
   zoneRulesetIds?: readonly string[];
+  accountVersionLists?: readonly VersionSelection[];
+  accountVersions?: readonly VersionSelection[];
+  zoneVersionLists?: readonly VersionSelection[];
+  zoneVersions?: readonly VersionSelection[];
+}
+function versionSnapshot(raw: readonly VersionSelection[] | undefined): ReadonlyMap<string, ReadonlySet<string>> {
+  const rows = raw === undefined ? [] : raw;
+  requireThat(Array.isArray(rows) && rows.length <= 32, "cap");
+  const selected = new Map<string, ReadonlySet<string>>();
+  for (const raw of rows) {
+    const row = object(raw), id = identifier.parse(row.rulesetId), values = row.versions;
+    requireThat(!selected.has(id) && Array.isArray(values) && values.length > 0, "schema");
+    requireThat(values.length <= 64, "cap");
+    const versions = new Set<string>();
+    for (const raw of values) {
+      const value = version.parse(raw);
+      requireThat(!versions.has(value), "schema"); versions.add(value);
+    }
+    selected.set(id, versions);
+  }
+  return selected;
 }
 function object(value: unknown): Row {
   requireThat(value !== null && typeof value === "object" && !Array.isArray(value), "upstream");
@@ -58,6 +83,8 @@ export function rulesetDescriptors(scope: RulesetScope) {
   // Lists select at most core's 64 IDs; the fixed provider first page returns at most 50.
   const accountList = snapshot(scope.accountListIds, 64), accountGet = snapshot(scope.accountRulesetIds, 100);
   const zoneList = snapshot(scope.zoneListIds, 64), zoneGet = snapshot(scope.zoneRulesetIds, 100);
+  const accountVersionLists = versionSnapshot(scope.accountVersionLists), accountVersions = versionSnapshot(scope.accountVersions);
+  const zoneVersionLists = versionSnapshot(scope.zoneVersionLists), zoneVersions = versionSnapshot(scope.zoneVersions);
   function context(row: Row): void {
     if (Object.hasOwn(row, "account_id")) requireThat(row.account_id === account, "scope");
     if (Object.hasOwn(row, "account")) requireThat(object(row.account).id === account, "scope");
@@ -79,7 +106,7 @@ export function rulesetDescriptors(scope: RulesetScope) {
     }
     return Object.freeze({ id: row.id });
   }
-  function descriptor<A, O>(parent: "account" | "zone", kind: "list" | "get", operation: string,
+  function descriptor<A, O>(parent: "account" | "zone", kind: "list" | "get" | "versions.list" | "versions.get", operation: string,
     prepare: (raw: unknown) => { arguments: A; suffix: string; resource: string },
     project: (result: unknown, args: A) => O): MetadataDescriptor<A, O> {
     const prepared = new WeakSet<object>();
@@ -109,7 +136,7 @@ export function rulesetDescriptors(scope: RulesetScope) {
           if (Object.hasOwn(row, "source")) boundedString(object(row.source).pointer);
         }
         // Optional cursor metadata is validated, discarded and never treated as terminality/authority.
-        if (kind === "list" && Object.hasOwn(body, "result_info")) {
+        if (kind.endsWith("list") && Object.hasOwn(body, "result_info")) {
           const info = object(body.result_info);
           if (Object.hasOwn(info, "cursors")) boundedString(object(info.cursors).after);
         }
@@ -145,8 +172,48 @@ export function rulesetDescriptors(scope: RulesetScope) {
     });
     return { list, get };
   }
+  function versionPair(parent: "account" | "zone", lists: ReadonlyMap<string, ReadonlySet<string>>,
+    gets: ReadonlyMap<string, ReadonlySet<string>>) {
+    const base = { subject: `configured-${parent}-ruleset-version-identities` as const,
+      effectiveProtection: "not-established" as const, serving: "not-established" as const, ownership: "not-established" as const };
+    const title = parent === "account" ? "Account" : "Zone";
+    function item(raw: unknown, rulesetId: string, detail: boolean) {
+      const id = identity(raw, detail).id, row = object(raw);
+      requireThat(id === rulesetId, "scope");
+      requireThat(typeof row.version === "string" && row.version.length <= 32, "upstream");
+      return Object.freeze({ id, version: row.version });
+    }
+    const list = descriptor(parent, "versions.list", `list${title}RulesetVersions`, raw => {
+      const args = getInput.parse(raw); requireThat(lists.has(args.rulesetId), "scope");
+      // These official endpoints have no page/per_page/cursor request parameters.
+      return { arguments: args, suffix: `/${args.rulesetId}/versions`, resource: `${args.rulesetId}:versions:list` };
+    }, (result, args) => {
+      requireThat(Array.isArray(result) && result.length <= 64, "cap");
+      const items: Readonly<{ id: string; version: string }>[] = [], seen = new Set<string>();
+      for (const raw of result) {
+        const value = item(raw, args.rulesetId, false);
+        requireThat(!seen.has(value.version), "upstream"); seen.add(value.version);
+        if (lists.get(args.rulesetId)!.has(value.version)) items.push(value);
+      }
+      return { ...base, items: Object.freeze(items), complete: false as const };
+    });
+    const get = descriptor(parent, "versions.get", `get${title}RulesetVersion`, raw => {
+      const args = versionInput.parse(raw); requireThat(gets.get(args.rulesetId)?.has(args.rulesetVersion), "scope");
+      return { arguments: args, suffix: `/${args.rulesetId}/versions/${args.rulesetVersion}`,
+        resource: `${args.rulesetId}:versions:${args.rulesetVersion}` };
+    }, (result, args) => {
+      const value = item(result, args.rulesetId, true);
+      requireThat(value.version === args.rulesetVersion, "scope");
+      return { ...base, item: value };
+    });
+    return { list, get };
+  }
   const accounts = pair("account", accountList, accountGet);
   const zones = zone === undefined ? undefined : pair("zone", zoneList, zoneGet);
+  const accountVersionPair = versionPair("account", accountVersionLists, accountVersions);
+  const zoneVersionPair = zone === undefined ? undefined : versionPair("zone", zoneVersionLists, zoneVersions);
   return Object.freeze({ accountList: accounts.list, accountGet: accounts.get,
-    ...(zones === undefined ? {} : { zoneList: zones.list, zoneGet: zones.get }) });
+    accountVersionsList: accountVersionPair.list, accountVersionGet: accountVersionPair.get,
+    ...(zones === undefined ? {} : { zoneList: zones.list, zoneGet: zones.get }),
+    ...(zoneVersionPair === undefined ? {} : { zoneVersionsList: zoneVersionPair.list, zoneVersionGet: zoneVersionPair.get }) });
 }
