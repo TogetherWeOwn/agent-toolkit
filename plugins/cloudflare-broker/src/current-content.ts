@@ -47,7 +47,7 @@ export function currentContentDescriptor(scope: CurrentContentScope) {
       requireThat(scripts.has(args.scriptName), "scope");
       const prepared = Object.freeze({
         arguments: args,
-        resource: Object.freeze({ id: `cloudflare:account:${account}:worker:${args.scriptName}:current-content`, revision }),
+        resource: Object.freeze({ id: `cloudflare:account:${account}:worker:${args.scriptName}:current-content${modules.get(args.scriptName)?.size ? ":module-digests" : ""}`, revision }),
         request: Object.freeze({
           method: "GET" as const,
           path: `/accounts/${account}/workers/scripts/${args.scriptName}/content/v2`,
