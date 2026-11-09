@@ -9,6 +9,7 @@ import { versionAssetDescriptor } from "../dist/plugins/cloudflare-broker/src/ve
 import { workerDomainMetadataDescriptors } from "../dist/plugins/cloudflare-broker/src/worker-domains.js";
 import { subscriptionDescriptors } from "../dist/plugins/cloudflare-broker/src/subscriptions.js";
 import { workerScheduleDescriptor } from "../dist/plugins/cloudflare-broker/src/worker-schedules.js";
+import { loadBalancingDescriptors } from "../dist/plugins/cloudflare-broker/src/load-balancing.js";
 import { scriptSettingsDescriptors } from "../dist/plugins/cloudflare-broker/src/script-settings.js";
 import { environmentSettingsDescriptor } from "../dist/plugins/cloudflare-broker/src/environment-settings.js";
 import { dispatchSettingsDescriptor } from "../dist/plugins/cloudflare-broker/src/dispatch-settings.js";
@@ -110,6 +111,7 @@ const contentDescriptor = currentContentDescriptor({ accountId: account, revisio
 const allDescriptors = { ...metadataOnly, ...deletionDescriptors, contentDescriptor,
   ...subscriptionDescriptors({ accountId: account, revision: "policy-1" }),
   workerSchedules: workerScheduleDescriptor({ accountId: account, revision: "policy-1" }),
+  ...loadBalancingDescriptors({ accountId: account, revision: "policy-1" }),
   ...scriptSettingsDescriptors({ accountId: account, revision: "policy-1" }),
   environmentSettings: environmentSettingsDescriptor({ accountId: account, revision: "policy-1" }),
   dispatchSettings: dispatchSettingsDescriptor({ accountId: account, revision: "policy-1" }),

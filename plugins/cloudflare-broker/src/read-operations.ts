@@ -3,6 +3,7 @@ import { canonicalHash, type Json, type Prepared, type ProviderOperation, type T
 import { currentContentDescriptor, type CurrentContentScope } from "./current-content.js";
 import { subscriptionDescriptors, type SubscriptionScope } from "./subscriptions.js";
 import { workerScheduleDescriptor, type WorkerScheduleScope } from "./worker-schedules.js";
+import { loadBalancingDescriptors, type LoadBalancingScope } from "./load-balancing.js";
 import { scriptSettingsDescriptors, type ScriptSettingsScope } from "./script-settings.js";
 import { environmentSettingsDescriptor, type EnvironmentSettingsScope } from "./environment-settings.js";
 import { dispatchSettingsDescriptor, type DispatchSettingsScope } from "./dispatch-settings.js";
@@ -101,6 +102,10 @@ export interface CloudflareReadScope extends MetadataScope {
   accountDnsReadAllowed?: AccountDnsScope["readAllowed"];
   subscriptions?: SubscriptionScope["subscriptions"];
   workerSchedules?: WorkerScheduleScope["workers"];
+  loadBalancingPoolListIds?: LoadBalancingScope["poolListIds"];
+  loadBalancingPoolIds?: LoadBalancingScope["poolIds"];
+  loadBalancingMonitorListIds?: LoadBalancingScope["monitorListIds"];
+  loadBalancingMonitorIds?: LoadBalancingScope["monitorIds"];
   workerSecrets?: WorkerSecretScope["workers"];
   workerIdentityList?: WorkerIdentityScope["listWorkers"];
   workerIdentityDetails?: WorkerIdentityScope["workers"];
@@ -173,6 +178,9 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
   }
   const { accountId, revision } = scope;
   const subscriptions = subscriptionDescriptors({ accountId, revision, subscriptions: scope.subscriptions ?? [] });
+  const loadBalancing = loadBalancingDescriptors({ accountId, revision,
+    poolListIds: scope.loadBalancingPoolListIds ?? [], poolIds: scope.loadBalancingPoolIds ?? [],
+    monitorListIds: scope.loadBalancingMonitorListIds ?? [], monitorIds: scope.loadBalancingMonitorIds ?? [] });
   const builds = buildRecordDescriptors({ accountId, revision, workers: scope.workerBuildRecords ?? [] });
   const scriptSettings = scriptSettingsDescriptors({ accountId, revision,
     observabilityScriptNames: scope.workerObservabilityScriptNames ?? [], usageModelScriptNames: scope.workerUsageModelScriptNames ?? [] });
@@ -218,6 +226,8 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(accountListDescriptor({ accountId, revision, readAllowed: scope.accountListReadAllowed ?? false })),
     metadata(accountDnsDescriptor({ accountId, revision, readAllowed: scope.accountDnsReadAllowed ?? false })),
     metadata(subscriptions.subscriptionsList), metadata(subscriptions.subscriptionGet),
+    metadata(loadBalancing.poolsList), metadata(loadBalancing.poolGet),
+    metadata(loadBalancing.monitorsList), metadata(loadBalancing.monitorGet),
     metadata(workerScheduleDescriptor({ accountId, revision, workers: scope.workerSchedules ?? [] })),
     metadata(scriptSettings.scriptSettingsGet), metadata(scriptSettings.usageModelGet),
     metadata(environmentSettingsDescriptor({ accountId, revision, environments: scope.workerEnvironmentSettings ?? [] })),
