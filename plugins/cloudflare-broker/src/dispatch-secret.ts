@@ -28,7 +28,7 @@ function object(value: unknown): Row {
   return value as Row;
 }
 
-export function dispatchSecretDescriptor(scope: DispatchSecretScope): MetadataDescriptor<Arguments, DispatchSecret> {
+function snapshot(scope: DispatchSecretScope) {
   const account = accountId.parse(scope.accountId);
   const revision = text(80, /^[A-Za-z0-9][A-Za-z0-9_.-]*$(?![\s\S])/).parse(scope.revision);
   const namespaces = scope.namespaces === undefined ? [] : scope.namespaces;
@@ -56,13 +56,18 @@ export function dispatchSecretDescriptor(scope: DispatchSecretScope): MetadataDe
     }
     ids.add(id); selected.set(namespace, { id, scripts });
   }
-  const preparations = new WeakSet<object>();
-  function context(row: Row, args: Arguments): void {
+  function context(row: Row, args: { namespaceName: string; scriptName: string }): void {
     requireThat(row.account_id === undefined || row.account_id === account, "scope");
     requireThat(row.namespace_id === undefined || row.namespace_id === selected.get(args.namespaceName)!.id, "scope");
     requireThat(row.namespace_name === undefined || row.namespace_name === args.namespaceName, "scope");
     requireThat(row.script_name === undefined || row.script_name === args.scriptName, "scope");
   }
+  return { account, revision, selected, context };
+}
+
+export function dispatchSecretDescriptor(scope: DispatchSecretScope): MetadataDescriptor<Arguments, DispatchSecret> {
+  const { account, revision, selected, context } = snapshot(scope);
+  const preparations = new WeakSet<object>();
   return Object.freeze({
     name: "cloudflare.workers.dispatch_secret_metadata.get", version: "1", tier: "read",
     providerOperationId: "namespace-worker-get-script-secrets",
@@ -91,6 +96,61 @@ export function dispatchSecretDescriptor(scope: DispatchSecretScope): MetadataDe
       // The official GET omits values despite reusing the secret write schema.
       return Object.freeze({ namespaceName: args.namespaceName, scriptName: args.scriptName, name: args.secretName, type: expected,
         subject: "configured-dispatch-script-secret-binding", effectiveAvailability: "not-established" });
+    },
+  });
+}
+
+const listInput = closed({ namespaceName: name, scriptName: name });
+type ListArguments = ReturnType<typeof listInput.parse>;
+interface DispatchSecretList {
+  readonly namespaceName: string;
+  readonly scriptName: string;
+  readonly items: readonly Readonly<{ name: string; type: SecretType }>[];
+  readonly subject: "configured-dispatch-script-secret-bindings";
+  readonly complete: false;
+  readonly effectiveAvailability: "not-established";
+}
+
+export function dispatchSecretListDescriptor(scope: DispatchSecretScope): MetadataDescriptor<ListArguments, DispatchSecretList> {
+  const { account, revision, selected, context } = snapshot(scope);
+  const preparations = new WeakSet<object>();
+  return Object.freeze({
+    name: "cloudflare.workers.dispatch_secret_metadata.list", version: "1", tier: "read",
+    providerOperationId: "namespace-worker-list-script-secrets",
+    prepare(raw: unknown): PreparedMetadata<ListArguments> {
+      const args = listInput.parse(raw), namespace = selected.get(args.namespaceName);
+      requireThat(namespace !== undefined && (namespace.scripts.get(args.scriptName)?.size ?? 0) > 0, "scope");
+      // This operation declares no pagination or secret-name query filter.
+      const prepared = Object.freeze({ arguments: args,
+        resource: Object.freeze({ id: `cloudflare:account:${account}:dispatch-namespace:${namespace.id}:script:${args.scriptName}:secrets`, revision }),
+        request: Object.freeze({ method: "GET" as const,
+          path: `/accounts/${account}/workers/dispatch/namespaces/${args.namespaceName}/scripts/${args.scriptName}/secrets`,
+          maxResponseBytes: 131072, timeoutMs: 10000, maxRequests: 1 as const, redirects: "deny" as const }) });
+      preparations.add(prepared); return prepared;
+    },
+    project(raw: string, prepared: PreparedMetadata<ListArguments>): DispatchSecretList {
+      requireThat(preparations.has(prepared), "scope");
+      requireThat(typeof raw === "string" && Buffer.byteLength(raw, "utf8") <= 131072, "cap");
+      let parsed: unknown;
+      try { parsed = JSON.parse(raw); } catch { requireThat(false, "upstream"); }
+      const body = object(parsed), args = prepared.arguments; context(body, args);
+      requireThat(body.success === true && Array.isArray(body.errors) && body.errors.length === 0 && Object.hasOwn(body, "result"), "upstream");
+      requireThat(Array.isArray(body.result) && body.result.length <= 100, "cap");
+      const secrets = selected.get(args.namespaceName)!.scripts.get(args.scriptName)!, seen = new Set<string>();
+      const items: Readonly<{ name: string; type: SecretType }>[] = [];
+      for (const raw of body.result) {
+        const row = object(raw); context(row, args);
+        requireThat(typeof row.name === "string", "upstream");
+        const expected = secrets.get(row.name);
+        if (expected === undefined) continue;
+        requireThat(row.type === expected && !seen.has(row.name), "scope"); seen.add(row.name);
+        items.push(Object.freeze({ name: row.name, type: expected }));
+      }
+      const out = Object.freeze({ namespaceName: args.namespaceName, scriptName: args.scriptName, items: Object.freeze(items),
+        subject: "configured-dispatch-script-secret-bindings" as const, complete: false as const,
+        effectiveAvailability: "not-established" as const });
+      requireThat(Buffer.byteLength(JSON.stringify(out), "utf8") <= 32768, "cap");
+      return out;
     },
   });
 }

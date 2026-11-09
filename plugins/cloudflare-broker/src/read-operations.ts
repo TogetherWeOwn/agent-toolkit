@@ -7,7 +7,7 @@ import { scriptSettingsDescriptors, type ScriptSettingsScope } from "./script-se
 import { environmentSettingsDescriptor, type EnvironmentSettingsScope } from "./environment-settings.js";
 import { dispatchSettingsDescriptor, type DispatchSettingsScope } from "./dispatch-settings.js";
 import { dispatchScriptDescriptor, type DispatchScriptScope } from "./dispatch-scripts.js";
-import { dispatchSecretDescriptor, type DispatchSecretScope } from "./dispatch-secret.js";
+import { dispatchSecretDescriptor, dispatchSecretListDescriptor, type DispatchSecretScope } from "./dispatch-secret.js";
 import { workerAccountDescriptors, type WorkerAccountScope } from "./worker-account.js";
 import { workerIdentityDescriptors, type WorkerIdentityScope } from "./worker-identities.js";
 import { dispatchNamespaceDescriptors, type DispatchNamespaceScope } from "./dispatch-namespaces.js";
@@ -100,6 +100,7 @@ export interface CloudflareReadScope extends MetadataScope {
   dispatchScriptSettings?: DispatchSettingsScope["scripts"];
   dispatchScriptLists?: DispatchScriptScope["namespaces"];
   dispatchScriptSecrets?: DispatchSecretScope["namespaces"];
+  dispatchScriptSecretLists?: DispatchSecretScope["namespaces"];
   workerObservabilityScriptNames?: ScriptSettingsScope["observabilityScriptNames"];
   workerUsageModelScriptNames?: ScriptSettingsScope["usageModelScriptNames"];
   workerBuildConfigurations?: WorkerBuildScope["workers"];
@@ -197,6 +198,7 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(dispatchSettingsDescriptor({ accountId, revision, scripts: scope.dispatchScriptSettings ?? [] })),
     metadata(dispatchScriptDescriptor({ accountId, revision, namespaces: scope.dispatchScriptLists ?? [] })),
     metadata(dispatchSecretDescriptor({ accountId, revision, namespaces: scope.dispatchScriptSecrets ?? [] })),
+    metadata(dispatchSecretListDescriptor({ accountId, revision, namespaces: scope.dispatchScriptSecretLists ?? [] })),
     metadata(workerAccount.accountSettingsGet), metadata(workerAccount.accountSubdomainGet),
     metadata(identities.identitiesList), metadata(identities.identityGet),
     metadata(dispatch.dispatchNamespacesList), metadata(dispatch.dispatchNamespaceGet),
