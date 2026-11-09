@@ -45,6 +45,9 @@ function boundedString(raw: unknown, max = 4096, allowEmpty = false): asserts ra
   requireThat(typeof raw === "string" && (allowEmpty || raw.length > 0) && raw.length <= max &&
     !/[\u0000-\u001f\u007f-\u009f\ud800-\udfff]/u.test(raw), "upstream");
 }
+function discardedText(raw: unknown): void {
+  requireThat(typeof raw === "string" && raw.length <= 4096, "upstream");
+}
 function timestamp(raw: unknown): void {
   boundedString(raw, 64);
   // Conservative calendar-checked RFC3339 subset, not a provider revision fence.
@@ -78,7 +81,7 @@ export function rulesListsDescriptors(scope: RulesListsScope) {
     context(row, item ? selectedList : id, item ? id : undefined);
     timestamp(row.created_on); timestamp(row.modified_on);
     if (item) {
-      if (Object.hasOwn(row, "comment")) boundedString(row.comment, 4096, true);
+      if (Object.hasOwn(row, "comment")) discardedText(row.comment);
       const variants = ["ip", "hostname", "redirect", "asn"].filter(key => Object.hasOwn(row, key));
       requireThat(variants.length === 1, "upstream");
       // Validate the union's common/variant shapes, not target semantics or reachability.
@@ -101,7 +104,7 @@ export function rulesListsDescriptors(scope: RulesListsScope) {
       requireThat(typeof row.kind === "string" && ["ip", "redirect", "hostname", "asn"].includes(row.kind), "upstream");
       for (const key of ["num_items", "num_referencing_filters"])
         requireThat(Number.isSafeInteger(row[key]) && Number(row[key]) >= 0, "upstream");
-      if (Object.hasOwn(row, "description")) boundedString(row.description, 4096, true);
+      if (Object.hasOwn(row, "description")) discardedText(row.description);
     }
     return Object.freeze({ id });
   }
@@ -132,7 +135,7 @@ export function rulesListsDescriptors(scope: RulesListsScope) {
         for (const raw of body.messages) {
           const row = object(raw); boundedString(row.message, 4096, true);
           requireThat(Number.isSafeInteger(row.code) && Number(row.code) >= 1000, "upstream");
-          const key = JSON.stringify(row); requireThat(!messages.has(key), "upstream"); messages.add(key);
+          const key = JSON.stringify([row.code, row.message]); requireThat(!messages.has(key), "upstream"); messages.add(key);
         }
         if (item && collection && Object.hasOwn(body, "result_info")) {
           const info = object(body.result_info);
