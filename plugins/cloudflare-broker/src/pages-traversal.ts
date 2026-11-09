@@ -221,7 +221,7 @@ export function createPagesInventoryTraversal(input: PagesTraversalSession, read
       if (valueBytes > session.budgets.valueBytes) { stop("value-byte-cap"); return; }
       collection.observations.push(observation); collection.coverage = coverage;
       events.add(observation.result.event); targets.add(observation.evidence.targetHash); correlations.add(correlation);
-      if (coverage.reportedTotalPages.status === "unavailable") { stop("pagination-unavailable"); return; }
+      if (object(coverage.reportedTotalPages).status === "unavailable") { stop("pagination-unavailable"); return; }
       if (coverage.pageCoverage === "all-reported-pages-observed") {
         collection.status = "observed";
         if (current === 0) finishProjects();
