@@ -12,7 +12,7 @@ const foreign = "f".repeat(32);
 const timestamp = "2023-10-02T10:00:00.12345Z";
 const cases = [
   { key: "variantsGet", name: "cloudflare.cache.variants.get", flag: "cacheVariantsFormats", permission: "formats", grant: ["avif", "png"],
-    id: "variants", suffix: "cache-variants:formats:avif,png", operationId: "zone-cache-settings-get-variants-setting" },
+    id: "variants", suffix: "cache-variants:formats:avif:png", operationId: "zone-cache-settings-get-variants-setting" },
   { key: "reserveClearStatusGet", name: "cloudflare.cache.reserve_clear_status.get", flag: "cacheReserveClearStatusReadAllowed", permission: "clearStatusReadAllowed", grant: true,
     id: "cache_reserve_clear", suffix: "cache-reserve-clear-status", operationId: "zone-cache-settings-get-cache-reserve-clear" },
 ];
@@ -172,6 +172,7 @@ for (const c of cases) {
   test(`${c.name} audit and cleanup uncertainty preserves reviewed-core outcomes and tombstones`, async () => {
     for (const failure of ["audit", "cleanup"]) {
       const f = fixture(c);
+      const append = f.dependencies.audit.append;
       if (failure === "audit") f.dependencies.audit.append = async event => { if (event.phase === "outcome") throw new Error(credentialCanary); };
       else {
         const resolve = f.dependencies.credentials.resolve;
@@ -184,6 +185,7 @@ for (const c of cases) {
       // The reviewed core attempts cleanup again in its failure handler.
       assert.equal(f.calls.close, failure === "cleanup" ? 2 : 1);
       const journal = structuredClone([...f.journal]);
+      f.dependencies.audit.append = append;
       assert.equal((await f.invoke()).code, "REPLAY_CONFLICT"); assert.equal(f.calls.secret, 1);
       assert.equal(f.requests.length, 1); assert.deepEqual([...f.journal], journal); safe(f, out);
     }
@@ -266,6 +268,22 @@ test("Reserve clear status validates required timestamps but projects only repor
   }
   assert.throws(() => d.project(success({ id: c.id, state: "Completed" }), p), /upstream/);
   for (const start_ts of [timestamp, "2024-02-29T12:34:56Z", "2024-02-29t12:34:56.1z", "2024-02-29T12:34:56+05:30"]) d.project(success({ id: c.id, state: "In-progress", start_ts }), p);
+});
+
+test("cache variants selected maxima fit actual core and output/aggregate overflow refuses", async () => {
+  const c = cases[0];
+  const values = Array.from({ length: 64 }, (_, n) => `image/x-${n}`);
+  const value = { avif: values, png: values };
+  const f = fixture(c, { response: { id: c.id, editable: false, value }, flags: { cacheVariantsFormats: [...variantFormats] } });
+  const out = await f.invoke(); assert.equal(out.ok, true);
+  assert.equal(out.value.formats.avif.mimeTypes.length, 64); assert.equal(out.value.formats.png.mimeTypes.length, 64);
+  assert.deepEqual(out.value.formats.tiff, { availability: "unavailable" });
+  const d = cacheMetadataDescriptors({ ...scope(c), formats: [...variantFormats] }).variantsGet; const p = d.prepare({});
+  assert.throws(() => d.project(success({ id: c.id, editable: false, value: { ...value, webp: ["image/extra"] } }), p), /cap/);
+  assert.throws(() => d.project(success({ id: c.id, editable: false,
+    value: { avif: Array.from({ length: 64 }, (_, n) => `image/${String(n).padStart(3, "0")}${"a".repeat(119)}`) } }), p), /cap/);
+  const sparse = ["avif", , "png"];
+  assert.throws(() => cacheMetadataDescriptors({ ...scope(c), formats: sparse }), /schema/);
 });
 
 test("cache metadata ledger additions remain disabled descriptor-only with registry parity", async () => {

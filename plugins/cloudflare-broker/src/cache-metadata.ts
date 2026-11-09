@@ -57,7 +57,7 @@ export function cacheMetadataDescriptors(scope: CacheMetadataScope) {
   const revision = label.parse(scope.revision);
   const selected = scope.formats === undefined ? [] : scope.formats;
   requireThat(Array.isArray(selected) && selected.length <= variantFormats.length &&
-    selected.every(format => variantFormats.includes(format)) && new Set(selected).size === selected.length, "schema");
+    Array.from(selected).every(format => variantFormats.includes(format)) && new Set(selected).size === selected.length, "schema");
   const formats = Object.freeze(variantFormats.filter(format => selected.includes(format)));
   requireThat(scope.clearStatusReadAllowed === undefined || typeof scope.clearStatusReadAllowed === "boolean", "schema");
   const clearStatusAllowed = scope.clearStatusReadAllowed === true;
@@ -104,7 +104,7 @@ export function cacheMetadataDescriptors(scope: CacheMetadataScope) {
   }
   return Object.freeze({
     variantsGet: descriptor<VariantsResult>("cloudflare.cache.variants.get", "zone-cache-settings-get-variants-setting",
-      "variants", `cache-variants:formats:${formats.join(",")}`, formats.length > 0, row => {
+      "variants", `cache-variants:formats:${formats.join(":")}`, formats.length > 0, row => {
         requireThat(typeof row.editable === "boolean", "upstream");
         const value = object(row.value);
         const projected: Partial<Record<VariantFormat, SelectedFormat>> = {};
