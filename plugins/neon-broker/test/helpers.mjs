@@ -479,7 +479,7 @@ export function objectDownloadFixture(value, config = objectDownloadScope) {
   return fixture(typeof value === 'function' ? value : () => binaryResponse(value.bytes), config, createNeonObjectDownloadOperations);
 }
 export const allCases = [...objectDownloadCases, ...oauthProviderCases, ...logQueryCases, ...schemaComparisonCases, ...logValueCases, ...branchSchemaCases, ...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
-export const sourceNames = [...allCases.map(([name]) => name), 'deleteSnapshot', 'updateSnapshot', 'updateProjectBranch', 'updateProject', 'updateProjectEndpoint', 'suspendProjectEndpoint', 'deleteProjectEndpoint', 'startProjectEndpoint', 'restartProjectEndpoint', 'deleteProjectBranch', 'deleteProject', 'deleteProjectBranchDatabase', 'deleteProjectBranchRole', 'revokeApiKey', 'revokeOrgApiKey', 'revokeCredential', 'revokePermissionFromProject', 'removeOrganizationMember', 'removeProjectMemberRole', 'deleteNeonAuthOAuthClient', 'deleteProjectJWKS', 'deleteProjectBranchTrigger', 'deleteProjectBranchFunction', 'deleteProjectBranchBucket', 'deleteProjectBranchCustomDomain'];
+export const sourceNames = [...allCases.map(([name]) => name), 'deleteSnapshot', 'updateSnapshot', 'updateProjectBranch', 'updateProject', 'updateProjectEndpoint', 'suspendProjectEndpoint', 'deleteProjectEndpoint', 'startProjectEndpoint', 'restartProjectEndpoint', 'deleteProjectBranch', 'deleteProject', 'deleteProjectBranchDatabase', 'deleteProjectBranchRole', 'revokeApiKey', 'revokeOrgApiKey', 'revokeCredential', 'revokePermissionFromProject', 'removeOrganizationMember', 'removeProjectMemberRole', 'deleteNeonAuthOAuthClient', 'deleteProjectJWKS', 'deleteProjectBranchTrigger', 'deleteProjectBranchFunction', 'deleteProjectBranchBucket', 'deleteProjectBranchCustomDomain', 'deleteProjectBranchBucketObject'];
 import { createNeonCustomDomainDeleteOperations } from '../dist/plugins/neon-broker/src/custom-domain-delete.js';
 export const customDomainDeleteScope = { projectId: 'project-a', branchId: 'br-a', domain: 'app.example.invalid', functionSlug: 'hello', revision: 'scope-v1' };
 export const customDomainDeleteArgs = { project_id: 'project-a', branch_id: 'br-a', domain: 'app.example.invalid' };
@@ -488,6 +488,15 @@ export function customDomainDeleteFixture(value = null, config = customDomainDel
   return fixture((url, init, n) => typeof value === 'function' ? value(url, init, n) :
     init.method === 'DELETE' ? new Response(null, { status: 204 }) : response({ custom_domains: [{ domain: config.domain, entity_type: 'function', entity_id: config.functionSlug }] }),
   config, createNeonCustomDomainDeleteOperations);
+}
+import { createNeonObjectDeleteOperations } from '../dist/plugins/neon-broker/src/object-delete.js';
+export const objectDeleteScope = { projectId: 'project-a', branchId: 'br-a', bucketName: 'assets', objectKey: 'docs/file.txt', expectedSize: 123, revision: 'scope-v1' };
+export const objectDeleteArgs = { project_id: 'project-a', branch_id: 'br-a', bucket_name: 'assets', object_key: 'docs/file.txt' };
+export const objectDeleteMetadata = { key: objectDeleteScope.objectKey, size: 123 };
+export function objectDeleteFixture(value = null, config = objectDeleteScope) {
+  return fixture((url, init, n) => typeof value === 'function' ? value(url, init, n) :
+    init.method === 'DELETE' ? new Response(null, { status: 204 }) : response({ objects: [{ key: config.objectKey, size: config.expectedSize }],
+      folders: [], prefix: config.objectKey, is_truncated: false }), config, createNeonObjectDeleteOperations);
 }
 import { createNeonBucketDeleteOperations } from '../dist/plugins/neon-broker/src/bucket-delete.js';
 export const bucketDeleteScope = { projectId: 'project-a', branchId: 'br-a', bucketName: 'assets', expectedAccessLevel: 'private', revision: 'scope-v1' };

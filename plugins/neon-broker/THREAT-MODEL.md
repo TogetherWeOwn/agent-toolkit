@@ -19,6 +19,21 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
 
+## Reserved single-object deletion source delta
+
+The exact copied project/effective branch/bucket/key/expected size/revision and
+reserved native exact-plan authority bind a separate object/delete grant. Terminal
+bounded prefix-list preflight checks all pages and exact key/size before one encoded,
+bodyless DELETE. Key/size are not immutable object identity; preflight is not atomic
+CAS and same-key/same-size replacement is unresolved. Inherited visibility proves no
+origin ownership or deletion propagation. Hashes, timestamps, content and diagnostics
+are not evaluated or emitted. Only empty204 acknowledges, not independent deletion,
+access/session/fencing/completeness proof. Ambiguity receives one bounded list
+observation, remains uncertain even on absence/replacement, and never retries.
+Permanent common journal protects same-request replay/restart only. No bulk deletion,
+download, live provider call or enablement. Native session/entitlement/effects,
+host/custody/durable recovery and independent review gates remain unresolved.
+
 ## Reserved branch bucket-deletion source delta
 
 Copied exact project/effective branch/bucket name/expected access level/revision,

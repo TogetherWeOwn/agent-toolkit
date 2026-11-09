@@ -18,6 +18,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  deleteProjectBranchBucketObject(project: string, branch: string, bucket: string, key: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchCustomDomain(project: string, branch: string, domain: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchBucket(project: string, branch: string, bucket: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchFunction(project: string, branch: string, slug: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -239,6 +240,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    deleteProjectBranchBucketObject: (project: string, branch: string, bucket: string, key: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/buckets/${downloadBucketName.parse(bucket)}/objects/${encodeURIComponent(downloadObjectKey.parse(key))}`,
+        new URLSearchParams(), options, undefined, false, 204),
     deleteProjectBranchCustomDomain: (project: string, branch: string, domain: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/custom-domains/${customDomainDeleteName.parse(domain)}`,
         new URLSearchParams(), options, undefined, false, 204),

@@ -3757,20 +3757,21 @@
       "id": "deleteProjectBranchBucketObject",
       "apiArea": "buckets",
       "tool": "neon.deleteProjectBranchBucketObject",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/bucket_name/object_key/delete",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "object-deletion-request"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": ["plugins/neon-broker/test/object-delete.test.mjs", "plugins/neon-broker/test/core.compat.mjs"],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only. Reserved exact native plan authority and terminal bounded prefix-list exact key/size preflight precede one DELETE. Empty204 acknowledges only; key/size not immutable identity, preflight not atomic CAS, ambiguity remains uncertain after one observation without retry. Native host/custody, durable journal/recovery, session entitlement/effects and independent reviews unresolved; no live mutation or enablement."
     },
     {
       "id": "getProjectBranchBucketObject",
