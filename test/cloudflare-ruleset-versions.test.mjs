@@ -256,7 +256,10 @@ for (const c of cases) {
     body.padding = ""; body.padding = "x".repeat(131072 - Buffer.byteLength(JSON.stringify(body)));
     const response = JSON.stringify(body); assert.equal(Buffer.byteLength(response), 131072);
     const f = fixture(c, { scope: s, response });
-    const out = await f.invoke({ rulesetId: own, ...(c.list ? {} : { rulesetVersion: versions[0] }) });
+    const input = { rulesetId: own, ...(c.list ? {} : { rulesetVersion: versions[0] }) };
+    // Grant the exact maximum-length string version, not the fixture's default "1".
+    f.vector.policy.resources = [f.operation.prepare(input).resource.id];
+    const out = await f.invoke(input);
     assert.equal(out.ok, true); jsonData(out.value);
     if (c.list) { assert.equal(out.value.items.length, 64); assert.equal(out.value.complete, false); }
     assert.ok(Buffer.byteLength(JSON.stringify(out.value)) <= 8192); assert.equal(f.requests.length, 1); safe(f, out);
