@@ -1292,6 +1292,23 @@ response status/body bounds, abort/deadlines and common native identity/authorit
 TOCTOU, replay and safe envelopes. Source/mocks only; native host/custody, durable
 recovery, effects/entitlement and independent reviews remain unresolved.
 
+## Reserved database Data API deletion delta
+
+`deleteProjectBranchDataAPI` copies exact project/branch/database/revision/expected
+status. Dedicated database Data API/delete grant and reserved native exact-plan
+authority precede credentials. Fixed detail GET binds presence/status and optional
+ancestry before one bodyless DELETE. URL/settings/schema/provider fields are never
+evaluated or emitted. Only documented HTTP200 empty JSON object acknowledges; no
+independent endpoint-refusal, token/session revocation, completeness or fencing claim.
+Provider documents connection failure after deletion, not independent proof here.
+
+Cached deployment status is not immutable identity, preflight is not atomic CAS and
+same-name replacement races remain unresolved. Ambiguity gets one bounded detail
+observation and remains uncertain even on absence or changed status. No mutation
+retry; permanent common journal blocks restart/replay, not external writers. Strict
+arguments/plan, response bounds, cancellation/deadline, ignored-field, native authority,
+TOCTOU, safe-envelope and replay tests remain source/mocks, not live qualification.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.

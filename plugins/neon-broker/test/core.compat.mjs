@@ -59,6 +59,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   authDomainDeleteFixture, authDomainDeleteArgs, authDomainDeleteScope, authDomainDeleteMetadata,
   legacyAuthDomainDeleteFixture, legacyAuthDomainDeleteArgs, legacyAuthDomainDeleteScope,
   oauthProviderDeleteFixture, oauthProviderDeleteArgs, oauthProviderDeleteScope, oauthProviderDeleteMetadata,
+  dataAPIDeleteFixture, dataAPIDeleteArgs, dataAPIDeleteScope,
   legacyOAuthProviderDeleteFixture, legacyOAuthProviderDeleteArgs, legacyOAuthProviderDeleteScope,
   bucketDeleteFixture, bucketDeleteArgs, bucketDeleteScope, bucketDeleteMetadata,
   functionDeleteFixture, functionDeleteArgs, functionDeleteScope, functionDeleteMetadata,
@@ -518,6 +519,129 @@ test('OAuth provider delete: maximum identity selection fits actual common prepa
   const config = { ...oauthProviderDeleteScope, projectId: 'p'.repeat(60), branchId: 'b'.repeat(60),
     oauthProviderId: 'microsoft', revision: 'r'.repeat(80) };
   const f = oauthProviderDeletionBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
+function dataAPIDeletionBroker(value = null, overrides = {}, config = dataAPIDeleteScope) {
+  const provider = dataAPIDeleteFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId, database_name: config.databaseName };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('deleteProjectBranchDataAPI').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.deleteProjectBranchDataAPI', args, context, key);
+  } };
+}
+const dataAPIDeletionMetadata = { status: 'ready' };
+
+test('Data API delete: reserved exact-plan authority and exact database/delete AND agent grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = dataAPIDeletionBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = 'neon/projects/project-a/branches/br-a/data-api/main/delete';
+  for (const resource of [target.replace('/delete', ''), target.replace('br-a', 'other'), target.replace('project-a', 'other'),
+    target.replace('/main/', '/other/'), 'neon/projects/project-a/branches/br-a']) {
+    const f = dataAPIDeletionBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = dataAPIDeletionBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = dataAPIDeletionBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { acknowledged: true });
+  assert.equal(f.common.calls.consumed, 1);
+  safeEnvelope(f, result);
+});
+
+test('Data API delete: stale, wrong-target and unconsumable native evidence are isolated negative controls', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = dataAPIDeletionBroker();
+    const base = f.common.authority;
+    let consumeCalls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.deleteProjectBranchDataAPI', dataAPIDeleteArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Data API delete: host identity/resource TOCTOU and authority/target overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = dataAPIDeletionBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = dataAPIDeletionBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.call()).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { project_id: 'other' }, { branch_id: 'other' }, { database_name: 'other' },
+    { expectedStatus: 'other' }, { retry: true }]) {
+    const g = dataAPIDeletionBroker();
+    assert.equal((await g.common.broker().call('neon.deleteProjectBranchDataAPI', { ...dataAPIDeleteArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('Data API delete: complete/uncertain permanent journal blocks restart replay without enforcement proof', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = dataAPIDeletionBroker((url, init, n) => {
+      if (init.method === 'DELETE') { if (ambiguous) throw Error(credentialCanary); return response({}); }
+      return response(dataAPIDeletionMetadata, { status: ambiguous && n > 2 ? 404 : 200 });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Data API delete: foreign/status drift and reflected lease strings cannot enter safe envelopes', async () => {
+  for (const change of [{ project_id: 'other' }, { branch_id: 'other' }, { database_name: credentialCanary },
+    { status: credentialCanary }, { status: 'other' }, { pagination: {} }]) {
+    const f = dataAPIDeletionBroker(() => response({ ...dataAPIDeletionMetadata, ...change }));
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 0);
+    safeEnvelope(f, result);
+  }
+  const f = dataAPIDeletionBroker((url, init) => response(init.method === 'DELETE' ? { error: credentialCanary } : dataAPIDeletionMetadata));
+  const result = await f.call();
+  assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+  safeEnvelope(f, result);
+});
+
+test('Data API delete: maximum identity selection fits actual common prepared budgets', async () => {
+  const config = { ...dataAPIDeleteScope, projectId: 'p'.repeat(60), branchId: 'b'.repeat(60),
+    databaseName: 'd'.repeat(63), expectedStatus: 's'.repeat(64), revision: 'r'.repeat(80) };
+  const f = dataAPIDeletionBroker(null, {}, config);
   const result = await f.call();
   assert.equal(result.ok, true);
   safeEnvelope(f, result);

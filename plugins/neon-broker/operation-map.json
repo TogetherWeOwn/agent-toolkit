@@ -800,7 +800,7 @@
       "id": "deleteProjectBranchDataAPI",
       "apiArea": "dataapi",
       "tool": "neon.deleteProjectBranchDataAPI",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/database_name",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -808,12 +808,15 @@
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "unknown",
+      "tests": [
+        "test/data-api-delete.test.mjs",
+        "test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only; native exact-plan authority, host/custody, durable recovery, entitlement/effects and independent review unresolved. Cached status is not immutable deployment identity; preflight is not atomic CAS. Empty JSON acknowledgement is not independently observed endpoint refusal, token/session revocation, fencing or lifecycle enforcement; ambiguity stays uncertain with no retry."
     },
     {
       "id": "getProjectBranchDataAPI",
