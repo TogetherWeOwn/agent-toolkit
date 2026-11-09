@@ -197,6 +197,38 @@ and lost-write-acknowledgment/audit-outage behavior. SQLite success is **not**
 PostgreSQL execution, host restricted-SQL admission or production durability.
 No production data, credentials or provider requests are used.
 
+## Isolated PostgreSQL dialect contracts
+
+The dedicated `cloudflare-postgres-contracts` Actions job runs
+`testing/postgres-contracts.mjs` against digest-pinned PostgreSQL 17.7. Its
+randomized schemas/tables are disposable test setup, not a shipping migration.
+No runtime driver or workspace dependency is added: the runner's `psql` client
+prepares the candidate's positional-parameter statements on the server and uses
+synthetic EXECUTE literals. Each call starts a separate connection; concurrent
+claims therefore exercise PostgreSQL uniqueness rather than a shared JS lock.
+The client inherits only PATH and fixed ephemeral test connection settings, not
+provider credentials or a supplied database URL. The test file fails if its
+explicit CI opt-in or mapped service port is absent; it is not silently skipped
+in the ordinary unit suite. The Actions service is torn down with the job, and
+test cleanup drops only its randomized schemas.
+
+The contracts cover claim contention/reopened ports, original-event conditional
+updates/absorbing uncertain and refused outcomes, capture/audit append uniqueness,
+exact reader mismatch refusal, distinct schemas and BIGINT JSON round trips from
+zero through the maximum safe integer. A simulated string-valued BIGINT decoder
+still refuses. Actual core composition uses all three PostgreSQL-backed candidate
+ports for successful Pages capture and for lost intent/outcome acknowledgments;
+retained ALLOW plus uncertain replay must never become successful output.
+
+These tests narrow **SQL-dialect and fixture-decoding** uncertainty, not native
+qualification. The psql/JSON bridge is not the SDK's restricted-SQL parser,
+parameter protocol or RPC decoder. A reopened connection is not a database/server
+restart or retention drill. The test superuser can access either schema, so
+separate records are not proof of caller/namespace authorization. No native
+handler, credential resolver, provider request, production schema provisioning,
+accepted audit/evidence consistency boundary or enabled tool is supplied. Exact
+Actions results must be recorded separately; test source alone is not a pass.
+
 Before this candidate can satisfy the native seam, verify the exact installed
 host's allowed SQL statements and schema binding, PostgreSQL unique-insert and
 conditional-update semantics across workers/restarts, durable acknowledgments and
