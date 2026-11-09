@@ -13,7 +13,8 @@ export interface NeonBucketDeleteScope {
 }
 const pathId = text(60, /^[a-z0-9][a-z0-9-]*$/);
 // A conservative selected-name subset fits the common resource budget.
-const bucketName = text(60, /^[a-z0-9][a-z0-9._-]*$/);
+export const bucketDeleteName = text(60, /^[a-z0-9][a-z0-9._-]*$/);
+const bucketName = bucketDeleteName;
 const accessLevel = oneOf(["private", "public_read"] as const);
 const argumentsSchema = closed({ project_id: pathId, branch_id: pathId, bucket_name: bucketName });
 const acknowledgement = closed({ acknowledged: { parse(value: unknown): true { check(value === true); return true; } } });

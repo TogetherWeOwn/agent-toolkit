@@ -5,6 +5,7 @@ import { snapshotLabel } from "./snapshot-update.js";
 import { branchLabel } from "./branch-update.js";
 import { projectLabel } from "./project-update.js";
 import { endpointLabel } from "./endpoint-update.js";
+import { bucketDeleteName } from "./bucket-delete.js";
 
 export const NEON_ORIGIN = "https://console.neon.tech";
 export const RESPONSE_BYTES = 65_536;
@@ -237,7 +238,7 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
   }
   return Object.freeze({
     deleteProjectBranchBucket: (project: string, branch: string, bucket: string, options: MetadataRequestOptions) =>
-      request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/buckets/${downloadBucketName(bucket)}`,
+      request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/buckets/${bucketDeleteName.parse(bucket)}`,
         new URLSearchParams(), options, undefined, false, 204),
     deleteProjectBranchFunction: (project: string, branch: string, slug: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/functions/${functionSlug(slug)}`,
