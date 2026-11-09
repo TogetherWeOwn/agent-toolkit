@@ -7,6 +7,7 @@ import { projectLabel } from "./project-update.js";
 import { endpointLabel } from "./endpoint-update.js";
 import { bucketDeleteName } from "./bucket-delete.js";
 import { customDomainDeleteName } from "./custom-domain-delete.js";
+import { authDomainDeleteOrigin, authDomainDeleteProvider } from "./auth-domain-delete.js";
 
 export const NEON_ORIGIN = "https://console.neon.tech";
 export const RESPONSE_BYTES = 65_536;
@@ -18,6 +19,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  deleteBranchNeonAuthTrustedDomain(project: string, branch: string, provider: string, domain: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchBucketObject(project: string, branch: string, bucket: string, key: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchCustomDomain(project: string, branch: string, domain: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchBucket(project: string, branch: string, bucket: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -159,7 +161,7 @@ function cursorQuery(cursor: string | null): URLSearchParams {
 // Construction is a source/test seam, not an installed or enabled runtime tool.
 export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadataTransport {
   const get = (path: string, query: URLSearchParams, options: MetadataRequestOptions) => request(path, query, options);
-  async function request(path: string, query: URLSearchParams, options: MetadataRequestOptions, body?: string, binary = false, deleteStatus: 200 | 202 | 204 | false = false, patch = false, suspend = false): Promise<unknown> {
+  async function request(path: string, query: URLSearchParams, options: MetadataRequestOptions, body?: string, binary = false, deleteStatus: 200 | 202 | 204 | false = false, patch = false, suspend = false, emptyDelete200 = false): Promise<unknown> {
     if (/[\r\n]/.test(options.credential)) throw Error("UPSTREAM_UNAVAILABLE");
     const expiresAt = performance.now() + REQUEST_TIMEOUT_MS;
     const controller = new AbortController();
@@ -193,6 +195,23 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
           throw Error("UPSTREAM_UNAVAILABLE");
         }
         // Normalize this endpoint's documented empty acknowledgement, not an identity echo.
+        return { acknowledged: true };
+      }
+      if (emptyDelete200) {
+        const length = response.headers.get("content-length");
+        if (expired() || response.status !== 200 || response.redirected || (length !== null && length !== "0") ||
+          ![null, "identity"].includes(response.headers.get("content-encoding"))) {
+          void response.body?.cancel().catch(() => {});
+          throw Error("UPSTREAM_UNAVAILABLE");
+        }
+        if (response.body) {
+          reader = response.body.getReader();
+          for (;;) {
+            const item = await reader.read();
+            if (expired() || (!item.done && item.value.byteLength !== 0)) throw Error("UPSTREAM_UNAVAILABLE");
+            if (item.done) break;
+          }
+        }
         return { acknowledged: true };
       }
       const mime = binary ? /^application\/octet-stream(?:\s*;|$)/i : /^application\/json(?:\s*;|$)/i;
@@ -240,6 +259,10 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    deleteBranchNeonAuthTrustedDomain: (project: string, branch: string, provider: string, domain: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/domains`, new URLSearchParams(), options,
+        JSON.stringify({ auth_provider: authDomainDeleteProvider.parse(provider), domains: [{ domain: authDomainDeleteOrigin.parse(domain) }] }),
+        false, 200, false, false, true),
     deleteProjectBranchBucketObject: (project: string, branch: string, bucket: string, key: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/buckets/${downloadBucketName.parse(bucket)}/objects/${encodeURIComponent(downloadObjectKey.parse(key))}`,
         new URLSearchParams(), options, undefined, false, 204),

@@ -7,6 +7,23 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonAuthDomainDeleteOperations` adds reserved
+`deleteBranchNeonAuthTrustedDomain` source for one copied project/branch/provider/
+canonical HTTPS origin/revision. Only lowercase dotted host origins of at most
+128 characters are selected: no wildcard, port, path, query or fragment. The
+separate exact provider/hostname/delete grant is bound to HTTPS, and reserved
+native exact-plan authorization precedes credentials. Mandatory nonpaginated
+30-row list validation binds exact provider and origin before one DELETE with
+`{auth_provider, domains: [{domain}]}`. No legacy or bulk fallback is supplied.
+
+Only terminal empty HTTP200 yields closed `{acknowledged: true}`. This is neither
+an identity echo nor independent redirect enforcement, token/session revocation
+or fencing evidence. No URL is followed. Names are not immutable identities and
+preflight is not atomic CAS. Ambiguity receives one bounded list observation and
+remains uncertain even on absence; no retry, and the permanent common journal
+prevents replay after restart. Source/mocks only; native host/custody/entitlement/
+effects and independent review remain unresolved.
+
 `createNeonBucketDeleteOperations(trustedScope, transport)` adds reserved
 `deleteProjectBranchBucket` source with copied exact project/effective branch/name,
 expected access level and revision. Dedicated bucket/delete grant and native
@@ -1641,8 +1658,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: one hundred implemented
-source adapters, 94 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 101 implemented
+source adapters, 93 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

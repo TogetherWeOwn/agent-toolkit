@@ -1,5 +1,29 @@
 # Source-slice threat model
 
+## Reserved branch trusted-redirect deletion delta
+
+`deleteBranchNeonAuthTrustedDomain` copies one exact branch/provider/canonical HTTPS
+origin/revision. Its dedicated provider/hostname/delete grant cannot be replaced
+by list, branch, legacy or another-provider authority. Reserved native exact-plan
+authorization precedes credential resolution. Mandatory full nonpaginated list
+validation caps at 30 rows, refuses duplicate provider/domain pairs and conflicting
+ancestry/pagination, and requires exact case-sensitive selected origin presence.
+Other bounded printable domain strings are data only and never followed/emitted.
+
+One fixed DELETE carries only the documented provider and singleton domains body.
+The documented empty HTTP200 must terminate empty within the existing request
+size/time/cancellation controls; JSON, redirects, nonzero length, content encoding,
+wrong status or failed stream are ambiguous, not success. Projection acknowledges
+only: it does not independently prove effective redirect removal, revoke tokens
+or sessions, fence connections or establish credential completeness. Origin names
+are not immutable IDs; preflight is not atomic CAS. Ambiguity gets one bounded
+list observation and stays uncertain even on absence or replacement. No retry;
+common permanent journal prevents replay/restart. Legacy/bulk/wildcard/port/path/
+query/fragment targets remain unsupported. No live change, URL following, host
+registration, custody or qualification is provided. Source/common contracts cover
+exact authority/identity/resource/replay/TOCTOU, closed projection, reflection,
+request/response bounds and ignored metadata. Native independent reviews remain.
+
 The caller controls JSON arguments, not runtime identity, trusted scope, operation
 registry, transport implementation, credential resolution or policy. Provider
 responses/errors are untrusted, including otherwise plausible metadata strings.
