@@ -50,6 +50,7 @@ import { createNeonEndpointRestartOperations } from '../dist/plugins/neon-broker
 import { createNeonEndpointSuspendOperations } from '../dist/plugins/neon-broker/src/endpoint-suspend.js';
 import { createNeonEndpointDeleteOperations } from '../dist/plugins/neon-broker/src/endpoint-delete.js';
 import { createNeonDatabaseDeleteOperations } from '../dist/plugins/neon-broker/src/database-delete.js';
+import { createNeonRoleDeleteOperations } from '../dist/plugins/neon-broker/src/role-delete.js';
 import { createNeonProjectDeleteOperations } from '../dist/plugins/neon-broker/src/project-delete.js';
 import { createNeonBranchDeleteOperations } from '../dist/plugins/neon-broker/src/branch-delete.js';
 import { createNeonSnapshotUpdateOperations } from '../dist/plugins/neon-broker/src/snapshot-update.js';
@@ -469,7 +470,17 @@ export function objectDownloadFixture(value, config = objectDownloadScope) {
   return fixture(typeof value === 'function' ? value : () => binaryResponse(value.bytes), config, createNeonObjectDownloadOperations);
 }
 export const allCases = [...objectDownloadCases, ...oauthProviderCases, ...logQueryCases, ...schemaComparisonCases, ...logValueCases, ...branchSchemaCases, ...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
-export const sourceNames = [...allCases.map(([name]) => name), 'deleteSnapshot', 'updateSnapshot', 'updateProjectBranch', 'updateProject', 'updateProjectEndpoint', 'suspendProjectEndpoint', 'deleteProjectEndpoint', 'startProjectEndpoint', 'restartProjectEndpoint', 'deleteProjectBranch', 'deleteProject', 'deleteProjectBranchDatabase'];
+export const sourceNames = [...allCases.map(([name]) => name), 'deleteSnapshot', 'updateSnapshot', 'updateProjectBranch', 'updateProject', 'updateProjectEndpoint', 'suspendProjectEndpoint', 'deleteProjectEndpoint', 'startProjectEndpoint', 'restartProjectEndpoint', 'deleteProjectBranch', 'deleteProject', 'deleteProjectBranchDatabase', 'deleteProjectBranchRole'];
+export const roleDeleteScope = { projectId: 'project-a', branchId: 'br-a', roleName: 'reader', expectedCreatedAt: '2026-11-08T10:00:00Z', revision: 'scope-v1' };
+export const roleDeleteArgs = { project_id: 'project-a', branch_id: 'br-a', role_name: 'reader' };
+export const roleDeleteReceipt = { role: { name: 'reader', branch_id: 'br-a', created_at: roleDeleteScope.expectedCreatedAt, protected: false },
+  operations: [{ ...operation, action: 'apply_config', status: 'running' }] };
+export function roleDeleteFixture(value = roleDeleteReceipt, config = roleDeleteScope) {
+  return fixture((url, init, n) => typeof value === 'function' ? value(url, init, n) :
+    init.method === 'DELETE' ? response(value) : response({ role: { name: config.roleName, branch_id: config.branchId,
+      created_at: config.expectedCreatedAt, protected: false } }),
+  config, createNeonRoleDeleteOperations);
+}
 export const databaseDeleteScope = { projectId: 'project-a', branchId: 'br-a', databaseName: 'main', databaseId: 123, revision: 'scope-v1' };
 export const databaseDeleteArgs = { project_id: 'project-a', branch_id: 'br-a', database_name: 'main' };
 export const databaseDeleteReceipt = { database: { id: 123, branch_id: 'br-a', name: 'main' },

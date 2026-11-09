@@ -7,6 +7,29 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonRoleDeleteOperations(trustedScope, transport)` adds reserved
+`deleteProjectBranchRole` source. Copy exact project/branch/role name, expected
+`created_at` fingerprint and revision; require the distinct
+`neon/projects/<project>/branches/<branch>/roles/<role>/delete` grant and common-core
+native exact-target/plan authorization before credentials. Mandatory role-detail GET
+binds name/branch/creation fingerprint and requires explicit `protected: false`
+before one bodyless DELETE. Missing protection refuses. This fingerprint is not an
+immutable role ID or chronology proof. Preflight is not atomic CAS: same-name
+replacement after the GET remains unresolved without a provider conditional delete.
+
+Only HTTP200 exact target/fingerprint/unprotected echo and bounded unique
+operation-ID/status observations yield `{name, branch_id, acknowledged: true, operations}`.
+This is not completed role deletion, effective ACL revocation, a credential expiry
+receipt, fencing, zero sessions/no reconnect or cutover proof. Passwords, DSNs,
+authentication methods, updated timestamps, actions/endpoints and diagnostics are
+never evaluated or emitted. HTTP204/ambiguity gets at most one bounded detail
+observation and remains uncertain even on absence or replacement. No retry, SQL,
+cascade, protection change or invented idempotency header exists. Permanent common
+journal barriers block same-request restart/replay, not independent external writers.
+Native authority/host/policy/custody, durable recovery, entitlement/effects, production
+deletion authority and independent reviews remain gates. Source/mocks only; no live
+role deletion, password retrieval, runtime registration or enablement.
+
 `createNeonDatabaseDeleteOperations(trustedScope, transport)` adds reserved
 `deleteProjectBranchDatabase` source. Copy exact project/branch/database name,
 immutable numeric database ID and revision; require the dedicated
@@ -1337,8 +1360,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: eighty-six implemented
-source adapters, 108 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: eighty-seven implemented
+source adapters, 107 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

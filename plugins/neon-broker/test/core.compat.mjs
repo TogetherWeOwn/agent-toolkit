@@ -46,6 +46,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   endpointDeleteFixture, endpointDeleteArgs, endpointDeleteScope, endpointDeleteReceipt,
   projectDeleteFixture, projectDeleteArgs, projectDeleteScope, projectDeleteReceipt,
   databaseDeleteFixture, databaseDeleteArgs, databaseDeleteScope, databaseDeleteReceipt,
+  roleDeleteFixture, roleDeleteArgs, roleDeleteScope, roleDeleteReceipt,
   branchDeleteFixture, branchDeleteArgs, branchDeleteScope, branchDeleteReceipt,
   endpointStartFixture, endpointStartArgs, endpointStartScope, endpointStartReceipt,
   endpointRestartFixture, endpointRestartArgs, endpointRestartScope, endpointRestartReceipt,
@@ -122,6 +123,130 @@ function safeEnvelope(f, result) {
     assert(!serialized.includes(secret), `secret in output/audit/journal: ${secret}`);
   }
 }
+
+function roleDeletionBroker(value = roleDeleteReceipt, overrides = {}, config = roleDeleteScope) {
+  const provider = roleDeleteFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId, role_name: config.roleName };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('deleteProjectBranchRole').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.deleteProjectBranchRole', args, context, key);
+  } };
+}
+
+test('role deletion: reserved exact agent AND delete grant precede credentials and transport', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = roleDeletionBroker(undefined, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  for (const resource of ['neon/projects/project-a/branches/br-a/roles/reader', 'neon/projects/project-a/delete',
+    'neon/projects/project-a/branches/br-a/delete', 'neon/projects/project-a/branches/br-a/roles/other/delete',
+    'neon/projects/project-a/branches/br-other/roles/reader/delete', 'neon/projects/project-a/branches/br-a/databases/reader/delete']) {
+    const f = roleDeletionBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = roleDeletionBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = roleDeletionBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { name: 'reader', branch_id: 'br-a', acknowledged: true,
+    operations: roleDeleteReceipt.operations.map(({ id, status }) => ({ id, status })) });
+  assert.equal(f.common.calls.consumed, 1);
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('role deletion: native authorization rejects stale, wrong target or unconsumable evidence', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = roleDeletionBroker();
+    const base = f.common.authority;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { return false; } };
+    const result = await f.common.broker().call('neon.deleteProjectBranchRole', roleDeleteArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('role deletion: identity/resource TOCTOU and caller fingerprint/SQL/cascade overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = roleDeletionBroker(undefined, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = roleDeletionBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.deleteProjectBranchRole', roleDeleteArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { expected_created_at: roleDeleteScope.expectedCreatedAt }, { sql: 'DROP ROLE reader' }, { cascade: true }, { force: true }, { role_name: 'other' }]) {
+    const g = roleDeletionBroker();
+    assert.equal((await g.common.broker().call('neon.deleteProjectBranchRole', { ...roleDeleteArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('role deletion: permanent journal blocks complete and uncertain replay after restart', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = roleDeletionBroker((url, init) => {
+      if (init.method === 'DELETE' && ambiguous) throw Error(credentialCanary);
+      return response(roleDeleteReceipt);
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('role deletion: reflected/protected/reassociated echoes retain uncertainty and safe envelopes', async () => {
+  for (const raw of [{ ...roleDeleteReceipt, role: { ...roleDeleteReceipt.role, name: credentialCanary } },
+    { ...roleDeleteReceipt, role: { ...roleDeleteReceipt.role, protected: true } },
+    { ...roleDeleteReceipt, role: { ...roleDeleteReceipt.role, created_at: '2026-11-09T10:00:00Z' } },
+    { ...roleDeleteReceipt, operations: [{ ...roleDeleteReceipt.operations[0], project_id: credentialCanary }] }]) {
+    const f = roleDeletionBroker(raw);
+    const result = await f.call();
+    assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, 'uncertain');
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 1);
+    safeEnvelope(f, result);
+  }
+  const f = roleDeletionBroker({ ...roleDeleteReceipt, password: credentialCanary,
+    role: { ...roleDeleteReceipt.role, password: credentialCanary, connection_uri: derivedCanary } });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
+test('role deletion: maximum copied IDs, role name and creation fingerprint fit common budgets', async () => {
+  const config = { projectId: 'p'.repeat(60), branchId: 'br-' + 'b'.repeat(57), roleName: 'R'.repeat(63),
+    expectedCreatedAt: '2026-11-08T10:00:00.123456789+00:00', revision: 'r'.repeat(80) };
+  const f = roleDeletionBroker({ role: { name: config.roleName, branch_id: config.branchId, created_at: config.expectedCreatedAt, protected: false }, operations: [] }, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
 
 function databaseDeletionBroker(value = databaseDeleteReceipt, overrides = {}, config = databaseDeleteScope) {
   const provider = databaseDeleteFixture(value, config);

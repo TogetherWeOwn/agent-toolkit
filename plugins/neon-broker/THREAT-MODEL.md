@@ -19,6 +19,27 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
 
+## Reserved role-deletion source delta
+
+Copied exact project/branch/role name/creation fingerprint/revision and a distinct
+role/delete grant require reserved native exact-plan authorization before credentials.
+A fixed detail GET checks name/branch/expected `created_at` and explicit `protected: false`
+before one bodyless DELETE; protected or missing-protection roles refuse. Creation
+fingerprints are not immutable IDs or chronology evidence, and preflight is not atomic
+CAS. Same-name replacement after preflight remains a native qualification limit; no
+conditional or idempotency header is invented. Only HTTP200 exact bound echo and
+bounded unique operation-ID/status observations acknowledge the request. No completed
+role deletion, effective ACL revocation, credential expiry, session fence, zero sessions,
+no reconnect or lifecycle enforcement is proved, even by finished operation statuses.
+
+HTTP204/ambiguity triggers at most one bounded detail observation then stays uncertain,
+even on absence or replacement. No mutation retry, SQL, cascade or protection change.
+Passwords, DSNs, authentication methods, updated dates, actions/errors and endpoints
+are not evaluated or emitted. Permanent common journal barriers block same-request
+restart/replay, not concurrent external actors. Native host/policy/custody/authority,
+durable recovery, effects/entitlement, production deletion authority and independent
+reviews remain gates. Source/mocks only; no live credential action or runtime registration.
+
 ## Reserved endpoint-deletion source delta
 
 Exact copied project/branch/endpoint/revision and a distinct endpoint/delete grant
