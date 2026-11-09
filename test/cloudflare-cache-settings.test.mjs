@@ -195,14 +195,16 @@ for (const c of cases) {
       }
       const out = await f.invoke();
       assert.equal(out.ok, false);
-      if (!options.cleanupFailure) assert.equal(out.code, options.auditFailure ? "OUTCOME_UNCERTAIN" : "UPSTREAM_UNAVAILABLE");
+      assert.equal(out.code, options.auditFailure || options.cleanupFailure ? "OUTCOME_UNCERTAIN" : "UPSTREAM_UNAVAILABLE");
       assert.equal([...f.journal.values()][0].outcome, "uncertain");
-      assert.equal(f.calls.close, 1);
+      // The reviewed core attempts cleanup again in its failure handler.
+      const closes = options.cleanupFailure ? 2 : 1;
+      assert.equal(f.calls.close, closes);
       const journal = structuredClone([...f.journal]);
       f.dependencies.audit.append = append;
       assert.equal((await f.invoke()).code, "REPLAY_CONFLICT");
       assert.equal(f.calls.secret, 1);
-      assert.equal(f.calls.close, 1);
+      assert.equal(f.calls.close, closes);
       assert.equal(f.requests.length, 1);
       assert.deepEqual([...f.journal], journal);
       safe(f, out);
