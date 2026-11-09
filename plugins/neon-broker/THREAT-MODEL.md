@@ -19,6 +19,23 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
 
+## Reserved organization-member removal source delta
+
+Exact copied organization/member UUID/user UUID/expected role/revision and a dedicated
+member/remove grant require reserved native exact-plan authority before credentials.
+Mandatory detail GET binds all identities and expected role before one bodyless DELETE.
+Provider enforces admin and last-admin constraints; there is no bypass, role-change
+or project-member fallback. Profile fields and joined_at are never evaluated/emitted.
+
+Only HTTP200 bounded empty JSON object acknowledges; returned member_id is the trusted
+target, not a provider echo. Acknowledgement is not independent access removal,
+completeness, session closure or cutover fencing. Preflight is not atomic CAS.
+Ambiguity gets at most one bounded member-detail observation and stays uncertain
+even on absence or matching state; no mutation retry. Permanent common journal
+barriers block restart/replay, not external writers. Native authority/host/custody,
+durable recovery, provider effects/entitlement and independent reviews remain
+unresolved. Source/mocks only; no live member removal or runtime enablement.
+
 ## Reserved project-permission revocation source delta
 
 Exact copied project/permission ID/revision and a dedicated permission/revoke grant

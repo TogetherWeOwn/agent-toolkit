@@ -50,6 +50,7 @@ import { createNeonEndpointRestartOperations } from '../dist/plugins/neon-broker
 import { createNeonEndpointSuspendOperations } from '../dist/plugins/neon-broker/src/endpoint-suspend.js';
 import { createNeonEndpointDeleteOperations } from '../dist/plugins/neon-broker/src/endpoint-delete.js';
 import { createNeonDatabaseDeleteOperations } from '../dist/plugins/neon-broker/src/database-delete.js';
+import { createNeonOrganizationMemberRemoveOperations } from '../dist/plugins/neon-broker/src/organization-member-remove.js';
 import { createNeonPermissionRevokeOperations } from '../dist/plugins/neon-broker/src/permission-revoke.js';
 import { createNeonCredentialRevokeOperations } from '../dist/plugins/neon-broker/src/credential-revoke.js';
 import { createNeonOrganizationKeyRevokeOperations } from '../dist/plugins/neon-broker/src/organization-key-revoke.js';
@@ -474,7 +475,17 @@ export function objectDownloadFixture(value, config = objectDownloadScope) {
   return fixture(typeof value === 'function' ? value : () => binaryResponse(value.bytes), config, createNeonObjectDownloadOperations);
 }
 export const allCases = [...objectDownloadCases, ...oauthProviderCases, ...logQueryCases, ...schemaComparisonCases, ...logValueCases, ...branchSchemaCases, ...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
-export const sourceNames = [...allCases.map(([name]) => name), 'deleteSnapshot', 'updateSnapshot', 'updateProjectBranch', 'updateProject', 'updateProjectEndpoint', 'suspendProjectEndpoint', 'deleteProjectEndpoint', 'startProjectEndpoint', 'restartProjectEndpoint', 'deleteProjectBranch', 'deleteProject', 'deleteProjectBranchDatabase', 'deleteProjectBranchRole', 'revokeApiKey', 'revokeOrgApiKey', 'revokeCredential', 'revokePermissionFromProject'];
+export const sourceNames = [...allCases.map(([name]) => name), 'deleteSnapshot', 'updateSnapshot', 'updateProjectBranch', 'updateProject', 'updateProjectEndpoint', 'suspendProjectEndpoint', 'deleteProjectEndpoint', 'startProjectEndpoint', 'restartProjectEndpoint', 'deleteProjectBranch', 'deleteProject', 'deleteProjectBranchDatabase', 'deleteProjectBranchRole', 'revokeApiKey', 'revokeOrgApiKey', 'revokeCredential', 'revokePermissionFromProject', 'removeOrganizationMember'];
+export const organizationMemberRemoveScope = { organizationId: 'org-a', memberId: '11111111-1111-4111-8111-111111111111',
+  userId: '22222222-2222-4222-8222-222222222222', expectedRole: 'editor', revision: 'scope-v1' };
+export const organizationMemberRemoveArgs = { org_id: 'org-a', member_id: organizationMemberRemoveScope.memberId };
+export const organizationMemberRemoveMetadata = { id: organizationMemberRemoveScope.memberId, user_id: organizationMemberRemoveScope.userId,
+  org_id: 'org-a', role: 'editor' };
+export function organizationMemberRemoveFixture(value = {}, config = organizationMemberRemoveScope) {
+  return fixture((url, init, n) => typeof value === 'function' ? value(url, init, n) :
+    init.method === 'DELETE' ? response(value) : response({ id: config.memberId, user_id: config.userId,
+      org_id: config.organizationId, role: config.expectedRole }), config, createNeonOrganizationMemberRemoveOperations);
+}
 export const permissionRevokeScope = { projectId: 'project-a', permissionId: 'permission-a', revision: 'scope-v1' };
 export const permissionRevokeArgs = { project_id: 'project-a', permission_id: 'permission-a' };
 export const permissionRevokeReceipt = { id: 'permission-a' };

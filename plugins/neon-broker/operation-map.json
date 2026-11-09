@@ -3112,18 +3112,22 @@
       "tool": "neon.removeOrganizationMember",
       "scope": "org_id/member_id",
       "sideEffects": [
+        "organization-member-removal-request",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/organization-member-remove.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Reserved organization-member removal-request source only; exact member/user/organization/role preflight, one DELETE and empty acknowledgement do not prove independent access removal, completeness, session fencing or cutover enforcement. Provider enforces admin and last-admin constraints; preflight is not atomic CAS. Native authority/host/policy/custody, durable common journal recovery, effects/entitlement and independent reviews unresolved."
     },
     {
       "id": "getOrganizationInvitations",

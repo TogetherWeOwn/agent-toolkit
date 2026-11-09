@@ -7,6 +7,25 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonOrganizationMemberRemoveOperations(trustedScope, transport)` adds reserved
+`removeOrganizationMember` source. Copy exact organization/member UUID/user UUID,
+expected known role and revision. Dedicated
+`neon/organizations/<org>/members/<member>/remove` and common-core native exact-plan
+authority precede credentials. Mandatory member-detail GET binds all identities and
+expected role before one bodyless DELETE. Provider enforces admin/last-admin
+constraints; no bypass, role update or project-member fallback is supplied.
+
+Only HTTP200 bounded empty JSON object yields closed `{member_id, acknowledged: true}`;
+the member ID comes from the trusted target, not a provider identity echo. This is
+not independently observed access removal, completeness, session closure or fencing.
+Preflight is not atomic CAS. Profile fields and joined_at are never evaluated/emitted.
+Ambiguity gets at most one bounded member-detail observation and remains uncertain
+even on absence or unchanged state; no mutation retry. Permanent common journal
+barriers block restart/replay, not external writers. Each request keeps the 64KiB/1s
+bound; operation ceiling 3.5s. Native authority/host/custody/durable recovery,
+effects/entitlement and independent reviews remain gates. Source/mocks only;
+no live removal or runtime enablement.
+
 `createNeonPermissionRevokeOperations(trustedScope, transport)` adds reserved
 `revokePermissionFromProject` source. Copy exact project/permission ID/revision;
 require `neon/projects/<project>/permissions/<id>/revoke` and common-core native
@@ -1445,8 +1464,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: ninety-one implemented
-source adapters, 103 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: ninety-two implemented
+source adapters, 102 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

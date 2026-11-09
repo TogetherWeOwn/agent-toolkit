@@ -16,6 +16,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  removeOrganizationMember(organization: string, member: string, options: MetadataRequestOptions): Promise<unknown>;
   revokePermissionFromProject(project: string, permission: string, options: MetadataRequestOptions): Promise<unknown>;
   revokeCredential(project: string, branch: string, token: string, options: MetadataRequestOptions): Promise<unknown>;
   revokeOrgApiKey(organization: string, key: number, options: MetadataRequestOptions): Promise<unknown>;
@@ -229,6 +230,10 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    removeOrganizationMember: (organization: string, member: string, options: MetadataRequestOptions) => {
+      if (typeof member !== "string" || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(member) || /[^a-f0-9-]/.test(member)) throw Error("INVALID_ARGUMENTS");
+      return request(`/organizations/${authPathId(organization)}/members/${member}`, new URLSearchParams(), options, undefined, false, 200);
+    },
     revokePermissionFromProject: (project: string, permission: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/permissions/${identifier.parse(permission)}`, new URLSearchParams(), options, undefined, false, 200),
     revokeCredential: (project: string, branch: string, token: string, options: MetadataRequestOptions) =>
