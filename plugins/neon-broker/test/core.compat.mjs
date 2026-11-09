@@ -1158,6 +1158,132 @@ test('Trigger disable: maximum identity selection fits actual common prepared bu
   }
 });
 
+import { spendingLimitUpdateFixture, spendingLimitUpdateScope, spendingLimitUpdateArgs, spendingLimitUpdateMetadata } from './helpers.mjs';
+function spendingLimitUpdateBroker(value = null, overrides = {}, config = spendingLimitUpdateScope) {
+  const provider = spendingLimitUpdateFixture(value, config);
+  const args = { org_id: config.organizationId, spending_limit_cents: config.cents };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('setOrganizationSpendingLimit').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.setOrganizationSpendingLimit', args, context, key);
+  } };
+}
+
+test('Spending threshold decrease: native exact-plan authority and exact agent AND decrease grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = spendingLimitUpdateBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = 'neon/organizations/org-a/billing/spending_limit/decrease';
+  for (const resource of [target.replace('/decrease', ''), target.replace('org-a', 'org-b'), target.replace('/decrease', '/delete'),
+    target.replace('/decrease', '/increase'), 'neon/organizations/org-a']) {
+    const f = spendingLimitUpdateBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = spendingLimitUpdateBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.common.calls.secret, 0);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = spendingLimitUpdateBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { acknowledged: true, spending_limit_cents: 5000 });
+  assert.equal(f.common.calls.consumed, 1);
+  safeEnvelope(f, result);
+});
+
+test('Spending threshold decrease: stale, wrong-target and consume failures are independent negative controls', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = spendingLimitUpdateBroker();
+    const base = f.common.authority;
+    let consumeCalls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.setOrganizationSpendingLimit', spendingLimitUpdateArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Spending threshold decrease: identity/resource TOCTOU and caller threshold/authority overrides refuse', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = spendingLimitUpdateBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = spendingLimitUpdateBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.setOrganizationSpendingLimit', spendingLimitUpdateArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { org_id: 'other' }, { spending_limit_cents: 10001 }, { spending_limit_cents: null },
+    { spending_limit_cents: 0 }, { expected_cents: 9999 }, { delete: true }, { retry: true }]) {
+    const g = spendingLimitUpdateBroker();
+    assert.equal((await g.common.broker().call('neon.setOrganizationSpendingLimit', { ...spendingLimitUpdateArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+    assert.equal(g.provider.requests.length, 0);
+  }
+});
+
+test('Spending threshold decrease: permanent complete/uncertain journal blocks restart replay without retrying PUT', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = spendingLimitUpdateBroker((url, init, n) => {
+      if (init.method === 'PUT') { if (ambiguous) throw Error(credentialCanary); return response({ spending_limit_cents: 5000 }); }
+      return response({ spending_limit_cents: n === 1 ? 10000 : 5000 });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'PUT').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Spending threshold decrease: preflight drift and reflected receipt cannot enter safe envelopes', async () => {
+  for (const raw of [{ spending_limit_cents: null }, { ...spendingLimitUpdateMetadata, org_id: 'other' },
+    { spending_limit_cents: credentialCanary }]) {
+    const f = spendingLimitUpdateBroker(() => response(raw));
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'PUT').length, 0);
+    safeEnvelope(f, result);
+  }
+  const f = spendingLimitUpdateBroker({ spending_limit_cents: credentialCanary });
+  const result = await f.call();
+  assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+  assert.equal([...f.common.journal.values()][0].outcome, 'uncertain');
+  safeEnvelope(f, result);
+});
+
+test('Spending threshold decrease: maximal copied target and safe-int cents fit actual pinned common budgets', async () => {
+  const config = { ...spendingLimitUpdateScope, organizationId: 'o'.repeat(60), revision: 'r'.repeat(80),
+    expectedCents: Number.MAX_SAFE_INTEGER, cents: Number.MAX_SAFE_INTEGER - 1 };
+  const f = spendingLimitUpdateBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
 import { snapshotScheduleUpdateFixture, snapshotScheduleUpdateScope, snapshotScheduleUpdateArgs, snapshotScheduleUpdateMetadata } from './helpers.mjs';
 function snapshotScheduleUpdateBroker(value = null, overrides = {}, config = snapshotScheduleUpdateScope) {
   const provider = snapshotScheduleUpdateFixture(value, config);

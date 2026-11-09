@@ -13,6 +13,7 @@ import { databaseUpdateName } from "./database-update.js";
 import { functionLabel } from "./function-update.js";
 import { snapshotCreateTime } from "./snapshot-create.js";
 import { snapshotScheduleHour, snapshotScheduleRetention } from "./snapshot-schedule-update.js";
+import { spendingLimitCents } from "./spending-limit-update.js";
 
 export const NEON_ORIGIN = "https://console.neon.tech";
 export const RESPONSE_BYTES = 65_536;
@@ -24,6 +25,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  setOrganizationSpendingLimit(organization: string, cents: number, options: MetadataRequestOptions): Promise<unknown>;
   setSnapshotSchedule(project: string, branch: string, hour: number, retentionSeconds: number, options: MetadataRequestOptions): Promise<unknown>;
   createSnapshot(project: string, branch: string, name: string, timestamp: string, expiresAt: string, options: MetadataRequestOptions): Promise<unknown>;
   createProjectBranchDatabase(project: string, branch: string, database: string, owner: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -288,6 +290,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    setOrganizationSpendingLimit: (organization: string, cents: number, options: MetadataRequestOptions) =>
+      request(`/organizations/${id(organization)}/billing/spending_limit`, new URLSearchParams(), options,
+        JSON.stringify({ spending_limit_cents: spendingLimitCents.parse(cents) }), false, false, false, false, false, 200, true),
     setSnapshotSchedule: (project: string, branch: string, hour: number, retentionSeconds: number, options: MetadataRequestOptions) =>
       request(`/projects/${id(project)}/branches/${id(branch)}/backup_schedule`, new URLSearchParams(), options,
         JSON.stringify({ schedule: [{ frequency: "daily", hour: snapshotScheduleHour.parse(hour), retention_seconds: snapshotScheduleRetention.parse(retentionSeconds) }] }),

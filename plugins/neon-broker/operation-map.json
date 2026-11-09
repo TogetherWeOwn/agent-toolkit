@@ -3084,7 +3084,7 @@
       "id": "setOrganizationSpendingLimit",
       "apiArea": "organizations",
       "tool": "neon.setOrganizationSpendingLimit",
-      "scope": "org_id",
+      "scope": "exact-org-spending-threshold-decrease",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3092,12 +3092,15 @@
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/spending-limit-update.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Decrease-only positive existing alert threshold source/mocks; dedicated decrease grant and reserved native exact-plan authority. Alert-only: computes are not suspended, notification delivery unverified. Increases, unset/zero/removal unsupported; preflight not atomic CAS. Ambiguity stays uncertain after one observation, no retry, permanent common replay journal. Effects, admin/plan entitlement, custody/host and independent native review/integration remain unresolved; no live billing or spend change."
     },
     {
       "id": "deleteOrganizationSpendingLimit",

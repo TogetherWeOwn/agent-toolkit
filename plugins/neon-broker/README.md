@@ -7,6 +7,22 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonSpendingLimitUpdateOperations` supplies `setOrganizationSpendingLimit`
+source limited to decreasing an existing explicit positive alert threshold. Copied
+organization/expected-desired safe integer cents/revision, dedicated spending_limit/
+decrease grant and reserved native exact-plan authority precede credentials. Exact
+threshold preflight precedes one PUT sending only spending_limit_cents. Unset/null,
+zero, increases, removal and arbitrary body overrides are unsupported. This limit
+is **alert-only**: notifications fire at 80/100%, but computes are NOT suspended.
+A threshold below accrued spend may trigger the over-limit notification on the next
+worker run. Exact HTTP200 value echo acknowledges only, not notification delivery,
+spend enforcement, compute/session stopping, fencing or persistence. Admin/Launch/
+Scale entitlement remains provider-enforced. Preflight is not atomic CAS; external
+reconfiguration races remain unresolved. Ambiguity gets one bounded observation and
+stays uncertain even at the desired value; no retry, permanent common journal blocks
+same-request replay, not external writers. Source/mocks only, no live billing change,
+spend authorization or runtime registration.
+
 `createNeonSnapshotScheduleUpdateOperations` supplies `setSnapshotSchedule` source
 for changing only the hour of an existing single daily entry. Copied exact target,
 expected/desired hour and explicit unchanged retention require a dedicated
@@ -2098,8 +2114,8 @@ creation, spend authority or runtime qualification.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 125 implemented
-source adapters, 69 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 126 implemented
+source adapters, 68 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

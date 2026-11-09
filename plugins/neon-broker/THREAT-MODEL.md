@@ -1758,6 +1758,24 @@ uncertain even on desired presence or absence. No retry; the common permanent jo
 blocks same-request replay, not external writers. Source/mocks, not live creation or
 spend authority; native effects/entitlement, host/custody and independent gates remain.
 
+## Alert-only spending threshold decrease delta
+
+`setOrganizationSpendingLimit` copies exact organization/expected-desired positive
+safe integer cents/revision and requires a distinct decrease grant plus reserved
+native exact-plan authority. Mandatory exact-value preflight precedes one PUT with
+only spending_limit_cents. Unset/null, zero, increases and removal are unsupported.
+The provider's limit is alert-only: computes are NOT suspended, even over limit.
+Notifications fire at 80/100%; a decrease below accrued spend can trigger the next
+worker's over-limit notification. No independent notification-delivery, spend-control,
+compute/session-stopping, persistence or fencing proof is supplied. Only exact HTTP200
+value echo acknowledges; unused provider metadata is never evaluated or emitted.
+
+Preflight is not atomic CAS; external reconfiguration races remain unresolved.
+Ambiguity gets one bounded threshold observation and remains uncertain even on the
+desired value or absence. No retry; permanent common journal blocks same-request
+replay, not external writers. Admin/plan entitlement, effects, custody/host and native
+review/integration remain unverified. Source/mocks only, not live billing/spend authority.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.
