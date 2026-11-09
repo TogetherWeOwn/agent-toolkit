@@ -10,7 +10,9 @@ const listed = metadata;
 
 test('OAuth client delete: exact client-detail preflight precedes one bodyless DELETE and documented HTTP204 acknowledges only', async () => {
   const f = fixture();
-  assert.deepEqual(await f.run('deleteNeonAuthOAuthClient', args), expected);
+  const result = await f.run('deleteNeonAuthOAuthClient', args);
+  assert.equal(Object.getPrototypeOf(result), Object.prototype);
+  assert.deepEqual(result, expected);
   assert.deepEqual(f.requests.map(({ url, init }) => [url, init.method]), [
     [`${NEON_ORIGIN}/api/v2/projects/project-a/branches/br-a/auth/oauth-provider/clients/clientA`, 'GET'],
     [`${NEON_ORIGIN}/api/v2/projects/project-a/branches/br-a/auth/oauth-provider/clients/clientA`, 'DELETE']]);

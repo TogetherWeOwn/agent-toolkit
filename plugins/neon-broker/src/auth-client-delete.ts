@@ -38,7 +38,10 @@ export function createNeonAuthClientDeleteOperations(scope: NeonAuthClientDelete
     check(optional(raw, "pagination") === undefined);
     // Display names, redirects, resources, flags, timestamps and unexpected secrets are not evaluated.
   }
-  function receipt(raw: unknown): Json { return acknowledgement.parse(raw); }
+  function receipt(raw: unknown): Json {
+    acknowledgement.parse(raw);
+    return { acknowledged: true };
+  }
   return Object.freeze([Object.freeze({
     name: "neon.deleteNeonAuthOAuthClient", version: "1.0.0", tier: "reserved" as const, lifecycle: "none" as const, timeoutMs: 3500,
     prepare,
