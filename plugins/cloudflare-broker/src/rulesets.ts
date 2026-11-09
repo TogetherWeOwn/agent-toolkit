@@ -15,6 +15,12 @@ const phases = new Set(["ddos_l4", "ddos_l7", "http_config_settings", "http_cust
   "http_request_sanitize", "http_request_sbfm", "http_request_transform", "http_response_cache_settings",
   "http_response_compression", "http_response_firewall_custom", "http_response_firewall_managed",
   "http_response_headers_transform", "magic_transit", "magic_transit_ids_managed", "magic_transit_managed", "magic_transit_ratelimit"]);
+const phase = text(64, /^[a-z][a-z0-9_]*$(?![\s\S])/);
+const entrypointInput = closed({ phase, rulesetId: identifier });
+const entrypointVersionInput = closed({ phase, rulesetId: identifier, rulesetVersion: version });
+type EntrypointSelection = Readonly<{ phase: string; rulesetId: string }>;
+type EntrypointVersionSelection = EntrypointSelection & Readonly<{ versions: readonly string[] }>;
+type EntrypointSnapshot = ReadonlyMap<string, Readonly<{ rulesetId: string; versions: ReadonlySet<string> }>>;
 type Row = Record<string, unknown>;
 type Identity = Readonly<{ id: string }>;
 export interface RulesetScope {
@@ -29,6 +35,32 @@ export interface RulesetScope {
   accountVersions?: readonly VersionSelection[];
   zoneVersionLists?: readonly VersionSelection[];
   zoneVersions?: readonly VersionSelection[];
+  accountEntrypoints?: readonly EntrypointSelection[];
+  accountEntrypointVersionLists?: readonly EntrypointVersionSelection[];
+  accountEntrypointVersions?: readonly EntrypointVersionSelection[];
+  zoneEntrypoints?: readonly EntrypointSelection[];
+  zoneEntrypointVersionLists?: readonly EntrypointVersionSelection[];
+  zoneEntrypointVersions?: readonly EntrypointVersionSelection[];
+}
+function entrypointSnapshot(raw: readonly EntrypointSelection[] | undefined, versioned: boolean): EntrypointSnapshot {
+  const rows = raw === undefined ? [] : raw;
+  requireThat(Array.isArray(rows) && rows.length <= 32, "cap");
+  const selected = new Map<string, Readonly<{ rulesetId: string; versions: ReadonlySet<string> }>>();
+  for (const raw of rows) {
+    const row = object(raw), key = phase.parse(row.phase), rulesetId = identifier.parse(row.rulesetId);
+    requireThat(phases.has(key) && !selected.has(key), "schema");
+    const versions = new Set<string>();
+    if (versioned) {
+      requireThat(Array.isArray(row.versions) && row.versions.length > 0, "schema");
+      requireThat(row.versions.length <= 64, "cap");
+      for (const raw of row.versions) {
+        const value = version.parse(raw);
+        requireThat(!versions.has(value), "schema"); versions.add(value);
+      }
+    }
+    selected.set(key, Object.freeze({ rulesetId, versions }));
+  }
+  return selected;
 }
 function versionSnapshot(raw: readonly VersionSelection[] | undefined): ReadonlyMap<string, ReadonlySet<string>> {
   const rows = raw === undefined ? [] : raw;
@@ -85,6 +117,12 @@ export function rulesetDescriptors(scope: RulesetScope) {
   const zoneList = snapshot(scope.zoneListIds, 64), zoneGet = snapshot(scope.zoneRulesetIds, 100);
   const accountVersionLists = versionSnapshot(scope.accountVersionLists), accountVersions = versionSnapshot(scope.accountVersions);
   const zoneVersionLists = versionSnapshot(scope.zoneVersionLists), zoneVersions = versionSnapshot(scope.zoneVersions);
+  const accountEntrypoints = entrypointSnapshot(scope.accountEntrypoints, false);
+  const accountEntrypointVersionLists = entrypointSnapshot(scope.accountEntrypointVersionLists, true);
+  const accountEntrypointVersions = entrypointSnapshot(scope.accountEntrypointVersions, true);
+  const zoneEntrypoints = entrypointSnapshot(scope.zoneEntrypoints, false);
+  const zoneEntrypointVersionLists = entrypointSnapshot(scope.zoneEntrypointVersionLists, true);
+  const zoneEntrypointVersions = entrypointSnapshot(scope.zoneEntrypointVersions, true);
   function context(row: Row): void {
     if (Object.hasOwn(row, "account_id")) requireThat(row.account_id === account, "scope");
     if (Object.hasOwn(row, "account")) requireThat(object(row.account).id === account, "scope");
@@ -106,7 +144,8 @@ export function rulesetDescriptors(scope: RulesetScope) {
     }
     return Object.freeze({ id: row.id });
   }
-  function descriptor<A, O>(parent: "account" | "zone", kind: "list" | "get" | "versions.list" | "versions.get", operation: string,
+  function descriptor<A, O>(parent: "account" | "zone", kind: "list" | "get" | "versions.list" | "versions.get" |
+    "entrypoint.get" | "entrypoint.versions.list" | "entrypoint.versions.get", operation: string,
     prepare: (raw: unknown) => { arguments: A; suffix: string; resource: string },
     project: (result: unknown, args: A) => O): MetadataDescriptor<A, O> {
     const prepared = new WeakSet<object>();
@@ -208,12 +247,63 @@ export function rulesetDescriptors(scope: RulesetScope) {
     });
     return { list, get };
   }
+  function entrypointTriple(parent: "account" | "zone", current: EntrypointSnapshot, lists: EntrypointSnapshot, gets: EntrypointSnapshot) {
+    const title = parent === "account" ? "Account" : "Zone";
+    const base = { subject: `configured-${parent}-ruleset-entrypoint-identities` as const,
+      effectiveProtection: "not-established" as const, serving: "not-established" as const, ownership: "not-established" as const };
+    function selected(args: EntrypointSelection, selections: EntrypointSnapshot) {
+      const value = selections.get(args.phase);
+      requireThat(phases.has(args.phase) && value !== undefined && value.rulesetId === args.rulesetId, "scope");
+      return value;
+    }
+    function item(raw: unknown, args: EntrypointSelection, detail: boolean) {
+      const id = identity(raw, detail).id, row = object(raw);
+      // The URL alone cannot establish which immutable ruleset occupies a phase.
+      requireThat(id === args.rulesetId && row.phase === args.phase, "scope");
+      requireThat(typeof row.version === "string" && row.version.length <= 32, "upstream");
+      return Object.freeze({ id, version: row.version });
+    }
+    const get = descriptor(parent, "entrypoint.get", `get${title}EntrypointRuleset`, raw => {
+      const args = entrypointInput.parse(raw); selected(args, current);
+      return { arguments: args, suffix: `/phases/${args.phase}/entrypoint`, resource: `entrypoint:${args.phase}:${args.rulesetId}:current` };
+    }, (result, args) => ({ ...base, item: item(result, args, true) }));
+    const versionsList = descriptor(parent, "entrypoint.versions.list", `list${title}EntrypointRulesetVersions`, raw => {
+      const args = entrypointInput.parse(raw); selected(args, lists);
+      // Official phase-entrypoint version lists have no pagination request parameters.
+      return { arguments: args, suffix: `/phases/${args.phase}/entrypoint/versions`, resource: `entrypoint:${args.phase}:${args.rulesetId}:versions:list` };
+    }, (result, args) => {
+      requireThat(Array.isArray(result) && result.length <= 64, "cap");
+      const items: Readonly<{ id: string; version: string }>[] = [], seen = new Set<string>();
+      for (const raw of result) {
+        const value = item(raw, args, false);
+        requireThat(!seen.has(value.version), "upstream"); seen.add(value.version);
+        if (lists.get(args.phase)!.versions.has(value.version)) items.push(value);
+      }
+      return { ...base, items: Object.freeze(items), complete: false as const };
+    });
+    const versionGet = descriptor(parent, "entrypoint.versions.get", `get${title}EntrypointRulesetVersion`, raw => {
+      const args = entrypointVersionInput.parse(raw), value = selected(args, gets);
+      requireThat(value.versions.has(args.rulesetVersion), "scope");
+      return { arguments: args, suffix: `/phases/${args.phase}/entrypoint/versions/${args.rulesetVersion}`,
+        resource: `entrypoint:${args.phase}:${args.rulesetId}:versions:${args.rulesetVersion}` };
+    }, (result, args) => {
+      const value = item(result, args, true); requireThat(value.version === args.rulesetVersion, "scope");
+      return { ...base, item: value };
+    });
+    return { get, versionsList, versionGet };
+  }
+  const accountEntrypoint = entrypointTriple("account", accountEntrypoints, accountEntrypointVersionLists, accountEntrypointVersions);
+  const zoneEntrypoint = zone === undefined ? undefined : entrypointTriple("zone", zoneEntrypoints, zoneEntrypointVersionLists, zoneEntrypointVersions);
   const accounts = pair("account", accountList, accountGet);
   const zones = zone === undefined ? undefined : pair("zone", zoneList, zoneGet);
   const accountVersionPair = versionPair("account", accountVersionLists, accountVersions);
   const zoneVersionPair = zone === undefined ? undefined : versionPair("zone", zoneVersionLists, zoneVersions);
   return Object.freeze({ accountList: accounts.list, accountGet: accounts.get,
     accountVersionsList: accountVersionPair.list, accountVersionGet: accountVersionPair.get,
+    accountEntrypointGet: accountEntrypoint.get, accountEntrypointVersionsList: accountEntrypoint.versionsList,
+    accountEntrypointVersionGet: accountEntrypoint.versionGet,
+    ...(zoneEntrypoint === undefined ? {} : { zoneEntrypointGet: zoneEntrypoint.get,
+      zoneEntrypointVersionsList: zoneEntrypoint.versionsList, zoneEntrypointVersionGet: zoneEntrypoint.versionGet }),
     ...(zones === undefined ? {} : { zoneList: zones.list, zoneGet: zones.get }),
     ...(zoneVersionPair === undefined ? {} : { zoneVersionsList: zoneVersionPair.list, zoneVersionGet: zoneVersionPair.get }) });
 }
