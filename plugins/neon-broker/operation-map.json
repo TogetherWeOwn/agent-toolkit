@@ -3487,7 +3487,7 @@
       "id": "createSnapshot",
       "apiArea": "snapshot",
       "tool": "neon.createSnapshot",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/snapshot_name/create",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3495,12 +3495,12 @@
       "tier": "write",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": ["plugins/neon-broker/test/snapshot-create.test.mjs", "plugins/neon-broker/test/core.compat.mjs"],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Explicit-time snapshot creation source/mocks only; exact branch/name/capture/expiry scope, dedicated create grant and exact plan. Branch identity and bounded name-absence preflight then one POST; acknowledgement only, not completion/recoverability or guaranteed expiry deletion. Ambiguity stays uncertain, no retry; native entitlement/effects/custody/host/durable recovery, spend/production authority and independent reviews remain unresolved."
     },
     {
       "id": "listSnapshots",

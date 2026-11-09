@@ -5383,6 +5383,111 @@ test('project rename: maximal copied target and labels fit common budgets', asyn
   safeEnvelope(f, result);
 });
 
+import { snapshotCreateFixture, snapshotCreateArgs, snapshotCreateScope, snapshotCreateReceipt } from './helpers.mjs';
+function snapshotCreateBroker(value = null, overrides = {}, config = snapshotCreateScope) {
+  const provider = snapshotCreateFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId, name: config.name,
+    timestamp: config.timestamp, expires_at: config.expiresAt };
+  const common = providerFixture(overrides);
+  common.vector.policy.resources = [provider.operation('createSnapshot').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.createSnapshot', args, context, key);
+  } };
+}
+
+test('snapshot create: agent AND exact create grant precede credentials; closed acknowledgement only', async () => {
+  const target = 'neon/projects/project-a/branches/br-a/snapshots/backup-a';
+  for (const resource of ['neon/projects/project-a', 'neon/projects/project-a/branches/br-a/snapshots', target,
+    target + '/delete', target.replace('br-a', 'br-b') + '/create', target.replace('backup-a', 'other') + '/create']) {
+    const f = snapshotCreateBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = snapshotCreateBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.common.calls.secret, 0);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = snapshotCreateBroker({ ...snapshotCreateReceipt, snapshot: { ...snapshotCreateReceipt.snapshot, lsn: credentialCanary, full_size: derivedCanary } });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { id: 'snap-new', acknowledged: true,
+    operations: snapshotCreateReceipt.operations.map(({ id, status }) => ({ id, status })) });
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('snapshot create: identity/resource TOCTOU and capture/expiry/body overrides refuse before transport', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = snapshotCreateBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = snapshotCreateBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.createSnapshot', snapshotCreateArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ name: 'other' }, { timestamp: '2026-11-08T13:00:00Z' }, { expires_at: null }, { approved: true },
+    { project_id: 'other' }, { branch_id: 'br-b' }, { retry: true }, { lsn: '0/1' }, { body: {} }]) {
+    const g = snapshotCreateBroker();
+    assert.equal((await g.common.broker().call('neon.createSnapshot', { ...snapshotCreateArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+    assert.equal(g.provider.requests.length, 0);
+  }
+});
+
+test('snapshot create: permanent journal blocks complete/uncertain replay after restart without retrying POST', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = snapshotCreateBroker((url, init, n) => {
+      if (init.method === 'POST') {
+        if (ambiguous) throw Error(credentialCanary);
+        return response(snapshotCreateReceipt);
+      }
+      return response(url.endsWith('/snapshots') ? { snapshots: n === 2 ? [] : [snapshotCreateReceipt.snapshot] } :
+        { branch: { id: 'br-a', project_id: 'project-a' } });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const count = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, count);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'POST').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('snapshot create: existing names never mutate; reflected receipt remains uncertain and redacted', async () => {
+  const f = snapshotCreateBroker(url => response(url.endsWith('/snapshots') ? { snapshots: [snapshotCreateReceipt.snapshot] } :
+    { branch: { id: 'br-a', project_id: 'project-a' } }));
+  assert.equal((await f.call()).ok, false);
+  assert.equal(f.provider.requests.length, 2);
+  for (const snapshot of [{ ...snapshotCreateReceipt.snapshot, name: credentialCanary }, { ...snapshotCreateReceipt.snapshot, id: credentialCanary }]) {
+    const g = snapshotCreateBroker({ ...snapshotCreateReceipt, snapshot });
+    const result = await g.call();
+    assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...g.common.journal.values()][0].outcome, 'uncertain');
+    safeEnvelope(g, result);
+  }
+});
+
+test('snapshot create: maximal copied target fits actual common budgets', async () => {
+  const config = { ...snapshotCreateScope, projectId: 'p'.repeat(60), branchId: 'br-' + 'b'.repeat(57), name: 'n'.repeat(80), revision: 'r'.repeat(80) };
+  const f = snapshotCreateBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { id: 'snap-new', acknowledged: true, operations: [] });
+  safeEnvelope(f, result);
+});
+
 import { databaseCreateFixture, databaseCreateArgs, databaseCreateScope, databaseCreateReceipt } from './helpers.mjs';
 function databaseCreateBroker(value = null, overrides = {}, config = databaseCreateScope) {
   const provider = databaseCreateFixture(value, config);

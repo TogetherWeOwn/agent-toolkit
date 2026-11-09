@@ -11,6 +11,7 @@ import { authDomainDeleteOrigin, authDomainDeleteProvider } from "./auth-domain-
 import { providerId } from "./oauth-providers.js";
 import { databaseUpdateName } from "./database-update.js";
 import { functionLabel } from "./function-update.js";
+import { snapshotCreateTime } from "./snapshot-create.js";
 
 export const NEON_ORIGIN = "https://console.neon.tech";
 export const RESPONSE_BYTES = 65_536;
@@ -22,6 +23,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  createSnapshot(project: string, branch: string, name: string, timestamp: string, expiresAt: string, options: MetadataRequestOptions): Promise<unknown>;
   createProjectBranchDatabase(project: string, branch: string, database: string, owner: string, options: MetadataRequestOptions): Promise<unknown>;
   setProjectMemberRole(project: string, member: string, options: MetadataRequestOptions): Promise<unknown>;
   updateOrganizationMember(organization: string, member: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -284,6 +286,14 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    createSnapshot: (project: string, branch: string, name: string, timestamp: string, expiresAt: string, options: MetadataRequestOptions) => {
+      const capture = snapshotCreateTime.parse(timestamp);
+      const expiry = snapshotCreateTime.parse(expiresAt);
+      if (expiry <= capture) throw Error("INVALID_ARGUMENTS");
+      return request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/snapshot`,
+        new URLSearchParams({ name: snapshotLabel.parse(name), timestamp: capture, expires_at: expiry }), options,
+        undefined, false, false, false, true);
+    },
     setProjectMemberRole: (project: string, member: string, options: MetadataRequestOptions) => {
       if (typeof member !== "string" || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(member) || /[^a-f0-9-]/.test(member)) throw Error("INVALID_ARGUMENTS");
       return request(`/projects/${authPathId(project)}/members/${member}/role`, new URLSearchParams(), options,

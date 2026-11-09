@@ -1,5 +1,22 @@
 # Source-slice threat model
 
+## Explicit-time snapshot creation delta
+
+`createSnapshot` binds one copied project/branch/name/capture/expiry/revision and
+requires a distinct snapshot/create grant and exact plan. Branch identity and
+bounded project-wide name-absence preflights validate before one bodyless POST.
+Only explicit canonical UTC-second timestamp and expiry are sent; LSN/default-time,
+caller body and unbounded-retention overrides refuse. Exact200 identity/source/name/
+time/expiry echoes acknowledge only; optional echo omission stays uncertain.
+Operation observations are not completion or recoverability proof. Expiry means
+eligible for deletion, not enforced teardown. Names are not unique immutable IDs;
+preflight is not atomic CAS and external races remain. Ambiguity gets one bounded
+list observation without promotion to success, no retry; common permanent journal
+blocks same-request replay, not external writers. Arbitrary size/LSN/billing data
+never evaluate/project. Native effects/entitlement, secret custody/host/durable
+recovery, independent review and production/spend authority remain unresolved.
+Source/mocks only, no live snapshot or runtime registration.
+
 ## Project-member pagination compatibility repair
 
 The member read and both explicit-role mutation preflights consume the same

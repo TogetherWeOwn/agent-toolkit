@@ -7,6 +7,23 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonSnapshotCreateOperations` supplies `createSnapshot` source for one copied
+project/source branch/name/explicit UTC-second capture and expiry/revision. Dedicated
+snapshot/create grant and exact plan precede credentials. Mandatory branch identity
+and bounded complete project snapshot-list name-absence preflights precede one
+bodyless POST with only name/timestamp/expires_at query parameters. LSN, default
+current time and unbounded retention are unsupported. Exact HTTP200 ID/source/name/
+capture/expiry echo and bounded operation observations acknowledge only, not completed
+creation, persistence or recoverability. Optional source/time/expiry echoes are
+required by this narrow source; omission stays uncertain. Expiry is eligibility for
+deletion, not guaranteed teardown. Names are not unique immutable identities;
+absence preflight is not atomic CAS. Ambiguity gets one bounded list observation and
+stays uncertain on presence/absence, never retried; permanent common journal blocks
+same-request replay, not external writers. Size/LSN/billing metadata never evaluate
+or project. Source/mocks only; no live snapshot, spend or runtime registration.
+Native custody/host/durable recovery, effects/entitlement and independent reviews
+remain gates.
+
 Project-member collection reads, explicit-role removal preflight and viewer-update
 preflight accept the documented optional `CursorPagination.sort_by` and `sort_order`
 metadata on terminal and continuing pages. Sort names are bounded printable tokens;
@@ -2067,8 +2084,8 @@ creation, spend authority or runtime qualification.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 123 implemented
-source adapters, 71 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 124 implemented
+source adapters, 70 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable
