@@ -35,6 +35,7 @@ import { zoneListDescriptor } from "../dist/plugins/cloudflare-broker/src/zone-l
 import { zoneHoldDescriptor } from "../dist/plugins/cloudflare-broker/src/zone-hold.js";
 import { regionalCacheDescriptor } from "../dist/plugins/cloudflare-broker/src/regional-cache.js";
 import { cacheSettingsDescriptors } from "../dist/plugins/cloudflare-broker/src/cache-settings.js";
+import { argoSettingsDescriptors } from "../dist/plugins/cloudflare-broker/src/argo-settings.js";
 import { zonePlanDescriptors } from "../dist/plugins/cloudflare-broker/src/zone-plans.js";
 import { dnsSettingsDescriptor } from "../dist/plugins/cloudflare-broker/src/dns-settings.js";
 import { accountDnsDescriptor } from "../dist/plugins/cloudflare-broker/src/account-dns.js";
@@ -140,6 +141,7 @@ const allDescriptors = { ...metadataOnly, ...deletionDescriptors, contentDescrip
   zoneHold: zoneHoldDescriptor({ accountId: account, zoneId: zone, revision: "policy-1" }),
   regionalCache: regionalCacheDescriptor({ accountId: account, zoneId: zone, revision: "policy-1" }),
   ...cacheSettingsDescriptors({ accountId: account, zoneId: zone, revision: "policy-1" }),
+  ...argoSettingsDescriptors({ accountId: account, zoneId: zone, revision: "policy-1" }),
   ...zonePlanDescriptors({ accountId: account, zoneId: zone, revision: "policy-1" }),
   dnsSettings: dnsSettingsDescriptor({ accountId: account, zoneId: zone, revision: "policy-1" }),
   accountDns: accountDnsDescriptor({ accountId: account, revision: "policy-1" }),
