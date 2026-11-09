@@ -6,6 +6,7 @@ import { workerScheduleDescriptor, type WorkerScheduleScope } from "./worker-sch
 import { loadBalancingDescriptors, type LoadBalancingScope } from "./load-balancing.js";
 import { zoneLoadBalancerDescriptors, type ZoneLoadBalancerScope } from "./zone-load-balancers.js";
 import { healthCheckDescriptors, type HealthCheckScope } from "./health-checks.js";
+import { rulesetDescriptors, type RulesetScope } from "./rulesets.js";
 import { scriptSettingsDescriptors, type ScriptSettingsScope } from "./script-settings.js";
 import { environmentSettingsDescriptor, type EnvironmentSettingsScope } from "./environment-settings.js";
 import { dispatchSettingsDescriptor, type DispatchSettingsScope } from "./dispatch-settings.js";
@@ -107,6 +108,8 @@ export interface CloudflareReadScope extends MetadataScope {
   accountDnsReadAllowed?: AccountDnsScope["readAllowed"];
   subscriptions?: SubscriptionScope["subscriptions"];
   workerSchedules?: WorkerScheduleScope["workers"];
+  accountRulesetListIds?: RulesetScope["accountListIds"];
+  accountRulesetIds?: RulesetScope["accountRulesetIds"];
   loadBalancingPoolListIds?: LoadBalancingScope["poolListIds"];
   loadBalancingPoolIds?: LoadBalancingScope["poolIds"];
   loadBalancingMonitorListIds?: LoadBalancingScope["monitorListIds"];
@@ -170,6 +173,8 @@ export interface CloudflareReadScope extends MetadataScope {
     availablePlanIds?: ZonePlanScope["planIds"];
     loadBalancerListIds?: ZoneLoadBalancerScope["listIds"];
     loadBalancerIds?: ZoneLoadBalancerScope["balancerIds"];
+    rulesetListIds?: RulesetScope["zoneListIds"];
+    rulesetIds?: RulesetScope["zoneRulesetIds"];
     healthCheckListIds?: HealthCheckScope["listIds"];
     healthCheckIds?: HealthCheckScope["healthcheckIds"];
     dnsSettingsReadAllowed?: DnsSettingsScope["readAllowed"];
@@ -193,6 +198,10 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
   }
   const { accountId, revision } = scope;
   const subscriptions = subscriptionDescriptors({ accountId, revision, subscriptions: scope.subscriptions ?? [] });
+  const rulesets = rulesetDescriptors({ accountId, revision,
+    accountListIds: scope.accountRulesetListIds ?? [], accountRulesetIds: scope.accountRulesetIds ?? [],
+    ...(scope.zone === undefined ? {} : { zoneId: scope.zone.zoneId,
+      zoneListIds: scope.zone.rulesetListIds ?? [], zoneRulesetIds: scope.zone.rulesetIds ?? [] }) });
   const loadBalancing = loadBalancingDescriptors({ accountId, revision,
     poolListIds: scope.loadBalancingPoolListIds ?? [], poolIds: scope.loadBalancingPoolIds ?? [],
     monitorListIds: scope.loadBalancingMonitorListIds ?? [], monitorIds: scope.loadBalancingMonitorIds ?? [] });
@@ -256,6 +265,8 @@ export function cloudflareReadOperations(scope: CloudflareReadScope, sourceScope
     metadata(accountListDescriptor({ accountId, revision, readAllowed: scope.accountListReadAllowed ?? false })),
     metadata(accountDnsDescriptor({ accountId, revision, readAllowed: scope.accountDnsReadAllowed ?? false })),
     metadata(subscriptions.subscriptionsList), metadata(subscriptions.subscriptionGet),
+    metadata(rulesets.accountList), metadata(rulesets.accountGet),
+    ...(rulesets.zoneList === undefined || rulesets.zoneGet === undefined ? [] : [metadata(rulesets.zoneList), metadata(rulesets.zoneGet)]),
     metadata(loadBalancing.poolsList), metadata(loadBalancing.poolGet),
     metadata(loadBalancing.monitorsList), metadata(loadBalancing.monitorGet),
     metadata(workerScheduleDescriptor({ accountId, revision, workers: scope.workerSchedules ?? [] })),

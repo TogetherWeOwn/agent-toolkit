@@ -12,6 +12,7 @@ import { workerScheduleDescriptor } from "../dist/plugins/cloudflare-broker/src/
 import { loadBalancingDescriptors } from "../dist/plugins/cloudflare-broker/src/load-balancing.js";
 import { zoneLoadBalancerDescriptors } from "../dist/plugins/cloudflare-broker/src/zone-load-balancers.js";
 import { healthCheckDescriptors } from "../dist/plugins/cloudflare-broker/src/health-checks.js";
+import { rulesetDescriptors } from "../dist/plugins/cloudflare-broker/src/rulesets.js";
 import { scriptSettingsDescriptors } from "../dist/plugins/cloudflare-broker/src/script-settings.js";
 import { environmentSettingsDescriptor } from "../dist/plugins/cloudflare-broker/src/environment-settings.js";
 import { dispatchSettingsDescriptor } from "../dist/plugins/cloudflare-broker/src/dispatch-settings.js";
@@ -113,7 +114,10 @@ const accessDescriptors = accessApplicationMetadataDescriptors({ accountId: acco
 const accessPolicyDescriptors = accessPolicyMetadataDescriptors({ accountId: account, revision: "policy-1", applications: [{ applicationId: db, policyIds: [otherDb] }] });
 const metadataOnly = { ...descriptors, ...zoneDescriptors, ...routeDescriptors, ...accessDescriptors, ...accessPolicyDescriptors, ...secretsStoreDescriptors, ...durableDescriptors, ...pagesDescriptors };
 const contentDescriptor = currentContentDescriptor({ accountId: account, revision: "source-policy-1", sourceDigestScriptNames: ["safe-worker"] });
+const rulesets = rulesetDescriptors({ accountId: account, zoneId: zone, revision: "policy-1" });
 const allDescriptors = { ...metadataOnly, ...deletionDescriptors, contentDescriptor,
+  rulesetsAccountList: rulesets.accountList, rulesetsAccountGet: rulesets.accountGet,
+  rulesetsZoneList: rulesets.zoneList, rulesetsZoneGet: rulesets.zoneGet,
   ...subscriptionDescriptors({ accountId: account, revision: "policy-1" }),
   workerSchedules: workerScheduleDescriptor({ accountId: account, revision: "policy-1" }),
   ...loadBalancingDescriptors({ accountId: account, revision: "policy-1" }),
