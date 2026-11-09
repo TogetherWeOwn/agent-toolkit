@@ -524,6 +524,128 @@ test('OAuth provider delete: maximum identity selection fits actual common prepa
   safeEnvelope(f, result);
 });
 
+import { organizationVPCDeleteFixture, organizationVPCDeleteScope, organizationVPCDeleteArgs, organizationVPCDeleteMetadata } from './helpers.mjs';
+function organizationVPCDeleteBroker(value = null, overrides = {}, config = organizationVPCDeleteScope) {
+  const provider = organizationVPCDeleteFixture(value, config);
+  const args = { org_id: config.organizationId, region_id: config.regionId, vpc_endpoint_id: config.vpcEndpointId };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('deleteOrganizationVPCEndpoint').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.deleteOrganizationVPCEndpoint', args, context, key);
+  } };
+}
+
+test('Organization VPC delete: reserved exact-plan authority and exact restriction AND agent grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = organizationVPCDeleteBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = 'neon/organizations/org-a/vpc/region/aws-us-east-1/vpc_endpoints/vpce-a/delete';
+  for (const resource of [target.replace('/delete', ''), target.replace('vpce-a', 'other'), target.replace('org-a', 'other'), target.replace('aws-us-east-1', 'aws-other'),
+    target.replace('/delete', '/assign'), 'neon/organizations/org-a/vpc/region/aws-us-east-1/vpc_endpoints', 'neon/projects/project-a/vpc_endpoints/vpce-a/remove']) {
+    const f = organizationVPCDeleteBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = organizationVPCDeleteBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = organizationVPCDeleteBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { acknowledged: true });
+  assert.equal(f.common.calls.consumed, 1);
+  safeEnvelope(f, result);
+});
+
+test('Organization VPC delete: stale, wrong-target and unconsumable native evidence are isolated negative controls', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = organizationVPCDeleteBroker();
+    const base = f.common.authority;
+    let consumeCalls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.deleteOrganizationVPCEndpoint', organizationVPCDeleteArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Organization VPC delete: host identity/resource TOCTOU and authority/target overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = organizationVPCDeleteBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = organizationVPCDeleteBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.call()).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { org_id: 'other' }, { vpc_endpoint_id: 'other' }, { project_id: 'project-a' }, { region_id: 'azure-eastus' }, { retry: true }]) {
+    const g = organizationVPCDeleteBroker();
+    assert.equal((await g.common.broker().call('neon.deleteOrganizationVPCEndpoint', { ...organizationVPCDeleteArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('Organization VPC delete: complete/uncertain permanent journal blocks restart replay without enforcement proof', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = organizationVPCDeleteBroker((url, init, n) => {
+      if (init.method === 'DELETE') { if (ambiguous) throw Error(credentialCanary); return new Response(null, { status: 200 }); }
+      return response(n > 2 ? {} : organizationVPCDeleteMetadata);
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Organization VPC delete: foreign/absent restrictions and reflected lease strings cannot enter safe envelopes', async () => {
+  for (const raw of [{ ...organizationVPCDeleteMetadata, org_id: 'other' }, { ...organizationVPCDeleteMetadata, pagination: {} },
+    {}, { vpc_endpoint_id: credentialCanary },
+    { vpc_endpoint_id: 'vpce-a', region_id: credentialCanary }] {
+    const f = organizationVPCDeleteBroker(() => response(raw));
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 0);
+    safeEnvelope(f, result);
+  }
+  const f = organizationVPCDeleteBroker((url, init) => response(init.method === 'DELETE' ? { error: credentialCanary } : organizationVPCDeleteMetadata));
+  const result = await f.call();
+  assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+  safeEnvelope(f, result);
+});
+
+test('Organization VPC delete: maximum identity selection fits actual common prepared budgets', async () => {
+  const config = { ...organizationVPCDeleteScope, organizationId: 'o'.repeat(60), regionId: 'aws-' + 'r'.repeat(76), vpcEndpointId: 'v'.repeat(63), revision: 'r'.repeat(80) };
+  const f = organizationVPCDeleteBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
 import { projectVPCRemoveFixture, projectVPCRemoveScope, projectVPCRemoveArgs, projectVPCRemoveMetadata } from './helpers.mjs';
 function projectVPCRemoveBroker(value = null, overrides = {}, config = projectVPCRemoveScope) {
   const provider = projectVPCRemoveFixture(value, config);

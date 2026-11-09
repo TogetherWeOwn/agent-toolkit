@@ -3313,20 +3313,24 @@
       "id": "deleteOrganizationVPCEndpoint",
       "apiArea": "organizations",
       "tool": "neon.deleteOrganizationVPCEndpoint",
-      "scope": "org_id/region_id/vpc_endpoint_id",
+      "scope": "org_id/region_id/vpc_endpoint_id/delete",
       "sideEffects": [
+        "irreversible-organization-vpc-endpoint-removal-request",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/organization-vpc-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only. Exact AWS organization endpoint/detail preflight then one DELETE; empty200 acknowledgement only. Provider states endpoint cannot be added back. Azure unsupported. Preflight not atomic CAS; ambiguity remains uncertain/no retry. Native host/authority/custody, durable recovery, entitlement/effects and independent review remain unresolved; no live removal or cloud-deletion/network/session/fencing proof."
     },
     {
       "id": "getActiveRegions",

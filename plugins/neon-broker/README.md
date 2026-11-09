@@ -7,6 +7,25 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonOrganizationVPCDeleteOperations` adds reserved
+`deleteOrganizationVPCEndpoint` source for one copied organization/AWS-region/cloud
+endpoint ID/revision. Dedicated
+`neon/organizations/<org>/vpc/region/<region>/vpc_endpoints/<endpoint>/delete`
+permission and native exact-plan authority precede credentials. Mandatory exact-ID
+detail preflight then one bodyless DELETE; only documented empty200 yields closed
+`{acknowledged: true}`. The provider states a removed endpoint cannot be added back
+to the organization. This irreversible organization-association removal is not
+cloud-resource deletion, independently verified network enforcement, session
+closure or fencing. Azure is explicitly unsupported and refuses before transport.
+
+Labels, sensitive state and restricted-project counts/examples are never evaluated
+or emitted; no project enumeration or completeness claim. Preflight is not atomic
+CAS and reconfiguration races remain unresolved. Ambiguity gets one bounded detail
+observation and stays uncertain even on absence; no retry. Permanent common journal
+blocks same-request replay, not external writers. Composed resource IDs must fit256
+characters; ordinary fixed transport bounds remain. Source/mocks only: no live
+removal, runtime registration or substitute for actual native/owner authority.
+
 `createNeonProjectVPCRemoveOperations` adds reserved `deleteProjectVPCEndpoint`
 source for one copied exact project/cloud endpoint ID/revision. Dedicated
 `neon/projects/<project>/vpc_endpoints/<endpoint>/remove` permission and native
@@ -1759,8 +1778,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 107 implemented
-source adapters, 87 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 108 implemented
+source adapters, 86 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

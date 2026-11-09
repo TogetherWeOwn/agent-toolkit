@@ -1,5 +1,28 @@
 # Source-slice threat model
 
+## Reserved organization VPC endpoint removal delta
+
+`deleteOrganizationVPCEndpoint` copies one exact organization/AWS region/cloud
+endpoint ID/revision. Dedicated endpoint/delete grant and reserved native exact-plan
+authority precede credentials; project restriction/remove, collection, sibling
+region/organization and read permissions do not substitute. Exact-ID detail preflight
+then one bodyless DELETE targets only that organization/region endpoint path. Azure
+refuses before transport because the pinned schema explicitly excludes it.
+
+Provider documentation states the removed endpoint cannot be added back to the
+organization. This irreversible association-removal effect is explicit in the plan,
+not a cloud-resource-deletion or network/session/fencing guarantee. Empty200 is only
+an acknowledgement. Sensitive state, labels and restricted-project counts/examples
+are never consumed; no project enumeration or complete dependency analysis is claimed.
+Preflight is not atomic CAS and cannot fence external reconfiguration. One detail
+observation after ambiguity never establishes causal success, even on absence; no
+mutation retry. Common permanent journal blocks same-request replay/restart only.
+Strict inputs, composed resource limits, transport deadlines/cancellation/redirect
+controls, closed projection and isolated native target/expiry/consume negatives are
+covered by source/common contracts. Native custody/authority/durable recovery,
+entitlement/effects and independent review remain unresolved. Source/mocks only;
+no live removal, production action or security-authority substitution is provided.
+
 ## Reserved legacy OAuth-provider deletion delta
 
 `deleteNeonAuthOauthProvider` shares the branch implementation's strict known
