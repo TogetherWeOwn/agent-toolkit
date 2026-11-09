@@ -10,13 +10,13 @@
     "openapi": "3.0.3",
     "version": "4.0.0"
   },
-  "inventorySha256": "40aa41fd3e93895b38aacb4cad47f6c86245bab658b003b51ab52a7c325f60b9",
+  "inventorySha256": "cd4ebad2c73b039de8d7cbff7b2ecde8fb1adadd300636b847b2a00511efe0e4",
   "counts": {
     "paths": 2352,
     "operations": 3777,
     "apiTags": 599,
-    "descriptors": 130,
-    "metadataDescriptors": 124,
+    "descriptors": 132,
+    "metadataDescriptors": 126,
     "contentDescriptors": 1,
     "planDescriptors": 5,
     "implementedTools": 0,
