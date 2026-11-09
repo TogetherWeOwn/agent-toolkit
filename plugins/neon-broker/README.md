@@ -7,6 +7,22 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonRealtimeDisableOperations` adds reserved `disableProjectBranchRealtime`
+source for one copied exact project/branch/expected positive int32 deployment revision.
+Dedicated `neon/projects/<project>/branches/<branch>/realtime/disable` permission and
+native exact-plan authorization precede credentials. Mandatory enabled=true,
+pending=false, exact-revision preflight then one bodyless DELETE targets the fixed
+branch path. Only documented empty202 returns closed `{accepted: true}`: asynchronous
+deprovisioning acceptance, never completion. Provider documents shared-secret discard;
+this source does not read the secret or independently verify discard, token/session
+revocation, invocation refusal or fencing. Invocation URLs/origins/extras are not consumed.
+
+Revision is not immutable identity; preflight is not atomic CAS and replacement races
+remain unresolved. Ambiguity gets one bounded state observation and stays uncertain
+even on disabled/absent state; no retry, permanent common journal blocks replay/restart,
+not external writers. Provisioning/pending or missing-revision deployments refuse.
+Source/mocks only; Beta availability/effects and runtime qualification remain unknown.
+
 `createNeonDataAPIDeleteOperations` adds reserved `deleteProjectBranchDataAPI`
 source for one copied exact project/branch/database/revision and expected bounded
 status. Dedicated database-specific Data API/delete permission and native exact-plan
@@ -1727,8 +1743,8 @@ There is no test-time network fallback if the fixture is missing.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 105 implemented
-source adapters, 89 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 106 implemented
+source adapters, 88 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

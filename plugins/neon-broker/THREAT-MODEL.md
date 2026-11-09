@@ -1292,6 +1292,26 @@ response status/body bounds, abort/deadlines and common native identity/authorit
 TOCTOU, replay and safe envelopes. Source/mocks only; native host/custody, durable
 recovery, effects/entitlement and independent reviews remain unresolved.
 
+## Reserved Realtime disable delta
+
+`disableProjectBranchRealtime` copies exact project/branch/expected deployment revision
+and requires a dedicated disable grant plus reserved native exact-plan authorization.
+Mandatory enabled/not-pending/exact-revision GET precedes one bodyless DELETE. Fixed
+empty202 transport normalizes acknowledgement, projected as asynchronous acceptance
+only. Existing empty200 deletion callers retain their exact status requirement.
+Invocation URL, allowed origins and secret-like extras are never consumed. No secret
+read/rotation, start, provisioning or live call is introduced.
+
+Provider deprovisioning is asynchronous and discards the shared secret; no independent
+completion, secret discard, issued-token/session revocation or connection-fence proof
+is supplied. Deployment revision is not immutable identity; preflight not atomic CAS,
+replacement races unresolved. Pending/disabled/missing-revision targets refuse before
+mutation. Ambiguity gets one bounded state observation and stays uncertain even on
+disabled/absent/replaced state. No retry; permanent common journal blocks same-request
+restart/replay, not external writers. Source/mocks and negative native-authority,
+TOCTOU, bounds/deadline, ignored-field and safe-envelope contracts are not runtime
+qualification. Native effects/entitlement, custody/host and independent reviews remain.
+
 ## Reserved database Data API deletion delta
 
 `deleteProjectBranchDataAPI` copies exact project/branch/database/revision/expected

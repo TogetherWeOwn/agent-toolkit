@@ -20,6 +20,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  disableProjectBranchRealtime(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchDataAPI(project: string, branch: string, database: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteNeonAuthOauthProvider(project: string, provider: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteBranchNeonAuthOauthProvider(project: string, branch: string, provider: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -166,7 +167,7 @@ function cursorQuery(cursor: string | null): URLSearchParams {
 // Construction is a source/test seam, not an installed or enabled runtime tool.
 export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadataTransport {
   const get = (path: string, query: URLSearchParams, options: MetadataRequestOptions) => request(path, query, options);
-  async function request(path: string, query: URLSearchParams, options: MetadataRequestOptions, body?: string, binary = false, deleteStatus: 200 | 202 | 204 | false = false, patch = false, suspend = false, emptyDelete200 = false): Promise<unknown> {
+  async function request(path: string, query: URLSearchParams, options: MetadataRequestOptions, body?: string, binary = false, deleteStatus: 200 | 202 | 204 | false = false, patch = false, suspend = false, emptyDelete = false): Promise<unknown> {
     if (/[\r\n]/.test(options.credential)) throw Error("UPSTREAM_UNAVAILABLE");
     const expiresAt = performance.now() + REQUEST_TIMEOUT_MS;
     const controller = new AbortController();
@@ -202,9 +203,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
         // Normalize this endpoint's documented empty acknowledgement, not an identity echo.
         return { acknowledged: true };
       }
-      if (emptyDelete200) {
+      if (emptyDelete) {
         const length = response.headers.get("content-length");
-        if (expired() || response.status !== 200 || response.redirected || (length !== null && length !== "0") ||
+        if (expired() || response.status !== deleteStatus || response.redirected || (length !== null && length !== "0") ||
           ![null, "identity"].includes(response.headers.get("content-encoding"))) {
           void response.body?.cancel().catch(() => {});
           throw Error("UPSTREAM_UNAVAILABLE");
@@ -264,6 +265,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    disableProjectBranchRealtime: (project: string, branch: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/realtime`, new URLSearchParams(), options,
+        undefined, false, 202, false, false, true),
     deleteProjectBranchDataAPI: (project: string, branch: string, database: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/data-api/${catalogName(database)}`,
         new URLSearchParams(), options, undefined, false, 200),

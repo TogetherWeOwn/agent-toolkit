@@ -2549,20 +2549,25 @@
       "id": "disableProjectBranchRealtime",
       "apiArea": "realtime",
       "tool": "neon.disableProjectBranchRealtime",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/realtime/disable",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "asynchronous-deprovisioning",
+        "shared-secret-discard-request"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/realtime-disable.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only; exact dedicated disable grant and reserved native exact-plan authorization. Enabled/not-pending/exact-revision preflight then one DELETE; empty202 is asynchronous acceptance only, not deprovisioning completion, independently verified secret discard, token/session revocation or fencing. Revision not immutable identity; preflight not atomic CAS. Ambiguity stays uncertain after one observation, no retry; permanent common journal blocks replay. Native host/authority/durable recovery/custody, entitlement/effects and independent reviews unresolved; no live disable or runtime registration."
     },
     {
       "id": "getProjectBranchRealtimeSecret",
