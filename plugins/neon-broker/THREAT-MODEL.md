@@ -1,5 +1,29 @@
 # Source-slice threat model
 
+## Reserved OAuth authorization-server plugin disable delta
+
+`updateNeonAuthOAuthProviderPlugin` is disable-only: copied exact project/branch/revision,
+dedicated oauth-provider/disable permission and reserved native exact-plan authority.
+Read, branch-wide, phone-plugin, sibling-target or enable permissions do not substitute.
+Mandatory fixed-path GET requires enabled=true before exactly one PATCH sends false.
+Enabling and login/consent-page, resource-list and MCP replacement are unsupported;
+all caller body overrides refuse before credentials. Omitted configuration is retained
+by the provider contract; unused response fields are never evaluated/emitted, including
+URLs and resource/MCP objects. Consumed ancestry/pagination is validated. Exact false200
+echo yields closed acknowledgement, not independently observed authorization-server
+refusal, issued-token/session revocation, client deletion or connection fencing.
+
+Boolean status is not immutable identity; preflight is not atomic CAS and external
+reconfiguration races remain unresolved. One post-ambiguity observation cannot prove
+causal completion even on false or absence. No retry; permanent common journal blocks
+same-request replay/restart, not external writers. Source/common regressions isolate
+target/expiry/consume authority negatives, exact policy and identity/resource TOCTOU,
+tampered plans, configuration-override refusal, status drift, response/cancellation/
+deadline bounds, reflection and actual common budgets. Conservative write-to-reserved
+classification adds authority, not a waiver. Native host/custody/authority/durable
+recovery, provider effects/Beta entitlement and independent reviews remain gates.
+Source/mocks only; no live mutation, OAuth flow, runtime registration or new authority.
+
 ## Reserved phone-number authentication plugin disable delta
 
 `updateNeonAuthPhoneNumberPlugin` is disable-only: copied exact project/branch/revision,

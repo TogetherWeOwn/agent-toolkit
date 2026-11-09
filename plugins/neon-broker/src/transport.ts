@@ -20,6 +20,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  updateNeonAuthOAuthProviderPlugin(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   updateNeonAuthPhoneNumberPlugin(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   updateNeonAuthAllowLocalhost(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteNeonAuthIntegration(project: string, provider: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -271,6 +272,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    updateNeonAuthOAuthProviderPlugin: (project: string, branch: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/plugins/oauth-provider`, new URLSearchParams(), options,
+        JSON.stringify({ enabled: false }), false, false, true),
     updateNeonAuthPhoneNumberPlugin: (project: string, branch: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/plugins/phone-number`, new URLSearchParams(), options,
         JSON.stringify({ enabled: false }), false, false, true),
