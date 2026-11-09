@@ -613,18 +613,22 @@
       "tool": "neon.revokePermissionFromProject",
       "scope": "project_id/permission_id",
       "sideEffects": [
+        "project-permission-revocation-request",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/permission-revoke.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Reserved project-permission revocation-request source only; bounded exact permission-ID preflight, one DELETE and closed acknowledgement do not prove independent effective-access removal, completeness, session fencing or cutover enforcement. Preflight is not atomic CAS. Native authority/host/policy/custody, durable common journal recovery, effects/entitlement and independent reviews unresolved."
     },
     {
       "id": "getAvailablePreloadLibraries",

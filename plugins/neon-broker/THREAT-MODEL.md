@@ -19,6 +19,25 @@ sandboxed. This source is trusted adapter code, not an adversarial-code sandbox.
 | Replay, stale policy, audit failure | Reused common fixture exercises refusal and revalidation. No local replacement authority/store. Production durable journal/audit/credential/recovery adapters absent. |
 | Candidate mistaken for authority | Type-only commit-pinned excerpt; candidate tested in isolated Actions checkout; no runtime worker, manifest or registration. Reviewed compatible core is still a qualification prerequisite. |
 
+## Reserved project-permission revocation source delta
+
+Exact copied project/permission ID/revision and a dedicated permission/revoke grant
+require reserved native exact-plan authority before credentials. A bounded 30-row
+project-permission-list preflight validates all IDs/duplicates/ancestry and requires
+the selected ID before one bodyless DELETE. The selected canonical identifier
+subset is narrower than the upstream opaque string; unrelated printable IDs are
+validated but never become targets. No email lookup or member-role fallback.
+
+HTTP200 exact ID echo yields closed acknowledgement only. Email and timestamps,
+including optional revoked_at, are never evaluated/emitted or used as enforcement
+proof. This is not independent effective-access removal, access completeness,
+session closure or cutover fencing. Preflight is not atomic CAS. Ambiguity gets at
+most one bounded list observation and remains uncertain even on absence or revoke
+timestamps. No mutation retry; permanent common journal barriers block restart/replay,
+not external writers. Native host/authority/custody/durable recovery, effects and
+entitlement qualification and independent reviews remain unresolved. Source/mocks
+only; no live revoke, grant, credential retrieval or enablement.
+
 ## Reserved branch-credential revocation source delta
 
 Exact copied project/branch/opaque ID/revision and a dedicated credential/revoke

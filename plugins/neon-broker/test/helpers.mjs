@@ -50,6 +50,7 @@ import { createNeonEndpointRestartOperations } from '../dist/plugins/neon-broker
 import { createNeonEndpointSuspendOperations } from '../dist/plugins/neon-broker/src/endpoint-suspend.js';
 import { createNeonEndpointDeleteOperations } from '../dist/plugins/neon-broker/src/endpoint-delete.js';
 import { createNeonDatabaseDeleteOperations } from '../dist/plugins/neon-broker/src/database-delete.js';
+import { createNeonPermissionRevokeOperations } from '../dist/plugins/neon-broker/src/permission-revoke.js';
 import { createNeonCredentialRevokeOperations } from '../dist/plugins/neon-broker/src/credential-revoke.js';
 import { createNeonOrganizationKeyRevokeOperations } from '../dist/plugins/neon-broker/src/organization-key-revoke.js';
 import { createNeonUserKeyRevokeOperations } from '../dist/plugins/neon-broker/src/user-key-revoke.js';
@@ -473,7 +474,15 @@ export function objectDownloadFixture(value, config = objectDownloadScope) {
   return fixture(typeof value === 'function' ? value : () => binaryResponse(value.bytes), config, createNeonObjectDownloadOperations);
 }
 export const allCases = [...objectDownloadCases, ...oauthProviderCases, ...logQueryCases, ...schemaComparisonCases, ...logValueCases, ...branchSchemaCases, ...advisorCases, ...userKeyCases, ...organizationKeyCases, ...credentialMetadataCases, ...authDetailsCases, ...maskingRuleCases, ...legacyConsumptionCases, ...branchConsumptionCases, ...consumptionCases, ...bucketObjectCases, ...logFieldCases, ...sharedProjectCases, ...userOrganizationCases, ...projectCases, ...authEmailCases, ...userProfileCases, ...authWebhookCases, ...projectCountCases, ...regionCases, ...dataAPICases, ...organizationInvitationCases, ...organizationMemberCases, ...organizationCases, ...organizationVPCCases, ...cases, ...catalogCases, ...capabilityCases, ...branchFeatureCases, ...authStatusCases, ...authDomainCases, ...authIntegrationCases, ...functionCases, ...triggerCases, ...authClientCases, ...branchResourceCases, ...projectSecurityCases, ...projectAccessCases];
-export const sourceNames = [...allCases.map(([name]) => name), 'deleteSnapshot', 'updateSnapshot', 'updateProjectBranch', 'updateProject', 'updateProjectEndpoint', 'suspendProjectEndpoint', 'deleteProjectEndpoint', 'startProjectEndpoint', 'restartProjectEndpoint', 'deleteProjectBranch', 'deleteProject', 'deleteProjectBranchDatabase', 'deleteProjectBranchRole', 'revokeApiKey', 'revokeOrgApiKey', 'revokeCredential'];
+export const sourceNames = [...allCases.map(([name]) => name), 'deleteSnapshot', 'updateSnapshot', 'updateProjectBranch', 'updateProject', 'updateProjectEndpoint', 'suspendProjectEndpoint', 'deleteProjectEndpoint', 'startProjectEndpoint', 'restartProjectEndpoint', 'deleteProjectBranch', 'deleteProject', 'deleteProjectBranchDatabase', 'deleteProjectBranchRole', 'revokeApiKey', 'revokeOrgApiKey', 'revokeCredential', 'revokePermissionFromProject'];
+export const permissionRevokeScope = { projectId: 'project-a', permissionId: 'permission-a', revision: 'scope-v1' };
+export const permissionRevokeArgs = { project_id: 'project-a', permission_id: 'permission-a' };
+export const permissionRevokeReceipt = { id: 'permission-a' };
+export function permissionRevokeFixture(value = permissionRevokeReceipt, config = permissionRevokeScope) {
+  return fixture((url, init, n) => typeof value === 'function' ? value(url, init, n) :
+    init.method === 'DELETE' ? response(value) : response({ project_permissions: [{ id: config.permissionId }] }),
+  config, createNeonPermissionRevokeOperations);
+}
 export const credentialRevokeScope = { projectId: 'project-a', branchId: 'br-a', tokenId: 'credential-id-fixture', revision: 'scope-v1' };
 export const credentialRevokeArgs = { project_id: 'project-a', branch_id: 'br-a', token_id: credentialRevokeScope.tokenId };
 export const credentialRevokeMetadata = { token_id: credentialRevokeScope.tokenId, branch_id: 'br-a', principal_type: 'user' };

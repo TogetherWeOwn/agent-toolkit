@@ -16,6 +16,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  revokePermissionFromProject(project: string, permission: string, options: MetadataRequestOptions): Promise<unknown>;
   revokeCredential(project: string, branch: string, token: string, options: MetadataRequestOptions): Promise<unknown>;
   revokeOrgApiKey(organization: string, key: number, options: MetadataRequestOptions): Promise<unknown>;
   revokeApiKey(key: number, options: MetadataRequestOptions): Promise<unknown>;
@@ -228,6 +229,8 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    revokePermissionFromProject: (project: string, permission: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/permissions/${identifier.parse(permission)}`, new URLSearchParams(), options, undefined, false, 200),
     revokeCredential: (project: string, branch: string, token: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/credentials/${identifier.parse(token)}`,
         new URLSearchParams(), options, undefined, false, 204),
