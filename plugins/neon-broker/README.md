@@ -7,6 +7,23 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonAuthClientCreateOperations` supplies reserved `createNeonAuthOAuthClient`
+source for one copied project/branch/name/redirect-origin/resource-origin/revision.
+Public/no-secret clients only; singleton canonical HTTPS origins and fixed
+`skip_consent: false`. Dedicated creation grant/native exact-plan authority and
+complete bounded client-name absence preflight precede one fixed POST. Confidential
+clients, HTTP loopback, multiple URIs/resources and caller-body/consent overrides
+are unsupported. The provider validates configured resources and entitlement;
+creation broadens OAuth trust, not permission for a live security change. Exact201
+ID/configuration echo yields closed acknowledgement only, not independent
+persistence, access enforcement or readiness. Unexpected secret/diagnostic fields
+are never evaluated/emitted. Preflight is not atomic CAS; name/branch/configuration
+races remain unresolved. Ambiguity gets one bounded list observation then stays
+uncertain even on presence/absence; no retry, permanent common journal blocks
+same-request replay, not external writers. Three requests maximum/3.5s ceiling,
+fixed origin, redirects refused and per-request byte/deadline/cancellation bounds.
+Source/mocks only; no live creation, credential action or runtime registration.
+
 `createNeonBranchCreateOperations` supplies reserved `createProjectBranch` source
 for one copied exact project/parent/name/revision. Dedicated create grant/native
 exact-plan authority precede parent identity and complete bounded branch-name
@@ -2333,8 +2350,8 @@ entitlement, native host/custody/durable recovery and independent review remain 
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 138 implemented
-source adapters, 56 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 139 implemented
+source adapters, 55 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

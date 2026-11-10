@@ -17,6 +17,7 @@ import { snapshotScheduleHour, snapshotScheduleRetention } from "./snapshot-sche
 import { spendingLimitCents } from "./spending-limit-update.js";
 import { triggerCreateHour, triggerCreateMinute, triggerCreateName, triggerCreateSlug } from "./trigger-create.js";
 import { jwksAddLabel, jwksAddRole, jwksAddUrl } from "./jwks-add.js";
+import { authClientCreateName, authClientCreateOrigin } from "./auth-client-create.js";
 
 export const NEON_ORIGIN = "https://console.neon.tech";
 export const RESPONSE_BYTES = 65_536;
@@ -28,6 +29,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  createNeonAuthOAuthClient(project: string, branch: string, name: string, redirectOrigin: string, resourceOrigin: string, options: MetadataRequestOptions): Promise<unknown>;
   createProjectBranch(project: string, parent: string, name: string, options: MetadataRequestOptions): Promise<unknown>;
   createProjectEndpoint(project: string, branch: string, name: string, options: MetadataRequestOptions): Promise<unknown>;
   createProjectBranchTrigger(project: string, branch: string, slug: string, name: string, hour: number, minute: number, options: MetadataRequestOptions): Promise<unknown>;
@@ -360,6 +362,10 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     updateProjectBranchTrigger: (project: string, branch: string, trigger: string, type: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/triggers/${identifier.parse(trigger)}`, new URLSearchParams(), options,
         JSON.stringify({ type: oneOf(["schedule", "storage_object_created"] as const).parse(type), enabled: false }), false, false, true),
+    createNeonAuthOAuthClient: (project: string, branch: string, name: string, redirectOrigin: string, resourceOrigin: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/oauth-provider/clients`, new URLSearchParams(), options,
+        JSON.stringify({ name: authClientCreateName.parse(name), redirect_uris: [authClientCreateOrigin.parse(redirectOrigin)],
+          type: "public", resources: [authClientCreateOrigin.parse(resourceOrigin)], skip_consent: false }), false, false, false, false, false, 201),
     updateNeonAuthOAuthClient: (project: string, branch: string, client: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/oauth-provider/clients/${authClientId(client)}`, new URLSearchParams(), options,
         JSON.stringify({ disabled: true }), false, false, true),

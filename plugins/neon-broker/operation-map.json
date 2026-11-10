@@ -1838,20 +1838,24 @@
       "id": "createNeonAuthOAuthClient",
       "apiArea": "auth",
       "tool": "neon.createNeonAuthOAuthClient",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/client_name/redirect_origin/resource_origin",
       "sideEffects": [
+        "public-oauth-client-trust-creation-request",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-client-create.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Public/no-secret, singleton HTTPS-origin source/mocks only; fixed consent-required creation broadens OAuth trust. Dedicated exact grant/native plan authority, bounded name-absence preflight and acknowledgement only. Confidential and arbitrary configuration unsupported. Native Security/Crypto/QA, provider effects/entitlement/configured resource, custody and durable journal/runtime integration remain unresolved; no live creation, mint, binding or enablement."
     },
     {
       "id": "getNeonAuthOAuthClient",

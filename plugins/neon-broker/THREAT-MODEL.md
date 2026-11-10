@@ -1,5 +1,25 @@
 # Source-slice threat model
 
+## Public OAuth-client creation delta
+
+Copied exact project/branch/name/single redirect and protected-resource origins
+require a dedicated creation grant and reserved native exact-plan authority.
+Complete bounded client-name absence preflight precedes one fixed public-client,
+consent-required POST. Public clients have no secret by the pinned schema;
+confidential clients and arbitrary configuration are unsupported. Unexpected
+secret fields and unrelated metadata are never evaluated/emitted. Creation
+broadens OAuth trust; source coverage supplies no live security-change authority,
+domain custody, configured-resource verification, entitlement or non-waking proof.
+Exact201 ID/configuration echo acknowledges only, not independently verified
+persistence, authentication behavior or readiness. Preflight is not atomic CAS;
+name reuse and external branch/plugin/configuration races remain unresolved.
+Ambiguity stays uncertain after one bounded list observation even on desired
+presence or absence. No retry; permanent common journal prevents same-request
+replay, not external writers. Three-request worst case/3.5s operation ceiling
+retains fixed origin, redirect refusal and bounded bytes/deadlines/cancellation.
+Synthetic authority/journal tests do not qualify native durable recovery/custody.
+Source/mocks only; no live trust registration, mint, binding or enablement.
+
 ## Explicit-parent schema-only branch creation delta
 
 Copied exact project/parent/name/revision needs a dedicated creation grant and

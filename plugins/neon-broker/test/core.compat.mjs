@@ -2881,6 +2881,132 @@ test('Realtime disable: maximum identity selection fits actual common prepared b
   safeEnvelope(f, result);
 });
 
+import { authClientCreateFixture, authClientCreateArgs, authClientCreateScope, authClientCreateReceipt } from './helpers.mjs';
+function authClientCreateBroker(value = null, overrides = {}, config = authClientCreateScope) {
+  const provider = authClientCreateFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId, name: config.name,
+    redirect_origin: config.redirectOrigin, resource_origin: config.resourceOrigin };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('createNeonAuthOAuthClient').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.createNeonAuthOAuthClient', args, context, key);
+  } };
+}
+
+test('Public client create: reserved exact-plan authority and exact creation AND agent grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = authClientCreateBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = 'neon/projects/project-a/branches/br-a/auth/oauth-provider/clients/create/public_app';
+  for (const resource of [target.replace('/create/', '/'), target.replace('/create/', '/delete/'), target.replace('br-a', 'other'),
+    target.replace('project-a', 'other'), target.replace('public_app', 'other'), 'neon/projects/project-a/branches/br-a/auth/oauth-provider/clients']) {
+    const f = authClientCreateBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = authClientCreateBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.common.calls.secret, 0);
+  const f = authClientCreateBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { client_id: 'client-new', acknowledged: true });
+  assert.equal(f.common.calls.consumed, 1);
+  safeEnvelope(f, result);
+});
+
+test('Public client create: stale, wrong-target and unconsumable evidence isolate each native invariant', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = authClientCreateBroker();
+    const base = f.common.authority;
+    let consumeCalls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.createNeonAuthOAuthClient', authClientCreateArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Public client create: host identity/resource TOCTOU and trust-configuration overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = authClientCreateBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = authClientCreateBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.call()).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { project_id: 'other' }, { branch_id: 'other' }, { name: 'other' },
+    { redirect_origin: 'https://other.example.invalid' }, { resource_origin: 'https://other.example.invalid' },
+    { type: 'confidential' }, { skip_consent: true }, { client_secret: 'not-a-secret' }, { disabled: true }, { body: {} }]) {
+    const g = authClientCreateBroker();
+    assert.equal((await g.common.broker().call('neon.createNeonAuthOAuthClient', { ...authClientCreateArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('Public client create: complete and uncertain journal permanently blocks restart replay without enforcement proof', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = authClientCreateBroker((url, init, n) => {
+      if (init.method === 'POST') { if (ambiguous) throw Error(credentialCanary); return response(authClientCreateReceipt, { status: 201 }); }
+      return response({ clients: n === 1 ? [] : [authClientCreateReceipt] });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'POST').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Public client create: collisions, foreign or truncated bindings and reflected credentials cannot enter safe envelopes', async () => {
+  for (const raw of [{ clients: [{ ...authClientCreateReceipt, branch_id: 'other' }] },
+    { clients: [authClientCreateReceipt] }, { clients: [], pagination: {} }]) {
+    const f = authClientCreateBroker(() => response(raw));
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'POST').length, 0);
+    safeEnvelope(f, result);
+  }
+  const f = authClientCreateBroker((url, init) => init.method === 'POST' ? response({ ...authClientCreateReceipt,
+    client_id: credentialCanary, client_secret: credentialCanary }, { status: 201 }) : response({ clients: [] }));
+  const result = await f.call();
+  assert.equal(result.ok, false);
+  safeEnvelope(f, result);
+});
+
+test('Public client create: maximum identity and trust configuration fit actual common prepared budgets', async () => {
+  const config = { ...authClientCreateScope, projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), name: 'n'.repeat(60), revision: 'r'.repeat(80),
+    redirectOrigin: 'https://' + 'a'.repeat(60) + '.' + 'b'.repeat(59), resourceOrigin: 'https://' + 'c'.repeat(60) + '.' + 'd'.repeat(59) };
+  const f = authClientCreateBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
 import { branchCreateFixture, branchCreateArgs, branchCreateScope, branchCreateReceipt } from './helpers.mjs';
 function branchCreateBroker(value = null, overrides = {}, config = branchCreateScope) {
   const provider = branchCreateFixture(value, config);
