@@ -52,6 +52,7 @@ export interface NeonMetadataTransport {
   deleteNeonAuthOauthProvider(project: string, provider: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteBranchNeonAuthOauthProvider(project: string, branch: string, provider: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteNeonAuthDomainFromRedirectURIWhitelist(project: string, provider: string, domain: string, options: MetadataRequestOptions): Promise<unknown>;
+  addBranchNeonAuthTrustedDomain(project: string, branch: string, provider: string, domain: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteBranchNeonAuthTrustedDomain(project: string, branch: string, provider: string, domain: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchBucketObject(project: string, branch: string, bucket: string, key: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchCustomDomain(project: string, branch: string, domain: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -232,7 +233,7 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       }
       if (emptyDelete) {
         const length = response.headers.get("content-length");
-        if (expired() || response.status !== deleteStatus || response.redirected || (length !== null && length !== "0") ||
+        if (expired() || response.status !== (deleteStatus === false ? successStatus : deleteStatus) || response.redirected || (length !== null && length !== "0") ||
           ![null, "identity"].includes(response.headers.get("content-encoding"))) {
           void response.body?.cancel().catch(() => {});
           throw Error("UPSTREAM_UNAVAILABLE");
@@ -376,6 +377,10 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       request(`/projects/${authPathId(project)}/auth/domains`, new URLSearchParams(), options,
         JSON.stringify({ auth_provider: authDomainDeleteProvider.parse(provider), domains: [{ domain: authDomainDeleteOrigin.parse(domain) }] }),
         false, 200, false, false, true),
+    addBranchNeonAuthTrustedDomain: (project: string, branch: string, provider: string, domain: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/domains`, new URLSearchParams(), options,
+        JSON.stringify({ auth_provider: authDomainDeleteProvider.parse(provider), domain: authDomainDeleteOrigin.parse(domain) }),
+        false, false, false, false, true, 201),
     deleteBranchNeonAuthTrustedDomain: (project: string, branch: string, provider: string, domain: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/domains`, new URLSearchParams(), options,
         JSON.stringify({ auth_provider: authDomainDeleteProvider.parse(provider), domains: [{ domain: authDomainDeleteOrigin.parse(domain) }] }),

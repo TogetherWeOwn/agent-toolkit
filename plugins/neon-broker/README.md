@@ -2125,13 +2125,34 @@ atomic CAS. Ambiguity stays uncertain after one bounded list observation, no ret
 common permanent journal prevents same-request replay. Source/mocks only, not live
 creation, spend authority or runtime qualification.
 
+## Single trusted-redirect origin addition source
+
+`createNeonAuthDomainAddOperations` supplies reserved
+`addBranchNeonAuthTrustedDomain` source for one copied exact branch/provider/
+canonical HTTPS origin/revision. A dedicated `/add` resource and native exact-plan
+authorization are required; list/delete/legacy grants do not substitute. This
+broadens redirect trust, so source coverage is not authority for a live change.
+Only lowercase HTTPS origins without wildcard, port, path, query or fragment are
+supported. Mandatory bounded whole-list validation (30 rows, no pagination) checks
+provider/domain pairs, duplicates and ancestry before requiring absence for that
+provider, case-insensitively. Other domains/providers are not changed.
+
+One POST carries singular `domain` plus `auth_provider`; no bulk, legacy or caller
+body fallback. Documented terminal empty201 gives `{ acknowledged: true }` only,
+not independently observed persistence, effective redirect enforcement or session
+handling. Preflight is not atomic CAS and external races/provider normalization
+remain unresolved. Ambiguity gets one bounded list observation and stays uncertain
+even on presence/absence; no retry, permanent common journal prevents same-request
+replay. Native owner security authority, host/policy/custody/durable recovery,
+entitlement/effects and independent reviews remain unresolved. Source/mocks only.
+
 ## Coverage and verification
 
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 127 implemented
-source adapters, 67 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 128 implemented
+source adapters, 66 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

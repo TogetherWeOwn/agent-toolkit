@@ -1013,20 +1013,24 @@
       "id": "addBranchNeonAuthTrustedDomain",
       "apiArea": "auth",
       "tool": "neon.addBranchNeonAuthTrustedDomain",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/auth_provider/domain/add",
       "sideEffects": [
+        "redirect-trust-expansion",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-domain-add.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Single canonical HTTPS redirect origin addition source/mocks only; dedicated add grant and reserved native exact-plan authority. Bounded complete provider/origin absence preflight then one singular-domain POST; empty201 acknowledges only, not independently observed trust enforcement or persistence. Broadens redirect trust; no live security change authorized. Preflight not atomic CAS; ambiguity stays uncertain after one list observation, no retry, permanent common replay journal. Legacy/bulk/wildcard/path/port overrides unsupported. Native owner security authority, host/policy/custody/durable recovery, entitlement/effects and independent reviews unresolved."
     },
     {
       "id": "deleteBranchNeonAuthTrustedDomain",

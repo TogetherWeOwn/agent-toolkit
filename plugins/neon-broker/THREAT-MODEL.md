@@ -392,6 +392,29 @@ common contracts cover exact authority/agent/resource/TOCTOU, replay, malformed
 inputs, closed projection, ignored metadata, reflection and actual common budgets.
 Independent native reviews remain required.
 
+## Reserved branch trusted-redirect addition delta
+
+`addBranchNeonAuthTrustedDomain` copies one exact project/branch/provider/canonical
+HTTPS origin/revision and requires a distinct provider/hostname/add grant plus
+reserved native exact-plan authorization. This broadens redirect trust: source
+coverage is not owner permission for a live security change. Only one lowercase
+HTTPS origin is accepted; wildcard, port, path, query, fragment, bulk and legacy
+overrides are unsupported. The existing strict origin/provider parsers are reused.
+A complete nonpaginated list (at most 30 rows) validates duplicates, provider enums
+and ancestry before requiring selected-provider origin absence, case-insensitively.
+Other bounded strings are never followed or emitted. Preflight is not atomic CAS;
+external reconfiguration races and provider normalization remain unresolved.
+
+One POST sends the documented singular `domain` and `auth_provider`, not deletion's
+`domains` array. Only a terminal empty HTTP201 becomes a closed acknowledgement.
+Wrong status, nonempty/failed/hanging body, nonzero length, encoding or redirect
+refuses within the existing transport deadline/cancellation bounds. Acknowledgement
+is not independently observed trust enforcement, persistence or session handling.
+Ambiguity gets one bounded list observation and stays uncertain on either presence
+or absence, never a retry. The permanent common journal blocks same-request replay,
+not other writers. Native owner authority, host/custody/durable recovery, provider
+effects/entitlement and independent reviews remain absent. No live calls occur.
+
 ## Reserved branch trusted-redirect deletion delta
 
 `deleteBranchNeonAuthTrustedDomain` copies one exact branch/provider/canonical HTTPS
