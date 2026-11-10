@@ -31,6 +31,18 @@ test("plugin-source-only changes select the CI code area", () => {
   assert.match(workflow, /fromJSON\(needs\.changes\.outputs\.areas\)\.code/);
 });
 
+test("actionlint download retries are bounded without bypassing checksum or lint", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
+  const step = workflow.match(/      - name: Lint workflows\n        run: \|\n([\s\S]*?)\n\n/)[1];
+  assert.match(step, /set -euo pipefail/);
+  assert.match(step, /curl -fsSL --retry 3 --retry-delay 2 --retry-max-time 90 \\\n            --connect-timeout 10 --max-time 30/);
+  assert.match(step, /https:\/\/github\.com\/rhysd\/actionlint\/releases\/download\/v1\.7\.7\/actionlint_1\.7\.7_linux_amd64\.tar\.gz/);
+  assert.match(step, /023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757.*sha256sum -c -/);
+  assert.ok(step.indexOf("sha256sum -c -") < step.indexOf("tar -xzf"));
+  assert.ok(step.indexOf("tar -xzf") < step.indexOf('"$lint_dir/actionlint" -shellcheck= -pyflakes='));
+  assert.doesNotMatch(step, /\|\|\s*true|continue-on-error/);
+});
+
 test("root build and typecheck reject invalid plugin source", () => {
   const directory = mkdtempSync(join(tmpdir(), "toolkit-plugin-check-"));
   try {

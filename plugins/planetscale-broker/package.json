@@ -1,0 +1,11 @@
+{
+  "name": "@togetherweown/paperclip-plugin-planetscale-broker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Incomplete offline PlanetScale provider adapters; not an installable broker",
+  "scripts": {
+    "test": "python3 -I scripts/inventory.py --check && node --test --test-timeout=30000 test/*.test.mjs"
+  },
+  "engines": { "node": ">=24.11.0 <25" }
+}
