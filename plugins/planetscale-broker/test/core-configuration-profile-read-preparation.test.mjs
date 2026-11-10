@@ -15,13 +15,13 @@ const cases = [
     scope: t => ({ organization: t.organization, database: t.database, branch: t.branch, profile: t.profile }),
     resource: 'planetscale/configuration-profile/record_1', path,
     body: { id: 'record_1', name: 'standard', state: 'ready', default: true, metal: false },
-    keys: ['id', 'name', 'state', 'default', 'metal'], invalid: { state: 'unknown' }, rebound: { name: 'other' } },
+    keys: ['id', 'name', 'state', 'default', 'metal'], invalid: { state: 'unknown' }, invalidCode: 'schema', rebound: { name: 'other' } },
   { operation: 'get_shard_configuration_profile_shard', bind: bindGetShardConfigurationProfileShardPreparation, read: shardRead,
     target: () => ({ ...branch(), shard: { id: 'record_1' } }),
     scope: t => ({ organization: t.organization, database: t.database, branch: t.branch, profile: t.profile, shard: t.shard }),
     resource: 'planetscale/configuration-profile-shard/record_1/record_1', path: `${path}/shards/record_1`,
     body: { id: 'record_1', configuration_profile: 'standard', ready: true, authoritative: false },
-    keys: ['id', 'ready', 'authoritative'], invalid: { ready: 'true' }, rebound: { configuration_profile: 'other' } },
+    keys: ['id', 'ready', 'authoritative'], invalid: { ready: 'true' }, invalidCode: 'upstream', rebound: { configuration_profile: 'other' } },
 ];
 const nested = target => Object.keys(target).filter(key => typeof target[key] === 'object');
 
@@ -73,7 +73,7 @@ for (const c of cases) {
     for (const patch of [{ id: 'other' }, c.rebound]) {
       assert.throws(() => read.project(Buffer.from(JSON.stringify({ ...c.body, ...patch }))), { code: 'scope' });
     }
-    refused(() => read.project(Buffer.from(JSON.stringify({ ...c.body, ...c.invalid }))));
+    assert.throws(() => read.project(Buffer.from(JSON.stringify({ ...c.body, ...c.invalid }))), { code: c.invalidCode });
   });
 
   test(`${c.operation}: captured nested target and request remain immutable`, () => {
