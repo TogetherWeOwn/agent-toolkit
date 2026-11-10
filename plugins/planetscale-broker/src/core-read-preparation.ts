@@ -13,7 +13,10 @@ import { prepare as prepareBranch } from "./tools/get-branch.js";
 import { prepare as prepareBackup } from "./tools/get-backup.js";
 import { prepare as prepareBackupPolicy } from "./tools/get-backup-policy.js";
 import { prepare as prepareDeployRequest } from "./tools/get-deploy-request.js";
-import { deployBinding, deployNumber } from "./lifecycle.js";
+import { deployBinding, deployBindings, deployNumber, lifecycleIds } from "./lifecycle.js";
+import { prepare as prepareBackupList } from "./tools/list-backups.js";
+import { prepare as prepareBackupPolicyList } from "./tools/list-backup-policies.js";
+import { prepare as prepareDeployRequestList } from "./tools/list-deploy-requests.js";
 import { prepare as prepareDeployment } from "./tools/get-deployment.js";
 import { prepare as prepareSchemaRecommendation } from "./tools/get-schema-recommendation.js";
 import { prepare as prepareKeyspace } from "./tools/get-keyspace.js";
@@ -78,6 +81,9 @@ const organizationTarget = closed(organizationFields);
 const databaseTarget = closed(databaseFields);
 const branchFields = { ...databaseFields, branch: slug, branchId: identifier };
 const branchTarget = closed(branchFields);
+const backupListTarget = closed({ ...branchFields, backupIds: lifecycleIds, pagination: pageArguments });
+const backupPolicyListTarget = closed({ ...databaseFields, policyIds: lifecycleIds, pagination: pageArguments });
+const deployRequestListTarget = closed({ ...databaseFields, requests: deployBindings, pagination: pageArguments });
 const databaseListTarget = closed({ ...organizationFields, databases: resourceBindings, pagination: pageArguments });
 const branchListTarget = closed({ ...databaseFields, branches: resourceBindings, pagination: pageArguments });
 const databaseRegionListTarget = closed({ ...databaseFields, regions: resourceBindings, pagination: pageArguments });
@@ -172,9 +178,11 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof branchMaintenanceWindowTarget.parse> | ReturnType<typeof moveTablesWorkflowStatusTarget.parse> |
   ReturnType<typeof databaseListTarget.parse> | ReturnType<typeof branchListTarget.parse> |
   ReturnType<typeof databaseRegionListTarget.parse> | ReturnType<typeof organizationRegionListTarget.parse> |
-  ReturnType<typeof publicRegionListTarget.parse>;
+  ReturnType<typeof publicRegionListTarget.parse> | ReturnType<typeof backupListTarget.parse> |
+  ReturnType<typeof backupPolicyListTarget.parse> | ReturnType<typeof deployRequestListTarget.parse>;
 type ReadOperation = "list_databases" | "list_branches" | "list_database_regions" |
   "list_regions_for_organization" | "list_public_regions" | "get_organization" | "get_database" | "get_branch" |
+  "list_backups" | "list_backup_policies" | "list_deploy_requests" |
   "get_backup" | "get_backup_policy" | "get_deploy_request" |
   "get_keyspace" | "get_shard" | "get_maintenance_event" |
   "get_organization_membership" | "get_organization_team" | "get_organization_team_member" |
@@ -223,6 +231,30 @@ function bindRead(
     jsonData(prepared);
     return prepared;
   };
+}
+
+export function bindListBackupsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = backupListTarget.parse(rawTarget);
+  const read = prepareBackupList({ organization: target.organization, database: target.database,
+    branch: target.branch, backupIds: target.backupIds }, target.pagination);
+  return bindRead(`planetscale/branch/${target.branchId}`, target, "list_backups", read.request,
+    "record-id-only-parent-not-verified");
+}
+
+export function bindListBackupPoliciesPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = backupPolicyListTarget.parse(rawTarget);
+  const read = prepareBackupPolicyList({ organization: target.organization, database: target.database,
+    policyIds: target.policyIds }, target.pagination);
+  return bindRead(`planetscale/database/${target.databaseId}`, target, "list_backup_policies", read.request,
+    "record-id-only-parent-not-verified");
+}
+
+export function bindListDeployRequestsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = deployRequestListTarget.parse(rawTarget);
+  const read = prepareDeployRequestList({ organization: target.organization, database: target.database,
+    requests: target.requests }, target.pagination);
+  return bindRead(`planetscale/database/${target.databaseId}`, target, "list_deploy_requests", read.request,
+    "record-and-source-ids-destination-not-verified");
 }
 
 export function bindListDatabasesPreparation(rawTarget: unknown): (raw: unknown) => Prepared {

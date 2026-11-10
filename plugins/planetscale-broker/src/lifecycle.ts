@@ -1,7 +1,7 @@
 import { closed, identifier, integer, oneOf, requireThat, type Schema } from "../../../packages/core/src/schema.js";
 import { flag, slug } from "./metadata.js";
 
-const ids: Schema<readonly string[]> = { parse(value) {
+export const lifecycleIds: Schema<readonly string[]> = { parse(value) {
   requireThat(Array.isArray(value) && value.length > 0 && value.length <= 32, "schema");
   const parsed = value.map(item => identifier.parse(item));
   requireThat(new Set(parsed).size === parsed.length, "schema");
@@ -16,7 +16,7 @@ export const deploymentState = oneOf([
 ] as const);
 export const deployBinding = closed({ id: identifier, number: deployNumber, branch: slug, branchId: identifier, intoBranch: slug });
 export type DeployBinding = ReturnType<typeof deployBinding.parse>;
-const deployBindings: Schema<readonly DeployBinding[]> = { parse(value) {
+export const deployBindings: Schema<readonly DeployBinding[]> = { parse(value) {
   requireThat(Array.isArray(value) && value.length > 0 && value.length <= 32, "schema");
   const parsed = value.map(item => deployBinding.parse(item));
   requireThat(new Set(parsed.map(item => item.id)).size === parsed.length, "schema");
@@ -25,9 +25,9 @@ const deployBindings: Schema<readonly DeployBinding[]> = { parse(value) {
 } };
 
 // Broker-owned response bindings, never caller selectors or collection authority.
-export const backupListScope = closed({ organization: slug, database: slug, branch: slug, backupIds: ids });
+export const backupListScope = closed({ organization: slug, database: slug, branch: slug, backupIds: lifecycleIds });
 export const backupScope = closed({ organization: slug, database: slug, branch: slug, backupId: identifier });
-export const backupPolicyListScope = closed({ organization: slug, database: slug, policyIds: ids });
+export const backupPolicyListScope = closed({ organization: slug, database: slug, policyIds: lifecycleIds });
 export const backupPolicyScope = closed({ organization: slug, database: slug, policyId: identifier });
 export const deployRequestListScope = closed({ organization: slug, database: slug, requests: deployBindings });
 export const deployRequestScope = closed({ organization: slug, database: slug, request: deployBinding });

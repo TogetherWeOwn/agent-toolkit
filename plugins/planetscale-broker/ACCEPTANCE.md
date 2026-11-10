@@ -4,6 +4,38 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Lifecycle collection preparation source increment
+
+Three pure Prepared bindings cover existing backup/backup-policy/deploy-request
+list reads. Closed immutable host parent IDs/names/revision, bounded unique child
+IDs and host pagination bind fixed GETs and empty caller arguments. Deploy-request
+children also capture number, source branch ID/name and destination name. Reuse
+existing lifecycle parsers; every field enters plan/full hashes. Child confinement
+is not upstream collection authorization. No executor, credential resolution,
+registration or authority consumption. Current parent ownership/bindings/revision,
+collection permission, transport/raw-body custody and independent non-waking proof
+remain prerequisites. Deploy projections do not authenticate immutable destination
+identity or native approval; backup/policy flags never grant mutation authority.
+
+`test/core-lifecycle-collection-read-preparation.test.mjs` supplies **30 synthetic
+contracts** for fixed requests, every-field hashes/rebinding, deep snapshots,
+closed/accessor/injection refusals, caps, whole-page refusal and redaction.
+Coverage stays **134/291 offline adapters; 157 missing**, twelve previews and
+**77 pure preparations**, zero runtime-integrated/reviewed/enabled/adopted.
+New-contract execution requires exact-head Actions; this source declaration is
+not a test pass. Older counts below are historical.
+
+Prior exact `eb093fdf5056d6fdccac92627f6f8af37242e0d9`
+[Actions test](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42778312079/job/129702004397)
+passed **1679/1679 PlanetScale**, root 317/317, helpers 122/122 and Neon 37/37;
+GitHub broker passed 218/219. The unchanged pinned SDK recovery assertion at
+`plugins/github-broker/test/sdk-http.test.mjs:159` received `mint.revoke_failed`
+instead of success. Aggregate correctly failed. No retry, repair or all-green
+claim: earlier same-SHA passes do not establish its cause. Lint/typecheck,
+native-policy, [Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42778311529)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42778306022)
+passed. Prior-head evidence does not cover the new lifecycle collection contracts.
+
 ## Discovery collection preparation source increment
 
 Five pure Prepared bindings capture existing database/branch and database,

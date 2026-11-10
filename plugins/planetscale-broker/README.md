@@ -6,6 +6,29 @@ manifest, network executor, credential resolver, or tool registration is supplie
 The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
+## Lifecycle collection preparation increment
+
+Three pure `Prepared` bindings in `src/core-read-preparation.ts` cover existing
+backup, backup-policy and deploy-request list reads. Closed immutable host
+parents/revision, 1–32 unique child IDs (deploy requests also bind number, source
+branch ID/name and destination name) and host pagination (page 1–100, perPage
+1–10) bind fixed GETs and empty caller arguments. Reuse the existing lifecycle
+ID/request parsers. Every field enters plan/full hashes, including child bindings
+that do not change the upstream collection request.
+
+`test/core-lifecycle-collection-read-preparation.test.mjs` supplies 30 synthetic
+contracts for fixed requests, every-field hashes, deep snapshots, closed/accessor/
+injection refusals, caps, whole-page refusal and redaction. Receipts retain bound
+IDs and strict metadata; deploy receipts retain source/destination names, state
+and source ID, not an immutable destination ID or native approval. Backup flags
+and policy targets are metadata, never deletion, scheduling or spend authority.
+Parent ownership/collection permission, current bindings/revision, trusted
+transport/raw-body custody and independent non-waking proof remain prerequisites.
+No executor, credential resolution, registration or authority consumption.
+Coverage stays **134/291 offline adapters; 157 missing**, twelve separate previews
+and **77 pure preparations**, zero runtime-integrated/reviewed/enabled/adopted.
+New contracts require exact-head Actions; older counts below are historical.
+
 ## Discovery collection preparation increment
 
 Five pure `Prepared` bindings in `src/core-read-preparation.ts` cover existing
