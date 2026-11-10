@@ -79,13 +79,16 @@ test('Auth user role: only terminal JSON200 exact user ID acknowledges; other re
     ...[null, {}, [], { id: 'other' }, { id: 1 }, { id: 'user_a', project_id: 'other' }, { id: 'user_a', branch_id: 'other' },
       { id: 'user_a', pagination: {} }].map(raw => () => response(raw)),
     () => response({ id: 'user_a' }, { headers: { 'content-type': 'text/plain' } }),
-    () => new Response('{"id":"user_a","id":"user_a"}', { headers: { 'content-type': 'application/json' } }),
+    () => new Response('{"id":"user_a"', { headers: { 'content-type': 'application/json' } }),
     () => response({ id: 'user_a', ignored: 'a'.repeat(66000) }),
     () => ({ status: 200, redirected: true, body: null, headers: new Headers() })]) {
     const f = fixture((url, init) => init.method === 'PUT' ? make() : response(metadata));
     await assert.rejects(f.run(name, args), { message: 'OUTCOME_UNCERTAIN' });
     assert.equal(f.requests.length, 2);
   }
+  const f = fixture((url, init) => init.method === 'PUT' ?
+    new Response('{"id":"user_a","id":"user_a"}', { headers: { 'content-type': 'application/json' } }) : response(metadata));
+  assert.deepEqual(await f.run(name, args), expected);
 });
 
 test('Auth user role: unused metadata never evaluates and exact-ID projection is closed', async () => {
