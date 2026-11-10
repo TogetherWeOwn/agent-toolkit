@@ -4,6 +4,36 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Maintenance schedule preparation source increment
+
+Two pure Prepared bindings capture existing database maintenance-schedule and
+branch maintenance-window GETs. Closed immutable host parent/schedule/revision
+snapshots bind fixed requests and empty caller arguments. The branch singleton
+independently binds schedule ID absent from its path; projections match schedule
+ID only, not parent ownership or branch association. Both share a schedule resource
+with distinct operation/request/target hashes. No executor, registration, credential
+resolution or authority consumption is added.
+
+`test/core-maintenance-read-preparation.test.mjs` supplies 18 synthetic contracts
+for fixed GETs, every-field hashes, immutable capture, host/caller/accessor refusals,
+schedule rebinding, canary omission and cross-operation separation. Receipts retain
+strict flags and frequency enum only. Provider scheduling metadata is not an
+authorized execution/use window or scheduling/wake/spend authority. Current
+bindings/revision, transport/custody and non-waking proof remain prerequisites.
+Coverage stays **134/291 offline adapters; 157 missing**, twelve previews and
+**68 pure preparations**, zero runtime-integrated/reviewed/enabled/adopted.
+Exact-head Actions must execute these contracts; no current-head pass is implied.
+Older counts below are historical.
+
+Prior exact `e6aa6d8efe2050fbf13872772c1f7005d3c39600`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42770435082)
+and [test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42770435082/job/129676739238)
+passed, including lint/typecheck/native-policy/ci-ok and Neon candidate contract.
+[Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42770434670)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42770429173)
+passed. Earlier unchanged SDK recovery uncertainty remains unresolved. This
+prior-head evidence does not cover the new maintenance preparation contracts.
+
 ## Metric preparation source increment
 
 Six pure Prepared bindings capture the existing instant branch/tablet and historical

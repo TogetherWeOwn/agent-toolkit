@@ -6,6 +6,28 @@ manifest, network executor, credential resolver, or tool registration is supplie
 The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
+## Maintenance schedule preparation increment
+
+Two pure `Prepared` bindings in `src/core-read-preparation.ts` cover the existing
+database maintenance-schedule and branch maintenance-window GETs. Closed host
+snapshots capture immutable parent/schedule IDs, names and revision. The branch
+singleton independently binds a schedule ID absent from its path. Both plans
+share the schedule resource, with distinct operation/request/target hashes and
+empty caller arguments. Projections match schedule ID only, not immutable parent
+ownership or branch association; trusted current bindings remain prerequisites.
+
+`test/core-maintenance-read-preparation.test.mjs` supplies 18 synthetic contracts
+for fixed requests, every-field hashes, immutable capture, host/caller/accessor
+refusals, schedule rebinding and existing redaction. Receipts retain strict
+scheduling flags and frequency enum, never names or raw timings. Provider metadata
+is not an authorized execution/use window or permission to schedule, wake compute,
+spend or act. Transport/custody, current ownership/revision and independent
+non-waking proof remain required. No executor, registration, credential resolution
+or approval consumption is supplied. Coverage stays 134/291 offline adapters,
+157 missing, twelve separate previews and **68 pure preparations**; zero runtime-
+integrated/reviewed/enabled/adopted. Exact-head Actions must execute the contracts;
+source declarations and older counts below are not current-head pass evidence.
+
 ## Metric preparation increment
 
 Six pure `Prepared` bindings in `src/core-read-preparation.ts` cover the existing

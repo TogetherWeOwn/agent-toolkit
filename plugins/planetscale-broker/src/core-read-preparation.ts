@@ -62,6 +62,8 @@ import { prepare as prepareBranchMetrics } from "./tools/get-branch-metrics.js";
 import { prepare as prepareTabletMetrics } from "./tools/get-tablet-metrics.js";
 import { prepare as prepareBranchQueryMetrics } from "./tools/get-branch-query-metrics.js";
 import { prepare as prepareBranchTagMetrics } from "./tools/get-branch-tag-metrics.js";
+import { prepare as prepareMaintenanceSchedule } from "./tools/get-maintenance-schedule.js";
+import { prepare as prepareBranchMaintenanceWindow } from "./tools/get-branch-maintenance-window.js";
 
 const organizationFields = { organization: slug, organizationId: identifier, revision: digest };
 const databaseFields = { ...organizationFields, database: slug, databaseId: identifier };
@@ -69,6 +71,8 @@ const organizationTarget = closed(organizationFields);
 const databaseTarget = closed(databaseFields);
 const branchFields = { ...databaseFields, branch: slug, branchId: identifier };
 const branchTarget = closed(branchFields);
+const maintenanceScheduleTarget = closed({ ...databaseFields, scheduleId: identifier });
+const branchMaintenanceWindowTarget = closed({ ...branchFields, scheduleId: identifier });
 const instantBranchMetricsTarget = closed({ ...branchFields, metric: oneOf(branchMetricNames) });
 const instantTabletMetricsTarget = closed({ ...branchFields, metric: oneOf(tabletMetricNames) });
 const metricWindowFields = { from: timestamp, to: timestamp };
@@ -150,7 +154,8 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof vtctldOperationTarget.parse> | ReturnType<typeof lintBranchTarget.parse> |
   ReturnType<typeof deployStorageCheckTarget.parse> | ReturnType<typeof instantBranchMetricsTarget.parse> |
   ReturnType<typeof instantTabletMetricsTarget.parse> | ReturnType<typeof branchMetricsTarget.parse> |
-  ReturnType<typeof tabletMetricsTarget.parse>;
+  ReturnType<typeof tabletMetricsTarget.parse> | ReturnType<typeof maintenanceScheduleTarget.parse> |
+  ReturnType<typeof branchMaintenanceWindowTarget.parse>;
 type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_backup" | "get_backup_policy" | "get_deploy_request" |
   "get_keyspace" | "get_shard" | "get_maintenance_event" |
@@ -167,7 +172,8 @@ type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_branch_query" | "get_branch_query_tag" | "get_change_request" | "get_vtctld_operation" |
   "get_keyspace_vschema" | "get_data_topology" | "lint_branch_schema" | "check_deploy_request_storage" |
   "get_instant_branch_metrics" | "get_instant_tablet_metrics" | "get_branch_metrics" | "get_tablet_metrics" |
-  "get_branch_query_metrics" | "get_branch_tag_metrics";
+  "get_branch_query_metrics" | "get_branch_tag_metrics" |
+  "get_maintenance_schedule" | "get_branch_maintenance_window";
 type ResponseIdentity = "name-only-not-immutable" | "record-id-only-parent-not-verified" |
   "record-and-source-ids-destination-not-verified" | "record-and-branch-ids-parent-not-verified" |
   "record-and-user-ids-parent-not-verified" | "record-and-number-parent-and-destination-not-verified" |
@@ -199,6 +205,22 @@ function bindRead(
     jsonData(prepared);
     return prepared;
   };
+}
+
+export function bindGetMaintenanceSchedulePreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = maintenanceScheduleTarget.parse(rawTarget);
+  const read = prepareMaintenanceSchedule({ organization: target.organization, database: target.database,
+    scheduleId: target.scheduleId }, {});
+  return bindRead(`planetscale/maintenance-schedule/${target.scheduleId}`, target, "get_maintenance_schedule", read.request,
+    "record-id-only-parent-not-verified");
+}
+
+export function bindGetBranchMaintenanceWindowPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = branchMaintenanceWindowTarget.parse(rawTarget);
+  const read = prepareBranchMaintenanceWindow({ organization: target.organization, database: target.database,
+    branch: target.branch, scheduleId: target.scheduleId }, {});
+  return bindRead(`planetscale/maintenance-schedule/${target.scheduleId}`, target, "get_branch_maintenance_window", read.request,
+    "record-id-only-parent-not-verified");
 }
 
 export function bindGetInstantBranchMetricsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
