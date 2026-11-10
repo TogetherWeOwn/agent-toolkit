@@ -6,6 +6,31 @@ manifest, network executor, credential resolver, or tool registration is supplie
 The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
+## Security-record collection preparation increment
+
+Three pure `Prepared` bindings in `src/core-read-preparation.ts` cover existing
+service-token, OAuth-token and webhook list GETs. Reuse the existing 1–32 unique
+record-ID parser. Closed immutable host parents/revision, OAuth application ID
+where applicable and pagination (page 1–100, perPage 1–10) bind fixed requests and
+empty caller arguments. Every field enters plan/full hashes; record-ID rebinding
+can leave the upstream collection path unchanged. OAuth resources retain their
+application ID rather than treating the organization as the token collection.
+
+`test/core-security-record-collection-read-preparation.test.mjs` supplies 30
+synthetic contracts for requests, every-field hashes, deep snapshots, bounded
+unique IDs, host/caller/accessor refusals, whole-page refusal and canary omission.
+Receipts match record ID, not organization/application/database ownership. Token
+expiry/usage presence is not token validity, rights or native authority. Webhook
+flags are not delivery or execution authority. Secrets, refresh tokens, endpoints,
+raw authorization headers, access/scope bodies, actors and raw times are omitted.
+Child confinement does not authorize the upstream collection or resolve custody
+of raw secret-bearing responses. Current ownership/revision, collection permission,
+trusted transport/raw-body custody and independent non-waking proof remain required.
+No executor, registration, credential resolution or authority consumption. Coverage
+stays **134/291 offline adapters; 157 missing**, twelve separate previews and
+**86 pure preparations**, zero runtime-integrated/reviewed/enabled/adopted. New
+execution requires exact-head Actions; older counts below are historical.
+
 ## Organization collection preparation increment
 
 Three pure `Prepared` bindings in `src/core-read-preparation.ts` cover existing

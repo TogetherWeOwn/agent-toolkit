@@ -1,7 +1,7 @@
 import { closed, identifier, requireThat, text, type Schema } from "../../../packages/core/src/schema.js";
 import { flag, slug } from "./metadata.js";
 
-const ids: Schema<readonly string[]> = { parse(value) {
+export const securityRecordIds: Schema<readonly string[]> = { parse(value) {
   requireThat(Array.isArray(value) && value.length > 0 && value.length <= 32, "schema");
   const parsed = value.map(item => identifier.parse(item));
   requireThat(new Set(parsed).size === parsed.length, "schema");
@@ -10,11 +10,11 @@ const ids: Schema<readonly string[]> = { parse(value) {
 
 // Broker-owned response confinement; neither possession nor effective authority.
 export const serviceTokenScope = closed({ organization: slug, tokenId: identifier });
-export const serviceTokenListScope = closed({ organization: slug, tokenIds: ids });
+export const serviceTokenListScope = closed({ organization: slug, tokenIds: securityRecordIds });
 export const oauthTokenScope = closed({ organization: slug, applicationId: identifier, tokenId: identifier });
-export const oauthTokenListScope = closed({ organization: slug, applicationId: identifier, tokenIds: ids });
+export const oauthTokenListScope = closed({ organization: slug, applicationId: identifier, tokenIds: securityRecordIds });
 export const webhookScope = closed({ organization: slug, database: slug, webhookId: identifier });
-export const webhookListScope = closed({ organization: slug, database: slug, webhookIds: ids });
+export const webhookListScope = closed({ organization: slug, database: slug, webhookIds: securityRecordIds });
 
 function matchedId(body: Record<string, unknown>, allowed: readonly string[]): string {
   const id = identifier.parse(body.id);

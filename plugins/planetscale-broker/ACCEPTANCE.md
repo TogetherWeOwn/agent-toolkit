@@ -4,6 +4,40 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Security-record collection preparation source increment
+
+Three pure Prepared bindings cover existing service-token/OAuth-token/webhook
+list GETs. Closed immutable host organization/database/application/revision
+captures, bounded unique record IDs and host pagination bind fixed requests and
+empty caller arguments. Existing ID parser exported/reused without behavior
+change. All fields enter plan/full hashes; child rebinding can leave the collection
+request unchanged. OAuth resources retain the application. No executor,
+registration, credential resolution or authority consumption.
+
+`test/core-security-record-collection-read-preparation.test.mjs` supplies **30
+synthetic contracts** for requests, every-field hashes, deep snapshots, bounded
+unique IDs, host/caller/accessor refusals, whole-page refusal and canary omission.
+Response record IDs do not authenticate parents/application ownership. Token
+timestamp presence never establishes validity/effective rights; webhook flags
+never grant execution/delivery authority. Tokens, refresh tokens, endpoint URLs,
+raw authorization headers, access/scope bodies, actors and raw times are omitted.
+Upstream collection permission, trusted current ownership/revision, raw secret-
+bearing response custody and independent non-waking proof remain prerequisites.
+Coverage stays **134/291 offline adapters; 157 missing**, twelve previews and
+**86 pure preparations**, zero runtime-integrated/reviewed/enabled/adopted. New
+execution requires exact-head Actions; this source declaration is not a pass.
+Older counts below are historical.
+
+Prior exact `997d677d2bbad8ed901865502193bf146bbb0a2d`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42788444603)
+and [test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42788444603/job/129735527289)
+passed, including lint/typecheck/native-policy/ci-ok and Neon candidate contract.
+[Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42788443608)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42788437463)
+passed. No inline findings/submitted reviews returned. Earlier unchanged SDK
+recovery uncertainty remains unresolved. Prior-head evidence does not cover the
+new security-record collection contracts.
+
 ## Organization collection preparation source increment
 
 Three pure Prepared bindings cover existing organization member/team/team-member

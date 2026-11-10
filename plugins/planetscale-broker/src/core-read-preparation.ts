@@ -33,6 +33,10 @@ import { prepare as prepareOrganizationTeamMemberList } from "./tools/list-organ
 import { prepare as prepareOrganizationMembership } from "./tools/get-organization-membership.js";
 import { prepare as prepareOrganizationTeam } from "./tools/get-organization-team.js";
 import { prepare as prepareOrganizationTeamMember } from "./tools/get-organization-team-member.js";
+import { securityRecordIds } from "./security-records.js";
+import { prepare as prepareServiceTokenList } from "./tools/list-service-tokens.js";
+import { prepare as prepareOauthTokenList } from "./tools/list-oauth-tokens.js";
+import { prepare as prepareWebhookList } from "./tools/list-webhooks.js";
 import { prepare as prepareServiceToken } from "./tools/get-service-token.js";
 import { prepare as prepareOauthToken } from "./tools/get-oauth-token.js";
 import { prepare as prepareWebhook } from "./tools/get-webhook.js";
@@ -138,6 +142,10 @@ const organizationTeamMemberListTarget = closed({ ...organizationFields, ...team
 const organizationMembershipTarget = closed({ ...organizationFields, ...membershipFields });
 const organizationTeamTarget = closed({ ...organizationFields, ...teamFields });
 const organizationTeamMemberTarget = closed({ ...organizationFields, ...teamFields, ...membershipFields });
+const serviceTokenListTarget = closed({ ...organizationFields, tokenIds: securityRecordIds, pagination: pageArguments });
+const oauthTokenListTarget = closed({ ...organizationFields, applicationId: identifier,
+  tokenIds: securityRecordIds, pagination: pageArguments });
+const webhookListTarget = closed({ ...databaseFields, webhookIds: securityRecordIds, pagination: pageArguments });
 const serviceTokenTarget = closed({ ...organizationFields, tokenId: identifier });
 const oauthTokenTarget = closed({ ...organizationFields, applicationId: identifier, tokenId: identifier });
 const webhookTarget = closed({ ...databaseFields, webhookId: identifier });
@@ -197,7 +205,9 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof backupPolicyListTarget.parse> | ReturnType<typeof deployRequestListTarget.parse> |
   ReturnType<typeof keyspaceListTarget.parse> | ReturnType<typeof shardListTarget.parse> |
   ReturnType<typeof maintenanceEventListTarget.parse> | ReturnType<typeof organizationMemberListTarget.parse> |
-  ReturnType<typeof organizationTeamListTarget.parse> | ReturnType<typeof organizationTeamMemberListTarget.parse>;
+  ReturnType<typeof organizationTeamListTarget.parse> | ReturnType<typeof organizationTeamMemberListTarget.parse> |
+  ReturnType<typeof serviceTokenListTarget.parse> | ReturnType<typeof oauthTokenListTarget.parse> |
+  ReturnType<typeof webhookListTarget.parse>;
 type ReadOperation = "list_databases" | "list_branches" | "list_database_regions" |
   "list_regions_for_organization" | "list_public_regions" | "get_organization" | "get_database" | "get_branch" |
   "list_backups" | "list_backup_policies" | "list_deploy_requests" |
@@ -206,6 +216,7 @@ type ReadOperation = "list_databases" | "list_branches" | "list_database_regions
   "get_keyspace" | "get_shard" | "get_maintenance_event" |
   "list_organization_members" | "list_organization_teams" | "list_organization_team_members" |
   "get_organization_membership" | "get_organization_team" | "get_organization_team_member" |
+  "list_service_tokens" | "list_oauth_tokens" | "list_webhooks" |
   "get_service_token" | "get_oauth_token" | "get_webhook" | "get_deployment" | "get_schema_recommendation" |
   "get_branch_change_request" | "get_branch_config_change_request" | "get_keyspace_config_change_request" |
   "get_bouncer" | "get_branch_resize_request" | "get_keyspace_resize_request" |
@@ -251,6 +262,29 @@ function bindRead(
     jsonData(prepared);
     return prepared;
   };
+}
+
+export function bindListServiceTokensPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = serviceTokenListTarget.parse(rawTarget);
+  const read = prepareServiceTokenList({ organization: target.organization, tokenIds: target.tokenIds }, target.pagination);
+  return bindRead(`planetscale/organization/${target.organizationId}`, target, "list_service_tokens", read.request,
+    "record-id-only-parent-not-verified");
+}
+
+export function bindListOauthTokensPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = oauthTokenListTarget.parse(rawTarget);
+  const read = prepareOauthTokenList({ organization: target.organization, applicationId: target.applicationId,
+    tokenIds: target.tokenIds }, target.pagination);
+  return bindRead(`planetscale/oauth-application/${target.applicationId}`, target, "list_oauth_tokens", read.request,
+    "record-id-only-parent-not-verified");
+}
+
+export function bindListWebhooksPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = webhookListTarget.parse(rawTarget);
+  const read = prepareWebhookList({ organization: target.organization, database: target.database,
+    webhookIds: target.webhookIds }, target.pagination);
+  return bindRead(`planetscale/database/${target.databaseId}`, target, "list_webhooks", read.request,
+    "record-id-only-parent-not-verified");
 }
 
 export function bindListOrganizationMembersPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
