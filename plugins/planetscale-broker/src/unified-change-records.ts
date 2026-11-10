@@ -7,7 +7,7 @@ export const changeType = oneOf(["NekiAdminChangeRequest", "NekiClusterChangeReq
 export const changeState = oneOf(["draft", "pending", "applying", "canceled", "completed"] as const);
 const nullableId: Schema<string | null> = { parse(value) { return value === null ? null : identifier.parse(value); } };
 const changeBindingShape = closed({ id: identifier, type: changeType, targetId: nullableId, targetType: changeTargetType, targetName: slug });
-const changeBinding: typeof changeBindingShape = { parse(value) {
+export const changeBinding: typeof changeBindingShape = { parse(value) {
   const parsed = changeBindingShape.parse(value);
   requireThat(parsed.type === `${parsed.targetType}ChangeRequest`, "scope");
   return parsed;

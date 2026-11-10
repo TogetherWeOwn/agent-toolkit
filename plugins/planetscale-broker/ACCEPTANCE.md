@@ -4,6 +4,40 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Change/operation-detail preparation source increment
+
+Two pure Prepared bindings capture existing unified change-request and vtctld
+operation GETs. Closed host snapshots retain immutable parent/resource IDs,
+names, revision and the change target/type binding including nullable target ID.
+The existing matching-type parser is reused; read preparation does not inherit
+cancellation-only state/canDelete restrictions. Empty arguments, fixed requests
+and every-field plan/full hashes bind snapshots, not authority or freshness.
+Change projections match record/target bindings, not parents; vtctld projections
+match record ID/type only. Null target identity remains null. State/canDelete and
+completion-string presence never prove topology, rollback, closure or permission.
+
+`test/core-operation-detail-read-preparation.test.mjs` supplies 22 synthetic
+snapshot/hash/refusal/projection contracts including nested accessor refusal,
+null identity, exact type/target pair matching and cross-kind separation.
+Configuration/actions/results/errors/metadata/actors/raw times are omitted;
+existing bound change target ID/type/name output is retained. Current ownership,
+revision, trusted transport/raw-body custody and independent non-waking proof
+remain prerequisites. No executor, registration, credential resolution or
+authority consumption. Exact-head Actions must execute these contracts; no
+new-head success is implied. Coverage stays **134/291 offline adapters; 157
+missing**, twelve previews and **56 pure preparations**, zero runtime-integrated/
+reviewed/enabled/adopted. Older counts below are historical.
+
+Prior exact `1133ee7840c96f57d6c6b5151f14a8327e3ca0be`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42761777423)
+passed [tests](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42761777423/job/129648951008):
+1488/1488 PlanetScale, root 317/317, helpers 122/122, GitHub 219/219, Neon 37/37;
+zero failures/skips/cancellations. Lint/typecheck/native-policy/ci-ok and Neon
+candidate contract passed. [Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42761777090)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42761773573)
+passed. Historical evidence does not cover this increment; earlier unchanged SDK
+recovery uncertainty remains unresolved.
+
 ## Query-detail preparation source increment
 
 Two pure Prepared bindings capture existing individual-query and query-tag detail

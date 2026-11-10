@@ -1227,6 +1227,36 @@ ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.
 
+## Change/operation-detail core preparation
+
+`bindGetChangeRequestPreparation` and `bindGetVtctldOperationPreparation` capture
+closed immutable host organization/database/branch IDs and names, revision and
+record identity for existing fixed GETs. Change reads reuse the exact documented
+change/target-type pair, nullable target ID and bounded target name from the
+existing response-confinement parser. Null stays null, not an immutable target
+claim; unlike cancellation previews, reads do not restrict reported state or
+require canDelete=true. Resources use `planetscale/change-request/<id>` and
+`planetscale/vtctld-operation/<id>`. Every host field enters plan/full hashes;
+empty caller arguments cannot supply a new target, request or authority.
+
+Change projections match record and target binding fields, not parent ownership;
+vtctld projections match record ID and documented type only. State/canDelete and
+completion-string presence never grant cancellation/execution authority or prove
+freshness, topology, safe retry, rollback or closure. Configuration, action,
+results, errors, metadata, actors and raw times are omitted. The existing change
+receipt still includes bound target ID/type/name; no additional redaction claim
+is made. Current ownership/revision, transport/raw-body custody and independent
+non-waking proof remain prerequisites. No executor, registration, credential
+resolution or authority consumption is added.
+
+`test/core-operation-detail-read-preparation.test.mjs` supplies 22 synthetic
+contracts for fixed requests, deep captures, every-field hashes, host/caller and
+nested-accessor refusals, exact type/target matching, null identity, canary
+omission and separate namespaces. Coverage stays 134/291 offline adapters, 157
+missing; twelve previews and 56 pure preparations are separate counts. All
+operations remain runtime-unintegrated, unreviewed, disabled and unadopted.
+Earlier increments below retain their historical counts.
+
 ## Query-detail core preparation
 
 `bindGetBranchQueryPreparation` and `bindGetBranchQueryTagPreparation` capture
