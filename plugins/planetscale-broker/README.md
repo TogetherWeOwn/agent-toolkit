@@ -1227,6 +1227,33 @@ ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.
 
+## Network/throttler core preparation
+
+`bindGetDatabasePostgresCidrPreparation`, `bindGetDatabaseThrottlerPreparation`
+and `bindGetDeployRequestThrottlerPreparation` capture closed immutable host
+organization/database IDs and names, revision and CIDR/configurable identities.
+Throttler captures reuse the existing unique 1–32 keyspace-name schema; deploy
+throttler also retains independently resolved request ID and positive sequence
+number. Empty caller arguments and every-field plan/full hashes bind the fixed
+GETs. Request ID is not present in the number-addressed path or response, so its
+current ID/number/parent binding remains an independent host prerequisite.
+Configurable IDs and allowed keyspace names confine the existing projections;
+they do not authenticate parent ownership, immutable keyspace IDs or effective
+throttling. CIDR projections return only the bound entry ID, not CIDRs, schema or
+role selectors. Throttler receipts retain bound keyspace names and configuration
+presence, not ratios. Neither receipt grants enforcement/configuration authority.
+
+`test/core-network-read-preparation.test.mjs` supplies 30 synthetic contracts for
+fixed requests, immutable nested captures, every-field hashes, host/caller and
+nested-array accessor refusal, bounded unique names, canary omission and whole-
+response rejection of foreign keyspaces. Current ownership/revision, trusted
+transport/raw-body custody and independent non-waking proof remain required.
+No executor, registration, credential resolution or authority consumption is
+added. Coverage stays 134/291 offline adapters, 157 missing; twelve previews and
+52 pure preparations remain separate counts. All operations remain runtime-
+unintegrated, unreviewed, disabled and unadopted. Earlier increments below retain
+their historical counts.
+
 ## Insight-detail core preparation
 
 `bindGetBranchAnomalyPreparation`, `bindGetTrafficBudgetPreparation` and

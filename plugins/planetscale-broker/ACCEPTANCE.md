@@ -4,6 +4,39 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Network/throttler preparation source increment
+
+Three pure Prepared bindings capture existing CIDR/database-throttler/deploy-
+request-throttler GETs. Closed host snapshots retain organization/database names
+and IDs, revision and CIDR/configurable IDs, plus unique bounded keyspace names
+for throttlers and independent request ID/number for deploy throttler. Empty
+caller arguments, fixed requests, every-field plan/full hashes and separate
+resource namespaces bind the local plans, not permission or current ownership.
+
+`test/core-network-read-preparation.test.mjs` supplies 30 synthetic contracts for
+fixed GETs, nested capture/freeze, every-field hashes, missing/extra/unsafe/accessor
+host/caller refusals, bounded unique keyspace names, projection canaries, rebound
+IDs and whole-response refusal of foreign keyspaces. Existing projections match
+CIDR/configurable ID and allowlisted keyspace names, not immutable parent or
+request identity. Independent current request ID/number/parent binding remains
+required; host snapshots do not prove it. CIDRs, schema/role selectors, ratios,
+actors and times are omitted; bound keyspace names/configuration presence remain.
+Provider configuration never proves effective enforcement or native authority.
+Current ownership/revision, broker transport/raw-body custody and independent
+non-waking proof remain prerequisites. No executor, registration, credential
+resolution or authority consumption. Exact-head Actions must execute these new
+contracts; no new-head success is implied. Coverage stays **134/291 offline
+adapters; 157 missing**, twelve previews and **52 pure preparations**, zero
+runtime-integrated/reviewed/enabled/adopted. Older increments are historical.
+
+Prior exact `d61b7c06100eb35dca10a35cd1844c92655973a6`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42756166464)
+passed [test](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42756166464/job/129631010958),
+lint/typecheck/native-policy/ci-ok and Neon candidate contract.
+[Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42756165761)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42756162427)
+passed. No numeric totals extracted; prior evidence does not cover this increment.
+
 ## Insight-detail preparation source increment
 
 Three pure Prepared bindings capture existing branch-anomaly, traffic-budget and

@@ -40,6 +40,10 @@ import { prepare as preparePaymentSetup } from "./tools/get-payment-method-setup
 import { prepare as prepareBranchAnomaly } from "./tools/get-branch-anomaly.js";
 import { prepare as prepareTrafficBudget } from "./tools/get-traffic-budget.js";
 import { prepare as prepareQueryReportStatus } from "./tools/get-query-patterns-report-status.js";
+import { throttlerKeyspaceNames } from "./network-throttler.js";
+import { prepare as prepareDatabaseCidr } from "./tools/get-database-postgres-cidr.js";
+import { prepare as prepareDatabaseThrottler } from "./tools/get-database-throttler.js";
+import { prepare as prepareDeployThrottler } from "./tools/get-deploy-request-throttler.js";
 
 const organizationFields = { organization: slug, organizationId: identifier, revision: digest };
 const databaseFields = { ...organizationFields, database: slug, databaseId: identifier };
@@ -50,6 +54,10 @@ const branchTarget = closed(branchFields);
 const anomalyTarget = closed({ ...branchFields, anomalyId: identifier });
 const trafficBudgetTarget = closed({ ...branchFields, budgetId: identifier });
 const queryReportTarget = closed({ ...branchFields, reportId: identifier });
+const databaseCidrTarget = closed({ ...databaseFields, cidrId: identifier });
+const throttlerFields = { ...databaseFields, configurableId: identifier, keyspaceNames: throttlerKeyspaceNames };
+const databaseThrottlerTarget = closed(throttlerFields);
+const deployThrottlerTarget = closed({ ...throttlerFields, requestId: identifier, number: deployNumber });
 const backupTarget = closed({ ...branchFields, backupId: identifier });
 const backupPolicyTarget = closed({ ...databaseFields, policyId: identifier });
 const deployRequestTarget = closed({ ...databaseFields, request: deployBinding, intoBranchId: identifier });
@@ -106,7 +114,9 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof oauthApplicationTarget.parse> | ReturnType<typeof organizationSsoDomainTarget.parse> |
   ReturnType<typeof invoiceTarget.parse> | ReturnType<typeof paymentMethodTarget.parse> |
   ReturnType<typeof paymentSetupTarget.parse> | ReturnType<typeof anomalyTarget.parse> |
-  ReturnType<typeof trafficBudgetTarget.parse> | ReturnType<typeof queryReportTarget.parse>;
+  ReturnType<typeof trafficBudgetTarget.parse> | ReturnType<typeof queryReportTarget.parse> |
+  ReturnType<typeof databaseCidrTarget.parse> | ReturnType<typeof databaseThrottlerTarget.parse> |
+  ReturnType<typeof deployThrottlerTarget.parse>;
 type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_backup" | "get_backup_policy" | "get_deploy_request" |
   "get_keyspace" | "get_shard" | "get_maintenance_event" |
@@ -118,7 +128,8 @@ type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_shard_configuration_profile" | "get_shard_configuration_profile_shard" |
   "get_oauth_application" | "get_organization_sso" | "get_organization_sso_domain" |
   "get_invoice" | "get_organization_billing_payment_method" | "get_payment_method_setup" |
-  "get_branch_anomaly" | "get_traffic_budget" | "get_query_patterns_report_status";
+  "get_branch_anomaly" | "get_traffic_budget" | "get_query_patterns_report_status" |
+  "get_database_postgres_cidr" | "get_database_throttler" | "get_deploy_request_throttler";
 type ResponseIdentity = "name-only-not-immutable" | "record-id-only-parent-not-verified" |
   "record-and-source-ids-destination-not-verified" | "record-and-branch-ids-parent-not-verified" |
   "record-and-user-ids-parent-not-verified" | "record-and-number-parent-and-destination-not-verified" |
@@ -420,6 +431,30 @@ export function bindGetQueryPatternsReportStatusPreparation(rawTarget: unknown):
     branch: target.branch, reportId: target.reportId }, {});
   return bindRead(`planetscale/query-patterns-report/${target.reportId}`, target,
     "get_query_patterns_report_status", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindGetDatabasePostgresCidrPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = databaseCidrTarget.parse(rawTarget);
+  const read = prepareDatabaseCidr({ organization: target.organization, database: target.database,
+    cidrId: target.cidrId }, {});
+  return bindRead(`planetscale/database-cidr/${target.cidrId}`, target,
+    "get_database_postgres_cidr", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindGetDatabaseThrottlerPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = databaseThrottlerTarget.parse(rawTarget);
+  const read = prepareDatabaseThrottler({ organization: target.organization, database: target.database,
+    configurableId: target.configurableId, keyspaceNames: target.keyspaceNames }, {});
+  return bindRead(`planetscale/database-throttler/${target.databaseId}/${target.configurableId}`, target,
+    "get_database_throttler", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindGetDeployRequestThrottlerPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = deployThrottlerTarget.parse(rawTarget);
+  const read = prepareDeployThrottler({ organization: target.organization, database: target.database,
+    number: target.number, configurableId: target.configurableId, keyspaceNames: target.keyspaceNames }, {});
+  return bindRead(`planetscale/deploy-request-throttler/${target.requestId}/${target.configurableId}`, target,
+    "get_deploy_request_throttler", read.request, "record-id-only-parent-not-verified");
 }
 
 export function bindGetWebhookPreparation(rawTarget: unknown): (raw: unknown) => Prepared {

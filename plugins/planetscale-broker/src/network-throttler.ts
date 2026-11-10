@@ -11,12 +11,12 @@ function bindings(item: Schema<string>): Schema<readonly string[]> {
   } };
 }
 const ids = bindings(identifier);
-const names = bindings(slug);
+export const throttlerKeyspaceNames = bindings(slug);
 // These broker-owned bindings confine output, not parent ownership or authority.
 export const cidrScope = closed({ organization: slug, database: slug, cidrId: identifier });
 export const cidrListScope = closed({ organization: slug, database: slug, cidrIds: ids });
-export const databaseThrottlerScope = closed({ organization: slug, database: slug, configurableId: identifier, keyspaceNames: names });
-export const deployThrottlerScope = closed({ organization: slug, database: slug, number: deployNumber, configurableId: identifier, keyspaceNames: names });
+export const databaseThrottlerScope = closed({ organization: slug, database: slug, configurableId: identifier, keyspaceNames: throttlerKeyspaceNames });
+export const deployThrottlerScope = closed({ organization: slug, database: slug, number: deployNumber, configurableId: identifier, keyspaceNames: throttlerKeyspaceNames });
 
 export interface CidrSummary {
   readonly id: string;
