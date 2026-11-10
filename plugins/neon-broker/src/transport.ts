@@ -14,6 +14,7 @@ import { functionLabel } from "./function-update.js";
 import { snapshotCreateTime } from "./snapshot-create.js";
 import { snapshotScheduleHour, snapshotScheduleRetention } from "./snapshot-schedule-update.js";
 import { spendingLimitCents } from "./spending-limit-update.js";
+import { triggerCreateHour, triggerCreateMinute, triggerCreateName, triggerCreateSlug } from "./trigger-create.js";
 
 export const NEON_ORIGIN = "https://console.neon.tech";
 export const RESPONSE_BYTES = 65_536;
@@ -25,6 +26,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  createProjectBranchTrigger(project: string, branch: string, slug: string, name: string, hour: number, minute: number, options: MetadataRequestOptions): Promise<unknown>;
   setOrganizationSpendingLimit(organization: string, cents: number, options: MetadataRequestOptions): Promise<unknown>;
   setSnapshotSchedule(project: string, branch: string, hour: number, retentionSeconds: number, options: MetadataRequestOptions): Promise<unknown>;
   createSnapshot(project: string, branch: string, name: string, timestamp: string, expiresAt: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -290,6 +292,10 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    createProjectBranchTrigger: (project: string, branch: string, slug: string, name: string, hour: number, minute: number, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/triggers`, new URLSearchParams(), options,
+        JSON.stringify({ type: "schedule", function_slug: triggerCreateSlug.parse(slug), name: triggerCreateName.parse(name), function_path: "/",
+          schedule: { cron: `${triggerCreateMinute.parse(minute)} ${triggerCreateHour.parse(hour)} * * *` }, enabled: false }), false, false, false, false, false, 201),
     setOrganizationSpendingLimit: (organization: string, cents: number, options: MetadataRequestOptions) =>
       request(`/organizations/${id(organization)}/billing/spending_limit`, new URLSearchParams(), options,
         JSON.stringify({ spending_limit_cents: spendingLimitCents.parse(cents) }), false, false, false, false, false, 200, true),

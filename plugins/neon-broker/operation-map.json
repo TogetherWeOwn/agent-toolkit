@@ -4151,20 +4151,24 @@
       "id": "createProjectBranchTrigger",
       "apiArea": "functions",
       "tool": "neon.createProjectBranchTrigger",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/functions/function_slug/triggers/name/create",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "disabled-schedule-trigger-creation"
       ],
       "tier": "write",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/trigger-create.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Disabled daily schedule only, exact function identity then bounded visible-name absence preflights and one fixed disabled POST. Exact201 acknowledgement is not persistence or independently verified inactivity. Preflight not atomic CAS; ambiguity stays uncertain after one observation, no retry. Enabling, storage triggers and arbitrary cron/path unsupported. Native host/custody, effects/entitlement, independent reviews and integration remain unresolved; source/mocks only."
     },
     {
       "id": "getProjectBranchTrigger",

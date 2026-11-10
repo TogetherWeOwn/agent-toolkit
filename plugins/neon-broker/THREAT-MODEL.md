@@ -1758,6 +1758,26 @@ uncertain even on desired presence or absence. No retry; the common permanent jo
 blocks same-request replay, not external writers. Source/mocks, not live creation or
 spend authority; native effects/entitlement, host/custody and independent gates remain.
 
+## Disabled daily schedule-trigger creation delta
+
+`createProjectBranchTrigger` copies one exact project/effective branch/stable function
+ID/slug/name/hour/minute/revision, with a distinct function/trigger-name/create grant
+and validated plan. Mandatory function identity and whole-visible-list name-absence
+preflights precede one fixed POST. Local and inherited names both block creation;
+malformed/duplicate/foreign/paginated/oversize lists refuse before mutation. The body
+always sends type=schedule, function_path=/, numeric daily UTC cron and enabled=false.
+No enabling, arbitrary cron/path, storage trigger or caller-body override exists.
+
+Only exact201 matching configuration, local-disabled/null-next-run echo and safe
+version yields closed ID/version acknowledgement. Function deployment metadata and
+unrelated trigger configuration never evaluate or project. This is not independently
+verified inactivity, persistence, invocation cancellation or lifecycle enforcement.
+Preflight is not atomic CAS; name/function replacement races remain unresolved.
+Ambiguity gets one bounded visible-list observation and remains uncertain even on
+presence/absence/replacement. No retry; common permanent journal blocks same-request
+replay, not external writers. Beta entitlement/effects/native host/custody and reviews
+remain gates; source/mocks only, no live scheduling or resource creation.
+
 ## Alert-only spending threshold decrease delta
 
 `setOrganizationSpendingLimit` copies exact organization/expected-desired positive

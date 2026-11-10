@@ -5739,6 +5739,112 @@ test('snapshot create: maximal copied target fits actual common budgets', async 
   safeEnvelope(f, result);
 });
 
+import { triggerCreateFixture, triggerCreateArgs, triggerCreateScope, triggerCreateReceipt } from './helpers.mjs';
+function triggerCreateBroker(value = null, overrides = {}, config = triggerCreateScope) {
+  const provider = triggerCreateFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId, function_slug: config.functionSlug, name: config.name, hour: config.hour, minute: config.minute };
+  const common = providerFixture(overrides);
+  common.vector.policy.resources = [provider.operation('createProjectBranchTrigger').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.createProjectBranchTrigger', args, context, key);
+  } };
+}
+
+test('trigger create: agent AND dedicated exact creation grant precede credentials; closed acknowledgement only', async () => {
+  const target = 'neon/projects/project-a/branches/br-a/functions/hello/triggers/daily-a';
+  for (const resource of ['neon/projects/project-a', 'neon/projects/project-a/branches/br-a/triggers', target,
+    target + '/disable', target.replace('br-a', 'br-b') + '/create', target.replace('hello', 'other') + '/create', target.replace('daily-a', 'other') + '/create']) {
+    const f = triggerCreateBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = triggerCreateBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.common.calls.secret, 0);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = triggerCreateBroker({ ...triggerCreateReceipt, trigger: { ...triggerCreateReceipt.trigger, error: credentialCanary, invocation_url: derivedCanary } });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { trigger_id: 'tr-new', version: 1, acknowledged: true });
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('trigger create: authenticated identity/resource TOCTOU and body/enabling/schedule overrides refuse before transport', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = triggerCreateBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = triggerCreateBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.createProjectBranchTrigger', triggerCreateArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ enabled: true }, { schedule: { cron: '* * * * *' } }, { function_path: '/other' }, { type: 'storage_object_created' },
+    { function_slug: 'other' }, { name: 'other' }, { hour: 10 }, { minute: 6 }, { approved: true }, { project_id: 'other' }, { branch_id: 'br-b' }, { retry: true }]) {
+    const g = triggerCreateBroker();
+    assert.equal((await g.common.broker().call('neon.createProjectBranchTrigger', { ...triggerCreateArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+    assert.equal(g.provider.requests.length, 0);
+  }
+});
+
+test('trigger create: permanent journal blocks complete/uncertain replay across restart without retrying POST', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = triggerCreateBroker((url, init, n) => {
+      if (init.method === 'POST') {
+        if (ambiguous) throw Error(credentialCanary);
+        return response(triggerCreateReceipt, { status: 201 });
+      }
+      return response(url.endsWith('/triggers') ? { triggers: n === 2 ? [] : [triggerCreateReceipt.trigger] } : { function: { id: 'fn-a', slug: 'hello' } });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const count = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, count);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'POST').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('trigger create: preflight mismatches never mutate; reflected acknowledgement stays uncertain and redacted', async () => {
+  for (const badFunction of [false, true]) {
+    const f = triggerCreateBroker(url => response(url.endsWith('/triggers') ? { triggers: [triggerCreateReceipt.trigger] } :
+      { function: { id: badFunction ? 'replacement' : 'fn-a', slug: 'hello' } }));
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, badFunction ? 1 : 2);
+    assert.equal(f.provider.requests.some(({ init }) => init.method === 'POST'), false);
+  }
+  for (const change of [{ trigger_id: credentialCanary }, { name: credentialCanary }, { function_slug: derivedCanary }, { enabled: true }, { next_run_at: credentialCanary }]) {
+    const f = triggerCreateBroker({ trigger: { ...triggerCreateReceipt.trigger, ...change } });
+    const result = await f.call();
+    assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, 'uncertain');
+    safeEnvelope(f, result);
+  }
+});
+
+test('trigger create: maximal copied target and exact disabled plan fit actual common budgets', async () => {
+  const config = { projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), functionId: 'f'.repeat(80), functionSlug: 'f'.repeat(20), name: 'n'.repeat(40), revision: 'r'.repeat(80), hour: 23, minute: 59 };
+  const f = triggerCreateBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { trigger_id: 'tr-new', version: 1, acknowledged: true });
+  assert.equal(JSON.parse(f.provider.requests[2].init.body).enabled, false);
+  safeEnvelope(f, result);
+});
+
 import { databaseCreateFixture, databaseCreateArgs, databaseCreateScope, databaseCreateReceipt } from './helpers.mjs';
 function databaseCreateBroker(value = null, overrides = {}, config = databaseCreateScope) {
   const provider = databaseCreateFixture(value, config);
