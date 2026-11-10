@@ -24,8 +24,10 @@ function bindings<T extends { readonly id: string }>(schema: Schema<T>): Schema<
 const branchFields = { organization: slug, database: slug, branch: slug };
 // Response confinement only: trusted parent ownership and collection authority remain separate.
 export const unifiedChangeScope = closed({ ...branchFields, change: changeBinding });
-export const unifiedChangeListScope = closed({ ...branchFields, changes: bindings(changeBinding) });
-export const replicaChangeListScope = closed({ ...branchFields, changes: bindings(replicaChangeBinding) });
+export const unifiedChangeBindings = bindings(changeBinding);
+export const replicaChangeBindings = bindings(replicaChangeBinding);
+export const unifiedChangeListScope = closed({ ...branchFields, changes: unifiedChangeBindings });
+export const replicaChangeListScope = closed({ ...branchFields, changes: replicaChangeBindings });
 
 function matched<T extends { readonly id: string }>(body: Record<string, unknown>, allowed: readonly T[]): T {
   const id = identifier.parse(body.id);

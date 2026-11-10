@@ -4,6 +4,39 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Unified/replica change collection preparation source increment
+
+Two pure Prepared bindings cover existing unified change-request and dedicated-
+replica change-request list GETs. Closed immutable host parents/revision, reused
+unique bounded child/target bindings and host pagination bind fixed requests and
+empty caller arguments. Every field enters plan/full hashes, including IDs absent
+from paths. Existing binding parsers exported/reused without behavior changes.
+No executor, registration, credential resolution or authority consumption.
+
+`test/core-unified-change-collection-read-preparation.test.mjs` supplies **21 synthetic
+contracts** for exact requests, every-field hashes, immutable captures, closed and
+bounded inputs, accessor/page/whole-response refusals and redacted projections.
+Unified collections preserve all exact type/target pairs and nullable target IDs;
+replica collections retain multiple replica ID/name pairs. Informational states
+and canDelete are not cancellation restrictions or native authority. Receipts
+match child/target bindings, not immutable parent ownership. Child confinement is
+not upstream collection permission. Configuration/storage/errors/actors/raw times
+are omitted; state never proves unchanged settings, rollback or closure. Current
+ownership/revision/bindings, collection permission, trusted transport/raw-body
+custody and independent non-waking proof remain prerequisites. Coverage stays
+**134/291 offline adapters; 157 missing**, twelve previews and **114 pure
+preparations**, zero runtime-integrated/reviewed/enabled/adopted. New contracts
+require exact-head Actions, not this declaration.
+
+Prior exact `e7e98d1eb9ab0f8db0ba99be4316d8989c51364b`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42815978900)
+and [test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42815978900/job/129829125288)
+passed, as did [Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42815978297)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42815970086).
+Earlier pending observations superseded; no numeric totals extracted. Earlier
+recurring unchanged SDK recovery uncertainty remains unresolved, not repaired.
+No inline findings/submitted reviews returned. Older counts are historical.
+
 ## Deployment collection preparation source increment
 
 Four pure Prepared bindings cover existing deploy queue, deploy-operation,

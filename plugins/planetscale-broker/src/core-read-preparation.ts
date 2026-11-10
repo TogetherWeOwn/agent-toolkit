@@ -103,8 +103,10 @@ import { prepare as prepareDatabaseThrottler } from "./tools/get-database-thrott
 import { prepare as prepareDeployThrottler } from "./tools/get-deploy-request-throttler.js";
 import { prepare as prepareBranchQuery } from "./tools/get-branch-query.js";
 import { prepare as prepareBranchQueryTag } from "./tools/get-branch-query-tag.js";
-import { changeBinding } from "./unified-change-records.js";
+import { changeBinding, unifiedChangeBindings, replicaChangeBindings } from "./unified-change-records.js";
 import { prepare as prepareChangeRequest } from "./tools/get-change-request.js";
+import { prepare as prepareChangeRequestList } from "./tools/list-change-requests.js";
+import { prepare as prepareReplicaChangeRequestList } from "./tools/list-dedicated-read-replica-change-requests.js";
 import { prepare as prepareVtctldOperation } from "./tools/get-vtctld-operation.js";
 import { prepare as prepareKeyspaceVschema } from "./tools/get-keyspace-vschema.js";
 import { prepare as prepareDataTopology } from "./tools/get-data-topology.js";
@@ -162,6 +164,8 @@ const anomalyTarget = closed({ ...branchFields, anomalyId: identifier });
 const trafficBudgetTarget = closed({ ...branchFields, budgetId: identifier });
 const queryReportTarget = closed({ ...branchFields, reportId: identifier });
 const unifiedChangeTarget = closed({ ...branchFields, change: changeBinding });
+const unifiedChangeListTarget = closed({ ...branchFields, changes: unifiedChangeBindings, pagination: pageArguments });
+const replicaChangeListTarget = closed({ ...branchFields, changes: replicaChangeBindings, pagination: pageArguments });
 const vtctldOperationTarget = closed({ ...branchFields, operationId: identifier });
 const branchQueryTarget = closed({ ...branchFields, queryId: identifier });
 const branchQueryTagTarget = closed({ ...branchFields, tag: closed({ id: identifier, name: identifier }) });
@@ -284,8 +288,10 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof invoiceLineItemListTarget.parse> | ReturnType<typeof anomalyListTarget.parse> |
   ReturnType<typeof trafficBudgetListTarget.parse> | ReturnType<typeof queryReportListTarget.parse> |
   ReturnType<typeof auditLogListTarget.parse> | ReturnType<typeof deployQueueTarget.parse> |
-  ReturnType<typeof deployChildListTarget.parse> | ReturnType<typeof schemaRecommendationListTarget.parse>;
-type ReadOperation = "get_deploy_queue" | "list_deploy_operations" | "list_deploy_request_reviews" |
+  ReturnType<typeof deployChildListTarget.parse> | ReturnType<typeof schemaRecommendationListTarget.parse> |
+  ReturnType<typeof unifiedChangeListTarget.parse> | ReturnType<typeof replicaChangeListTarget.parse>;
+type ReadOperation = "list_change_requests" | "list_dedicated_read_replica_change_requests" |
+  "get_deploy_queue" | "list_deploy_operations" | "list_deploy_request_reviews" |
   "list_schema_recommendations" | "list_audit_logs" | "list_databases" | "list_branches" | "list_database_regions" |
   "list_regions_for_organization" | "list_public_regions" | "get_organization" | "get_database" | "get_branch" |
   "list_backups" | "list_backup_policies" | "list_deploy_requests" |
@@ -505,6 +511,22 @@ export function bindListKeyspaceResizeRequestsPreparation(rawTarget: unknown): (
     branch: target.branch, keyspace: target.keyspace, resizes: target.resizes }, target.pagination);
   return bindRead(`planetscale/keyspace/${target.keyspace.id}`, target, "list_keyspace_resize_requests", read.request,
     "record-id-only-parent-not-verified");
+}
+
+export function bindListChangeRequestsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = unifiedChangeListTarget.parse(rawTarget);
+  const read = prepareChangeRequestList({ organization: target.organization, database: target.database,
+    branch: target.branch, changes: target.changes }, target.pagination);
+  return bindRead(`planetscale/branch/${target.branchId}`, target, "list_change_requests", read.request,
+    "record-and-target-binding-parent-not-verified");
+}
+
+export function bindListDedicatedReadReplicaChangeRequestsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = replicaChangeListTarget.parse(rawTarget);
+  const read = prepareReplicaChangeRequestList({ organization: target.organization, database: target.database,
+    branch: target.branch, changes: target.changes }, target.pagination);
+  return bindRead(`planetscale/branch/${target.branchId}`, target, "list_dedicated_read_replica_change_requests", read.request,
+    "record-and-target-binding-parent-not-verified");
 }
 
 export function bindListBranchChangeRequestsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {

@@ -6,6 +6,30 @@ manifest, network executor, credential resolver, or tool registration is supplie
 The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
+## Unified/replica change collection preparation increment
+
+Two pure `Prepared` bindings cover existing unified change-request and dedicated-
+replica change-request list GETs. Closed immutable host parents/revision, reused
+unique bounded child/target bindings and host pagination bind fixed requests and
+empty caller arguments. Every field enters plan/full hashes, including IDs absent
+from paths. Existing binding parsers are exported/reused without behavior changes.
+No executor, registration, credential resolution or authority consumption.
+
+`test/core-unified-change-collection-read-preparation.test.mjs` supplies 21 synthetic
+contracts for exact requests, every-field hashes, immutable captures, closed and
+bounded inputs, accessor/page/whole-response refusals and redacted projections.
+Unified collections preserve all exact type/target pairs and nullable target IDs;
+replica collections preserve multiple replica ID/name pairs. Informational states
+and canDelete flags are not cancellation restrictions or native authority. Receipts
+match child/target bindings, not immutable parent ownership. Child confinement is
+not upstream collection permission. Configuration/storage/errors/actors/raw times
+are omitted; state never proves unchanged settings, rollback or closure. Current
+ownership/revision/bindings, collection permission, trusted transport/raw-body
+custody and independent non-waking proof remain prerequisites. Coverage stays
+**134/291 offline adapters; 157 missing**, twelve previews and **114 pure
+preparations**, zero runtime-integrated/reviewed/enabled/adopted. New contracts
+require exact-head Actions; older counts below are historical.
+
 ## Deployment collection preparation increment
 
 Four pure `Prepared` bindings cover the existing deploy queue, deploy-operation,
