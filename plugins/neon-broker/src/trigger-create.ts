@@ -14,6 +14,7 @@ export interface NeonTriggerCreateScope {
   readonly revision: string;
 }
 const pathId = text(60, /^[a-z0-9][a-z0-9-]*$/);
+const responseTriggerId = text(128, /^[A-Za-z0-9][A-Za-z0-9_.-]*$/);
 export const triggerCreateSlug = text(20, /^[a-z0-9]+$/);
 export const triggerCreateName = text(40, /^[a-z][a-z0-9-]*$/);
 export const triggerCreateHour = integer(0, 23);
@@ -53,7 +54,7 @@ export function createNeonTriggerCreateOperations(scope: NeonTriggerCreateScope,
     const ids = new Set<string>();
     for (const value of rows(field(raw, "triggers"), 30)) {
       ancestry(value);
-      const id = text(128, /^[A-Za-z0-9][A-Za-z0-9_.-]*$/).parse(field(value, "trigger_id"));
+      const id = responseTriggerId.parse(field(value, "trigger_id"));
       const name = text(256, /^[\x20-\x7e]+$/).parse(field(value, "name"));
       check(!names.has(name) && !ids.has(id));
       names.add(name);
@@ -66,7 +67,7 @@ export function createNeonTriggerCreateOperations(scope: NeonTriggerCreateScope,
     ancestry(raw);
     const value = field(raw, "trigger");
     ancestry(value);
-    const id = identifier.parse(field(value, "trigger_id"));
+    const id = responseTriggerId.parse(field(value, "trigger_id"));
     check(field(value, "type") === "schedule" && field(value, "function_slug") === config.functionSlug &&
       field(value, "name") === config.name && field(value, "function_path") === "/" &&
       field(value, "enabled") === false && field(value, "inherited") === false && field(value, "next_run_at") === null);

@@ -97,6 +97,24 @@ test('Trigger create: exact201 disabled/local/name/path/cron/next-run echo and s
   }
 });
 
+test('Trigger create: documented dotted and 128-character server IDs acknowledge; malformed IDs stay uncertain', async () => {
+  const [op] = createNeonTriggerCreateOperations(scope, {});
+  for (const trigger_id of ['t', 'tr.new', 't'.repeat(81), 't'.repeat(128)]) {
+    const raw = { trigger: { ...trigger, trigger_id } };
+    const f = fixture(raw);
+    assert.deepEqual(await f.run(name, args), { ...expected, trigger_id });
+    assert.equal(f.requests.length, 3);
+    assert.deepEqual(op.project(raw), { ...expected, trigger_id });
+  }
+  for (const trigger_id of ['', 't'.repeat(129), '.tr', 'tr/new', 'tr\n', 123]) {
+    const raw = { trigger: { ...trigger, trigger_id } };
+    assert.throws(() => op.project(raw));
+    const f = fixture(raw);
+    await assert.rejects(f.run(name, args), { message: 'OUTCOME_UNCERTAIN' });
+    assert.equal(f.requests.length, 4);
+  }
+});
+
 test('Trigger create: ambiguous POST observes once and never promotes presence/absence/replacement to success', async () => {
   for (const after of [{ triggers: [] }, { triggers: [trigger] }, { triggers: [{ ...trigger, enabled: true }] }, null, {}, { triggers: [], branch_id: 'br-b' }]) {
     const f = fixture((url, init, n) => {

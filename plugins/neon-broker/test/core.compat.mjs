@@ -5835,6 +5835,24 @@ test('trigger create: preflight mismatches never mutate; reflected acknowledgeme
   }
 });
 
+test('trigger create: documented server ID boundaries complete journal; malformed ID remains uncertain', async () => {
+  for (const trigger_id of ['tr.new', 't'.repeat(81), 't'.repeat(128), 't'.repeat(129)]) {
+    const f = triggerCreateBroker({ trigger: { ...triggerCreateReceipt.trigger, trigger_id } });
+    const result = await f.call();
+    const valid = trigger_id.length <= 128;
+    assert.equal(result.ok, valid);
+    if (valid) assert.deepEqual(result.value, { trigger_id, version: 1, acknowledged: true });
+    else assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, valid ? 'complete' : 'uncertain');
+    assert.equal(f.provider.requests.length, valid ? 3 : 4);
+    const count = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, count);
+    safeEnvelope(f, result);
+  }
+});
+
 test('trigger create: maximal copied target and exact disabled plan fit actual common budgets', async () => {
   const config = { projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), functionId: 'f'.repeat(80), functionSlug: 'f'.repeat(20), name: 'n'.repeat(40), revision: 'r'.repeat(80), hour: 23, minute: 59 };
   const f = triggerCreateBroker(null, {}, config);
