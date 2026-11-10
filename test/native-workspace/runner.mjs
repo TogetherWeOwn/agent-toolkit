@@ -1,6 +1,7 @@
 // Actions-only launcher and rootless supervisor. Never imports native code.
 import assert from 'node:assert/strict';
 import { spawn, execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { mkdtemp, mkdir, lstat, realpath, readFile, writeFile, copyFile, access, rm, symlink } from 'node:fs/promises';
 import { dirname, basename, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -22,16 +23,33 @@ function groupAbsent(pid) {
   try { process.kill(-pid, 0); return false; } catch (error) { return error.code === 'ESRCH'; }
 }
 
+// Sanitized supervisor diagnostics: step names and error codes only, never
+// paths, URLs, environment values or raw tool output.
+const steps = [];
+async function persistSteps(reportDir) {
+  try { await writeFile(join(reportDir, 'supervise.json'), JSON.stringify(steps, null, 2) + '\n'); } catch { /* Diagnostics must not fail setup. */ }
+}
+async function step(name, fn) {
+  try {
+    const value = await fn();
+    steps.push({ name, ok: true });
+    return value;
+  } catch (error) {
+    steps.push({ name, ok: false, code: error?.code ?? 'unknown' });
+    throw error;
+  }
+}
 async function sandboxFilesystem(root) {
   const fsRoot = join(root, 'filesystem');
   await mkdir(fsRoot, { mode: 0o700 });
-  run('mount', ['--make-rprivate', '/']);
+  await step('make-rprivate', () => run('mount', ['--make-rprivate', '/']));
   async function bind(source, target, readonly = true) {
     await mkdir(join(fsRoot, target), { recursive: true });
     // Read-only sockets still confer authority. Refuse them in every exposed tree.
-    assert.equal(run('find', [source, '-type', 's', '-print', '-quit']).toString(), '');
-    run('mount', ['--bind', source, join(fsRoot, target)]);
-    if (readonly) run('mount', ['-o', 'remount,bind,ro,nosuid,nodev', join(fsRoot, target)]);
+    await step(`socket-check-${target}`, () =>
+      assert.equal(run('find', [source, '-type', 's', '-print', '-quit']).toString(), ''));
+    await step(`bind-${target}`, () => run('mount', ['--bind', source, join(fsRoot, target)]));
+    if (readonly) await step(`bind-ro-${target}`, () => run('mount', ['-o', 'remount,bind,ro,nosuid,nodev', join(fsRoot, target)]));
   }
   await bind('/usr', 'usr');
   await bind(dirname(node), 'tools');
@@ -47,9 +65,9 @@ async function sandboxFilesystem(root) {
     await mkdir(join(fsRoot, dir), { recursive: true });
   for (const name of ['null', 'zero', 'random', 'urandom']) {
     await writeFile(join(fsRoot, 'dev', name), '');
-    run('mount', ['--bind', '/dev/' + name, join(fsRoot, 'dev', name)]);
+    await step(`dev-bind-${name}`, () => run('mount', ['--bind', '/dev/' + name, join(fsRoot, 'dev', name)]));
   }
-  run('mount', ['-t', 'tmpfs', '-o', 'mode=1777,nosuid,nodev', 'tmpfs', join(fsRoot, 'dev/shm')]);
+  await step('shm-tmpfs', () => run('mount', ['-t', 'tmpfs', '-o', 'mode=1777,nosuid,nodev', 'tmpfs', join(fsRoot, 'dev/shm')]));
   await writeFile(join(fsRoot, 'etc/passwd'), `fixture:x:${process.getuid()}:${process.getgid()}:Fixture:${root}/home:/bin/sh\n`);
   await writeFile(join(fsRoot, 'etc/group'), `fixture:x:${process.getgid()}:\n`);
   await writeFile(join(fsRoot, 'etc/nsswitch.conf'), 'passwd: files\ngroup: files\nhosts: files\n');
@@ -58,23 +76,37 @@ async function sandboxFilesystem(root) {
 
 if (process.argv[2] === '--supervise') {
   const root = process.argv[3];
+  const chrootBin = process.argv[5];
+  const setprivBin = process.argv[6];
   let child;
   try {
-    assert.equal(process.getuid(), Number(process.argv[4]));
-    assert.notEqual(process.getuid(), 0, 'native fixture must not run as root');
+    steps.push({ name: 'supervise-start', ok: true });
+    await persistSteps(join(root, 'shared'));
+    await step('uid-check', () => {
+      assert.equal(process.getuid(), Number(process.argv[4]));
+      assert.notEqual(process.getuid(), 0, 'native fixture must not run as root');
+    });
     assert.match(root, /^\/tmp\/native-workspace-[A-Za-z0-9]+$/);
+    steps.push({ name: 'root-check', ok: true });
     assert.equal(process.pid, 1, 'PID namespace init required for descendant disposal');
-    const links = JSON.parse(run('ip', ['-j', 'link', 'show']));
-    assert.deepEqual(links.map(link => link.ifname), ['lo']);
-    run('ip', ['link', 'set', 'lo', 'up']);
-    assert.deepEqual(JSON.parse(run('ip', ['-j', 'route', 'show'])), []);
+    steps.push({ name: 'pid-check', ok: true });
+    const links = await step('link-list', () => JSON.parse(run('ip', ['-j', 'link', 'show'])));
+    await step('link-check', () => assert.deepEqual(links.map(link => link.ifname), ['lo']));
+    await step('lo-up', () => run('ip', ['link', 'set', 'lo', 'up']));
+    const routes = await step('route-list', () => JSON.parse(run('ip', ['-j', 'route', 'show'])));
+    await step('route-check', () => assert.deepEqual(routes, []));
     const fsRoot = await sandboxFilesystem(root);
-    // chroot requires only this rootless namespace's capability. Native code runs
-    // after it, without capabilities, host filesystem authority or new privileges.
-    child = spawn('chroot', [fsRoot, '/usr/bin/setpriv', '--bounding-set=-all', '--inh-caps=-all',
+    // Absolute chroot/setpriv paths are resolved on the host and verified inside
+    // the chroot before spawn, so an image layout drift fails at a named step.
+    await step('setpriv-in-chroot', async () => {
+      assert.ok(chrootBin && setprivBin, 'absolute chroot/setpriv paths required');
+      assert.equal((await lstat(join(fsRoot, setprivBin))).isFile(), true);
+    });
+    child = spawn(chrootBin, [fsRoot, setprivBin, '--bounding-set=-all', '--inh-caps=-all',
       '--ambient-caps=-all', '--no-new-privs', '/tools/node', '/fixture/runner.mjs', '--fixture-child'], {
       cwd: '/', env: minimalEnv(root), stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
     });
+    steps.push({ name: 'child-spawn', ok: true });
     let fenced = false;
     child.on('message', async message => {
       try {
@@ -102,18 +134,28 @@ if (process.argv[2] === '--supervise') {
         child.kill('SIGKILL');
       }
     });
-    const code = await wait(child);
+    const code = await step('child-exit', async () => wait(child));
+    steps.push({ name: 'fence-check', ok: fenced, childCode: code });
     process.exitCode = fenced ? code : 1;
   } catch {
     child?.kill('SIGKILL');
     process.exitCode = 1;
+  } finally {
+    await persistSteps(join(root, 'shared'));
   }
   // Exiting PID 1 makes the kernel kill every remaining namespace descendant.
 } else if (process.argv[2] === '--fixture-child') {
   process.chdir('/fixture');
   // Keep the supervisor IPC in this process; importing the test uses Node's runner.
   // It emits no artifact containing raw test-runner exceptions.
-  await import('./selection-revision.test.mjs');
+  const childReport = join(process.env.FIXTURE_ROOT, 'child.json');
+  try {
+    await import('./selection-revision.test.mjs');
+    await writeFile(childReport, JSON.stringify({ phase: 'fixture-import', ok: true }) + '\n', { flag: 'w' });
+  } catch (error) {
+    await writeFile(childReport, JSON.stringify({ phase: 'fixture-import', ok: false, code: error?.code ?? 'unknown' }) + '\n', { flag: 'w' });
+    process.exitCode = 1;
+  }
   if (process.connected) process.disconnect();
 } else {
   assert.equal(process.env.GITHUB_ACTIONS, 'true', 'GitHub Actions only; no local fallback');
@@ -138,8 +180,13 @@ if (process.argv[2] === '--supervise') {
       evidence.tools[tool] = run(tool, [tool === 'ip' ? '-Version' : '--version']).toString().split('\n')[0].trim();
     }
     evidence.stage = 'rootless filesystem/network/PID namespace setup';
+    const resolveTool = name => [join('/usr/sbin', name), join('/sbin', name),
+      join('/usr/bin', name), join('/bin', name)].find(candidate => existsSync(candidate));
+    evidence.chrootPath = resolveTool('chroot') ?? null;
+    evidence.setprivPath = resolveTool('setpriv') ?? null;
     child = spawn('unshare', ['--user', '--map-current-user', '--keep-caps', '--net', '--mount',
-      '--pid', '--fork', '--kill-child=KILL', '--mount-proc', node, script, '--supervise', root, String(process.getuid())], {
+      '--pid', '--fork', '--kill-child=KILL', '--mount-proc', node, script, '--supervise', root,
+      String(process.getuid()), evidence.chrootPath ?? '', evidence.setprivPath ?? ''], {
       cwd: here, env: { PATH: path, LANG: 'C.UTF-8' }, stdio: ['ignore', 'ignore', 'ignore'], detached: true,
     });
     const term = setTimeout(() => {
@@ -158,6 +205,13 @@ if (process.argv[2] === '--supervise') {
     evidence.exitCode = code;
     evidence.descendantsStopped = groupAbsent(child.pid);
     assert.ok(evidence.descendantsStopped, 'namespace/process group shutdown required');
+    // Copy sanitized supervisor/child diagnostics even when assertions are absent.
+    for (const name of ['supervise.json', 'child.json']) {
+      try {
+        const sourceStat = await lstat(join(shared, name));
+        if (sourceStat.isFile()) await copyFile(join(shared, name), join(reportDir, name));
+      } catch { /* Optional diagnostics; missing files stay missing. */ }
+    }
     const source = join(shared, 'assertions.json');
     const stat = await lstat(source);
     assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.uid === process.getuid() && stat.size <= 1_000_000);

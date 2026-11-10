@@ -57,6 +57,8 @@ jobs:
           path: |
             ${{ runner.temp }}/native-workspace-report/setup.json
             ${{ runner.temp }}/native-workspace-report/runner.json
+            ${{ runner.temp }}/native-workspace-report/supervise.json
+            ${{ runner.temp }}/native-workspace-report/child.json
             ${{ runner.temp }}/native-workspace-report/assertions.json
             ${{ runner.temp }}/native-workspace-report/test.xml
           if-no-files-found: error
