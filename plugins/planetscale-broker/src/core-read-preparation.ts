@@ -139,6 +139,13 @@ import { prepare as prepareBranchTagMetrics } from "./tools/get-branch-tag-metri
 import { prepare as prepareMaintenanceSchedule } from "./tools/get-maintenance-schedule.js";
 import { prepare as prepareBranchMaintenanceWindow } from "./tools/get-branch-maintenance-window.js";
 import { prepare as prepareMoveTablesWorkflowStatus } from "./tools/get-move-tables-workflow-status.js";
+import { extensionBindings, parameterBindings } from "./configuration-definitions.js";
+import { prepare as prepareExtensionList } from "./tools/list-extensions.js";
+import { prepare as prepareProfileExtensionList } from "./tools/list-shard-configuration-profile-extensions.js";
+import { prepare as prepareParameterList } from "./tools/list-parameters.js";
+import { prepare as prepareAdminParameterList } from "./tools/list-admin-parameters.js";
+import { prepare as prepareRouterParameterList } from "./tools/list-router-parameters.js";
+import { prepare as prepareProfileParameterList } from "./tools/list-shard-configuration-profile-parameters.js";
 
 const organizationFields = { organization: slug, organizationId: identifier, revision: digest };
 const databaseFields = { ...organizationFields, database: slug, databaseId: identifier };
@@ -146,6 +153,14 @@ const organizationTarget = closed(organizationFields);
 const databaseTarget = closed(databaseFields);
 const branchFields = { ...databaseFields, branch: slug, branchId: identifier };
 const branchTarget = closed(branchFields);
+const extensionListTarget = closed({ ...branchFields, extensions: extensionBindings });
+const profileExtensionListTarget = closed({ ...branchFields,
+  profile: closed({ id: identifier, name: slug }), extensions: extensionBindings });
+const parameterListTarget = closed({ ...branchFields, parameters: parameterBindings });
+const profileParameterListTarget = closed({ ...branchFields,
+  profile: closed({ id: identifier, name: slug }), parameters: parameterBindings });
+const routerParameterListTarget = closed({ ...branchFields,
+  router: closed({ id: identifier, name: slug }), parameters: parameterBindings });
 const keyspaceListTarget = closed({ ...branchFields, keyspaces: keyspaceBindings, pagination: pageArguments });
 const shardListTarget = closed({ ...branchFields, shards: shardBindings, pagination: pageArguments });
 const maintenanceEventListTarget = closed({ ...databaseFields, events: maintenanceEventBindings, pagination: pageArguments });
@@ -321,7 +336,10 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof queryStatisticsTarget.parse> | ReturnType<typeof queryFingerprintSummaryTarget.parse> |
   ReturnType<typeof branchQueryErrorTarget.parse> | ReturnType<typeof branchQueryTagListTarget.parse> |
   ReturnType<typeof currentUserTarget.parse> | ReturnType<typeof organizationListTarget.parse> |
-  ReturnType<typeof readOnlyRegionListTarget.parse> | ReturnType<typeof postgresVersionListTarget.parse>;
+  ReturnType<typeof readOnlyRegionListTarget.parse> | ReturnType<typeof postgresVersionListTarget.parse> |
+  ReturnType<typeof extensionListTarget.parse> | ReturnType<typeof profileExtensionListTarget.parse> |
+  ReturnType<typeof parameterListTarget.parse> | ReturnType<typeof profileParameterListTarget.parse> |
+  ReturnType<typeof routerParameterListTarget.parse>;
 type ReadOperation = "get_branch_query_error" | "list_branch_query_tags" | "get_query_statistics" | "get_query_summary" | "list_branch_queries" | "list_branch_query_errors" |
   "list_change_requests" | "list_dedicated_read_replica_change_requests" |
   "get_deploy_queue" | "list_deploy_operations" | "list_deploy_request_reviews" |
@@ -356,7 +374,9 @@ type ReadOperation = "get_branch_query_error" | "list_branch_query_tags" | "get_
   "get_instant_branch_metrics" | "get_instant_tablet_metrics" | "get_branch_metrics" | "get_tablet_metrics" |
   "get_branch_query_metrics" | "get_branch_tag_metrics" |
   "get_maintenance_schedule" | "get_branch_maintenance_window" | "get_move_tables_workflow_status" |
-  "get_current_user" | "list_organizations" | "list_read_only_regions" | "list_postgres_versions";
+  "get_current_user" | "list_organizations" | "list_read_only_regions" | "list_postgres_versions" |
+  "list_extensions" | "list_shard_configuration_profile_extensions" | "list_parameters" |
+  "list_admin_parameters" | "list_router_parameters" | "list_shard_configuration_profile_parameters";
 type ResponseIdentity = "name-only-not-immutable" | "record-id-only-parent-not-verified" |
   "record-and-source-ids-destination-not-verified" | "record-and-branch-ids-parent-not-verified" |
   "record-and-user-ids-parent-not-verified" | "record-and-number-parent-and-destination-not-verified" |
@@ -389,6 +409,54 @@ function bindRead(
     jsonData(prepared);
     return prepared;
   };
+}
+
+export function bindListExtensionsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = extensionListTarget.parse(rawTarget);
+  const read = prepareExtensionList({ organization: target.organization, database: target.database,
+    branch: target.branch, extensions: target.extensions }, {});
+  return bindRead(`planetscale/branch/${target.branchId}`, target,
+    "list_extensions", read.request);
+}
+
+export function bindListShardConfigurationProfileExtensionsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = profileExtensionListTarget.parse(rawTarget);
+  const read = prepareProfileExtensionList({ organization: target.organization, database: target.database,
+    branch: target.branch, profile: target.profile, extensions: target.extensions }, {});
+  return bindRead(`planetscale/configuration-profile/${target.profile.id}`, target,
+    "list_shard_configuration_profile_extensions", read.request);
+}
+
+export function bindListParametersPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = parameterListTarget.parse(rawTarget);
+  const read = prepareParameterList({ organization: target.organization, database: target.database,
+    branch: target.branch, parameters: target.parameters }, {});
+  return bindRead(`planetscale/branch/${target.branchId}`, target,
+    "list_parameters", read.request);
+}
+
+export function bindListAdminParametersPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = parameterListTarget.parse(rawTarget);
+  const read = prepareAdminParameterList({ organization: target.organization, database: target.database,
+    branch: target.branch, parameters: target.parameters }, {});
+  return bindRead(`planetscale/branch/${target.branchId}`, target,
+    "list_admin_parameters", read.request);
+}
+
+export function bindListRouterParametersPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = routerParameterListTarget.parse(rawTarget);
+  const read = prepareRouterParameterList({ organization: target.organization, database: target.database,
+    branch: target.branch, router: target.router, parameters: target.parameters }, {});
+  return bindRead(`planetscale/router/${target.router.id}`, target,
+    "list_router_parameters", read.request);
+}
+
+export function bindListShardConfigurationProfileParametersPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = profileParameterListTarget.parse(rawTarget);
+  const read = prepareProfileParameterList({ organization: target.organization, database: target.database,
+    branch: target.branch, profile: target.profile, parameters: target.parameters }, {});
+  return bindRead(`planetscale/configuration-profile/${target.profile.id}`, target,
+    "list_shard_configuration_profile_parameters", read.request);
 }
 
 export function bindGetDeployQueuePreparation(rawTarget: unknown): (raw: unknown) => Prepared {

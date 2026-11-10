@@ -6,6 +6,33 @@ manifest, network executor, credential resolver, or tool registration is supplie
 The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
+## Configuration-definition preparation increment
+
+Six pure `Prepared` bindings cover existing branch/profile extension lists and
+branch/admin/router/profile parameter lists. Closed immutable host parents and
+revision, bounded unique definition names or namespace/name pairs and applicable
+profile/router IDs and names bind fixed GETs and empty caller arguments. Existing
+definition binding parsers are exported/reused without behavior changes. Every
+field enters plan/full hashes, including immutable IDs and definition bindings
+absent from requests. Plain-array shapes remain; no invented pagination or
+caller-selected `internal` filter. Engine-specific namespace validation is reused.
+
+`test/core-configuration-definition-read-preparation.test.mjs` supplies 57 synthetic
+contracts for fixed paths/resources, every-field hashes, captured immutability,
+closed/bounded/accessor/injection/whole-array refusal and redacted projections.
+Definition names/pairs are not immutable provider resource IDs or proof of parent
+ownership; profile/router names require independent current ID/name bindings.
+Flags, including nullable/absent extension enabled, never establish effective
+configuration, restart, enablement, wake, spend or native authority. Values,
+defaults/options, descriptions, URLs, actors and raw times are omitted. Current
+parent/engine/revision, collection permission, entitlement, transport/raw-body
+custody and non-waking evidence remain prerequisites. No executor, registration,
+credential resolution or authority consumption.
+
+Coverage stays **134/291 offline adapters; 157 missing**, twelve previews and
+**130 pure preparations**, zero runtime-integrated/reviewed/enabled/adopted.
+New contracts require exact-head Actions; older counts below are historical.
+
 ## Account and availability preparation increment
 
 Four pure `Prepared` bindings cover existing current-user, organization-list,

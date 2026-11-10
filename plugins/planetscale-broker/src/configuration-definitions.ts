@@ -19,6 +19,7 @@ function bindings<T>(schema: Schema<T>, key: (item: T) => string): Schema<readon
 }
 const extensions = bindings(namedBinding, item => item.name);
 const parameters = bindings(parameterBinding, item => `${item.namespace}:${item.name}`);
+export { extensions as extensionBindings, parameters as parameterBindings };
 const branchFields = { organization: slug, database: slug, branch: slug };
 // Definition names/namespace pairs are not immutable provider resource IDs.
 // Parent ownership, current engine and collection permission need trusted revalidation.

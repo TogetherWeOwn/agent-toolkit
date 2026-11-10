@@ -4,6 +4,40 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Configuration-definition preparation source increment
+
+Six pure Prepared bindings cover existing branch/profile extension-list and
+branch/admin/router/profile parameter-list GETs. Closed immutable host parents,
+revision, unique bounded definition-name/namespace pairs and applicable profile/
+router IDs and names fix requests and empty arguments. Existing binding parsers
+are exported/reused without behavior changes. Every field enters plan/full hashes;
+IDs and definition bindings absent from paths still affect both hashes. Plain
+arrays have no invented pagination; optional internal filters are unsupported.
+Engine-specific namespace validation is reused, not inferred from caller input.
+No executor, registration, credential resolution or authority consumption.
+Coverage stays **134/291 offline adapters; 157 missing**, twelve previews and
+**130 pure preparations**, zero runtime-integrated/reviewed/enabled/adopted.
+
+`test/core-configuration-definition-read-preparation.test.mjs` supplies 57 synthetic
+contracts: fixed GETs/resources, every-field hashes, immutable captures, closed/
+bounded/duplicate/accessor/injection/wire/whole-array refusal, engine namespace
+confinement, nullable/absent enabled handling and omitted configuration canaries.
+Names/pairs are not immutable provider resource IDs or proof of parent ownership.
+Profile/router ID/name bindings and current engine require trusted revalidation.
+Flags never grant configuration/restart/enablement/wake/spend/native authority.
+Values/defaults/options/descriptions/URLs/actors/raw times omitted; parent-wide
+collection permission, entitlement, current identity/revision, transport/custody
+and non-waking proof remain required. New-head execution awaits Actions.
+
+Prior exact `2f24183217d91b8f439fad62354c1a7210dc2966`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42834220900)
+and [test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42834220900/job/129892061638)
+passed, including the 39 account/availability contracts. Lint/typecheck/native-
+policy/Neon candidate/ci-ok, [Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42834220212)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42834208164)
+passed. Earlier pending observation superseded; no numeric suite totals extracted.
+No earlier recurring SDK recovery repair, native approval or merge claimed.
+
 ## Account and availability preparation source increment
 
 Four pure Prepared bindings cover existing current-user, organization-list,
