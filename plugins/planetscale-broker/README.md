@@ -277,6 +277,23 @@ refusal/canary contracts, including branch/keyspace type separation. Thirty-two
 pure preparations remain separate from runtime integration; coverage stays
 134/291 with 157 missing adapters.
 
+Three compute-detail seams additionally bind existing bouncer and branch/keyspace
+resize GETs. Closed trusted host snapshots retain organization/database/branch IDs
+and names, child ID and revision; bouncers bind their name, and keyspace resizes
+independently bind keyspace ID/name. Resources use `planetscale/bouncer/<id>`,
+`planetscale/branch-resize/<id>` and `planetscale/keyspace-resize/<id>`.
+Every variable host field enters the plan hash; caller arguments remain empty.
+Bouncers route by name and match response ID/name plus branch ID/name, not immutable
+organization/database identity. Resize projections match only record ID, not parent
+or keyspace identity. Plans retain these limits and unverified non-waking semantics.
+State/target metadata never grants resize, restart, cancellation, wake, spend or
+native approval authority. Trusted current ownership/name bindings, revision
+revalidation and broker transport/custody remain prerequisites. No executor,
+registration or credential resolution is added.
+`test/core-compute-read-preparation.test.mjs` supplies 25 synthetic snapshot/hash/
+refusal/canary contracts. Thirty-five pure preparations remain separate from
+runtime integration; coverage stays 134/291 with 157 missing adapters.
+
 All 291 entries remain `incomplete`, `implemented=false`, `reviewed=false`,
 `enabled=false`, and entitlement `unknown`. Existing offline read/preview test
 paths are linked as source evidence, never as full `ProviderOperation` tests.

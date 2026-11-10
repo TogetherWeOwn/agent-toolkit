@@ -1295,6 +1295,33 @@ and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/a
 passed. This is prior-head evidence, not execution of the 17 new contracts.
 Earlier unchanged SDK recovery-test uncertainty remains unresolved.
 
+## Compute-detail core preparation contracts
+
+`test/core-compute-read-preparation.test.mjs` adds 25 synthetic contracts for pure
+bouncer and branch/keyspace resize detail Prepared bindings. Closed immutable
+parent/child/revision snapshots retain fixed GETs and empty caller arguments;
+nested ID/name captures, every-field plan/full hashes, accessor/missing/extra/unsafe
+field refusals, output canaries, response identity refusal and resource namespace
+separation are covered. Bouncers route by name and match response ID/name and
+branch ID/name, not organization/database identity. Resize projections match
+record ID only, not immutable parent/keyspace identity. Plans retain these exact
+limits and nonWaking=not-verified. State/target metadata grants no resize, restart,
+cancellation, wake, spend or native approval authority. Current trusted ownership,
+ID/name mappings, revision revalidation and broker transport/custody remain required.
+No executor, registration, credential resolution or authority consumption is added.
+Coverage stays 134/291 offline adapters, 157 missing, twelve separate previews and
+35 pure preparations; zero runtime-integrated/reviewed/enabled/adopted operations.
+New contracts await exact-head Actions; no local suite/build/typecheck ran.
+
+Previous exact `0e15fcbf69ad2dedb183d0624290915d95d9e8a3`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42741465124)
+passed [test](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42741465124/job/129583335640),
+lint/typecheck/native-policy/ci-ok;
+[Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42741464185)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42741455816)
+passed. This is prior-head evidence, not execution of the 25 new contracts.
+Earlier unchanged SDK recovery-test uncertainty remains unresolved.
+
 ## Metrics preregistration — required before enablement
 
 Baseline and matched post-window measurements are **not yet collected or approved**.
