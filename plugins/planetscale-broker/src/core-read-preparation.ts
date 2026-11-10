@@ -19,6 +19,10 @@ import { prepare as prepareOrganizationTeamMember } from "./tools/get-organizati
 import { prepare as prepareServiceToken } from "./tools/get-service-token.js";
 import { prepare as prepareOauthToken } from "./tools/get-oauth-token.js";
 import { prepare as prepareWebhook } from "./tools/get-webhook.js";
+import { configBinding } from "./change-records.js";
+import { prepare as prepareBranchChange } from "./tools/get-branch-change-request.js";
+import { prepare as prepareBranchConfigChange } from "./tools/get-branch-config-change-request.js";
+import { prepare as prepareKeyspaceConfigChange } from "./tools/get-keyspace-config-change-request.js";
 
 const organizationFields = { organization: slug, organizationId: identifier, revision: digest };
 const databaseFields = { ...organizationFields, database: slug, databaseId: identifier };
@@ -45,6 +49,10 @@ const deploymentTarget = closed({ ...databaseFields,
   deployment: closed({ id: identifier, number: deployNumber, intoBranch: slug }), intoBranchId: identifier });
 const schemaRecommendationTarget = closed({ ...databaseFields,
   recommendation: closed({ id: identifier, number: deployNumber }) });
+const branchChangeTarget = closed({ ...branchFields, change: closed({ id: identifier }) });
+const branchConfigChangeTarget = closed({ ...branchFields, change: configBinding });
+const keyspaceConfigChangeTarget = closed({ ...branchFields,
+  keyspace: closed({ id: identifier, name: slug }), change: configBinding });
 
 type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeof databaseTarget.parse> |
   ReturnType<typeof branchTarget.parse> | ReturnType<typeof backupTarget.parse> |
@@ -54,12 +62,14 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof organizationTeamTarget.parse> | ReturnType<typeof organizationTeamMemberTarget.parse> |
   ReturnType<typeof serviceTokenTarget.parse> | ReturnType<typeof oauthTokenTarget.parse> |
   ReturnType<typeof webhookTarget.parse> | ReturnType<typeof deploymentTarget.parse> |
-  ReturnType<typeof schemaRecommendationTarget.parse>;
+  ReturnType<typeof schemaRecommendationTarget.parse> | ReturnType<typeof branchChangeTarget.parse> |
+  ReturnType<typeof branchConfigChangeTarget.parse> | ReturnType<typeof keyspaceConfigChangeTarget.parse>;
 type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_backup" | "get_backup_policy" | "get_deploy_request" |
   "get_keyspace" | "get_shard" | "get_maintenance_event" |
   "get_organization_membership" | "get_organization_team" | "get_organization_team_member" |
-  "get_service_token" | "get_oauth_token" | "get_webhook" | "get_deployment" | "get_schema_recommendation";
+  "get_service_token" | "get_oauth_token" | "get_webhook" | "get_deployment" | "get_schema_recommendation" |
+  "get_branch_change_request" | "get_branch_config_change_request" | "get_keyspace_config_change_request";
 type ResponseIdentity = "name-only-not-immutable" | "record-id-only-parent-not-verified" |
   "record-and-source-ids-destination-not-verified" | "record-and-branch-ids-parent-not-verified" |
   "record-and-user-ids-parent-not-verified" | "record-and-number-parent-and-destination-not-verified" |
@@ -207,6 +217,30 @@ export function bindGetSchemaRecommendationPreparation(rawTarget: unknown): (raw
     recommendation: target.recommendation }, {});
   return bindRead(`planetscale/schema-recommendation/${target.recommendation.id}`, target,
     "get_schema_recommendation", read.request, "record-and-number-parent-not-verified");
+}
+
+export function bindGetBranchChangeRequestPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = branchChangeTarget.parse(rawTarget);
+  const read = prepareBranchChange({ organization: target.organization, database: target.database,
+    branch: target.branch, change: target.change }, {});
+  return bindRead(`planetscale/branch-change/${target.change.id}`, target,
+    "get_branch_change_request", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindGetBranchConfigChangeRequestPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = branchConfigChangeTarget.parse(rawTarget);
+  const read = prepareBranchConfigChange({ organization: target.organization, database: target.database,
+    branch: target.branch, change: target.change }, {});
+  return bindRead(`planetscale/branch-config-change/${target.change.id}`, target,
+    "get_branch_config_change_request", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindGetKeyspaceConfigChangeRequestPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = keyspaceConfigChangeTarget.parse(rawTarget);
+  const read = prepareKeyspaceConfigChange({ organization: target.organization, database: target.database,
+    branch: target.branch, keyspace: target.keyspace, change: target.change }, {});
+  return bindRead(`planetscale/keyspace-config-change/${target.change.id}`, target,
+    "get_keyspace_config_change_request", read.request, "record-id-only-parent-not-verified");
 }
 
 export function bindGetWebhookPreparation(rawTarget: unknown): (raw: unknown) => Prepared {

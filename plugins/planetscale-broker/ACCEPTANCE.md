@@ -4,6 +4,27 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Change-detail preparation source increment
+
+Three pure Prepared bindings capture existing branch-change and branch/keyspace
+config-change detail GETs, reusing the existing config binding parser. Closed host
+snapshots retain immutable parent/change/keyspace IDs, names, revision and exact
+config type/nullable-keyspace pairs. Empty caller arguments cannot retarget the
+fixed requests or inject configuration/authority. Branch config requires vtgate/null;
+keyspace config requires mysqld/vttablet and a matching keyspace name. Distinct
+resource namespaces preserve record-kind separation; full plan hashes bind every
+variable field, including independently supplied IDs absent from the response.
+
+`test/core-change-read-preparation.test.mjs` adds 28 synthetic contracts covering
+fixed requests, deep capture, hash sensitivity, missing/extra/accessor/unsafe-input
+refusals, canary omission, response record/type/keyspace rebound and scope mismatch.
+Parent/keyspace immutable response identity and non-waking semantics remain
+unverified. State/type never grants configuration, cancellation, resize, spend or
+native approval authority. These are source contracts requiring exact-head Actions,
+not an executed result, transport, executor, registration or live-use grant.
+Coverage stays **134/291 offline adapters; 157 missing**, twelve previews and
+32 pure preparations, zero runtime-integrated/reviewed/enabled/adopted.
+
 ## Exact prerequisites and accountable roles
 
 | Missing evidence/implementation | Accountable role | Release condition |

@@ -6,7 +6,7 @@ const keyspaceBinding = closed({ id: identifier, name: slug });
 export const changeType = oneOf(["vtgate", "mysqld", "vttablet"] as const);
 const nullableKeyspace: Schema<string | null> = { parse(value) { return value === null ? null : slug.parse(value); } };
 const configFields = closed({ id: identifier, changeType, keyspace: nullableKeyspace });
-const configBinding: typeof configFields = { parse(value) {
+export const configBinding: typeof configFields = { parse(value) {
   const parsed = configFields.parse(value);
   requireThat((parsed.changeType === "vtgate") === (parsed.keyspace === null), "scope");
   return parsed;

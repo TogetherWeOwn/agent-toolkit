@@ -255,6 +255,28 @@ resolution is added. `test/core-deployment-detail-read-preparation.test.mjs` cov
 preparations remain separate from runtime integration; coverage stays 134/291,
 157 missing.
 
+Three change-detail seams additionally bind existing PostgreSQL branch-change,
+branch-config-change and keyspace-config-change GETs. Closed trusted host snapshots
+retain organization/database/branch IDs and names, change ID and revision; config
+reads also capture the existing type/nullable-keyspace contract, and keyspace reads
+independently bind keyspace ID/name. Branch config accepts vtgate/null only;
+keyspace config accepts mysqld/vttablet with a matching keyspace name. Resources use
+`planetscale/branch-change/<id>`, `planetscale/branch-config-change/<id>` and
+`planetscale/keyspace-config-change/<id>`; config reads share resource namespaces
+with cancellation previews, not their operation/plan hashes. Every variable host
+field enters the full plan hash; caller arguments remain empty.
+
+These projections match record ID and config type/keyspace where applicable,
+not immutable parent/keyspace identity. Plans retain `record-id-only-parent-not-verified`
+and unverified non-waking semantics. State/type never grants configuration,
+resize, cancellation, spend or native approval authority. Current trusted ownership,
+parent/keyspace binding, revision revalidation and broker transport/custody remain
+prerequisites. No executor, registration or credential resolution is added.
+`test/core-change-read-preparation.test.mjs` supplies 28 synthetic snapshot/hash/
+refusal/canary contracts, including branch/keyspace type separation. Thirty-two
+pure preparations remain separate from runtime integration; coverage stays
+134/291 with 157 missing adapters.
+
 All 291 entries remain `incomplete`, `implemented=false`, `reviewed=false`,
 `enabled=false`, and entitlement `unknown`. Existing offline read/preview test
 paths are linked as source evidence, never as full `ProviderOperation` tests.
