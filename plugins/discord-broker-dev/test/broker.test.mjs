@@ -198,6 +198,25 @@ test('embedded foreign bot token and invite redacted; message links preserved', 
   f.hygiene(result); f.done();
 });
 
+test('crossposted message_reference from another guild/channel still reads (reference, not membership)', async () => {
+  const f = fixture();
+  f.read(`/channels/${channelId}/messages?limit=5`, [{ id: messageId, channel_id: channelId, guild_id: guildId, timestamp: '2026-11-10T00:00:00.000Z', message_reference: { message_id: '1999999999999999998', channel_id: '1999999999999999997', guild_id: '1999999999999999999', type: 19 } }]);
+  const result = await f.call('discord.messages_list', { ...base, channelId, limit: 5 });
+  assert.equal(result.data.ok, true);
+  assert.equal(result.data.page[0].id, messageId);
+  f.hygiene(result); f.done();
+});
+
+test('ordinary "bot" text is not corrupted by header scrub', async () => {
+  const f = fixture();
+  f.read(`/channels/${channelId}`, { id: channelId, type: 0, guild_id: guildId, topic: 'the bot posts updates; robot arm demos' });
+  const result = await f.call('discord.channel_get', { ...base, channelId });
+  assert.equal(result.data.ok, true);
+  const text = JSON.stringify(result.data);
+  assert.ok(!text.includes('[REDACTED]'), 'Ordinary text was spuriously redacted');
+  f.hygiene(result); f.done();
+});
+
 test('messages_search limit is capped at the provider maximum; dropped guild-wide reads are unknown tools', async () => {
   // messages_search accepts at most 25 (Discord search maximum); 26 refuses.
   const b = fixture();

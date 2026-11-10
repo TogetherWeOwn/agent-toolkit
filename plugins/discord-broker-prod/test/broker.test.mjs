@@ -120,6 +120,15 @@ test('prod descriptive metadata absent; cross-channel upstream refused fail-clos
   g.hygiene(r2);
 });
 
+test('prod crossposted message_reference from another guild/channel still reads', async () => {
+  const f = fixture();
+  f.read(`/channels/${channelId}/messages?limit=5`, [{ id: messageId, channel_id: channelId, guild_id: guildId, message_reference: { message_id: '1999999999999999998', channel_id: '1999999999999999997', guild_id: '1999999999999999999', type: 19 } }]);
+  const r = await f.call('discord.messages_list', { ...base, channelId, limit: 5 });
+  assert.equal(r.data.ok, true);
+  assert.equal(r.data.page[0].id, messageId);
+  f.hygiene(r); f.done();
+});
+
 test('prod embedded foreign bot token redacted; message links preserved', async () => {
   const otherToken = `${'C'.repeat(24)}.ABCDEF.${'D'.repeat(27)}`;
   // Prod returns metadata only, so verify the scrub path via a message

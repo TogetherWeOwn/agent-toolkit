@@ -198,8 +198,9 @@ export function scrub(value: unknown, secrets: string[]): unknown {
       let out = v;
       for (const s of needles) out = out.split(s).join("[REDACTED]");
       out = out.replace(BOT_TOKEN, "[REDACTED]").replace(WEBHOOK, "[REDACTED]").replace(INVITE, "discord.gg/[REDACTED]");
-      // Strip any echoed Bot/Authorization headers
-      out = out.replace(/Bot\s+[A-Za-z0-9_\-.]+/gi, "Bot [REDACTED]");
+      // Strip any echoed Bot/Authorization headers. Require a token-shaped
+      // suffix so ordinary text ("the bot posts updates") is not corrupted.
+      out = out.replace(/\bBot\s+[A-Za-z0-9_\-.]{16,}/gi, "Bot [REDACTED]");
       return out;
     }
     if (Array.isArray(v)) return v.map(visit);

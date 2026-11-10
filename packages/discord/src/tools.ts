@@ -590,7 +590,9 @@ export class Broker {
         if (v !== null && typeof v === "object") {
           const o = v as Record<string, unknown>;
           if (typeof o.guild_id === "string" && o.guild_id !== guild) throw new Denied("upstream.guild");
-          Object.values(o).forEach(assertGuild);
+          // message_reference is a reference (e.g. a crossposted source),
+          // not a membership assertion: skip its guild/channel ids.
+          for (const [k, x] of Object.entries(o)) if (k !== "message_reference") assertGuild(x);
         }
       };
       assertGuild(value);
@@ -598,7 +600,8 @@ export class Broker {
       // visible after fetch: refuse when its channel is not allowlisted.
       if (tool.name === "discord.event_get" && value !== null && typeof value === "object") {
         const ch = (value as Record<string, unknown>).channel_id;
-        if (typeof ch === "string" && !config.policy.readChannelIds.includes(ch)) throw new Denied("policy.channel");
+        // Channel-less (external) events have no permitted tie: refuse.
+        if (typeof ch !== "string" || !config.policy.readChannelIds.includes(ch)) throw new Denied("policy.channel");
       }
       // Fail closed when any fetched object belongs outside the bound
       // channel. Channel-scoped endpoints are not guild/channel-enforced
