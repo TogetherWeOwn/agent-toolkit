@@ -6,6 +6,32 @@ manifest, network executor, credential resolver, or tool registration is supplie
 The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
+## Compute collection preparation increment
+
+Five pure `Prepared` bindings cover existing bouncer, branch-wide/bouncer-specific
+bouncer-resize, branch-resize and keyspace-resize list GETs. Closed immutable host
+parents/revision, 1–32 unique child IDs with captured names/target pairs, optional
+bouncer/keyspace ID/name and host pagination reuse the existing resize parsers.
+Empty caller arguments and fixed GETs bind every field into plan/full hashes,
+including IDs absent from paths. Bouncer-specific resize lists require every
+captured target pair to match; branch-wide lists retain multiple bouncer targets.
+
+`test/core-compute-collection-read-preparation.test.mjs` supplies 43 synthetic
+contracts for requests, hashes, deep snapshots, bounded/unique bindings,
+host/caller/accessor refusals, whole-page refusal and canary omission. Bouncer
+receipts match branch ID/name; resize receipts match record ID and, where supplied,
+bouncer ID/name. They do not authenticate database/organization ownership or the
+keyspace association. Child confinement is not upstream collection permission.
+State/target metadata never grants resize, cancellation, spend, wake or native
+authority or proves rollback/closure. Configuration/SKU/cost/errors/actors/raw
+times are omitted. Current ownership/revision/bindings, collection permission,
+trusted transport/raw-body custody and independent non-waking proof remain
+prerequisites. No executor, registration, credential resolution or authority
+consumption. Coverage stays **134/291 offline adapters; 157 missing**, twelve
+separate previews and **97 pure preparations**, zero runtime-integrated/reviewed/
+enabled/adopted. New execution requires exact-head Actions; older counts below
+are historical.
+
 ## Change collection preparation increment
 
 Three pure `Prepared` bindings cover existing branch-change and branch/keyspace

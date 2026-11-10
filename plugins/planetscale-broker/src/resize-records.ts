@@ -12,16 +12,19 @@ function bindings<T extends { readonly id: string }>(schema: Schema<T>): Schema<
     return Object.freeze(parsed);
   } };
 }
+export const bouncerBindings = bindings(namedBinding);
+export const resizeBindings = bindings(resizeBinding);
+export const bouncerResizeBindings = bindings(bouncerResizeBinding);
 const branchFields = { organization: slug, database: slug, branch: slug };
 // Broker-owned response confinement only; parent ownership/collection authority is separate.
 export const bouncerScope = closed({ ...branchFields, branchId: identifier, bouncer: namedBinding });
-export const bouncerListScope = closed({ ...branchFields, branchId: identifier, bouncers: bindings(namedBinding) });
-export const branchBouncerResizeListScope = closed({ ...branchFields, resizes: bindings(bouncerResizeBinding) });
-export const bouncerResizeListScope = closed({ ...branchFields, bouncer: namedBinding, resizes: bindings(bouncerResizeBinding) });
+export const bouncerListScope = closed({ ...branchFields, branchId: identifier, bouncers: bouncerBindings });
+export const branchBouncerResizeListScope = closed({ ...branchFields, resizes: bouncerResizeBindings });
+export const bouncerResizeListScope = closed({ ...branchFields, bouncer: namedBinding, resizes: bouncerResizeBindings });
 export const branchResizeScope = closed({ ...branchFields, resize: resizeBinding });
-export const branchResizeListScope = closed({ ...branchFields, resizes: bindings(resizeBinding) });
+export const branchResizeListScope = closed({ ...branchFields, resizes: resizeBindings });
 export const keyspaceResizeScope = closed({ ...branchFields, keyspace: namedBinding, resize: resizeBinding });
-export const keyspaceResizeListScope = closed({ ...branchFields, keyspace: namedBinding, resizes: bindings(resizeBinding) });
+export const keyspaceResizeListScope = closed({ ...branchFields, keyspace: namedBinding, resizes: resizeBindings });
 
 function matched<T extends { readonly id: string }>(body: Record<string, unknown>, allowed: readonly T[]): T {
   const id = identifier.parse(body.id);

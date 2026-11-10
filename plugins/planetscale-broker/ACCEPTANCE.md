@@ -4,6 +4,40 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Compute collection preparation source increment
+
+Five pure Prepared bindings cover existing bouncer, branch-wide/bouncer-specific
+bouncer-resize, branch-resize and keyspace-resize list GETs. Closed immutable host
+parents/revision, bounded unique child IDs/name/target pairs, optional bouncer or
+keyspace ID/name and host pagination bind fixed GETs and empty caller arguments.
+Existing resize parsers exported/reused without behavior changes. Bouncer-specific
+lists confine every captured target pair; branch-wide lists retain multiple targets.
+Every field enters plan/full hashes, even IDs absent from paths. No executor,
+registration, credential resolution or authority consumption.
+
+`test/core-compute-collection-read-preparation.test.mjs` supplies **43 synthetic
+contracts** for requests, every-field hashes, deep snapshots, bounded unique
+bindings, host/caller/accessor refusals, whole-page refusal, bouncer target-pair
+confinement, cross-operation separation and canary omission. Bouncer receipts match
+branch ID/name, resize receipts record ID and optional bouncer pair, not immutable
+organization/database ownership or keyspace association. Child confinement does
+not authorize the upstream collection. State/target never grants resize, cancel,
+spend, wake or native authority, or proves rollback/closure. Configuration/SKU/cost/
+errors/actors/raw times are omitted. Current ownership/revision/bindings, upstream
+collection permission, transport/raw-body custody and independent non-waking proof
+remain prerequisites. Coverage stays **134/291 offline adapters; 157 missing**,
+twelve previews and **97 pure preparations**; zero runtime-integrated/reviewed/
+enabled/adopted. New contracts require exact-head Actions, not this declaration.
+
+Prior exact `aee086793f96c2bc17173b14f5668720794a0cea`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42796604499)
+and [test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42796604499/job/129763335358)
+passed; [Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42796604078)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42796598726)
+passed. No numeric totals extracted, inline findings or submitted reviews returned.
+Earlier unchanged SDK recovery uncertainty remains unresolved. Prior evidence does
+not cover new compute-collection contracts; older counts below are historical.
+
 ## Change collection preparation source increment
 
 Three pure Prepared bindings cover existing branch-change and branch/keyspace

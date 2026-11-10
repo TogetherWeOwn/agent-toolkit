@@ -54,6 +54,12 @@ import { prepare as prepareSwitchoverList } from "./tools/list-switchovers.js";
 import { prepare as prepareRouter } from "./tools/get-router.js";
 import { prepare as prepareDedicatedReadReplica } from "./tools/get-dedicated-read-replica.js";
 import { prepare as prepareSwitchover } from "./tools/get-switchover.js";
+import { bouncerBindings, resizeBindings, bouncerResizeBindings } from "./resize-records.js";
+import { prepare as prepareBouncerList } from "./tools/list-bouncers.js";
+import { prepare as prepareBranchBouncerResizeList } from "./tools/list-branch-bouncer-resize-requests.js";
+import { prepare as prepareBouncerResizeList } from "./tools/list-bouncer-resize-requests.js";
+import { prepare as prepareBranchResizeList } from "./tools/list-branch-resize-requests.js";
+import { prepare as prepareKeyspaceResizeList } from "./tools/list-keyspace-resize-requests.js";
 import { prepare as prepareBouncer } from "./tools/get-bouncer.js";
 import { prepare as prepareBranchResize } from "./tools/get-branch-resize-request.js";
 import { prepare as prepareKeyspaceResize } from "./tools/get-keyspace-resize-request.js";
@@ -174,6 +180,13 @@ const switchoverTarget = closed({ ...branchFields, switchoverId: identifier });
 const profileFields = { ...branchFields, profile: closed({ id: identifier, name: slug }) };
 const configurationProfileTarget = closed(profileFields);
 const configurationProfileShardTarget = closed({ ...profileFields, shard: closed({ id: identifier }) });
+const bouncerListTarget = closed({ ...branchFields, bouncers: bouncerBindings, pagination: pageArguments });
+const branchBouncerResizeListTarget = closed({ ...branchFields, resizes: bouncerResizeBindings, pagination: pageArguments });
+const bouncerResizeListTarget = closed({ ...branchFields, bouncer: closed({ id: identifier, name: slug }),
+  resizes: bouncerResizeBindings, pagination: pageArguments });
+const branchResizeListTarget = closed({ ...branchFields, resizes: resizeBindings, pagination: pageArguments });
+const keyspaceResizeListTarget = closed({ ...branchFields, keyspace: closed({ id: identifier, name: slug }),
+  resizes: resizeBindings, pagination: pageArguments });
 const bouncerTarget = closed({ ...branchFields, bouncer: closed({ id: identifier, name: slug }) });
 const branchResizeTarget = closed({ ...branchFields, resize: closed({ id: identifier }) });
 const keyspaceResizeTarget = closed({ ...branchFields,
@@ -224,7 +237,9 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof webhookListTarget.parse> | ReturnType<typeof routerListTarget.parse> |
   ReturnType<typeof replicaListTarget.parse> | ReturnType<typeof switchoverListTarget.parse> |
   ReturnType<typeof branchChangeListTarget.parse> | ReturnType<typeof branchConfigChangeListTarget.parse> |
-  ReturnType<typeof keyspaceConfigChangeListTarget.parse>;
+  ReturnType<typeof keyspaceConfigChangeListTarget.parse> | ReturnType<typeof bouncerListTarget.parse> |
+  ReturnType<typeof branchBouncerResizeListTarget.parse> | ReturnType<typeof bouncerResizeListTarget.parse> |
+  ReturnType<typeof branchResizeListTarget.parse> | ReturnType<typeof keyspaceResizeListTarget.parse>;
 type ReadOperation = "list_databases" | "list_branches" | "list_database_regions" |
   "list_regions_for_organization" | "list_public_regions" | "get_organization" | "get_database" | "get_branch" |
   "list_backups" | "list_backup_policies" | "list_deploy_requests" |
@@ -237,6 +252,8 @@ type ReadOperation = "list_databases" | "list_branches" | "list_database_regions
   "get_service_token" | "get_oauth_token" | "get_webhook" | "get_deployment" | "get_schema_recommendation" |
   "list_branch_change_requests" | "list_branch_config_change_requests" | "list_keyspace_config_change_requests" |
   "get_branch_change_request" | "get_branch_config_change_request" | "get_keyspace_config_change_request" |
+  "list_bouncers" | "list_branch_bouncer_resize_requests" | "list_bouncer_resize_requests" |
+  "list_branch_resize_requests" | "list_keyspace_resize_requests" |
   "get_bouncer" | "get_branch_resize_request" | "get_keyspace_resize_request" |
   "list_routers" | "list_dedicated_read_replicas" | "list_switchovers" |
   "get_router" | "get_dedicated_read_replica" | "get_switchover" |
@@ -281,6 +298,46 @@ function bindRead(
     jsonData(prepared);
     return prepared;
   };
+}
+
+export function bindListBouncersPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = bouncerListTarget.parse(rawTarget);
+  const read = prepareBouncerList({ organization: target.organization, database: target.database,
+    branch: target.branch, branchId: target.branchId, bouncers: target.bouncers }, target.pagination);
+  return bindRead(`planetscale/branch/${target.branchId}`, target, "list_bouncers", read.request,
+    "record-and-branch-ids-parent-not-verified");
+}
+
+export function bindListBranchBouncerResizeRequestsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = branchBouncerResizeListTarget.parse(rawTarget);
+  const read = prepareBranchBouncerResizeList({ organization: target.organization, database: target.database,
+    branch: target.branch, resizes: target.resizes }, target.pagination);
+  return bindRead(`planetscale/branch/${target.branchId}`, target, "list_branch_bouncer_resize_requests", read.request,
+    "record-and-target-binding-parent-not-verified");
+}
+
+export function bindListBouncerResizeRequestsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = bouncerResizeListTarget.parse(rawTarget);
+  const read = prepareBouncerResizeList({ organization: target.organization, database: target.database,
+    branch: target.branch, bouncer: target.bouncer, resizes: target.resizes }, target.pagination);
+  return bindRead(`planetscale/bouncer/${target.bouncer.id}`, target, "list_bouncer_resize_requests", read.request,
+    "record-and-target-binding-parent-not-verified");
+}
+
+export function bindListBranchResizeRequestsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = branchResizeListTarget.parse(rawTarget);
+  const read = prepareBranchResizeList({ organization: target.organization, database: target.database,
+    branch: target.branch, resizes: target.resizes }, target.pagination);
+  return bindRead(`planetscale/branch/${target.branchId}`, target, "list_branch_resize_requests", read.request,
+    "record-id-only-parent-not-verified");
+}
+
+export function bindListKeyspaceResizeRequestsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = keyspaceResizeListTarget.parse(rawTarget);
+  const read = prepareKeyspaceResizeList({ organization: target.organization, database: target.database,
+    branch: target.branch, keyspace: target.keyspace, resizes: target.resizes }, target.pagination);
+  return bindRead(`planetscale/keyspace/${target.keyspace.id}`, target, "list_keyspace_resize_requests", read.request,
+    "record-id-only-parent-not-verified");
 }
 
 export function bindListBranchChangeRequestsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
