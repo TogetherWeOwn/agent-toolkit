@@ -1,7 +1,7 @@
 import { closed, identifier, requireThat, type Schema } from "../../../packages/core/src/schema.js";
 import { flag, record, slug } from "./metadata.js";
 
-const ids: Schema<readonly string[]> = { parse(value) {
+export const auditEventIds: Schema<readonly string[]> = { parse(value) {
   requireThat(Array.isArray(value) && value.length > 0 && value.length <= 32, "schema");
   const parsed = value.map(item => identifier.parse(item));
   requireThat(new Set(parsed).size === parsed.length, "schema");
@@ -9,7 +9,7 @@ const ids: Schema<readonly string[]> = { parse(value) {
 } };
 
 // Bound event IDs constrain output, not organization-wide audit-log access.
-export const auditEventListScope = closed({ organization: slug, eventIds: ids });
+export const auditEventListScope = closed({ organization: slug, eventIds: auditEventIds });
 export interface AuditEventSummary {
   readonly id: string;
   readonly auditActionRecorded: boolean;

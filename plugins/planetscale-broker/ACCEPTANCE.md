@@ -4,6 +4,37 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Audit-log preparation source increment
+
+One pure Prepared binding covers the existing organization audit-log first-page
+GET. Closed immutable host organization ID/name, revision and unique bounded event
+IDs bind the fixed limit=10 request and empty caller arguments. The existing ID
+parser is exported/reused without behavior changes. Every field enters plan/full
+hashes, including independent organization/event IDs absent from paths. No executor,
+registration, credential resolution or authority consumption.
+
+`test/core-audit-read-preparation.test.mjs` supplies **twelve synthetic contracts**
+for exact requests, every-field hashes, immutable captures, closed/bounded input,
+accessor and whole-response/cursor refusals, operation separation and canary omission.
+Receipts match event IDs, not organization ownership. Event confinement is not
+organization-wide collection permission or the distinct read_audit_logs entitlement.
+Action presence never proves integrity, completeness, native authority or closure.
+Action text, actors/targets, network/location, metadata and raw times are omitted.
+Current ownership/revision, collection permission, trusted transport/raw-body custody
+and independent non-waking proof remain prerequisites. Coverage stays **134/291
+offline adapters; 157 missing**, twelve previews and **108 pure preparations**;
+zero runtime-integrated/reviewed/enabled/adopted. New contracts require exact-head
+Actions, not this declaration.
+
+Prior exact `8bc76420b905249e6e26c0d76e9e7878bd14c38c`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42810481563)
+and [test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42810481563/job/129810401410)
+passed, as did [Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42810480917)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42810474360).
+No numeric totals extracted. Earlier recurring unchanged SDK recovery uncertainty
+remains unresolved; no repair claim. No inline findings/submitted reviews returned.
+Older counts below are historical.
+
 ## Insight collection preparation source increment
 
 Three pure Prepared bindings cover existing branch-anomaly, traffic-budget and

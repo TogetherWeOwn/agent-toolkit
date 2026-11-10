@@ -6,6 +6,28 @@ manifest, network executor, credential resolver, or tool registration is supplie
 The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
+## Audit-log preparation increment
+
+One pure `Prepared` binding covers the existing organization audit-log first-page
+GET. Closed immutable host organization ID/name, revision and unique bounded event
+IDs bind the fixed `limit=10` request and empty caller arguments. The existing ID
+parser is exported/reused without behavior changes. Every field enters plan/full
+hashes, including independent organization/event IDs absent from paths. No executor,
+credential resolution, registration or authority consumption.
+
+`test/core-audit-read-preparation.test.mjs` supplies twelve synthetic contracts for
+exact requests, every-field hashes, immutable captures, closed/bounded input and
+accessor refusals, cursor/whole-response refusal, operation separation and canary
+omission. Receipts match event IDs, not organization ownership. Event confinement
+is not organization-wide collection permission or the distinct `read_audit_logs`
+entitlement. Action presence is not event integrity, completeness, native authority
+or closure. Action text, actors/targets, network/location, metadata and raw times
+are omitted. Current ownership/revision, collection permission, trusted transport/
+raw-body custody and independent non-waking proof remain prerequisites. Coverage
+stays **134/291 offline adapters; 157 missing**, twelve previews and **108 pure
+preparations**, zero runtime-integrated/reviewed/enabled/adopted. New contracts
+require exact-head Actions; older counts below are historical.
+
 ## Insight collection preparation increment
 
 Three pure `Prepared` bindings cover existing branch-anomaly, traffic-budget and

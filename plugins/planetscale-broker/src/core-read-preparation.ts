@@ -81,6 +81,8 @@ import { prepare as prepareInvoiceLineItemList } from "./tools/get-invoice-line-
 import { prepare as prepareInvoice } from "./tools/get-invoice.js";
 import { prepare as preparePaymentMethod } from "./tools/get-organization-billing-payment-method.js";
 import { prepare as preparePaymentSetup } from "./tools/get-payment-method-setup.js";
+import { auditEventIds } from "./audit-events.js";
+import { prepare as prepareAuditLogList } from "./tools/list-audit-logs.js";
 import { anomalyIds } from "./anomalies.js";
 import { trafficBudgetIds } from "./traffic-budgets.js";
 import { queryReportIds } from "./query-reports.js";
@@ -144,6 +146,7 @@ const branchMetricsTarget = closed({ ...branchFields, ...metricWindowFields, met
 const tabletMetricsTarget = closed({ ...branchFields, ...metricWindowFields, metric: oneOf(historicalTabletMetricNames) });
 const lintBranchTarget = closed({ ...branchFields, keyspaceNames: lintKeyspaceNames });
 const deployStorageCheckTarget = closed({ ...databaseFields, requestId: identifier, number: deployNumber });
+const auditLogListTarget = closed({ ...organizationFields, eventIds: auditEventIds });
 const anomalyListTarget = closed({ ...branchFields, anomalyIds, pagination: pageArguments });
 const trafficBudgetListTarget = closed({ ...branchFields, budgetIds: trafficBudgetIds, pagination: pageArguments });
 const queryReportListTarget = closed({ ...branchFields, reportIds: queryReportIds });
@@ -271,8 +274,9 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof oauthApplicationListTarget.parse> | ReturnType<typeof organizationSsoDomainListTarget.parse> |
   ReturnType<typeof organizationInvitationListTarget.parse> | ReturnType<typeof invoiceListTarget.parse> |
   ReturnType<typeof invoiceLineItemListTarget.parse> | ReturnType<typeof anomalyListTarget.parse> |
-  ReturnType<typeof trafficBudgetListTarget.parse> | ReturnType<typeof queryReportListTarget.parse>;
-type ReadOperation = "list_databases" | "list_branches" | "list_database_regions" |
+  ReturnType<typeof trafficBudgetListTarget.parse> | ReturnType<typeof queryReportListTarget.parse> |
+  ReturnType<typeof auditLogListTarget.parse>;
+type ReadOperation = "list_audit_logs" | "list_databases" | "list_branches" | "list_database_regions" |
   "list_regions_for_organization" | "list_public_regions" | "get_organization" | "get_database" | "get_branch" |
   "list_backups" | "list_backup_policies" | "list_deploy_requests" |
   "get_backup" | "get_backup_policy" | "get_deploy_request" |
@@ -334,6 +338,13 @@ function bindRead(
     jsonData(prepared);
     return prepared;
   };
+}
+
+export function bindListAuditLogsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = auditLogListTarget.parse(rawTarget);
+  const read = prepareAuditLogList({ organization: target.organization, eventIds: target.eventIds }, {});
+  return bindRead(`planetscale/organization/${target.organizationId}`, target,
+    "list_audit_logs", read.request, "record-id-only-parent-not-verified");
 }
 
 export function bindListBranchAnomaliesPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
