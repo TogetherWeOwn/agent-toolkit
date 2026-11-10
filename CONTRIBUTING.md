@@ -49,7 +49,7 @@ nice timeout -k 10 300 npm run test:covering -- \
   test/source-checks.test.mjs plugins/github-broker/test/discovery.test.mjs
 ```
 
-The command requires at least one file. Missing files, directories, literal globs, flags, non-test files and symlinks escaping the repository fail with exit 2 **before any file runs**. Do not use a shell-expanded suite-wide glob as a shortcut. A test failure returns nonzero, as does a runner error or timeout. Each file has Node's 30-second test timeout; the runner also has a 290-second child timeout, inside the caller's separate 300-second bound. Type-checking and tests are independent commands, never a chained CI mirror.
+The command requires at least one file. Missing files, directories, literal globs, flags, non-test files and symlinks escaping the repository fail with exit 2 **before any file runs**. Do not use a shell-expanded suite-wide glob as a shortcut. Selected files execute literally (no glob expansion, so names containing brackets run exactly the named file, never a matching sibling). A test failure returns nonzero, as does a runner error or timeout. Each file has Node's 30-second test timeout; the runner also has a 290-second child timeout, inside the caller's separate 300-second bound. On timeout the runner SIGTERMs, then SIGKILLs after a 5-second grace, its owned process group and reports nonzero, so a test that ignores SIGTERM or leaves a descendant cannot survive the wrapper. `TEST_COVERING_TIMEOUT_MS`/`TEST_COVERING_GRACE_MS` may shorten those bounds for the teardown regression only. Type-checking and tests are independent commands, never a chained CI mirror.
 
 ### How source resolution works
 

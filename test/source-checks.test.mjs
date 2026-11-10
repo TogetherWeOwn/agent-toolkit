@@ -9,8 +9,8 @@ import { fileURLToPath } from 'node:url';
 import { sourceURL } from '../scripts/source-resolver.mjs';
 
 const root = new URL('../', import.meta.url);
-function run(files) {
-  const env = { ...process.env };
+function run(files, envOverrides = {}) {
+  const env = { ...process.env, ...envOverrides };
   delete env.NODE_TEST_CONTEXT;
   const result = spawnSync(process.execPath, ['scripts/test-covering.mjs', ...files], {
     cwd: root, env, encoding: 'utf8', timeout: 30000,
@@ -80,4 +80,30 @@ test('covering runner propagates an assertion failure rather than just resolving
   assert.match(result.output, /ERR_ASSERTION/);
   assert.match(result.output, /intentional assertion probe/);
   assert.doesNotMatch(result.output, /ERR_MODULE_NOT_FOUND|ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX/);
+});
+
+test('covering selection preserves a literal bracketed filename and runs only that file', () => {
+  const result = run(['test/fixtures/source-checks/case[1].test.mjs']);
+  assert.equal(result.status, 0, result.output);
+  assert.match(result.output, /bracketed-literal-case-ran/);
+  assert.doesNotMatch(result.output, /sibling-case1-ran/);
+});
+
+test('covering runner tears down a SIGTERM-ignoring test and its descendant on timeout', t => {
+  const dir = mkdtempSync(join(tmpdir(), 'covering-teardown-'));
+  const pidFile = join(dir, 'descendant.pid');
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const result = run(['test/fixtures/source-checks/hang.test.mjs'], {
+    TEST_COVERING_TIMEOUT_MS: '2000', TEST_COVERING_GRACE_MS: '1000', COVERING_PROBE_PID_FILE: pidFile,
+  });
+  assert.notEqual(result.status, 0, result.output);
+  assert.notEqual(result.status, 2, result.output);
+  const pid = Number(readFileSync(pidFile, 'utf8').trim());
+  assert.ok(Number.isInteger(pid) && pid > 0, `descendant pid file: ${pidFile}`);
+  const deadline = Date.now() + 5000;
+  for (;;) {
+    try { process.kill(pid, 0); } catch { return; }
+    assert.ok(Date.now() < deadline, `descendant ${pid} survived covering-runner teardown`);
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
+  }
 });
