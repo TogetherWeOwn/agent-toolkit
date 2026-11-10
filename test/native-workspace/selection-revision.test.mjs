@@ -140,12 +140,18 @@ await test('native stale revision and separate scheduling control', { timeout: 1
     report.stage = 'embedded database bootstrap';
     const support = await helper.getEmbeddedPostgresTestSupport();
     // Record the probe outcome only: the formatted reason may embed postgres
-    // stderr and paths, so keep the redacted home/root prefix and a bounded
-    // length. Case-error sanitization is unchanged: raw native errors still
-    // never reach the report except through this explicit, bounded field.
+    // stderr and paths, so keep home/root redacted and the field bounded.
+    // The helper wraps the attempt count plus a postgres log excerpt whose
+    // cause (the final postmaster error) sits at the end, so keep both the
+    // head and the tail. Case-error sanitization is unchanged: raw native
+    // errors still never reach the report except through this explicit,
+    // bounded field.
     if (!support.supported) {
-      report.support = String(support.reason ?? 'unsupported')
-        .replaceAll(home, '<home>').replaceAll(root, '<root>').slice(0, 400);
+      const reason = String(support.reason ?? 'unsupported')
+        .replaceAll(home, '<home>').replaceAll(root, '<root>');
+      report.support = reason.length > 1600
+        ? `${reason.slice(0, 200)}…${reason.slice(-1395)}`
+        : reason;
     }
     check('embedded PostgreSQL supported; never skip', support.supported);
     database = await helper.startEmbeddedPostgresTestDatabase('selection-revision-');
