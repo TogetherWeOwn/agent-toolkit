@@ -12,14 +12,17 @@ function bindings<T extends { readonly id: string }>(schema: Schema<T>): Schema<
     return Object.freeze(parsed);
   } };
 }
+export const keyspaceBindings = bindings(keyspaceBinding);
+export const shardBindings = bindings(shardBinding);
+export const maintenanceEventBindings = bindings(eventBinding);
 const branchFields = { organization: slug, database: slug, branch: slug };
 // Broker-owned output bindings, not upstream collection or mutation authority.
 export const keyspaceScope = closed({ ...branchFields, keyspace: keyspaceBinding });
-export const keyspaceListScope = closed({ ...branchFields, keyspaces: bindings(keyspaceBinding) });
+export const keyspaceListScope = closed({ ...branchFields, keyspaces: keyspaceBindings });
 export const shardScope = closed({ ...branchFields, shard: shardBinding });
-export const shardListScope = closed({ ...branchFields, shards: bindings(shardBinding) });
+export const shardListScope = closed({ ...branchFields, shards: shardBindings });
 export const maintenanceEventScope = closed({ organization: slug, database: slug, event: eventBinding });
-export const maintenanceEventListScope = closed({ organization: slug, database: slug, events: bindings(eventBinding) });
+export const maintenanceEventListScope = closed({ organization: slug, database: slug, events: maintenanceEventBindings });
 
 function matched<T extends { readonly id: string }>(body: Record<string, unknown>, allowed: readonly T[]): T {
   const id = identifier.parse(body.id);

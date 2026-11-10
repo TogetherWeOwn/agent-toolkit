@@ -19,6 +19,10 @@ import { prepare as prepareBackupPolicyList } from "./tools/list-backup-policies
 import { prepare as prepareDeployRequestList } from "./tools/list-deploy-requests.js";
 import { prepare as prepareDeployment } from "./tools/get-deployment.js";
 import { prepare as prepareSchemaRecommendation } from "./tools/get-schema-recommendation.js";
+import { keyspaceBindings, shardBindings, maintenanceEventBindings } from "./topology.js";
+import { prepare as prepareKeyspaceList } from "./tools/list-keyspaces.js";
+import { prepare as prepareShardList } from "./tools/list-shards.js";
+import { prepare as prepareMaintenanceEventList } from "./tools/list-maintenance-events.js";
 import { prepare as prepareKeyspace } from "./tools/get-keyspace.js";
 import { prepare as prepareShard } from "./tools/get-shard.js";
 import { prepare as prepareMaintenanceEvent } from "./tools/get-maintenance-event.js";
@@ -81,6 +85,9 @@ const organizationTarget = closed(organizationFields);
 const databaseTarget = closed(databaseFields);
 const branchFields = { ...databaseFields, branch: slug, branchId: identifier };
 const branchTarget = closed(branchFields);
+const keyspaceListTarget = closed({ ...branchFields, keyspaces: keyspaceBindings, pagination: pageArguments });
+const shardListTarget = closed({ ...branchFields, shards: shardBindings, pagination: pageArguments });
+const maintenanceEventListTarget = closed({ ...databaseFields, events: maintenanceEventBindings, pagination: pageArguments });
 const backupListTarget = closed({ ...branchFields, backupIds: lifecycleIds, pagination: pageArguments });
 const backupPolicyListTarget = closed({ ...databaseFields, policyIds: lifecycleIds, pagination: pageArguments });
 const deployRequestListTarget = closed({ ...databaseFields, requests: deployBindings, pagination: pageArguments });
@@ -179,11 +186,14 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof databaseListTarget.parse> | ReturnType<typeof branchListTarget.parse> |
   ReturnType<typeof databaseRegionListTarget.parse> | ReturnType<typeof organizationRegionListTarget.parse> |
   ReturnType<typeof publicRegionListTarget.parse> | ReturnType<typeof backupListTarget.parse> |
-  ReturnType<typeof backupPolicyListTarget.parse> | ReturnType<typeof deployRequestListTarget.parse>;
+  ReturnType<typeof backupPolicyListTarget.parse> | ReturnType<typeof deployRequestListTarget.parse> |
+  ReturnType<typeof keyspaceListTarget.parse> | ReturnType<typeof shardListTarget.parse> |
+  ReturnType<typeof maintenanceEventListTarget.parse>;
 type ReadOperation = "list_databases" | "list_branches" | "list_database_regions" |
   "list_regions_for_organization" | "list_public_regions" | "get_organization" | "get_database" | "get_branch" |
   "list_backups" | "list_backup_policies" | "list_deploy_requests" |
   "get_backup" | "get_backup_policy" | "get_deploy_request" |
+  "list_keyspaces" | "list_shards" | "list_maintenance_events" |
   "get_keyspace" | "get_shard" | "get_maintenance_event" |
   "get_organization_membership" | "get_organization_team" | "get_organization_team_member" |
   "get_service_token" | "get_oauth_token" | "get_webhook" | "get_deployment" | "get_schema_recommendation" |
@@ -231,6 +241,30 @@ function bindRead(
     jsonData(prepared);
     return prepared;
   };
+}
+
+export function bindListKeyspacesPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = keyspaceListTarget.parse(rawTarget);
+  const read = prepareKeyspaceList({ organization: target.organization, database: target.database,
+    branch: target.branch, keyspaces: target.keyspaces }, target.pagination);
+  return bindRead(`planetscale/branch/${target.branchId}`, target, "list_keyspaces", read.request,
+    "record-and-name-parent-not-verified");
+}
+
+export function bindListShardsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = shardListTarget.parse(rawTarget);
+  const read = prepareShardList({ organization: target.organization, database: target.database,
+    branch: target.branch, shards: target.shards }, target.pagination);
+  return bindRead(`planetscale/branch/${target.branchId}`, target, "list_shards", read.request,
+    "record-id-only-parent-not-verified");
+}
+
+export function bindListMaintenanceEventsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = maintenanceEventListTarget.parse(rawTarget);
+  const read = prepareMaintenanceEventList({ organization: target.organization, database: target.database,
+    events: target.events }, target.pagination);
+  return bindRead(`planetscale/database/${target.databaseId}`, target, "list_maintenance_events", read.request,
+    "record-and-branch-ids-parent-not-verified");
 }
 
 export function bindListBackupsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {

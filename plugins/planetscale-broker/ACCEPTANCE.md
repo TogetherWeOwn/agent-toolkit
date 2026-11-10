@@ -4,6 +4,38 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Topology collection preparation source increment
+
+Three pure Prepared bindings cover existing keyspace/shard/maintenance-event list
+GETs. Closed immutable host parent IDs/names/revision, bounded unique child IDs and
+host pagination bind fixed requests and empty caller arguments. Reuse existing
+topology parsers, additionally retaining keyspace names and maintenance branch
+ID/name tuples. Every field enters plan/full hashes. Child confinement does not
+authorize upstream collections or authenticate immutable parent ownership.
+Ready/authoritative/urgent/state metadata never grants execution, scheduling,
+wake, spend or native authority. Current ownership/bindings/revision, collection
+permission, transport/raw-body custody and independent non-waking proof remain
+prerequisites. No executor, registration, credential resolution or authority
+consumption. Parser exports preserve existing offline behavior.
+
+`test/core-topology-collection-read-preparation.test.mjs` supplies **30 synthetic
+contracts** for exact requests, hashes/rebinding, deep snapshots, closed/accessor/
+injection refusals, caps, whole-page refusal, tuple matching and canary omission.
+Coverage stays **134/291 offline adapters; 157 missing**, twelve previews and
+**80 pure preparations**, zero runtime-integrated/reviewed/enabled/adopted.
+New execution requires exact-head Actions; this source declaration is not a pass.
+Older counts below are historical.
+
+Prior exact `02aa97058e980e5c904c15372f61132e4612115a`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42783201829)
+and [test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42783201829/job/129718002963)
+passed, including lint/typecheck/native-policy/ci-ok and Neon candidate contract.
+[Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42783201391)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42783194957)
+passed. The deploy-list refusal assertion repair is verified; source 0173980's
+1708/1709 failure remains recorded below. Earlier unchanged SDK recovery uncertainty
+remains unresolved. Prior-head evidence does not cover the new topology contracts.
+
 ## Lifecycle collection preparation source increment
 
 Three pure Prepared bindings cover existing backup/backup-policy/deploy-request

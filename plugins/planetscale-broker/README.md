@@ -6,6 +6,28 @@ manifest, network executor, credential resolver, or tool registration is supplie
 The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
+## Topology collection preparation increment
+
+Three pure `Prepared` bindings in `src/core-read-preparation.ts` cover existing
+keyspace, shard and maintenance-event list reads. Reuse the topology parsers for
+1–32 unique child IDs, keyspace names and maintenance branch ID/name tuples.
+Closed immutable host parents/revision and pagination (page 1–100, perPage 1–10)
+bind fixed GETs and empty caller arguments. Every field enters plan/full hashes,
+including child bindings that do not change the upstream collection request.
+
+`test/core-topology-collection-read-preparation.test.mjs` supplies 30 synthetic
+contracts for requests, every-field hashes, deep snapshots, caps, host/caller/
+accessor refusals, whole-page refusal and redaction. Projections match child IDs,
+keyspace names or maintenance branch tuples, not immutable parent ownership.
+Ready/authoritative/urgent/state fields never grant topology or maintenance
+execution, compute wake, spend or native authority. Parent collection permission,
+current ownership/revision, trusted transport/raw-body custody and independent
+non-waking proof remain prerequisites. No executor, registration, credential
+resolution or authority consumption. Coverage stays **134/291 offline adapters;
+157 missing**, twelve separate previews and **80 pure preparations**, zero
+runtime-integrated/reviewed/enabled/adopted. New execution requires exact-head
+Actions; older counts below are historical.
+
 ## Lifecycle collection preparation increment
 
 Three pure `Prepared` bindings in `src/core-read-preparation.ts` cover existing
