@@ -6,6 +6,32 @@ manifest, network executor, credential resolver, or tool registration is supplie
 The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
+## Change collection preparation increment
+
+Three pure `Prepared` bindings cover existing branch-change and branch/keyspace
+configuration-change list GETs. Closed immutable host parents/revision, 1–32
+unique child IDs (with exact config type/keyspace pairs), optional keyspace
+ID/name and host pagination reuse the existing change parsers. Empty caller
+arguments and fixed GETs bind every field into plan/full hashes, including
+child IDs and keyspace ID whose rebinding leaves the upstream path unchanged.
+The branch-config collection preserves mixed vtgate/null and mysqld/vttablet
+keyspace bindings; it does not inherit the branch-detail vtgate-only restriction.
+Keyspace collections require every config type/keyspace to match their endpoint.
+
+`test/core-change-collection-read-preparation.test.mjs` supplies 30 synthetic
+contracts for requests, hashes, deep snapshots, bounded/unique bindings,
+host/caller/accessor refusals, whole-page refusal and canary omission. Receipts
+match child ID and captured config type/keyspace name, not immutable parents or
+keyspace identity. States never grant configuration, cancellation, spend, wake
+or native authority, or prove unchanged settings, rollback or closure.
+Configuration values, errors, actors and raw times are omitted. Current parent
+ownership/revision/bindings, upstream collection permission, trusted transport/
+raw-body custody and independent non-waking proof remain prerequisites. No
+executor, registration, credential resolution or authority consumption. Coverage
+stays **134/291 offline adapters; 157 missing**, twelve separate previews and
+**92 pure preparations**, zero runtime-integrated/reviewed/enabled/adopted. New
+execution requires exact-head Actions; older counts below are historical.
+
 ## Routing collection preparation increment
 
 Three pure `Prepared` bindings cover existing router, dedicated-read-replica and

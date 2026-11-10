@@ -4,6 +4,38 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Change collection preparation source increment
+
+Three pure Prepared bindings cover existing branch-change and branch/keyspace
+configuration-change list GETs. Closed immutable host parents/revision, bounded
+unique child IDs/type/keyspace pairs, optional keyspace ID/name and host pagination
+bind fixed GETs and empty caller arguments. Existing change parsers exported/reused
+without behavior changes. Branch-config collections retain mixed types, unlike
+branch details; keyspace collections preserve exact type/keyspace confinement.
+Every field enters plan/full hashes, even child/keyspace IDs absent from the path.
+No executor, registration, credential resolution or authority consumption.
+
+`test/core-change-collection-read-preparation.test.mjs` supplies **30 synthetic
+contracts** for requests, hashes, deep snapshots, bounded unique bindings,
+host/caller/accessor refusals, whole-page refusal, mixed/nullable types and canary
+omission. Child confinement is not upstream collection permission. Receipts do
+not authenticate immutable parent/keyspace ownership. State does not grant config,
+cancellation, spend, wake or native authority, or prove rollback/closure. Config
+values/errors/actors/raw times are omitted. Current ownership/revision/bindings,
+collection permission, transport/raw-body custody and independent non-waking proof
+remain prerequisites. Coverage stays **134/291 offline adapters; 157 missing**,
+twelve previews and **92 pure preparations**; zero runtime-integrated/reviewed/
+enabled/adopted. New execution requires exact-head Actions, not this declaration.
+
+Prior exact `b278679473091231e207d006d2478ed56272a044`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42793937341)
+and [test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42793937341/job/129754180109)
+passed; [Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42793936948)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42793930467)
+passed. No inline findings/submitted reviews returned. No numeric totals extracted.
+Earlier unchanged SDK recovery uncertainty remains unresolved. Prior evidence does
+not cover these new change-collection contracts; older counts below are historical.
+
 ## Routing collection preparation source increment
 
 Three pure Prepared bindings cover existing router/dedicated-read-replica/

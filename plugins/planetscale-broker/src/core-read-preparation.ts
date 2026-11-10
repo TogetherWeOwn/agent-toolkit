@@ -40,7 +40,10 @@ import { prepare as prepareWebhookList } from "./tools/list-webhooks.js";
 import { prepare as prepareServiceToken } from "./tools/get-service-token.js";
 import { prepare as prepareOauthToken } from "./tools/get-oauth-token.js";
 import { prepare as prepareWebhook } from "./tools/get-webhook.js";
-import { configBinding } from "./change-records.js";
+import { configBinding, branchChangeBindings, configChangeBindings } from "./change-records.js";
+import { prepare as prepareBranchChangeList } from "./tools/list-branch-change-requests.js";
+import { prepare as prepareBranchConfigChangeList } from "./tools/list-branch-config-change-requests.js";
+import { prepare as prepareKeyspaceConfigChangeList } from "./tools/list-keyspace-config-change-requests.js";
 import { prepare as prepareBranchChange } from "./tools/get-branch-change-request.js";
 import { prepare as prepareBranchConfigChange } from "./tools/get-branch-config-change-request.js";
 import { prepare as prepareKeyspaceConfigChange } from "./tools/get-keyspace-config-change-request.js";
@@ -175,6 +178,10 @@ const bouncerTarget = closed({ ...branchFields, bouncer: closed({ id: identifier
 const branchResizeTarget = closed({ ...branchFields, resize: closed({ id: identifier }) });
 const keyspaceResizeTarget = closed({ ...branchFields,
   keyspace: closed({ id: identifier, name: slug }), resize: closed({ id: identifier }) });
+const branchChangeListTarget = closed({ ...branchFields, changes: branchChangeBindings, pagination: pageArguments });
+const branchConfigChangeListTarget = closed({ ...branchFields, changes: configChangeBindings, pagination: pageArguments });
+const keyspaceConfigChangeListTarget = closed({ ...branchFields,
+  keyspace: closed({ id: identifier, name: slug }), changes: configChangeBindings, pagination: pageArguments });
 const branchChangeTarget = closed({ ...branchFields, change: closed({ id: identifier }) });
 const branchConfigChangeTarget = closed({ ...branchFields, change: configBinding });
 const keyspaceConfigChangeTarget = closed({ ...branchFields,
@@ -215,7 +222,9 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof organizationTeamListTarget.parse> | ReturnType<typeof organizationTeamMemberListTarget.parse> |
   ReturnType<typeof serviceTokenListTarget.parse> | ReturnType<typeof oauthTokenListTarget.parse> |
   ReturnType<typeof webhookListTarget.parse> | ReturnType<typeof routerListTarget.parse> |
-  ReturnType<typeof replicaListTarget.parse> | ReturnType<typeof switchoverListTarget.parse>;
+  ReturnType<typeof replicaListTarget.parse> | ReturnType<typeof switchoverListTarget.parse> |
+  ReturnType<typeof branchChangeListTarget.parse> | ReturnType<typeof branchConfigChangeListTarget.parse> |
+  ReturnType<typeof keyspaceConfigChangeListTarget.parse>;
 type ReadOperation = "list_databases" | "list_branches" | "list_database_regions" |
   "list_regions_for_organization" | "list_public_regions" | "get_organization" | "get_database" | "get_branch" |
   "list_backups" | "list_backup_policies" | "list_deploy_requests" |
@@ -226,6 +235,7 @@ type ReadOperation = "list_databases" | "list_branches" | "list_database_regions
   "get_organization_membership" | "get_organization_team" | "get_organization_team_member" |
   "list_service_tokens" | "list_oauth_tokens" | "list_webhooks" |
   "get_service_token" | "get_oauth_token" | "get_webhook" | "get_deployment" | "get_schema_recommendation" |
+  "list_branch_change_requests" | "list_branch_config_change_requests" | "list_keyspace_config_change_requests" |
   "get_branch_change_request" | "get_branch_config_change_request" | "get_keyspace_config_change_request" |
   "get_bouncer" | "get_branch_resize_request" | "get_keyspace_resize_request" |
   "list_routers" | "list_dedicated_read_replicas" | "list_switchovers" |
@@ -271,6 +281,30 @@ function bindRead(
     jsonData(prepared);
     return prepared;
   };
+}
+
+export function bindListBranchChangeRequestsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = branchChangeListTarget.parse(rawTarget);
+  const read = prepareBranchChangeList({ organization: target.organization, database: target.database,
+    branch: target.branch, changes: target.changes }, target.pagination);
+  return bindRead(`planetscale/branch/${target.branchId}`, target, "list_branch_change_requests", read.request,
+    "record-id-only-parent-not-verified");
+}
+
+export function bindListBranchConfigChangeRequestsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = branchConfigChangeListTarget.parse(rawTarget);
+  const read = prepareBranchConfigChangeList({ organization: target.organization, database: target.database,
+    branch: target.branch, changes: target.changes }, target.pagination);
+  return bindRead(`planetscale/branch/${target.branchId}`, target, "list_branch_config_change_requests", read.request,
+    "record-and-target-binding-parent-not-verified");
+}
+
+export function bindListKeyspaceConfigChangeRequestsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = keyspaceConfigChangeListTarget.parse(rawTarget);
+  const read = prepareKeyspaceConfigChangeList({ organization: target.organization, database: target.database,
+    branch: target.branch, keyspace: target.keyspace, changes: target.changes }, target.pagination);
+  return bindRead(`planetscale/keyspace/${target.keyspace.id}`, target, "list_keyspace_config_change_requests", read.request,
+    "record-and-target-binding-parent-not-verified");
 }
 
 export function bindListRoutersPreparation(rawTarget: unknown): (raw: unknown) => Prepared {

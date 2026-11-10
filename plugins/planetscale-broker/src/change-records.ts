@@ -19,14 +19,16 @@ function bindings<T extends { readonly id: string }>(schema: Schema<T>): Schema<
     return Object.freeze(parsed);
   } };
 }
+export const branchChangeBindings = bindings(changeBinding);
+export const configChangeBindings = bindings(configBinding);
 const branchFields = { organization: slug, database: slug, branch: slug };
 // Broker-owned response confinement, not parent ownership or collection authority.
 export const branchChangeScope = closed({ ...branchFields, change: changeBinding });
-export const branchChangeListScope = closed({ ...branchFields, changes: bindings(changeBinding) });
+export const branchChangeListScope = closed({ ...branchFields, changes: branchChangeBindings });
 export const branchConfigScope = closed({ ...branchFields, change: configBinding });
-export const branchConfigListScope = closed({ ...branchFields, changes: bindings(configBinding) });
+export const branchConfigListScope = closed({ ...branchFields, changes: configChangeBindings });
 export const keyspaceConfigScope = closed({ ...branchFields, keyspace: keyspaceBinding, change: configBinding });
-export const keyspaceConfigListScope = closed({ ...branchFields, keyspace: keyspaceBinding, changes: bindings(configBinding) });
+export const keyspaceConfigListScope = closed({ ...branchFields, keyspace: keyspaceBinding, changes: configChangeBindings });
 
 export function requireBranchConfig(binding: ReturnType<typeof configBinding.parse>): void {
   requireThat(binding.changeType === "vtgate" && binding.keyspace === null, "scope");
