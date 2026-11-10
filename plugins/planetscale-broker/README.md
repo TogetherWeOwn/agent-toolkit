@@ -6,6 +6,30 @@ manifest, network executor, credential resolver, or tool registration is supplie
 The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
+## Query-fingerprint preparation increment
+
+Two pure `Prepared` bindings cover existing query-statistics first-page and
+fingerprint-summary GETs. Closed immutable host parents, keyspace ID/name,
+revision and fingerprint plus separate query IDs or summary ID bind fixed requests
+and empty caller arguments. The existing unique bounded query-ID parser is
+exported/reused without behavior changes. Every field enters plan/full hashes,
+including response-only IDs absent from paths. No executor, registration,
+credential resolution or authority consumption.
+
+`test/core-query-fingerprint-read-preparation.test.mjs` supplies 21 synthetic
+contracts for fixed requests, every-field hashes, immutable captures, closed and
+bounded inputs, accessor/injection/envelope/whole-page refusal and redacted output.
+Query IDs are not summary IDs. Response fingerprint/keyspace-name matching does
+not prove immutable keyspace identity, parent ownership or trusted provenance.
+Receipts omit SQL/password objects, fingerprints/keyspace text, errors, metrics,
+actors and raw times. Flags never grant EXPLAIN or execution authority. Statistics
+retain fixed first-page-only coverage; optional filters and later pages remain
+unsupported. Collection permission, current identity/name/revision bindings,
+trusted transport/raw-body custody and independent non-waking proof remain
+prerequisites. Coverage stays **134/291 offline adapters; 157 missing**, twelve
+previews and **118 pure preparations**, zero runtime-integrated/reviewed/enabled/
+adopted. New contracts require exact-head Actions; older counts below are historical.
+
 ## Query-summary first-page preparation increment
 
 Two pure `Prepared` bindings cover existing query-summary and error-summary list

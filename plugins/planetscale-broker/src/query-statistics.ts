@@ -2,13 +2,13 @@ import { closed, identifier, requireThat, type Schema } from "../../../packages/
 import { slug } from "./metadata.js";
 import { queryRecordMetadata, querySummaryMetadata, type QueryRecordMetadata, type QuerySummaryMetadata } from "./query-records.js";
 
-const ids: Schema<readonly string[]> = { parse(value) {
+export const queryStatisticsIds: Schema<readonly string[]> = { parse(value) {
   requireThat(Array.isArray(value) && value.length > 0 && value.length <= 32, "schema");
   const parsed = value.map(item => identifier.parse(item));
   requireThat(new Set(parsed).size === parsed.length, "schema");
   return Object.freeze(parsed);
 } };
-export const queryStatisticsScope = closed({ organization: slug, database: slug, branch: slug, fingerprint: identifier, keyspace: slug, queryIds: ids });
+export const queryStatisticsScope = closed({ organization: slug, database: slug, branch: slug, fingerprint: identifier, keyspace: slug, queryIds: queryStatisticsIds });
 export const fingerprintSummaryScope = closed({ organization: slug, database: slug, branch: slug, fingerprint: identifier, keyspace: slug, summaryId: identifier });
 
 function matchContext(body: Record<string, unknown>, target: { readonly fingerprint: string; readonly keyspace: string }): void {
