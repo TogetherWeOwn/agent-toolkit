@@ -1,5 +1,24 @@
 # Source-slice threat model
 
+## Existing project VPC restriction label-assignment delta
+
+Copied exact project/endpoint/expected-desired label/revision requires a dedicated
+assignment grant and reserved native exact-plan authority before credentials.
+Mandatory full-list preflight requires exactly one existing restriction with the
+selected endpoint and expected label before one fixed label-only POST. New
+restrictions, endpoint switching, multi-restriction lists and caller-body overrides
+refuse. The provider retains the parent-organization association prerequisite.
+This endpoint reapplies network restriction configuration; a label-only request
+is not a no-network-effect guarantee. Empty200 acknowledgement proves neither
+policy preservation, independent connectivity/enforcement, persistence nor session
+fencing. No label or provider diagnostics escape in output. Preflight is not atomic
+CAS; concurrent external policy/label changes remain unresolved. Ambiguity gets one
+bounded list observation then stays uncertain even on desired label/absence; no
+retry. Permanent common journal blocks same-request replay, not external writers.
+Three-request worst case/3.5s ceiling reuses fixed origin, cancellation, deadlines,
+redirection refusal and byte bounds. Native effects/entitlement, host/custody/durable
+recovery and independent reviews remain gates. Source/mocks only, no live change.
+
 ## Default-branch designation switch delta
 
 Copied exact project/previous-default/target/revision require a directional switch

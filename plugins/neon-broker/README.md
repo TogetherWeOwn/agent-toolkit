@@ -2223,13 +2223,32 @@ worst-case path has an 8.5s operation ceiling. Native host/custody/durable recov
 effects/entitlement, Beta availability and independent review remain unresolved.
 Source/mocks only, no live registration, DNS, spend or runtime enablement.
 
+## Existing project VPC restriction label assignment
+
+`createNeonProjectVPCAssignOperations` adds reserved `assignProjectVPCEndpoint`
+for a changed label on the sole existing restriction. Copied exact project/endpoint,
+expected/desired canonical labels and revision bind a dedicated `/assign` grant and
+native exact-plan authority. Mandatory terminal full-list preflight requires exactly
+one matching endpoint/expected label, followed by one fixed POST with only `label`.
+New restrictions, endpoint changes, multi-restriction lists, no-op labels and arbitrary
+body overrides refuse. The provider requires the endpoint to belong to the project's
+parent organization. Empty200 acknowledges the request only; the endpoint reapplies
+network policy, and a label-only body does not prove policy preservation, independent
+connectivity/enforcement or persistence. No label appears in the closed output.
+Preflight is not atomic CAS; external policy/label races remain unresolved. Ambiguity
+gets one bounded list observation then stays uncertain even on desired label/absence;
+no retry, permanent common journal blocks same-request replay, not external writers.
+Three-request worst case/3.5s ceiling; fixed origin, redirection refusal, cancellation,
+deadlines and byte caps reused. Source/mocks only, no live network change. Effects,
+entitlement, native host/custody/durable recovery and independent review remain gates.
+
 ## Coverage and verification
 
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 132 implemented
-source adapters, 62 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 133 implemented
+source adapters, 61 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

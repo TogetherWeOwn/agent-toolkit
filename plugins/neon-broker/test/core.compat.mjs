@@ -769,6 +769,129 @@ test('Organization VPC delete: maximum identity selection fits actual common pre
   safeEnvelope(f, result);
 });
 
+import { projectVPCAssignFixture, projectVPCAssignScope, projectVPCAssignArgs, projectVPCAssignMetadata } from './helpers.mjs';
+function projectVPCAssignBroker(value = null, overrides = {}, config = projectVPCAssignScope) {
+  const provider = projectVPCAssignFixture(value, config);
+  const args = { project_id: config.projectId, vpc_endpoint_id: config.vpcEndpointId, label: config.label };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('assignProjectVPCEndpoint').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.assignProjectVPCEndpoint', args, context, key);
+  } };
+}
+
+test('Project VPC assignment: reserved exact-plan authority and exact assignment AND agent grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = projectVPCAssignBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = 'neon/projects/project-a/vpc_endpoints/vpce-a/assign';
+  for (const resource of [target.replace('/assign', ''), target.replace('vpce-a', 'other'), target.replace('project-a', 'other'),
+    target.replace('/assign', '/remove'), 'neon/projects/project-a/vpc_endpoints', 'neon/organizations/org-a/vpc_endpoints/vpce-a/delete']) {
+    const f = projectVPCAssignBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = projectVPCAssignBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = projectVPCAssignBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { acknowledged: true });
+  assert.equal(f.common.calls.consumed, 1);
+  safeEnvelope(f, result);
+});
+
+test('Project VPC assignment: stale, wrong-target and unconsumable native evidence are isolated negative controls', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = projectVPCAssignBroker();
+    const base = f.common.authority;
+    let consumeCalls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.assignProjectVPCEndpoint', projectVPCAssignArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Project VPC assignment: host identity/resource TOCTOU and authority/target/label overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = projectVPCAssignBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = projectVPCAssignBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.call()).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { project_id: 'other' }, { vpc_endpoint_id: 'other' }, { label: 'other' }, { org_id: 'org-a' }, { retry: true }]) {
+    const g = projectVPCAssignBroker();
+    assert.equal((await g.common.broker().call('neon.assignProjectVPCEndpoint', { ...projectVPCAssignArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('Project VPC assignment: complete/uncertain permanent journal blocks restart replay without policy proof', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = projectVPCAssignBroker((url, init, n) => {
+      if (init.method === 'POST') { if (ambiguous) throw Error(credentialCanary); return new Response(null, { status: 200 }); }
+      return response(n > 2 ? { endpoints: [{ ...projectVPCAssignMetadata.endpoints[0], label: projectVPCAssignScope.label }] } : projectVPCAssignMetadata);
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'POST').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Project VPC assignment: foreign/absent/drifted restrictions and reflected lease strings cannot enter safe envelopes', async () => {
+  for (const raw of [{ ...projectVPCAssignMetadata, project_id: 'other' }, { ...projectVPCAssignMetadata, pagination: {} },
+    { endpoints: [] }, { endpoints: [{ vpc_endpoint_id: credentialCanary, label: 'previous' }] },
+    { endpoints: [{ vpc_endpoint_id: 'vpce-a', label: credentialCanary }] }]) {
+    const f = projectVPCAssignBroker(() => response(raw));
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'POST').length, 0);
+    safeEnvelope(f, result);
+  }
+  const f = projectVPCAssignBroker((url, init) => response(init.method === 'POST' ? { error: credentialCanary } : projectVPCAssignMetadata));
+  const result = await f.call();
+  assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+  safeEnvelope(f, result);
+});
+
+test('Project VPC assignment: maximum identity and labels fit actual common prepared budgets', async () => {
+  const config = { ...projectVPCAssignScope, projectId: 'p'.repeat(60), vpcEndpointId: 'v'.repeat(80), revision: 'r'.repeat(80),
+    expectedLabel: 'E'.repeat(80), label: 'L'.repeat(80) };
+  const f = projectVPCAssignBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
 import { projectVPCRemoveFixture, projectVPCRemoveScope, projectVPCRemoveArgs, projectVPCRemoveMetadata } from './helpers.mjs';
 function projectVPCRemoveBroker(value = null, overrides = {}, config = projectVPCRemoveScope) {
   const provider = projectVPCRemoveFixture(value, config);

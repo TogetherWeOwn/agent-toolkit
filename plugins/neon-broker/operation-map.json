@@ -2704,20 +2704,23 @@
       "id": "assignProjectVPCEndpoint",
       "apiArea": "project",
       "tool": "neon.assignProjectVPCEndpoint",
-      "scope": "project_id/vpc_endpoint_id",
+      "scope": "project_id/vpc_endpoint_id/assign",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/project-vpc-assign.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Existing sole project restriction label-update source/mocks only; exact endpoint/expected-label full-list preflight, dedicated assignment grant and reserved native exact-plan authority. New restrictions and endpoint switches unsupported. Provider requires parent-organization association. Empty200 acknowledges only, not policy preservation, independent network enforcement, connectivity or persistence. Preflight not atomic CAS; ambiguity stays uncertain after one observation, no retry, permanent common replay journal. Effects/entitlement, host/custody/durable recovery and independent native review/integration unresolved; no live network change."
     },
     {
       "id": "deleteProjectVPCEndpoint",

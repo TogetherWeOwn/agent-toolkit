@@ -11,6 +11,7 @@ import { authDomainDeleteOrigin, authDomainDeleteProvider } from "./auth-domain-
 import { providerId } from "./oauth-providers.js";
 import { databaseUpdateName } from "./database-update.js";
 import { functionLabel } from "./function-update.js";
+import { projectVPCLabel } from "./project-vpc-assign.js";
 import { snapshotCreateTime } from "./snapshot-create.js";
 import { snapshotScheduleHour, snapshotScheduleRetention } from "./snapshot-schedule-update.js";
 import { spendingLimitCents } from "./spending-limit-update.js";
@@ -47,6 +48,7 @@ export interface NeonMetadataTransport {
   deleteNeonAuthIntegration(project: string, provider: string, options: MetadataRequestOptions): Promise<unknown>;
   disableNeonAuth(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteOrganizationVPCEndpoint(organization: string, region: string, endpoint: string, options: MetadataRequestOptions): Promise<unknown>;
+  assignProjectVPCEndpoint(project: string, endpoint: string, label: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectVPCEndpoint(project: string, endpoint: string, options: MetadataRequestOptions): Promise<unknown>;
   disableProjectBranchRealtime(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchDataAPI(project: string, branch: string, database: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -364,6 +366,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     deleteOrganizationVPCEndpoint: (organization: string, region: string, endpoint: string, options: MetadataRequestOptions) =>
       request(`/organizations/${authPathId(organization)}/vpc/region/${regionId(region, true)}/vpc_endpoints/${identifier.parse(endpoint)}`,
         new URLSearchParams(), options, undefined, false, 200, false, false, true),
+    assignProjectVPCEndpoint: (project: string, endpoint: string, label: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/vpc_endpoints/${identifier.parse(endpoint)}`, new URLSearchParams(), options,
+        JSON.stringify({ label: projectVPCLabel.parse(label) }), false, false, false, false, true),
     deleteProjectVPCEndpoint: (project: string, endpoint: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/vpc_endpoints/${identifier.parse(endpoint)}`, new URLSearchParams(), options,
         undefined, false, 200, false, false, true),
