@@ -4,6 +4,40 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Metric preparation source increment
+
+Six pure Prepared bindings capture the existing instant branch/tablet and historical
+branch/tablet/query/tag metric GETs. Closed immutable host parent/branch/revision
+snapshots bind one allowlisted metric and, for historical reads, a canonical UTC
+window of 1–900 seconds with fixed steps=16. The existing timestamp schema and
+window validation are reused. Empty caller arguments cannot retarget requests or
+supply authority. All six share a branch resource but retain distinct plan hashes.
+Instant response projections match branch ID/name, not parents; historical
+responses have no branch identity. Query/tag reads remain whole-branch collections,
+not per-query/tag isolation. No executor, registration, credential resolution or
+authority consumption is added.
+
+`test/core-metric-read-preparation.test.mjs` supplies 55 synthetic contracts for
+fixed GETs, captured immutable snapshots, every-field hashes, exact selector
+allowlists, canonical bounded windows, host/caller/accessor refusals, redaction and
+cross-operation separation. Existing projections omit samples, labels, raw times
+and unknown parent claims. Presence never proves health, freshness, integrity,
+provenance or authority. Current ownership/revision, trusted transport/raw-body
+custody, collection permission and independent non-waking proof remain required.
+Coverage stays **134/291 offline adapters; 157 missing**, twelve previews and
+**66 pure preparations**, zero runtime-integrated/reviewed/enabled/adopted.
+Exact-head Actions must execute the new contracts; no new-head pass is implied.
+Older counts below are historical.
+
+Prior exact `c4fadd8a432702c85c7f411c5241f415b65c5f2d`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42768050748)
+and [test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42768050748/job/129669154394)
+passed, including lint/typecheck/native-policy/ci-ok and Neon candidate contract.
+[Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42768050267)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42768045496)
+passed. Earlier unchanged SDK recovery uncertainty remains unresolved. This
+prior-head evidence does not cover the new metric preparation contracts.
+
 ## Diagnostic preparation source increment
 
 Two pure Prepared bindings capture existing branch schema-lint and deploy-request

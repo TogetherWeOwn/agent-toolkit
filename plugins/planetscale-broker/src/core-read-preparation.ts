@@ -1,5 +1,5 @@
 import type { Prepared } from "../../../packages/core/src/provider/contracts.js";
-import { closed, digest, identifier, jsonData } from "../../../packages/core/src/schema.js";
+import { closed, digest, identifier, jsonData, oneOf } from "../../../packages/core/src/schema.js";
 import { emptyArguments, slug, type PreparedRead } from "./metadata.js";
 import { prepare as prepareOrganization } from "./tools/get-organization.js";
 import { prepare as prepareDatabase } from "./tools/get-database.js";
@@ -54,6 +54,14 @@ import { prepare as prepareDataTopology } from "./tools/get-data-topology.js";
 import { lintKeyspaceNames } from "./schema-diagnostics.js";
 import { prepare as prepareLintBranchSchema } from "./tools/lint-branch-schema.js";
 import { prepare as prepareDeployStorageCheck } from "./tools/check-deploy-request-storage.js";
+import { branchMetricNames, tabletMetricNames } from "./instant-metrics.js";
+import { historicalBranchMetricNames, historicalTabletMetricNames, timestamp } from "./historical-metrics.js";
+import { prepare as prepareInstantBranchMetrics } from "./tools/get-instant-branch-metrics.js";
+import { prepare as prepareInstantTabletMetrics } from "./tools/get-instant-tablet-metrics.js";
+import { prepare as prepareBranchMetrics } from "./tools/get-branch-metrics.js";
+import { prepare as prepareTabletMetrics } from "./tools/get-tablet-metrics.js";
+import { prepare as prepareBranchQueryMetrics } from "./tools/get-branch-query-metrics.js";
+import { prepare as prepareBranchTagMetrics } from "./tools/get-branch-tag-metrics.js";
 
 const organizationFields = { organization: slug, organizationId: identifier, revision: digest };
 const databaseFields = { ...organizationFields, database: slug, databaseId: identifier };
@@ -61,6 +69,11 @@ const organizationTarget = closed(organizationFields);
 const databaseTarget = closed(databaseFields);
 const branchFields = { ...databaseFields, branch: slug, branchId: identifier };
 const branchTarget = closed(branchFields);
+const instantBranchMetricsTarget = closed({ ...branchFields, metric: oneOf(branchMetricNames) });
+const instantTabletMetricsTarget = closed({ ...branchFields, metric: oneOf(tabletMetricNames) });
+const metricWindowFields = { from: timestamp, to: timestamp };
+const branchMetricsTarget = closed({ ...branchFields, ...metricWindowFields, metric: oneOf(historicalBranchMetricNames) });
+const tabletMetricsTarget = closed({ ...branchFields, ...metricWindowFields, metric: oneOf(historicalTabletMetricNames) });
 const lintBranchTarget = closed({ ...branchFields, keyspaceNames: lintKeyspaceNames });
 const deployStorageCheckTarget = closed({ ...databaseFields, requestId: identifier, number: deployNumber });
 const anomalyTarget = closed({ ...branchFields, anomalyId: identifier });
@@ -135,7 +148,9 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof deployThrottlerTarget.parse> | ReturnType<typeof branchQueryTarget.parse> |
   ReturnType<typeof branchQueryTagTarget.parse> | ReturnType<typeof unifiedChangeTarget.parse> |
   ReturnType<typeof vtctldOperationTarget.parse> | ReturnType<typeof lintBranchTarget.parse> |
-  ReturnType<typeof deployStorageCheckTarget.parse>;
+  ReturnType<typeof deployStorageCheckTarget.parse> | ReturnType<typeof instantBranchMetricsTarget.parse> |
+  ReturnType<typeof instantTabletMetricsTarget.parse> | ReturnType<typeof branchMetricsTarget.parse> |
+  ReturnType<typeof tabletMetricsTarget.parse>;
 type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_backup" | "get_backup_policy" | "get_deploy_request" |
   "get_keyspace" | "get_shard" | "get_maintenance_event" |
@@ -150,13 +165,16 @@ type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_branch_anomaly" | "get_traffic_budget" | "get_query_patterns_report_status" |
   "get_database_postgres_cidr" | "get_database_throttler" | "get_deploy_request_throttler" |
   "get_branch_query" | "get_branch_query_tag" | "get_change_request" | "get_vtctld_operation" |
-  "get_keyspace_vschema" | "get_data_topology" | "lint_branch_schema" | "check_deploy_request_storage";
+  "get_keyspace_vschema" | "get_data_topology" | "lint_branch_schema" | "check_deploy_request_storage" |
+  "get_instant_branch_metrics" | "get_instant_tablet_metrics" | "get_branch_metrics" | "get_tablet_metrics" |
+  "get_branch_query_metrics" | "get_branch_tag_metrics";
 type ResponseIdentity = "name-only-not-immutable" | "record-id-only-parent-not-verified" |
   "record-and-source-ids-destination-not-verified" | "record-and-branch-ids-parent-not-verified" |
   "record-and-user-ids-parent-not-verified" | "record-and-number-parent-and-destination-not-verified" |
   "record-and-number-parent-not-verified" | "organization-id-matched" |
   "record-and-name-parent-not-verified" | "record-and-target-binding-parent-not-verified" |
-  "absent-request-bound-only" | "keyspace-name-only-parent-not-verified";
+  "absent-request-bound-only" | "keyspace-name-only-parent-not-verified" |
+  "branch-id-and-name-parent-not-verified";
 
 // Pure preparation only. Host IDs/revisions bind a snapshot, not permission;
 // response projections still cannot authenticate every parent/destination ID.
@@ -181,6 +199,54 @@ function bindRead(
     jsonData(prepared);
     return prepared;
   };
+}
+
+export function bindGetInstantBranchMetricsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = instantBranchMetricsTarget.parse(rawTarget);
+  const read = prepareInstantBranchMetrics({ organization: target.organization, database: target.database,
+    branch: target.branch, branchId: target.branchId, metric: target.metric }, {});
+  return bindRead(`planetscale/branch/${target.branchId}`, target, "get_instant_branch_metrics", read.request,
+    "branch-id-and-name-parent-not-verified");
+}
+
+export function bindGetInstantTabletMetricsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = instantTabletMetricsTarget.parse(rawTarget);
+  const read = prepareInstantTabletMetrics({ organization: target.organization, database: target.database,
+    branch: target.branch, branchId: target.branchId, metric: target.metric }, {});
+  return bindRead(`planetscale/branch/${target.branchId}`, target, "get_instant_tablet_metrics", read.request,
+    "branch-id-and-name-parent-not-verified");
+}
+
+export function bindGetBranchMetricsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = branchMetricsTarget.parse(rawTarget);
+  const read = prepareBranchMetrics({ organization: target.organization, database: target.database,
+    branch: target.branch, branchId: target.branchId, metric: target.metric, from: target.from, to: target.to }, {});
+  return bindRead(`planetscale/branch/${target.branchId}`, target, "get_branch_metrics", read.request,
+    "absent-request-bound-only");
+}
+
+export function bindGetTabletMetricsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = tabletMetricsTarget.parse(rawTarget);
+  const read = prepareTabletMetrics({ organization: target.organization, database: target.database,
+    branch: target.branch, branchId: target.branchId, metric: target.metric, from: target.from, to: target.to }, {});
+  return bindRead(`planetscale/branch/${target.branchId}`, target, "get_tablet_metrics", read.request,
+    "absent-request-bound-only");
+}
+
+export function bindGetBranchQueryMetricsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = branchMetricsTarget.parse(rawTarget);
+  const read = prepareBranchQueryMetrics({ organization: target.organization, database: target.database,
+    branch: target.branch, branchId: target.branchId, metric: target.metric, from: target.from, to: target.to }, {});
+  return bindRead(`planetscale/branch/${target.branchId}`, target, "get_branch_query_metrics", read.request,
+    "absent-request-bound-only");
+}
+
+export function bindGetBranchTagMetricsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = branchMetricsTarget.parse(rawTarget);
+  const read = prepareBranchTagMetrics({ organization: target.organization, database: target.database,
+    branch: target.branch, branchId: target.branchId, metric: target.metric, from: target.from, to: target.to }, {});
+  return bindRead(`planetscale/branch/${target.branchId}`, target, "get_branch_tag_metrics", read.request,
+    "absent-request-bound-only");
 }
 
 export function bindLintBranchSchemaPreparation(rawTarget: unknown): (raw: unknown) => Prepared {

@@ -1,7 +1,7 @@
 import { closed, identifier, oneOf, requireThat, text } from "../../../packages/core/src/schema.js";
 import { record, slug } from "./metadata.js";
 
-const timestamp = text(20, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
+export const timestamp = text(20, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
 const targetShape = { organization: slug, database: slug, branch: slug, branchId: identifier, from: timestamp, to: timestamp };
 export const historicalBranchMetricNames = Object.freeze(["queries", "query_errors"] as const);
 export const historicalTabletMetricNames = Object.freeze(["replication_lag", "primary_cpu_usage"] as const);

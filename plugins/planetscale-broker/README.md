@@ -6,6 +6,30 @@ manifest, network executor, credential resolver, or tool registration is supplie
 The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
+## Metric preparation increment
+
+Six pure `Prepared` bindings in `src/core-read-preparation.ts` cover the existing
+instant branch/tablet and historical branch/tablet/query/tag metric reads. Closed
+host snapshots capture immutable organization/database/branch IDs, names, revision
+and one allowlisted metric. Historical requests reuse canonical UTC windows of
+1–900 seconds and fixed steps=16; empty caller arguments cannot change scope,
+selectors, windows or requests. All operations share the branch resource while
+operation/request/target hashes remain distinct. Instant projections match branch
+ID/name, not parents; historical responses have no branch identity and retain the
+explicit request-bound-only limitation. Query/tag reads are whole-branch, not
+isolated per query or tag. Trusted collection permission remains required.
+
+`test/core-metric-read-preparation.test.mjs` supplies 55 synthetic contracts for
+fixed requests, hashes, immutability, selectors/windows, host/caller/accessor
+refusal and existing availability-only projection limits. Samples, labels, raw
+times and unknown parent claims are not returned. Presence is not health,
+freshness, integrity, provenance or execution authority. Transport/custody,
+current ownership/revision and independent non-waking proof remain prerequisites.
+There is no executor, registration, credential resolution or approval consumption.
+Coverage remains 134/291 offline adapters, 157 missing, twelve separate previews
+and now 66 pure preparations; zero runtime-integrated/reviewed/enabled/adopted.
+Exact-head Actions execution is required; this source declaration is not a pass.
+
 ## Official surface and scope
 
 The machine-readable [operation map](api/operation-map.json) inventories **291**
