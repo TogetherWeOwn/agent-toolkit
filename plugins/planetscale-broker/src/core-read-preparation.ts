@@ -34,6 +34,9 @@ import { prepare as prepareConfigurationProfileShard } from "./tools/get-shard-c
 import { prepare as prepareOauthApplication } from "./tools/get-oauth-application.js";
 import { prepare as prepareOrganizationSso } from "./tools/get-organization-sso.js";
 import { prepare as prepareOrganizationSsoDomain } from "./tools/get-organization-sso-domain.js";
+import { prepare as prepareInvoice } from "./tools/get-invoice.js";
+import { prepare as preparePaymentMethod } from "./tools/get-organization-billing-payment-method.js";
+import { prepare as preparePaymentSetup } from "./tools/get-payment-method-setup.js";
 
 const organizationFields = { organization: slug, organizationId: identifier, revision: digest };
 const databaseFields = { ...organizationFields, database: slug, databaseId: identifier };
@@ -58,6 +61,9 @@ const oauthTokenTarget = closed({ ...organizationFields, applicationId: identifi
 const webhookTarget = closed({ ...databaseFields, webhookId: identifier });
 const oauthApplicationTarget = closed({ ...organizationFields, applicationId: identifier });
 const organizationSsoDomainTarget = closed({ ...organizationFields, domainId: identifier });
+const invoiceTarget = closed({ ...organizationFields, invoiceId: identifier });
+const paymentMethodTarget = closed({ ...organizationFields, paymentMethodId: identifier });
+const paymentSetupTarget = closed({ ...organizationFields, setupId: identifier });
 const deploymentTarget = closed({ ...databaseFields,
   deployment: closed({ id: identifier, number: deployNumber, intoBranch: slug }), intoBranchId: identifier });
 const schemaRecommendationTarget = closed({ ...databaseFields,
@@ -91,7 +97,9 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof keyspaceResizeTarget.parse> | ReturnType<typeof routerTarget.parse> |
   ReturnType<typeof replicaTarget.parse> | ReturnType<typeof switchoverTarget.parse> |
   ReturnType<typeof configurationProfileTarget.parse> | ReturnType<typeof configurationProfileShardTarget.parse> |
-  ReturnType<typeof oauthApplicationTarget.parse> | ReturnType<typeof organizationSsoDomainTarget.parse>;
+  ReturnType<typeof oauthApplicationTarget.parse> | ReturnType<typeof organizationSsoDomainTarget.parse> |
+  ReturnType<typeof invoiceTarget.parse> | ReturnType<typeof paymentMethodTarget.parse> |
+  ReturnType<typeof paymentSetupTarget.parse>;
 type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_backup" | "get_backup_policy" | "get_deploy_request" |
   "get_keyspace" | "get_shard" | "get_maintenance_event" |
@@ -101,7 +109,8 @@ type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_bouncer" | "get_branch_resize_request" | "get_keyspace_resize_request" |
   "get_router" | "get_dedicated_read_replica" | "get_switchover" |
   "get_shard_configuration_profile" | "get_shard_configuration_profile_shard" |
-  "get_oauth_application" | "get_organization_sso" | "get_organization_sso_domain";
+  "get_oauth_application" | "get_organization_sso" | "get_organization_sso_domain" |
+  "get_invoice" | "get_organization_billing_payment_method" | "get_payment_method_setup";
 type ResponseIdentity = "name-only-not-immutable" | "record-id-only-parent-not-verified" |
   "record-and-source-ids-destination-not-verified" | "record-and-branch-ids-parent-not-verified" |
   "record-and-user-ids-parent-not-verified" | "record-and-number-parent-and-destination-not-verified" |
@@ -358,6 +367,27 @@ export function bindGetOrganizationSsoDomainPreparation(rawTarget: unknown): (ra
   const read = prepareOrganizationSsoDomain({ organization: target.organization, domainId: target.domainId }, {});
   return bindRead(`planetscale/organization-sso-domain/${target.domainId}`, target,
     "get_organization_sso_domain", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindGetInvoicePreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = invoiceTarget.parse(rawTarget);
+  const read = prepareInvoice({ organization: target.organization, invoiceId: target.invoiceId }, {});
+  return bindRead(`planetscale/invoice/${target.invoiceId}`, target,
+    "get_invoice", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindGetOrganizationBillingPaymentMethodPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = paymentMethodTarget.parse(rawTarget);
+  const read = preparePaymentMethod({ organization: target.organization, paymentMethodId: target.paymentMethodId }, {});
+  return bindRead(`planetscale/billing-payment-method/${target.paymentMethodId}`, target,
+    "get_organization_billing_payment_method", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindGetPaymentMethodSetupPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = paymentSetupTarget.parse(rawTarget);
+  const read = preparePaymentSetup({ organization: target.organization, setupId: target.setupId }, {});
+  return bindRead(`planetscale/payment-method-setup/${target.setupId}`, target,
+    "get_payment_method_setup", read.request, "record-id-only-parent-not-verified");
 }
 
 export function bindGetWebhookPreparation(rawTarget: unknown): (raw: unknown) => Prepared {

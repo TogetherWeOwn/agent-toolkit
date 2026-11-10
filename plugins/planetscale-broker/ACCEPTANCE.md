@@ -1400,6 +1400,34 @@ and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/a
 passed. This is prior-head evidence, not execution of the 25 new contracts.
 Earlier unchanged SDK recovery-test uncertainty remains unresolved.
 
+## Billing-detail core preparation contracts
+
+`test/core-billing-read-preparation.test.mjs` adds 26 synthetic contracts for
+invoice, billing payment-method and payment-setup detail Prepared bindings.
+Closed immutable organization/record/revision captures, fixed GETs and empty
+caller arguments retain every-field hashes, snapshot/accessor/missing/extra/unsafe
+refusals, output canaries and separate resource-kind namespaces. The singleton
+payment-method path contains no record ID; its independent expected-ID binding
+changes resource identity/full hash and refuses replacement response records.
+Existing projections match record ID only, not parent ownership. Payment flags
+and setup state never grant spending, setup, credential or native authority.
+The setup-status GET's documented write_payment_method scope remains a separate
+entitlement prerequisite, not permission to broaden credentials. Trusted current
+ownership/revision, transport/raw-body custody and non-waking proof remain required.
+No executor, runtime registration, credential resolution or authority consumption.
+Coverage remains 134/291 offline adapters, 157 missing, twelve previews and 46 pure
+preparations; zero runtime-integrated/reviewed/enabled/adopted operations. New
+contracts await exact-head Actions; no local suite/build/typecheck ran.
+
+Prior exact `b4a4365da2636fe57ce920911088206593ac8c3e`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42751426411)
+passed [test](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42751426411/job/129615758022),
+lint/typecheck/native-policy/ci-ok;
+[Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42751426795)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42751421876)
+passed. This is prior-head evidence, not execution of the 26 billing contracts.
+Earlier unchanged SDK recovery-test uncertainty remains unresolved.
+
 ## Metrics preregistration — required before enablement
 
 Baseline and matched post-window measurements are **not yet collected or approved**.

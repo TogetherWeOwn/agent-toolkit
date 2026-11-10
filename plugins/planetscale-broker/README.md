@@ -1227,6 +1227,27 @@ ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.
 
+## Billing-detail core preparation
+
+`bindGetInvoicePreparation`, `bindGetOrganizationBillingPaymentMethodPreparation`
+and `bindGetPaymentMethodSetupPreparation` capture closed immutable organization
+name/ID, record ID and revision snapshots for the existing fixed detail GETs.
+Caller arguments must be empty; all host fields enter the plan/full hash. The
+payment-method endpoint is a singleton path without a record ID, so its expected
+ID is independently captured and retained in the resource and plan. Existing
+projections match record ID, not organization ownership. Amounts, payment details,
+checkout URLs, client secrets, actors and contact data never enter receipts;
+`spendingAuthority: not-established` grants no billing or setup action authority.
+
+`test/core-billing-read-preparation.test.mjs` supplies 26 synthetic contracts.
+The setup-status GET retains its documented `write_payment_method` entitlement
+prerequisite; GET does not imply read-only credential scope or grant expansion.
+Current ownership/revision, trusted transport/raw-body custody and independent
+non-waking proof remain required. These are pure Prepared shapes, not executors,
+runtime registration or authority enforcement. Adapter coverage remains 134/291
+with 157 missing; twelve previews and 46 pure preparations are separate counts.
+All operations remain runtime-unintegrated, unreviewed, disabled and unadopted.
+
 ## Required common interface
 
 Reuse one reviewed, versioned common provider core for:
