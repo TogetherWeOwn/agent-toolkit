@@ -81,8 +81,11 @@ for (const c of cases) {
     assert.ok(Object.isFrozen(output));
     if (output.keyspaces) {
       assert.ok(Object.isFrozen(output.keyspaces));
-      for (const row of output.keyspaces) assert.ok(Object.isFrozen(row));
-      assert.equal(JSON.stringify(output).includes('ratio'), false);
+      assert.equal(Object.hasOwn(output, 'ratio'), false);
+      for (const row of output.keyspaces) {
+        assert.ok(Object.isFrozen(row));
+        assert.equal(Object.hasOwn(row, 'ratio'), false);
+      }
     }
   });
 

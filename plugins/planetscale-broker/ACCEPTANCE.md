@@ -4,6 +4,26 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Network projection assertion repair
+
+Source head `4751ff43551cab478d72b4837c33ccfdd6f933d9`
+[Actions test](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42758090623/job/129637100017)
+passed 1467/1469 PlanetScale contracts. Both failing throttler assertions searched
+for the substring `ratio`, which also occurs in the required
+`configurationAuthority` key. Exact expected receipt equality passed; no leaked
+ratio was demonstrated. The repair checks exact own-property absence on the
+receipt and every keyspace row, retaining full projection equality, canary
+omission, frozen output and the authority disclaimer. Runtime behavior is
+unchanged; the same 30 network preparation contracts require fresh Actions
+verification, with no additional test-count credit or repair-head pass implied.
+
+Root 317/317, helpers 122/122, GitHub broker 219/219 and Neon 37/37 passed on
+that source head. Lint/typecheck/native-policy, Gitleaks and all three CodeQL
+analyses passed; aggregate ci-ok correctly failed. Earlier SDK recovery uncertainty
+is not repaired here. Coverage, missing adapters, previews/preparations and all
+review/runtime gates below are unchanged. No local suite, build, typecheck or
+CI mirror is substitute evidence.
+
 ## Network/throttler preparation source increment
 
 Three pure Prepared bindings capture existing CIDR/database-throttler/deploy-
