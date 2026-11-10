@@ -44,6 +44,8 @@ import { throttlerKeyspaceNames } from "./network-throttler.js";
 import { prepare as prepareDatabaseCidr } from "./tools/get-database-postgres-cidr.js";
 import { prepare as prepareDatabaseThrottler } from "./tools/get-database-throttler.js";
 import { prepare as prepareDeployThrottler } from "./tools/get-deploy-request-throttler.js";
+import { prepare as prepareBranchQuery } from "./tools/get-branch-query.js";
+import { prepare as prepareBranchQueryTag } from "./tools/get-branch-query-tag.js";
 
 const organizationFields = { organization: slug, organizationId: identifier, revision: digest };
 const databaseFields = { ...organizationFields, database: slug, databaseId: identifier };
@@ -54,6 +56,8 @@ const branchTarget = closed(branchFields);
 const anomalyTarget = closed({ ...branchFields, anomalyId: identifier });
 const trafficBudgetTarget = closed({ ...branchFields, budgetId: identifier });
 const queryReportTarget = closed({ ...branchFields, reportId: identifier });
+const branchQueryTarget = closed({ ...branchFields, queryId: identifier });
+const branchQueryTagTarget = closed({ ...branchFields, tag: closed({ id: identifier, name: identifier }) });
 const databaseCidrTarget = closed({ ...databaseFields, cidrId: identifier });
 const throttlerFields = { ...databaseFields, configurableId: identifier, keyspaceNames: throttlerKeyspaceNames };
 const databaseThrottlerTarget = closed(throttlerFields);
@@ -116,7 +120,8 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof paymentSetupTarget.parse> | ReturnType<typeof anomalyTarget.parse> |
   ReturnType<typeof trafficBudgetTarget.parse> | ReturnType<typeof queryReportTarget.parse> |
   ReturnType<typeof databaseCidrTarget.parse> | ReturnType<typeof databaseThrottlerTarget.parse> |
-  ReturnType<typeof deployThrottlerTarget.parse>;
+  ReturnType<typeof deployThrottlerTarget.parse> | ReturnType<typeof branchQueryTarget.parse> |
+  ReturnType<typeof branchQueryTagTarget.parse>;
 type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_backup" | "get_backup_policy" | "get_deploy_request" |
   "get_keyspace" | "get_shard" | "get_maintenance_event" |
@@ -129,11 +134,13 @@ type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_oauth_application" | "get_organization_sso" | "get_organization_sso_domain" |
   "get_invoice" | "get_organization_billing_payment_method" | "get_payment_method_setup" |
   "get_branch_anomaly" | "get_traffic_budget" | "get_query_patterns_report_status" |
-  "get_database_postgres_cidr" | "get_database_throttler" | "get_deploy_request_throttler";
+  "get_database_postgres_cidr" | "get_database_throttler" | "get_deploy_request_throttler" |
+  "get_branch_query" | "get_branch_query_tag";
 type ResponseIdentity = "name-only-not-immutable" | "record-id-only-parent-not-verified" |
   "record-and-source-ids-destination-not-verified" | "record-and-branch-ids-parent-not-verified" |
   "record-and-user-ids-parent-not-verified" | "record-and-number-parent-and-destination-not-verified" |
-  "record-and-number-parent-not-verified" | "organization-id-matched";
+  "record-and-number-parent-not-verified" | "organization-id-matched" |
+  "record-and-name-parent-not-verified";
 
 // Pure preparation only. Host IDs/revisions bind a snapshot, not permission;
 // response projections still cannot authenticate every parent/destination ID.
@@ -158,6 +165,22 @@ function bindRead(
     jsonData(prepared);
     return prepared;
   };
+}
+
+export function bindGetBranchQueryPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = branchQueryTarget.parse(rawTarget);
+  const read = prepareBranchQuery({ organization: target.organization, database: target.database,
+    branch: target.branch, queryId: target.queryId }, {});
+  return bindRead(`planetscale/branch-query/${target.queryId}`, target, "get_branch_query", read.request,
+    "record-id-only-parent-not-verified");
+}
+
+export function bindGetBranchQueryTagPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = branchQueryTagTarget.parse(rawTarget);
+  const read = prepareBranchQueryTag({ organization: target.organization, database: target.database,
+    branch: target.branch, tag: target.tag }, {});
+  return bindRead(`planetscale/branch-query-tag/${target.tag.id}`, target, "get_branch_query_tag", read.request,
+    "record-and-name-parent-not-verified");
 }
 
 export function bindGetOrganizationPreparation(rawTarget: unknown): (raw: unknown) => Prepared {

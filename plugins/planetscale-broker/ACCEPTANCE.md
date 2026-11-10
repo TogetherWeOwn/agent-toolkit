@@ -4,6 +4,39 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Query-detail preparation source increment
+
+Two pure Prepared bindings capture existing individual-query and query-tag detail
+GETs. Closed immutable host organization/database/branch IDs and names, revision
+and query ID or tag ID/name pair bind fixed requests and empty caller arguments.
+All host fields enter plan/full hashes. Query projections match record ID; tag
+projections match ID and name, not immutable parent ownership. The static summaries
+route refuses. Query IDs are distinct from summary IDs. Plans retain bound tag
+names for routing; receipts omit tag names/values, SQL/password objects,
+fingerprints, users/addresses/tables, metrics, actors and times. Flags/source
+never grant EXPLAIN, execution or native authority.
+
+`test/core-query-detail-read-preparation.test.mjs` supplies 19 synthetic contracts
+for fixed GETs, closed deep snapshots/freeze, every-field hashes, host/caller and
+nested-accessor refusal, rebound ID/name rejection, canary omission and resource
+namespace separation. Current ownership/revision, broker transport/raw-body
+custody and independent non-waking proof remain prerequisites. No executor,
+registration, credential resolution or authority consumption. Exact-head Actions
+must execute the new contracts; no new-head success is implied. Coverage stays
+**134/291 offline adapters; 157 missing**, twelve previews and **54 pure
+preparations**, zero runtime-integrated/reviewed/enabled/adopted. Older counts
+below are historical.
+
+Prior exact `93ad6a6aaf0246705a6dda80a22b37b454b71788`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42759702195)
+passed [tests](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42759702195/job/129642297929):
+1469/1469 PlanetScale, root 317/317, helpers 122/122, GitHub 219/219, Neon 37/37;
+zero failures/skips/cancellations. Lint/typecheck/native-policy/ci-ok and Neon
+candidate contract passed. [Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42759701508)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42759697728)
+passed. Historical evidence does not cover this increment; unchanged SDK recovery
+uncertainty is unresolved, not repaired here.
+
 ## Network projection assertion repair
 
 Source head `4751ff43551cab478d72b4837c33ccfdd6f933d9`

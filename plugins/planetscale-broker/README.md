@@ -1227,6 +1227,29 @@ ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.
 
+## Query-detail core preparation
+
+`bindGetBranchQueryPreparation` and `bindGetBranchQueryTagPreparation` capture
+closed immutable host organization/database/branch identities, revision and query
+ID or tag ID/name pair for existing detail GETs. Caller arguments must be empty;
+every host field enters plan/full hashes. The query projection matches record ID;
+the name-addressed tag projection matches both bound ID and name. Neither verifies
+immutable parent ownership. The static `summaries` route refuses rather than
+being treated as a tag. Query IDs are not summary IDs. Plans retain the required
+tag name for routing, but receipts omit names/values, SQL, passwords, fingerprints,
+users, addresses, tables, metrics, actors and times. Explainable/truncated flags
+and source enums never grant EXPLAIN, execution or native authority.
+
+`test/core-query-detail-read-preparation.test.mjs` supplies 19 synthetic contracts
+for fixed requests, deep captures, every-field hashes, host/caller/accessor
+refusals, canary omission, rebound ID/name rejection and separate namespaces.
+Current ownership/revision, trusted transport/raw-body custody and independent
+non-waking proof remain prerequisites. No executor, registration, credential
+resolution or authority consumption is added. Coverage stays 134/291 offline
+adapters, 157 missing; twelve previews and 54 pure preparations are separate
+counts. All operations remain runtime-unintegrated, unreviewed, disabled and
+unadopted. Earlier increments below retain their historical counts.
+
 ## Network/throttler core preparation
 
 `bindGetDatabasePostgresCidrPreparation`, `bindGetDatabaseThrottlerPreparation`
