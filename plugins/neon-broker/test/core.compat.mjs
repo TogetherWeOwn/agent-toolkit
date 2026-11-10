@@ -4748,6 +4748,131 @@ test('Legacy auth user delete: maximum copied project/opaque IDs fit common budg
   safeEnvelope(f, result);
 });
 
+import { authMagicLinkDisableFixture, authMagicLinkDisableArgs, authMagicLinkDisableScope, authMagicLinkDisableMetadata } from './helpers.mjs';
+function authMagicLinkDisableBroker(value = null, overrides = {}, config = authMagicLinkDisableScope) {
+  const provider = authMagicLinkDisableFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('updateNeonAuthMagicLinkPlugin').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.updateNeonAuthMagicLinkPlugin', args, context, key);
+  } };
+}
+
+test('Auth magic-link disable: reserved authority AND exact agent/branch/disable grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = authMagicLinkDisableBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = 'neon/projects/project-a/branches/br-a/auth';
+  for (const resource of [target, target + '/plugins', target + '/plugins/magic-link', target + '/plugins/magic-link/enable',
+    target.replace('br-a', 'other') + '/plugins/magic-link/disable', target.replace('project-a', 'other') + '/plugins/magic-link/disable']) {
+    const f = authMagicLinkDisableBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = authMagicLinkDisableBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.common.calls.secret, 0);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = authMagicLinkDisableBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { acknowledged: true });
+  assert.equal(f.common.calls.consumed, 1);
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('Auth magic-link disable: native authorization isolates stale, wrong-target and unconsumable evidence', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = authMagicLinkDisableBroker();
+    const base = f.common.authority;
+    let consumeCalls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.updateNeonAuthMagicLinkPlugin', authMagicLinkDisableArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Auth magic-link disable: identity/resource TOCTOU and caller policy/authority overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = authMagicLinkDisableBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = authMagicLinkDisableBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.updateNeonAuthMagicLinkPlugin', authMagicLinkDisableArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { enabled: true }, { enabled: false }, { expires_in: 5 }, { disable_sign_up: true },
+    { body: {} }, { auth_provider: 'stack' }, { project_id: 'other' }, { branch_id: 'other' }, { token: 'not-a-token' }, { retry: true }]) {
+    const g = authMagicLinkDisableBroker();
+    assert.equal((await g.common.broker().call('neon.updateNeonAuthMagicLinkPlugin', { ...authMagicLinkDisableArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+    assert.equal(g.provider.requests.length, 0);
+  }
+});
+
+test('Auth magic-link disable: permanent journal blocks complete and uncertain replay after restart', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = authMagicLinkDisableBroker((url, init) => {
+      if (init.method === 'PATCH') { if (ambiguous) throw Error(credentialCanary); return response({ enabled: false }); }
+      return response(authMagicLinkDisableMetadata);
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'PATCH').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Auth magic-link disable: foreign or unsupported auth refuses before PATCH; secret extras never enter envelopes', async () => {
+  for (const change of [{ branch_id: 'other' }, { project_id: 'other' }, { auth_provider: 'stack' }, { transfer_status: 'initiated' }, { pagination: {} }]) {
+    const f = authMagicLinkDisableBroker(() => response({ ...authMagicLinkDisableMetadata, ...change }));
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'PATCH').length, 0);
+    safeEnvelope(f, result);
+  }
+  const f = authMagicLinkDisableBroker((url, init) => response(init.method === 'PATCH' ?
+    { enabled: false, password: credentialCanary, expires_in: derivedCanary, disable_sign_up: derivedCanary } : authMagicLinkDisableMetadata));
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
+test('Auth magic-link disable: maximum copied IDs and fixed false plan fit common budgets', async () => {
+  const config = { projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), revision: 'r'.repeat(80) };
+  const f = authMagicLinkDisableBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
 import { authLogsDisableFixture, authLogsDisableArgs, authLogsDisableScope, authLogsDisableMetadata } from './helpers.mjs';
 function authLogsDisableBroker(value = null, overrides = {}, config = authLogsDisableScope) {
   const provider = authLogsDisableFixture(value, config);

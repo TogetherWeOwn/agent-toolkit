@@ -1,5 +1,23 @@
 # Source-slice threat model
 
+## Magic-link authentication disable delta
+
+Copied exact branch/revision, dedicated magic-link disable grant and reserved native
+exact-plan authority precede exact-branch better_auth/no-pending-transfer preflight
+and one fixed false PATCH. Enabling, expiry/sign-up policy changes and caller-body
+overrides are unsupported. There is no dedicated magic-link GET in the pinned
+schema: previous state is unverified, parent auth metadata cannot reconcile plugin
+state, and credential-bearing aggregate reads are not substituted. Exact200 false
+echo acknowledges only, not independently observed authentication refusal,
+outstanding-link invalidation, token/session revocation, configuration preservation
+or persistence. Unused expiry/sign-up policy, auth metadata and diagnostics never
+evaluate or emit. Preflight is not atomic CAS; external races remain. Ambiguity
+stays uncertain without fabricated reads or retry. Shared fixed-origin,
+redirect-refusal and bounded transport remain. Permanent mock authority/journal
+contracts are not native custody/durable recovery qualification. Independent
+provider-effect/authority and specialist/release gates remain. Source/mocks only;
+no runtime grant, live authentication change, binding or enablement.
+
 ## Auth event logs-export disable delta
 
 A copied exact branch/revision, dedicated disable grant and reserved native exact-plan
