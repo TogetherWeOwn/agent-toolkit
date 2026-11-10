@@ -4748,6 +4748,131 @@ test('Legacy auth user delete: maximum copied project/opaque IDs fit common budg
   safeEnvelope(f, result);
 });
 
+import { authUserRoleFixture, authUserRoleArgs, authUserRoleScope, authUserRoleMetadata } from './helpers.mjs';
+function authUserRoleBroker(value = null, overrides = {}, config = authUserRoleScope) {
+  const provider = authUserRoleFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId, auth_user_id: config.userId };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('updateNeonAuthUserRole').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.updateNeonAuthUserRole', args, context, key);
+  } };
+}
+
+test('Auth user role: reserved authority AND exact agent/user/branch/role grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = authUserRoleBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = 'neon/projects/project-a/branches/br-a/auth/users/user_a';
+  for (const resource of [target, target + '/delete', target + '/role/admin', target.replace('br-a', 'other') + '/role/user',
+    target.replace('project-a', 'other') + '/role/user', target.replace('user_a', 'other') + '/role/user']) {
+    const f = authUserRoleBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = authUserRoleBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.common.calls.secret, 0);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = authUserRoleBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { acknowledged: true });
+  assert.equal(f.common.calls.consumed, 1);
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('Auth user role: native authorization isolates stale, wrong-target and unconsumable evidence', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = authUserRoleBroker();
+    const base = f.common.authority;
+    let consumeCalls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.updateNeonAuthUserRole', authUserRoleArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Auth user role: identity/resource TOCTOU and caller role/authority overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = authUserRoleBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = authUserRoleBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.updateNeonAuthUserRole', authUserRoleArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { roles: ['admin'] }, { roles: ['user', 'admin'] }, { role: 'custom' }, { body: {} },
+    { project_id: 'other' }, { branch_id: 'other' }, { auth_user_id: 'other' }, { token: 'not-a-token' }, { retry: true }]) {
+    const g = authUserRoleBroker();
+    assert.equal((await g.common.broker().call('neon.updateNeonAuthUserRole', { ...authUserRoleArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+    assert.equal(g.provider.requests.length, 0);
+  }
+});
+
+test('Auth user role: permanent journal blocks complete and uncertain replay after restart', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = authUserRoleBroker((url, init) => {
+      if (init.method === 'PUT') { if (ambiguous) throw Error(credentialCanary); return response({ id: 'user_a' }); }
+      return response(authUserRoleMetadata);
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'PUT').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Auth user role: foreign detail refuses before PUT; unused secret fields never enter envelopes', async () => {
+  for (const change of [{ branch_id: 'other' }, { project_id: 'other' }, { branch: { id: 'other', project_id: 'project-a' } }, { pagination: {} }]) {
+    const f = authUserRoleBroker(() => response({ ...authUserRoleMetadata, ...change }));
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'PUT').length, 0);
+    safeEnvelope(f, result);
+  }
+  const f = authUserRoleBroker((url, init) => response(init.method === 'PUT' ?
+    { id: 'user_a', password: credentialCanary, roles: [derivedCanary] } : authUserRoleMetadata));
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
+test('Auth user role: maximum copied IDs and fixed role plan fit common budgets', async () => {
+  const config = { projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), userId: 'c'.repeat(64), revision: 'r'.repeat(80) };
+  const f = authUserRoleBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
 import { authUserDeleteFixture, authUserDeleteArgs, authUserDeleteScope, authUserDeleteMetadata } from './helpers.mjs';
 function authUserDeletionBroker(value = null, overrides = {}, config = authUserDeleteScope) {
   const provider = authUserDeleteFixture(value, config);

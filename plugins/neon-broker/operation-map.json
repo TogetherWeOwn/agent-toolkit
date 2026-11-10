@@ -1149,20 +1149,23 @@
       "id": "updateNeonAuthUserRole",
       "apiArea": "auth",
       "tool": "neon.updateNeonAuthUserRole",
-      "scope": "project_id/branch_id/auth_user_id",
+      "scope": "project_id/branch_id/auth_user_id/role/user",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-user-role.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Built-in user role assignment source/mocks only; admin/custom/multiple roles unsupported. Trusted branch/user binding, independent directory-role reconciliation, native custody/durable journal, entitlement, provider effects and specialist/release qualification unresolved; no live permission change or runtime enablement."
     },
     {
       "id": "deleteNeonAuthUser",

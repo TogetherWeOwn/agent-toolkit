@@ -2382,13 +2382,35 @@ fabricated read or retry. Preflight is not atomic CAS. The common permanent jour
 blocks same-request replay, not external writers. Source/mocks only; no live
 user deletion, credential retrieval or runtime enablement.
 
+## Built-in user role assignment source
+
+`createNeonAuthUserRoleOperations` supplies reserved `updateNeonAuthUserRole`, fixed
+`roles:["user"]` only. Copy one exact trusted project/branch/user-ID/revision binding;
+require a separate `neon/projects/<project>/branches/<branch>/auth/users/<user>/role/user`
+grant and native exact-plan authority. Mandatory branch identity preflight precedes
+one PUT sending only that fixed roles array. Admin, custom and multiple role lists,
+arbitrary body overrides and legacy fallback are unsupported.
+
+The documented HTTP200 response echoes only user ID, not assigned roles. A closed
+acknowledgement is not independently observed user presence, prior roles, demotion,
+effective-access reduction, assigned roles, issued-token/session revocation or
+connection fencing. The pinned management schema has no directory user-detail/list
+GET: no invented current-role/existence preflight or reconciliation is supplied.
+Preflight is not atomic CAS; external branch/directory races remain unresolved.
+Ambiguity remains uncertain without unrelated parent reads or a mutation retry.
+Permanent common journaling blocks same-request replay/restart, not external writers.
+Fixed origin, redirect refusal, byte/deadline/cancellation bounds and two-request
+worst case remain. Source/mocks only; no live permission or runtime change. Native
+trusted binding, directory-role reconciliation, custody/durable recovery, entitlement,
+provider effects and independent specialist/release qualification remain prerequisites.
+
 ## Coverage and verification
 
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 141 implemented
-source adapters, 53 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 142 implemented
+source adapters, 52 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

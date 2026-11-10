@@ -1,5 +1,23 @@
 # Source-slice threat model
 
+## Built-in user role assignment delta
+
+One copied trusted branch/user binding, dedicated role/user grant and reserved native
+exact-plan authority precede branch identity preflight and a single fixed-role PUT.
+Admin/custom/multiple roles and arbitrary body overrides are unsupported. The public
+schema echoes only user ID; acknowledgement does not independently verify assigned
+roles, prior roles, user existence, demotion, effective-access reduction or session
+revocation. No user-detail/list GET exists in the pinned management schema. Parent
+metadata is not directory-role reconciliation; ambiguity stays uncertain without an
+invented read or retry. Preflight is not atomic CAS; external directory/branch races
+remain. Exact ID/ancestry validation and closed acknowledgement omit unused profile,
+role and diagnostic fields without evaluating them. Fixed origin, redirect refusal,
+bounded transport and permanent common replay journaling are reused. Process-local
+mock authority/journal tests do not qualify native custody or durable recovery.
+Independent directory reconciliation, trusted user binding and specialist/release
+qualification remain prerequisites. Source/mocks only; no live permission change,
+credential retrieval, mint, binding or enablement.
+
 ## Legacy project-scoped auth-user deletion delta
 
 A separate project-only factory binds one trusted project/user/revision, dedicated
