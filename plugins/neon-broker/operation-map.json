@@ -952,20 +952,24 @@
       "id": "addNeonAuthDomainToRedirectURIWhitelist",
       "apiArea": "auth-legacy",
       "tool": "neon.addNeonAuthDomainToRedirectURIWhitelist",
-      "scope": "project_id",
+      "scope": "project_id/auth/legacy/domains/auth_provider/origin/add",
       "sideEffects": [
+        "redirect-trust-expansion",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/legacy-auth-domain-add.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Single canonical HTTPS redirect origin addition source/mocks only; separate project-legacy add grant and reserved native exact-plan authority. Bounded complete provider/origin absence preflight then one singular-domain POST; empty201 acknowledges only, not independent trust enforcement or persistence. Broadens trust; no live security change authorized. Preflight not atomic CAS; ambiguity stays uncertain after one observation, no retry, permanent common replay journal. Deprecated endpoint sunset 2026-03-01: availability UNKNOWN; no branch fallback. Native owner authority, host/policy/custody/durable recovery, entitlement/effects and independent reviews unresolved."
     },
     {
       "id": "deleteNeonAuthDomainFromRedirectURIWhitelist",

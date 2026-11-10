@@ -2146,13 +2146,30 @@ even on presence/absence; no retry, permanent common journal prevents same-reque
 replay. Native owner security authority, host/policy/custody/durable recovery,
 entitlement/effects and independent reviews remain unresolved. Source/mocks only.
 
+## Legacy single trusted-redirect origin addition source
+
+`createNeonLegacyAuthDomainAddOperations` supplies reserved
+`addNeonAuthDomainToRedirectURIWhitelist` source through a distinct project-only
+factory, `/auth/legacy/domains/<provider>/<hostname>/add` grant and project endpoint.
+It reuses branch addition's exact origin/provider parsers, bounded complete absence
+preflight, singular-domain POST, empty201 acknowledgement and uncertain/no-retry
+contracts. Branch arguments and cross-factory grants are rejected, never inferred.
+The schema deprecates this endpoint with sunset 2026-03-01: availability is UNKNOWN,
+and 404/410 refuse without branch fallback. Source coverage is not permission to
+broaden live redirect trust or proof of effective enforcement, persistence or
+session/token handling. Preflight is not atomic CAS; external races and provider
+normalization remain unresolved. One bounded observation cannot resolve ambiguity;
+the permanent common journal blocks same-request replay, not external writers.
+Native owner authority, host/policy/custody/durable recovery, effects/entitlement
+and independent reviews remain unresolved. Source/mocks only.
+
 ## Coverage and verification
 
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 128 implemented
-source adapters, 66 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 129 implemented
+source adapters, 65 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

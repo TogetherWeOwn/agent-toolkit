@@ -62,6 +62,7 @@ import { allCases as cases, cases as metadataCases, catalogCases, catalogFixture
   objectDeleteFixture, objectDeleteArgs, objectDeleteScope, objectDeleteMetadata,
   authDomainDeleteFixture, authDomainDeleteArgs, authDomainDeleteScope, authDomainDeleteMetadata,
   authDomainAddFixture, authDomainAddArgs, authDomainAddScope,
+  legacyAuthDomainAddFixture, legacyAuthDomainAddArgs, legacyAuthDomainAddScope,
   legacyAuthDomainDeleteFixture, legacyAuthDomainDeleteArgs, legacyAuthDomainDeleteScope,
   oauthProviderDeleteFixture, oauthProviderDeleteArgs, oauthProviderDeleteScope, oauthProviderDeleteMetadata,
   dataAPIDeleteFixture, dataAPIDeleteArgs, dataAPIDeleteScope,
@@ -2513,6 +2514,125 @@ test('legacy OAuth provider delete: maximum identity selection fits actual commo
     oauthProviderId: 'microsoft', revision: 'r'.repeat(80) };
   const f = legacyOAuthProviderDeletionBroker(null, {}, config);
   const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
+function legacyAuthDomainAdditionBroker(value = null, overrides = {}, config = legacyAuthDomainAddScope) {
+  const provider = legacyAuthDomainAddFixture(value, config);
+  const args = { project_id: config.projectId, auth_provider: config.authProvider, domain: config.domain };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('addNeonAuthDomainToRedirectURIWhitelist').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.addNeonAuthDomainToRedirectURIWhitelist', args, context, key);
+  } };
+}
+
+test('legacy Auth domain add: reserved exact-plan authority AND exact provider/origin/add and agent grants precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = legacyAuthDomainAdditionBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = 'neon/projects/project-a/auth/legacy/domains/better_auth/app.example.invalid/add';
+  for (const resource of [target.replace('/add', '/delete'), target.replace('/auth/legacy', '/branches/br-a/auth'), target.replace('project-a', 'other'),
+    target.replace('better_auth', 'stack'), target.replace('app.example.invalid', 'other.invalid'), 'neon/projects/project-a/auth/legacy/domains']) {
+    const f = legacyAuthDomainAdditionBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = legacyAuthDomainAdditionBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = legacyAuthDomainAdditionBroker(), result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { acknowledged: true });
+  assert.equal(f.common.calls.consumed, 1);
+  safeEnvelope(f, result);
+});
+
+test('legacy Auth domain add: wrong-target, expiry and consume denials are isolated authority controls', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = legacyAuthDomainAdditionBroker(), base = f.common.authority;
+    let consumeCalls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.addNeonAuthDomainToRedirectURIWhitelist', legacyAuthDomainAddArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('legacy Auth domain add: host identity/resource TOCTOU and target/authority overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = legacyAuthDomainAdditionBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = legacyAuthDomainAdditionBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.call()).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { project_id: 'other' }, { branch_id: 'other' }, { auth_provider: 'stack' },
+    { domain: 'https://other.invalid' }, { domains: [] }, { retry: true }]) {
+    const g = legacyAuthDomainAdditionBroker();
+    assert.equal((await g.common.broker().call('neon.addNeonAuthDomainToRedirectURIWhitelist', { ...legacyAuthDomainAddArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('legacy Auth domain add: completed and uncertain permanent journals block restart replay without trust proof', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = legacyAuthDomainAdditionBroker((url, init, n) => {
+      if (init.method === 'POST') { if (ambiguous) throw Error(credentialCanary); return new Response(null, { status: 201 }); }
+      return response({ domains: n > 2 ? [authDomainDeleteMetadata] : [] });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'POST').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('legacy Auth domain add: existing/foreign/malformed inputs and reflected lease strings cannot enter safe envelopes', async () => {
+  for (const raw of [{ domains: [authDomainDeleteMetadata] }, { domains: [], project_id: 'other' },
+    { domains: [], branch_id: 'other' }, { domains: [], pagination: {} },
+    { domains: [{ domain: 'https://other.invalid', auth_provider: credentialCanary }] }]) {
+    const f = legacyAuthDomainAdditionBroker(() => response(raw)), result = await f.call();
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'POST').length, 0);
+    safeEnvelope(f, result);
+  }
+  const f = legacyAuthDomainAdditionBroker((url, init) => init.method === 'POST' ? response({ acknowledged: true, error: credentialCanary }, { status: 201 }) : response({ domains: [] }));
+  const result = await f.call();
+  assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+  safeEnvelope(f, result);
+});
+
+test('legacy Auth domain add: maximum composed selection fits actual common prepared budgets', async () => {
+  const config = { ...legacyAuthDomainAddScope, projectId: 'p'.repeat(60),
+    domain: 'https://' + 'a'.repeat(60) + '.' + 'b'.repeat(59), revision: 'r'.repeat(80) };
+  const f = legacyAuthDomainAdditionBroker(null, {}, config), result = await f.call();
   assert.equal(result.ok, true);
   safeEnvelope(f, result);
 });

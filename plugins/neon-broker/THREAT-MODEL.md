@@ -415,6 +415,24 @@ or absence, never a retry. The permanent common journal blocks same-request repl
 not other writers. Native owner authority, host/custody/durable recovery, provider
 effects/entitlement and independent reviews remain absent. No live calls occur.
 
+## Reserved legacy trusted-redirect addition delta
+
+`addNeonAuthDomainToRedirectURIWhitelist` uses a separate strictly project-only
+factory, legacy provider/hostname/add resource, native exact-plan authorization
+and project endpoint. The shared implementation retains branch addition's copied
+selection, strict origin/provider parsers, complete bounded absence preflight,
+singular-domain POST and terminal empty201 acknowledgement. Branch-bearing scope,
+arguments or response ancestry refuse; branch/list/delete grants never substitute.
+The pinned schema's sunset is 2026-03-01: availability remains UNKNOWN. Preflight
+404/410 fails closed without POST or branch fallback; mutation errors remain
+uncertain after at most one project-list observation. Broadening redirect trust
+still requires actual owner security authority. No live change, enforcement,
+persistence or token/session claim follows from source coverage. Preflight is
+not atomic CAS, external races remain unresolved, and no presence/absence upgrades
+ambiguity to success. The permanent common journal blocks replay without inventing
+provider idempotency. Host/custody/durable recovery, effects/entitlement and native
+independent reviews remain absent. Source/mocks only.
+
 ## Reserved branch trusted-redirect deletion delta
 
 `deleteBranchNeonAuthTrustedDomain` copies one exact branch/provider/canonical HTTPS

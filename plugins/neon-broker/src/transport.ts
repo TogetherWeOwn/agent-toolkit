@@ -52,6 +52,7 @@ export interface NeonMetadataTransport {
   deleteNeonAuthOauthProvider(project: string, provider: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteBranchNeonAuthOauthProvider(project: string, branch: string, provider: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteNeonAuthDomainFromRedirectURIWhitelist(project: string, provider: string, domain: string, options: MetadataRequestOptions): Promise<unknown>;
+  addNeonAuthDomainToRedirectURIWhitelist(project: string, provider: string, domain: string, options: MetadataRequestOptions): Promise<unknown>;
   addBranchNeonAuthTrustedDomain(project: string, branch: string, provider: string, domain: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteBranchNeonAuthTrustedDomain(project: string, branch: string, provider: string, domain: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchBucketObject(project: string, branch: string, bucket: string, key: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -377,6 +378,10 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       request(`/projects/${authPathId(project)}/auth/domains`, new URLSearchParams(), options,
         JSON.stringify({ auth_provider: authDomainDeleteProvider.parse(provider), domains: [{ domain: authDomainDeleteOrigin.parse(domain) }] }),
         false, 200, false, false, true),
+    addNeonAuthDomainToRedirectURIWhitelist: (project: string, provider: string, domain: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/auth/domains`, new URLSearchParams(), options,
+        JSON.stringify({ auth_provider: authDomainDeleteProvider.parse(provider), domain: authDomainDeleteOrigin.parse(domain) }),
+        false, false, false, false, true, 201),
     addBranchNeonAuthTrustedDomain: (project: string, branch: string, provider: string, domain: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/domains`, new URLSearchParams(), options,
         JSON.stringify({ auth_provider: authDomainDeleteProvider.parse(provider), domain: authDomainDeleteOrigin.parse(domain) }),
