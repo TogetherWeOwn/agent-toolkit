@@ -29,7 +29,8 @@ Common properties (all tools): closed schema (unknown/spoofed args refused, e.g.
 | `discord.message_post` / `message_reply` | write | yes | persistent staging messages; @everyone attempted as plain text (see below) | `allowed_mentions:{parse:[]}` frozen; profile=`builder`; channel allowlist; ledger persists `own:…` for later edit-own |
 | `discord.message_edit_own` | write | yes, after ledger+author verify | edits own messages only | ledger entry MUST exist before secret (tested `policy.ownership` with `secretCalls=0`); upstream author == `botUserId`; Discord nonce dedup window is minutes (residual) |
 | `discord.reaction_add_own` / `reaction_remove_own` | write | yes | reactions on own messages | emoji schema rejects `/` `%` (no path smuggling); channel allowlist |
-| `discord.thread_create` / `event_create` | write | yes | persistent threads/events on staging | named, bounded; **lifecycle gap:** archiving ≠ deletion — exact-owned deletion is not yet wired (§10) |
+| `discord.thread_create` / `event_create` | write | yes | persistent threads/events on staging | named, bounded; intent-before-side-effect + 7d immutable expiry + exact-owned delete + sweep (§9) |
+| `discord.message_delete_own` / `thread_delete_own` / `event_delete_own` | write (exact-owned) | yes, after ledger + agent binding | teardown of broker-owned staging resources only | ledger `policy.ownership` preflight before secret (tested); upstream verify (author/owner/creator); 404 = already-gone; clears ledger |
 
 ## 4. Confused deputy
 
@@ -61,7 +62,11 @@ All verified by tests with `secretCalls=0, calls=0`: unknown/prototype tool, sch
 
 ## 9. Lifecycle / TTL / spend caps
 
-- No general spend cap is Discord-relevant; instead hard caps: 1 MiB response, 262 KiB output, 30s deadline, rate budgets above, 401 pause 3600s. Dev threads/events accumulate on staging — owned-cleanup deletion is **not yet implemented**; until wired, only ledger-tracked messages can be edited (not deleted). The Operator must clean staging fixtures manually or we add exact-owned delete under a separate review. No auto-teardown claim is made.
+- Caps: 1 MiB response, 262 KiB output, 30s deadline, rate budgets above, 401 pause 3600s. Ledger caps: ≤512 entries in the `life-index` KV index; creations refuse with `lifecycle.unhealthy` when the index is full or cleanup health is degraded.
+- Every persistent creation (post, reply, thread, event) writes a durable `pending` intent + index entry **before** its upstream side effect, with an immutable server-derived `expiresAt = createdAt + 7d` (caller TTL cannot extend; there is no caller TTL — the 7-day window is fixed). Events additionally require start within (1h, 7d] at call time (`policy.expiry`, preflight, tested). On success the intent is replaced by an `owned` entry keyed by the upstream resource ID; messages also dual-write the legacy `own:` entry for `message_edit_own`.
+- Teardown is exact-owned only: `message_delete_own` / `thread_delete_own` / `event_delete_own` require a ledger entry whose `authorId == botUserId` and `agentId == caller` (preflight, before secret), then upstream verify (message author / thread `owner_id` / event `creator_id`) before DELETE. A 404 at any step counts as already-gone and clears the ledger — cleanup is idempotent. No broad delete tool exists.
+- Expiry sweep: the host offers no scheduler, so each authorized dev call sweeps at most 10 expired owned entries (verify + DELETE + GET-404 verification + audit `sweep.deleted`/`sweep.gone`). A failed verified delete sets instance `lifecycleUnhealthy` and blocks new creations (`lifecycle.unhealthy`) until a clean sweep — reads continue. Restart/expired/ambiguous fixtures cover persistence across broker restarts, expiry, and ambiguous-success reconciliation (stale `pending` intents re-derived by bot-authored search/list; exactly-one match adopts, otherwise retained for operator escalation until expiry).
+- Honest residuals: sweep is opportunistic on the next call, not independently scheduled; the KV index is read-modify-write (not CAS) so concurrent creations can theoretically race one index slot (creation aborts if the index write fails); thread/event creation have no upstream idempotency key, so reconcile-by-list is best-effort. These are bounded, auditable, and manually operable — not silent accumulation.
 
 ## 10. Open control gaps (must not treat as blockers for tiers 1–2, must not also claim solved)
 
@@ -70,10 +75,10 @@ All verified by tests with `secretCalls=0, calls=0`: unknown/prototype tool, sch
 3. **Nested errors:** host gateway may not inspect nested `result.error`; the plugin maps failures to the SDK `error` field (commented pattern from GitHub broker). Verify on exact host before relying on MCP error propagation.
 4. **Transport bounds:** `ctx.http` reconstructs 204/205/304 replies via `new Response("")` (throws) and the host buffers up to 200 MiB; abort is not forwarded; 30s is per-request, not an operation deadline. Mitigations here: 1 MiB cap, redirect refusal (3xx except 304), preserved 204 handling. Do not claim durable isolation/timeout beyond this.
 5. **State CAS:** `ctx.state` get-then-set is not compare-and-swap; concurrent `message_post` ledger entries could race. Ledger checks are best-effort fencing, not atomic uniqueness.
-6. **Lifecycle for persistent creations:** archive ≠ deletion; no exact-owned delete for threads/events/messages yet (see §9).
-7. **Retention boundary:** broker does not log, but host call-event audit may retain ~4000 chars of args/results; member-message raw storage is forbidden by usage policy, not by host mechanics.
+6. **Lifecycle for persistent creations:** implemented (§9) — intent-before-side-effect, exact-owned delete, expiry sweep. Residual: sweep timing is opportunistic and thread/event reconcile is best-effort.
+7. **Retention boundary:** broker does not log, but host call-event audit may retain ~4000 chars of args/results. On prod this can no longer contain member message bodies (metadata-only surface). On dev (staging), bodies are returned for canary verification by design.
 8. **Isolation:** two plugins ≠ OS sandbox ≠ proof of Discord-side isolation; isolation rests on disjoint secret refs + the closed tool set.
 
 ## 11. Acceptance status
 
-Testing: fixture/unit only (`node --test`, synthetic `ctx`), 13 dev tests. No live canary, no host verification, no Security Engineer acceptance yet. Blocks install.
+Testing: fixture/unit only (`node --test`, synthetic `ctx`), 20 dev tests. No live canary, no host verification, no Security Engineer acceptance yet. Blocks install.

@@ -10,7 +10,7 @@ The prod token is **shared with the live Owen bot** (Cloudflare Worker `two-bot-
 
 ## Tools (14 read-only)
 
-Tier 1 — read only: `discord.guild_get`, `discord.channels_list`, `discord.channel_get`, `discord.messages_list`, `discord.message_get`, `discord.messages_search`, `discord.pins_list`, `discord.reactions_list`, `discord.threads_active_list`, `discord.events_list`, `discord.event_get`, `discord.roles_list`, `discord.member_get`, `discord.members_search`.
+Tier 1 — read only: `discord.guild_get`, `discord.channels_list`, `discord.channel_get`, `discord.messages_list`, `discord.message_get`, `discord.messages_search`, `discord.pins_list`, `discord.reactions_list`, `discord.threads_active_list`, `discord.events_list`, `discord.event_get`, `discord.roles_list`, `discord.member_get`, `discord.members_search`. Message tools (`messages_list`, `message_get`, `messages_search`, `pins_list`) return **metadata only** (counts, links, timestamps, author names) — raw member message bodies never leave the broker.
 
 Tier 3 (prod publish: post/reply/edit-own) is **off at first** and registers no tool. Tier 4 (moderation/admin) is not registered. Hard denies, never constructed: token disclosure, app/intent/permission changes, @everyone/@here escalation, mass DM, bulk ban/prune, guild leave/delete.
 

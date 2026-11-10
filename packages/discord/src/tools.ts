@@ -3,7 +3,7 @@
 import { closed, hash, integer, text, type Schema } from "../../core/src/index.js";
 import {
   DiscordFailure, header, parse, request, retryAfter, scrub, snowflake, snowflakeJson, snowflakeValue,
-  projectGuild, projectChannel, projectMessage, projectMember, projectRole, projectEvent,
+  projectGuild, projectChannel, projectMessage, projectMessageMeta, projectSearchMeta, projectMember, projectRole, projectEvent,
   messageContent, searchQuery, emojiToken, limit, limitJson, object, list,
   type Transport, type Response,
 } from "./index.js";
@@ -44,6 +44,7 @@ export interface Host {
   http: Transport;
   kvGet(key: string): Promise<unknown>;
   kvSet(key: string, value: unknown): Promise<void>;
+  kvDel(key: string): Promise<void>;
   audit(record: Record<string, unknown>): Promise<void>;
   clock(): number;
 }
@@ -77,6 +78,40 @@ export const readTools: Tool[] = [
   define("discord.members_search", "read", "Search members by query (bounded, for research aggregates only).", { query: searchQuery(256), limit }, { query: { type: "string", maxLength: 256 }, ...listJson }, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/members/search?query=${enc(a.query as string)}&limit=${a.limit}` }), b => list(b, 10).map(projectMember)),
 ];
 
+// Prod research surface (Security A2): metadata-only, so only bounded counts,
+// links and author metadata leave the broker. No raw member message bodies.
+export const readToolsMeta: Tool[] = [
+  define("discord.guild_get", "read", "Read guild metadata for the bound guild.", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}` }), b => projectGuild(b)),
+  define("discord.channels_list", "read", "List channels in the bound guild (counts/metadata only when paginated).", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/channels` }), b => list(b, 100).map(projectChannel)),
+  define("discord.channel_get", "read", "Read one channel by ID.", { channelId: snow }, { channelId: snowflakeJson }, (a, g) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}` }), b => projectChannel(b), "read"),
+  define("discord.messages_list", "read", "List recent message metadata in an allowlisted channel. Bodies are not returned.", { channelId: snow, limit }, { channelId: snowflakeJson, ...listJson }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/messages?limit=${a.limit}` }), b => list(b, 100).map(projectMessageMeta), "read"),
+  define("discord.message_get", "read", "Read one message's metadata in an allowlisted channel. Body is not returned.", { channelId: snow, messageId: snow }, { channelId: snowflakeJson, messageId: snowflakeJson }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/messages/${enc(a.messageId as string)}` }), b => projectMessageMeta(b), "read"),
+  define("discord.messages_search", "read", "Search messages in an allowlisted guild channel. Returns total_results plus message metadata links only; no message bodies.", { query: searchQuery(512), channelId: snow, limit }, { query: { type: "string", maxLength: 512 }, channelId: snowflakeJson, ...listJson }, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/messages/search?q=${enc(a.query as string)}&channel_id=${enc(a.channelId as string)}&limit=${a.limit}` }), b => projectSearchMeta(b), "read"),
+  define("discord.pins_list", "read", "List pinned message metadata in an allowlisted channel. Bodies are not returned.", { channelId: snow }, { channelId: snowflakeJson }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/pins` }), b => list(b, 50).map(projectMessageMeta), "read"),
+  define("discord.reactions_list", "read", "List reactions on a message.", { channelId: snow, messageId: snow, emoji: emojiToken(64) }, { channelId: snowflakeJson, messageId: snowflakeJson, emoji: { type: "string", maxLength: 64 } }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/messages/${enc(a.messageId as string)}/reactions/${enc(a.emoji as string)}` }), b => list(b, 100).map(m => pick(m, ["id", "name", "count", "me"])), "read"),
+  define("discord.threads_active_list", "read", "List active threads in the bound guild.", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/threads/active` }), b => { const t = object(b).threads; return list(t, 100).map(projectChannel); }),
+  define("discord.events_list", "read", "List scheduled events in the bound guild.", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/scheduled-events` }), b => list(b, 100).map(projectEvent)),
+  define("discord.event_get", "read", "Read one scheduled event.", { eventId: snow }, { eventId: snowflakeJson }, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/scheduled-events/${enc(a.eventId as string)}` }), b => projectEvent(b)),
+  define("discord.roles_list", "read", "List roles in the bound guild.", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/roles` }), b => list(b, 100).map(projectRole)),
+  define("discord.member_get", "read", "Read one guild member.", { userId: snow }, { userId: snowflakeJson }, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/members/${enc(a.userId as string)}` }), b => projectMember(b)),
+  define("discord.members_search", "read", "Search members by query (bounded, for research aggregates only).", { query: searchQuery(256), limit }, { query: { type: "string", maxLength: 256 }, ...listJson }, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/members/search?query=${enc(a.query as string)}&limit=${a.limit}` }), b => list(b, 10).map(projectMember)),
+];
+
+// Ledger-backed lifecycle (STANDARD §5, Security A1). Every dev creation
+// writes a durable ledger entry before its side effect where possible and
+// expires after an immutable server-derived deadline. The three delete-own
+// tools are exact-owned only: ledger + agent binding + upstream verify.
+// Broad moderation deletes never exist as tools.
+export const DEV_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+export const LIFE_INDEX_KEY = "life-index";
+export const LIFE_INDEX_MAX = 512;
+export const SWEEP_BATCH = 10;
+
+export function lifeKey(kind: string, resourceId: string, channelId: string): string {
+  return `life:${kind}:${channelId}:${resourceId}`;
+}
+export interface LifeEntry { kind: "message" | "thread" | "event"; channelId: string; resourceId: string; guildId: string; agentId: string; runId: string; authorId: string; createdAt: number; expiresAt: number; state: "pending" | "owned" | "failed"; intent?: string }
+
 export const writeTools: Tool[] = [
   define("discord.message_post", "write", "Post a plain-text message to an allowlisted channel. Mentions suppressed.", { channelId: snow, content: messageContent(2000) }, { channelId: snowflakeJson, content: { type: "string", maxLength: 2000 } }, (a) => ({ method: "POST", path: `/api/v10/channels/${enc(a.channelId as string)}/messages` }), b => projectMessage(b), "write"),
   define("discord.message_reply", "write", "Reply to a message in an allowlisted channel.", { channelId: snow, messageId: snow, content: messageContent(2000) }, { channelId: snowflakeJson, messageId: snowflakeJson, content: { type: "string", maxLength: 2000 } }, (a) => ({ method: "POST", path: `/api/v10/channels/${enc(a.channelId as string)}/messages` }), b => projectMessage(b), "write"),
@@ -85,8 +120,15 @@ export const writeTools: Tool[] = [
   define("discord.reaction_remove_own", "write", "Remove the bot's own reaction.", { channelId: snow, messageId: snow, emoji: emojiToken(64) }, { channelId: snowflakeJson, messageId: snowflakeJson, emoji: { type: "string", maxLength: 64 } }, (a) => ({ method: "DELETE", path: `/api/v10/channels/${enc(a.channelId as string)}/messages/${enc(a.messageId as string)}/reactions/${enc(a.emoji as string)}/@me` }), b => null, "write"),
   define("discord.thread_create", "write", "Create a thread from an allowlisted channel message.", { channelId: snow, messageId: snow, name: text(100, /^[A-Za-z0-9][A-Za-z0-9 _-]+$/) }, { channelId: snowflakeJson, messageId: snowflakeJson, name: { type: "string", maxLength: 100 } }, (a) => ({ method: "POST", path: `/api/v10/channels/${enc(a.channelId as string)}/messages/${enc(a.messageId as string)}/threads` }), b => projectChannel(b), "write"),
   define("discord.event_create", "write", "Create a scheduled event in the bound guild.", { name: text(100, /^[A-Za-z0-9][A-Za-z0-9 _-]+$/), scheduledStartTime: text(64, /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}/), channelId: snow }, { name: { type: "string", maxLength: 100 }, scheduledStartTime: { type: "string", maxLength: 64 }, channelId: snowflakeJson }, (a, g) => ({ method: "POST", path: `/api/v10/guilds/${g}/scheduled-events` }), b => projectEvent(b), "write"),
+  define("discord.message_delete_own", "write", "Delete one broker-owned message. Exact-owned only.", { channelId: snow, messageId: snow }, { channelId: snowflakeJson, messageId: snowflakeJson }, (a) => ({ method: "DELETE", path: `/api/v10/channels/${enc(a.channelId as string)}/messages/${enc(a.messageId as string)}` }), b => null, "write"),
+  define("discord.thread_delete_own", "write", "Delete one broker-owned thread. Exact-owned only.", { channelId: snow, threadId: snow }, { channelId: snowflakeJson, threadId: snowflakeJson }, (a) => ({ method: "DELETE", path: `/api/v10/channels/${enc(a.threadId as string)}` }), b => null, "write"),
+  define("discord.event_delete_own", "write", "Delete one broker-owned scheduled event. Exact-owned only.", { eventId: snow }, { eventId: snowflakeJson }, (a, g) => ({ method: "DELETE", path: `/api/v10/guilds/${g}/scheduled-events/${enc(a.eventId as string)}` }), b => null),
 ];
 
+function observeResponse(res: Response, out: string[]): void {
+  const id = header(res, "x-request-id") ?? header(res, "x-discord-request-id");
+  if (id && /^[A-Za-z0-9-]{6,64}$/.test(id)) out.push(id);
+}
 function pick(m: unknown, fields: string[]): Record<string, unknown> {
   const o = object(m) as Record<string, unknown>;
   const out: Record<string, unknown> = {};
@@ -95,7 +137,7 @@ function pick(m: unknown, fields: string[]): Record<string, unknown> {
 }
 
 export function toolsFor(kind: EnvKind): Tool[] {
-  return kind === "dev" ? [...readTools, ...writeTools] : [...readTools];
+  return kind === "dev" ? [...readTools, ...writeTools] : [...readToolsMeta];
 }
 
 export function operationNames(kind: EnvKind): string[] { return toolsFor(kind).map(t => t.name); }
@@ -182,11 +224,168 @@ export async function authorize(host: Host, config: Config, caller: Caller, tool
   }
 }
 
+const CREATOR_TOOLS = new Set(["discord.message_post", "discord.message_reply", "discord.thread_create", "discord.event_create"]);
+function isCreator(name: string): boolean { return CREATOR_TOOLS.has(name); }
+
 export class Broker {
   private agents = new Map<string, { start: number; count: number; blockedUntil: number }>();
   private guilds = new Map<string, { start: number; count: number; blockedUntil: number }>();
   private inFlight = 0;
   private generation = 0;
+  private lifecycleUnhealthy = false;
+
+  private async readIndex(host: Host): Promise<string[]> {
+    const v = await host.kvGet(LIFE_INDEX_KEY);
+    if (v === null || v === undefined) return [];
+    if (!Array.isArray(v) || !v.every(x => typeof x === "string")) throw new Denied("lifecycle.unhealthy");
+    return v as string[];
+  }
+  private async indexAdd(host: Host, key: string): Promise<void> {
+    const idx = await this.readIndex(host);
+    if (!idx.includes(key)) {
+      if (idx.length >= LIFE_INDEX_MAX) throw new Denied("lifecycle.unhealthy");
+      idx.push(key);
+      await host.kvSet(LIFE_INDEX_KEY, idx);
+    }
+  }
+  private async indexRemove(host: Host, key: string): Promise<void> {
+    const idx = await this.readIndex(host);
+    const next = idx.filter(k => k !== key);
+    await host.kvSet(LIFE_INDEX_KEY, next);
+  }
+
+  // Opportunistic sweep on each authorized call (the host offers no
+  // scheduler): expired owned entries are deleted via the exact-owned path,
+  // pending intents are reconciled. At most SWEEP_BATCH per call; a failed
+  // verified delete marks the instance unhealthy and blocks new creations.
+  async sweep(host: Host, config: Config, token: string, requestIds: string[], emit: (operation: string, outcome: "success" | "error", rule: string) => Promise<void>): Promise<void> {
+    let idx: string[];
+    try { idx = await this.readIndex(host); } catch { this.lifecycleUnhealthy = true; return; }
+    if (idx.length === 0) return;
+    const now = host.clock();
+    let processed = 0;
+    for (const key of idx) {
+      if (processed >= SWEEP_BATCH) break;
+      let entry: unknown;
+      try { entry = await host.kvGet(key); } catch { this.lifecycleUnhealthy = true; break; }
+      if (entry === null || entry === undefined || typeof entry !== "object") {
+        try { await this.indexRemove(host, key); } catch { this.lifecycleUnhealthy = true; }
+        continue;
+      }
+      const e = entry as LifeEntry;
+      const expired = typeof e.expiresAt === "number" && e.expiresAt <= now;
+      const staleIntent = e.state === "pending" && now - (e.createdAt ?? now) > 60000;
+      if (!expired && !staleIntent) continue;
+      processed++;
+      try {
+        if (e.state === "pending") {
+          const adopted = await this.reconcile(host, config, token, e, requestIds);
+          if (adopted) { try { await this.indexRemove(host, key); } catch {} continue; }
+          if (!expired) continue; // ambiguous: keep pending for operator
+          // expired pending with no reconciled resource: clear ledger only
+          try { await host.kvDel(key); await this.indexRemove(host, key); } catch { this.lifecycleUnhealthy = true; }
+          continue;
+        }
+        await this.deleteOwned(host, config, token, e, requestIds);
+        try { await host.kvDel(key); if (e.kind === "message") await host.kvDel(`own:${e.channelId}:${e.resourceId}`); await this.indexRemove(host, key); await emit("sweep", "success", "sweep.deleted"); }
+        catch { this.lifecycleUnhealthy = true; await emit("sweep", "error", "sweep.ledger"); }
+      } catch (err) {
+        const r = err instanceof Denied ? err.rule : err instanceof DiscordFailure ? err.rule : "sweep.failed";
+        if (r === "sweep.gone") { try { await host.kvDel(key); await this.indexRemove(host, key); await emit("sweep", "success", "sweep.gone"); } catch {} continue; }
+        this.lifecycleUnhealthy = true;
+        try { await emit("sweep", "error", r); } catch { throw new Denied("audit.unavailable"); }
+      }
+    }
+    if (processed === 0) this.lifecycleUnhealthy = false;
+  }
+
+  private async reconcile(host: Host, config: Config, token: string, e: LifeEntry, requestIds: string[]): Promise<boolean> {
+    const now = host.clock();
+    if (e.kind === "message") {
+      const res = await request(host.http, "GET", `/api/v10/guilds/${config.guildId}/messages/search?author_id=${config.botUserId}&channel_id=${enc(e.channelId)}&limit=5`, token);
+      observeResponse(res, requestIds);
+      if (res.status !== 200) return false;
+      const hit = (object(parse(res)).messages as unknown[] | undefined) ?? [];
+      const flat = hit.map(m => Array.isArray(m) ? m[0] : m).filter(Boolean);
+      if (flat.length !== 1) return false;
+      const m = object(flat[0]);
+      const rid = String(m.id);
+      const owned: LifeEntry = { ...e, resourceId: rid, state: "owned" };
+      await host.kvSet(lifeKey("message", rid, e.channelId), owned);
+      await host.kvSet(`own:${e.channelId}:${rid}`, { authorId: config.botUserId, agentId: e.agentId, at: e.createdAt });
+      await this.indexAdd(host, lifeKey("message", rid, e.channelId));
+      return true;
+    }
+    if (e.kind === "thread") {
+      const res = await request(host.http, "GET", `/api/v10/guilds/${config.guildId}/threads/active`, token);
+      observeResponse(res, requestIds);
+      if (res.status !== 200) return false;
+      const threads = list(object(parse(res)).threads, 100);
+      const hit = threads.filter(t => { const o = object(t); return o.owner_id === config.botUserId && o.name === e.intent; });
+      if (hit.length !== 1) return false;
+      const rid = String(object(hit[0]).id);
+      const owned: LifeEntry = { ...e, resourceId: rid, state: "owned" };
+      await host.kvSet(lifeKey("thread", rid, e.channelId), owned);
+      await this.indexAdd(host, lifeKey("thread", rid, e.channelId));
+      return true;
+    }
+    const res = await request(host.http, "GET", `/api/v10/guilds/${config.guildId}/scheduled-events`, token);
+    observeResponse(res, requestIds);
+    if (res.status !== 200) return false;
+    const events = list(parse(res), 100);
+    const hit = events.filter(ev => { const o = object(ev); return o.creator_id === config.botUserId && o.name === e.intent; });
+    if (hit.length !== 1) return false;
+    const rid = String(object(hit[0]).id);
+    const owned: LifeEntry = { ...e, resourceId: rid, state: "owned" };
+    await host.kvSet(lifeKey("event", rid, e.channelId), owned);
+    await this.indexAdd(host, lifeKey("event", rid, e.channelId));
+    return now > 0;
+  }
+
+  private async deleteOwned(host: Host, config: Config, token: string, e: LifeEntry, requestIds: string[]): Promise<void> {
+    if (e.kind === "message") {
+      const v = await request(host.http, "GET", `/api/v10/channels/${enc(e.channelId)}/messages/${enc(e.resourceId)}`, token);
+      observeResponse(v, requestIds);
+      if (v.status === 404) throw new Denied("sweep.gone");
+      if (v.status === 401) throw new Denied("upstream.unauthorized");
+      if (v.status !== 200) throw new Denied("sweep.verify");
+      const authorId = (object(parse(v)) as Record<string, any>).author?.id;
+      if (authorId !== config.botUserId) throw new Denied("policy.ownership");
+      const d = await request(host.http, "DELETE", `/api/v10/channels/${enc(e.channelId)}/messages/${enc(e.resourceId)}`, token);
+      observeResponse(d, requestIds);
+      return this.finishDelete(host, config, token, d, requestIds, `/api/v10/channels/${enc(e.channelId)}/messages/${enc(e.resourceId)}`);
+    }
+    if (e.kind === "thread") {
+      const v = await request(host.http, "GET", `/api/v10/channels/${enc(e.resourceId)}`, token);
+      observeResponse(v, requestIds);
+      if (v.status === 404) throw new Denied("sweep.gone");
+      if (v.status !== 200) throw new Denied("sweep.verify");
+      const owner = (object(parse(v)) as Record<string, any>).owner_id;
+      if (owner !== config.botUserId) throw new Denied("policy.ownership");
+      const d = await request(host.http, "DELETE", `/api/v10/channels/${enc(e.resourceId)}`, token);
+      observeResponse(d, requestIds);
+      return this.finishDelete(host, config, token, d, requestIds, `/api/v10/channels/${enc(e.resourceId)}`);
+    }
+    const v = await request(host.http, "GET", `/api/v10/guilds/${config.guildId}/scheduled-events/${enc(e.resourceId)}`, token);
+    observeResponse(v, requestIds);
+    if (v.status === 404) throw new Denied("sweep.gone");
+    if (v.status !== 200) throw new Denied("sweep.verify");
+    const creator = (object(parse(v)) as Record<string, any>).creator_id;
+    if (creator !== config.botUserId) throw new Denied("policy.ownership");
+    const d = await request(host.http, "DELETE", `/api/v10/guilds/${config.guildId}/scheduled-events/${enc(e.resourceId)}`, token);
+    observeResponse(d, requestIds);
+    return this.finishDelete(host, config, token, d, requestIds, `/api/v10/guilds/${config.guildId}/scheduled-events/${enc(e.resourceId)}`);
+  }
+
+  private async finishDelete(host: Host, config: Config, token: string, d: Response, requestIds: string[], verifyPath: string): Promise<void> {
+    if (d.status === 401) throw new Denied("upstream.unauthorized");
+    if (d.status === 429) throw new Denied("rate.discord", retryAfter(d, host.clock()));
+    if (d.status === 404) return; // already gone
+    if (!(d.status >= 200 && d.status < 300)) throw new Denied("sweep.delete");
+    const v = await request(host.http, "GET", verifyPath, token);
+    observeResponse(v, requestIds);
+    if (v.status !== 404) throw new Denied("sweep.verify");
+  }
 
   private pause(map: Map<string, any>, key: string, seconds: number, now: number): number {
     const b = map.get(key);
@@ -238,6 +437,29 @@ export class Broker {
         const owned = await host.kvGet(`own:${args!.channelId}:${args!.messageId}`);
         if (!owned || typeof owned !== "object") throw new Denied("policy.ownership");
       }
+      // Exact-owned delete preflight: durable ledger + caller agent binding,
+      // before secret resolution. Sweep uses the same ledger without an
+      // agent-supplied target (preauthorized cleanup, STANDARD §6).
+      if (tool.name === "discord.message_delete_own" || tool.name === "discord.thread_delete_own") {
+        const rid = tool.name === "discord.message_delete_own" ? (args!.messageId as string) : (args!.threadId as string);
+        const kind = tool.name === "discord.message_delete_own" ? "message" : "thread";
+        const entry = await host.kvGet(lifeKey(kind, rid, args!.channelId as string));
+        const legacy = kind === "message" ? await host.kvGet(`own:${args!.channelId}:${rid}`) : null;
+        const match = (e: unknown) => e !== null && typeof e === "object" && (e as Record<string, unknown>).authorId === config.botUserId && (e as Record<string, unknown>).agentId === caller!.agentId && ((e as Record<string, unknown>).state === undefined || (e as Record<string, unknown>).state === "owned");
+        if (!match(entry) && !match(legacy)) throw new Denied("policy.ownership");
+      }
+      if (tool.name === "discord.event_delete_own") {
+        const entry = await host.kvGet(lifeKey("event", args!.eventId as string, ""));
+        const okEntry = entry !== null && typeof entry === "object" && (entry as Record<string, unknown>).authorId === config.botUserId && (entry as Record<string, unknown>).agentId === caller!.agentId && ((entry as Record<string, unknown>).state === undefined || (entry as Record<string, unknown>).state === "owned");
+        if (!okEntry) throw new Denied("policy.ownership");
+      }
+      // Stop new provisioning when cleanup health is unavailable (STANDARD §5).
+      if (this.lifecycleUnhealthy && isCreator(tool.name)) throw new Denied("lifecycle.unhealthy");
+      // Immutable event window is a preflight refusal (before intent/secret).
+      if (tool.name === "discord.event_create") {
+        const startMs = Date.parse(args!.scheduledStartTime as string);
+        guard(Number.isFinite(startMs) && startMs > host.clock() + 3600000 && startMs <= host.clock() + DEV_TTL_MS, "policy.expiry");
+      }
       // Rate budgets (worst-case 1 request per call for reads; writes count 1)
       const agentKey = `${caller.companyId}:${caller.agentId}`;
       const guild = config.guildId;
@@ -256,12 +478,20 @@ export class Broker {
       let token: string;
       try { token = await host.secret(config.botTokenSecretRef, caller.companyId); } catch { throw new Denied("secret.unavailable"); }
       guard(typeof token === "string" && token.trim().length > 0, "secret.unavailable");
+      // Expiry sweep runs under the same token after authentication, before
+      // this call's side effect (opportunistic; no host scheduler exists).
+      if (kind === "dev") await this.sweep(host, config, token, requestIds, async (op, outcome, rule) => {
+        if (phase === "intent") phase = "outcome";
+        await emit(outcome === "success" ? "allow" : "deny", rule, outcome);
+      });
       // Body for writes: plain text + allowed_mentions parse []
       let body: string | undefined;
+      let intentKey: string | null = null;
+      let intentEntry: LifeEntry | null = null;
       if (tool.tier === "write") {
         const content = args!.content as string | undefined;
-        if (tool.name === "discord.message_post") body = JSON.stringify({ content, allowed_mentions: { parse: [] } });
-        else if (tool.name === "discord.message_reply") body = JSON.stringify({ content, allowed_mentions: { parse: [] }, message_reference: { message_id: args!.messageId, channel_id: args!.channelId, guild_id: guild, type: 19 } });
+        if (tool.name === "discord.message_post") { const nonce = (await import("node:crypto")).randomUUID(); body = JSON.stringify({ content, allowed_mentions: { parse: [] }, nonce }); }
+        else if (tool.name === "discord.message_reply") { const nonce = (await import("node:crypto")).randomUUID(); body = JSON.stringify({ content, allowed_mentions: { parse: [] }, message_reference: { message_id: args!.messageId, channel_id: args!.channelId, guild_id: guild, type: 19 }, nonce }); }
         else if (tool.name === "discord.message_edit_own") {
           // Upstream author verification via read (uses same token, after ledger)
           const verify = await request(host.http, "GET", `/api/v10/channels/${enc(args!.channelId as string)}/messages/${enc(args!.messageId as string)}`, token);
@@ -272,24 +502,62 @@ export class Broker {
           body = JSON.stringify({ content, allowed_mentions: { parse: [] } });
         } else if (tool.name === "discord.reaction_add_own" || tool.name === "discord.reaction_remove_own") body = undefined;
         else if (tool.name === "discord.thread_create") body = JSON.stringify({ name: args!.name, auto_archive_duration: 1440, type: 11 });
-        else if (tool.name === "discord.event_create") body = JSON.stringify({ name: args!.name, scheduled_start_time: args!.scheduledStartTime, channel_id: args!.channelId, privacy_level: 2, entity_type: 1, description: "Broker-created event" });
+        else if (tool.name === "discord.event_create") {
+          const startMs = Date.parse(args!.scheduledStartTime as string);
+          guard(Number.isFinite(startMs) && startMs > host.clock() + 3600000 && startMs <= host.clock() + DEV_TTL_MS, "policy.expiry");
+          body = JSON.stringify({ name: args!.name, scheduled_start_time: args!.scheduledStartTime, channel_id: args!.channelId, privacy_level: 2, entity_type: 1, description: "Broker-created event" });
+        }
+        // Durable intent + index BEFORE the side effect (STANDARD §5). Index
+        // or ledger failure refuses creation; nothing is created.
+        if (isCreator(tool.name)) {
+          const now = host.clock();
+          const ch = (args!.channelId as string) ?? "";
+          const kindOf = tool.name === "discord.thread_create" ? "thread" : tool.name === "discord.event_create" ? "event" : "message";
+          const pendingId = `pending-${(await import("node:crypto")).randomUUID()}`;
+          intentEntry = { kind: kindOf, channelId: ch, resourceId: pendingId, guildId: guild, agentId: caller.agentId, runId: caller.runId, authorId: config.botUserId, createdAt: now, expiresAt: now + DEV_TTL_MS, state: "pending", intent: (args!.name as string | undefined) ?? "" };
+          intentKey = lifeKey(kindOf, pendingId, ch);
+          await host.kvSet(intentKey, intentEntry);
+          try { await this.indexAdd(host, intentKey); } catch (e) { try { await host.kvDel(intentKey); } catch {} throw e; }
+        }
       }
       const method = reqSpec.method as "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
       const res = await request(host.http, method, reqSpec.path, token, body !== undefined ? { body } : {});
       observe(res, [token]);
       if (res.status === 401) { this.pause(this.guilds, guildKey, 3600, host.clock()); throw new Denied("upstream.unauthorized"); }
       if (res.status === 429) { const s = retryAfter(res, host.clock()); const eff = this.pause(this.guilds, guildKey, s, host.clock()); providerFailure = { rule: "rate.discord", retryAfterSeconds: eff }; throw new Denied("rate.discord", eff); }
+      // Idempotent delete: 404 means already gone — reconcile ledger, success.
+      if (res.status === 404 && (tool.name === "discord.message_delete_own" || tool.name === "discord.thread_delete_own" || tool.name === "discord.event_delete_own")) {
+        const rid = tool.name === "discord.event_delete_own" ? (args!.eventId as string) : tool.name === "discord.message_delete_own" ? (args!.messageId as string) : (args!.threadId as string);
+        const ch = tool.name === "discord.event_delete_own" ? "" : (args!.channelId as string);
+        const kk = tool.name === "discord.event_delete_own" ? "event" : tool.name === "discord.message_delete_own" ? "message" : "thread";
+        try { await host.kvDel(lifeKey(kk, rid, ch)); if (kk === "message") await host.kvDel(`own:${ch}:${rid}`); await this.indexRemove(host, lifeKey(kk, rid, ch)); } catch {}
+        phase = "outcome"; await emit("allow", "policy.allow", "success");
+        return response({ ok: true, policyHash: policyDigest, policyRevision: revision, guildId: guild, operation, page: { alreadyGone: true }, pagination: "bounded; request subsequent pages explicitly" }, false);
+      }
       guard(res.status >= 200 && res.status < 300, "upstream.read");
       let value: unknown;
-      try { value = res.status === 204 ? null : tool.project(parse(res), args!); } catch { value = parse(res); }
+      // Fail closed on unexpected shape — never return raw upstream bodies.
+      try { value = res.status === 204 ? null : tool.project(parse(res), args!); } catch { throw new DiscordFailure("upstream.shape"); }
       const clean = (v: unknown) => scrub(v, [token]) as unknown;
       value = clean(value);
       guard(Buffer.byteLength(JSON.stringify(value)) <= 262144, "output.limit");
       requestIds.splice(0, requestIds.length, ...(clean(requestIds) as string[]).filter(x => x !== "[REDACTED]"));
-      // Persist ownership for creates
-      if ((tool.name === "discord.message_post" || tool.name === "discord.message_reply") && value && typeof value === "object" && "id" in (value as Record<string, unknown>)) {
-        const mid = (value as Record<string, unknown>).id as string;
-        await host.kvSet(`own:${args!.channelId}:${mid}`, { authorId: config.botUserId, agentId: caller.agentId, at: host.clock() });
+      // Persist ownership for creates (legacy own entry + life ledger).
+      if (intentEntry && value && typeof value === "object" && "id" in (value as Record<string, unknown>)) {
+        const rid = (value as Record<string, unknown>).id as string;
+        const owned: LifeEntry = { ...intentEntry, resourceId: rid, state: "owned" };
+        await host.kvSet(lifeKey(owned.kind, rid, owned.channelId), owned);
+        await this.indexAdd(host, lifeKey(owned.kind, rid, owned.channelId));
+        if (owned.kind === "message") await host.kvSet(`own:${owned.channelId}:${rid}`, { authorId: config.botUserId, agentId: caller.agentId, at: host.clock() });
+        try { await host.kvDel(intentKey!); await this.indexRemove(host, intentKey!); } catch { this.lifecycleUnhealthy = true; }
+      }
+      // Successful exact-owned deletes clear their ledger (idempotent; an
+      // already-gone verify 404 also clears).
+      if (tool.name === "discord.message_delete_own" || tool.name === "discord.thread_delete_own" || tool.name === "discord.event_delete_own") {
+        const rid = tool.name === "discord.event_delete_own" ? (args!.eventId as string) : tool.name === "discord.message_delete_own" ? (args!.messageId as string) : (args!.threadId as string);
+        const ch = tool.name === "discord.event_delete_own" ? "" : (args!.channelId as string);
+        const kk = tool.name === "discord.event_delete_own" ? "event" : tool.name === "discord.message_delete_own" ? "message" : "thread";
+        try { await host.kvDel(lifeKey(kk, rid, ch)); if (kk === "message") await host.kvDel(`own:${ch}:${rid}`); await this.indexRemove(host, lifeKey(kk, rid, ch)); } catch {}
       }
       phase = "outcome"; await emit("allow", "policy.allow", "success");
       return response({ ok: true, policyHash: policyDigest, policyRevision: revision, guildId: guild, operation, page: value, pagination: "bounded; request subsequent pages explicitly" }, false);

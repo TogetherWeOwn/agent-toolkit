@@ -24,9 +24,27 @@ test('prod guild_get + messages_list: bounded read, audit, no token in output', 
   const r1 = await f.call('discord.guild_get', { ...base });
   assert.equal(r1.data.ok, true); f.hygiene(r1); f.done();
   const g = fixture();
-  g.read(`/channels/${channelId}/messages?limit=5`, [{ id: messageId, channel_id: channelId, content: 'synthetic', author: { id: '1'.repeat(17), username: 'syn' } }]);
+  g.read(`/channels/${channelId}/messages?limit=5`, [{ id: messageId, channel_id: channelId, content: 'synthetic member message body', author: { id: '1'.repeat(17), username: 'syn' } }]);
   const r2 = await g.call('discord.messages_list', { ...base, channelId, limit: 5 });
-  assert.equal(r2.data.ok, true); g.hygiene(r2); g.done();
+  assert.equal(r2.data.ok, true);
+  // A2: raw member bodies must not leave the broker on prod.
+  assert.ok(!JSON.stringify(r2.data).includes('synthetic member message body'), 'Message body escaped prod surface');
+  assert.equal(r2.data.page[0].id, messageId);
+  g.hygiene(r2); g.done();
+});
+
+test('prod message_get and pins_list return metadata only (no bodies)', async () => {
+  const f = fixture();
+  f.read(`/channels/${channelId}/messages/${messageId}`, { id: messageId, channel_id: channelId, content: 'member body secret', author: { id: '1'.repeat(17), username: 'syn' } });
+  const r1 = await f.call('discord.message_get', { ...base, channelId, messageId });
+  assert.equal(r1.data.ok, true);
+  assert.ok(!JSON.stringify(r1.data).includes('member body secret'), 'Body escaped message_get');
+  const g = fixture();
+  g.read(`/channels/${channelId}/pins`, [{ id: messageId, channel_id: channelId, content: 'pinned body secret', author: { id: '1'.repeat(17), username: 'syn' } }]);
+  const r2 = await g.call('discord.pins_list', { ...base, channelId });
+  assert.equal(r2.data.ok, true);
+  assert.ok(!JSON.stringify(r2.data).includes('pinned body secret'), 'Body escaped pins_list');
+  f.hygiene(r1); g.hygiene(r2); f.done(); g.done();
 });
 
 test('prod messages_search returns counts/links without storing raw member messages', async () => {
@@ -35,6 +53,10 @@ test('prod messages_search returns counts/links without storing raw member messa
   const result = await f.call('discord.messages_search', { ...base, query: 'TWO-1081', channelId, limit: 5 });
   assert.equal(result.data.ok, true);
   assert.ok(!JSON.stringify(result.data).includes('secret-prod'));
+  // A2: only counts + metadata links leave the broker.
+  assert.equal(result.data.page.total_results, 2);
+  assert.equal(result.data.page.messages[0].id, messageId);
+  assert.ok(!JSON.stringify(result.data).includes('asked for TWO-1081'), 'Message body escaped search');
   f.hygiene(result); f.done();
 });
 

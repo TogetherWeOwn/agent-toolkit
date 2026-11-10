@@ -20,9 +20,9 @@ Common: guild = config; channel args checked against `policy.readChannelIds`; sn
 | Tool | Effect / risk | Key control |
 | --- | --- | --- |
 | `discord.guild_get`, `channels_list`, `channel_get` | guild/channel metadata | bounded projection; audit; no token in output |
-| `discord.messages_list`, `message_get` | member message reads (public channels only) | channel allowlist; **store no raw member messages**; counts/links for research |
-| `discord.messages_search` (TWO-5606 workhorse) | bounded search for TWO-1081/1082/1083/1084/1087 | query ≤512, limit ≤100; webhook/invite scrub; report “no matches in coverage”, never “nobody asked” |
-| `discord.pins_list`, `reactions_list` | pins/reactions | channel allowlist |
+| `discord.messages_list`, `message_get` | message **metadata** reads (public channels only) | channel allowlist; bodies never returned (metadata-only projection); counts/links for research |
+| `discord.messages_search` (research workhorse) | bounded search returning `total_results` + message metadata links | query ≤512, limit ≤100; webhook/invite scrub; no bodies; report “no matches in coverage”, never “nobody asked” |
+| `discord.pins_list`, `reactions_list` | pins metadata / reactions | channel allowlist; pins return metadata only |
 | `discord.threads_active_list`, `events_list`, `event_get` | threads/events | bounded projection |
 | `discord.roles_list`, `member_get`, `members_search` | role/member metadata | no role-write tool exists |
 | `discord.message_post` / `message_reply` / `message_edit_own` / `reaction_*` / `thread_create` / `event_create` | **NOT REGISTERED (tier 3 off)** — absent, not permission-gated | tool set contains zero writes; `validation.unknown_tool` + single deny event (tested) |
@@ -33,7 +33,7 @@ Caller-supplied `token`/`secretRef`/`guildId`/URLs/identity are refused by close
 
 ## 5. Injection in member messages & research privacy
 
-- Member content is quoted data, never instructions. TWO-5606 answers must separate explicit requests, pain signals, and inference; disclose coverage (channels/windows searched); never store raw member messages (no embeddings, no Hindsight ingest, no attachments). `@everyone`/`@here` in read results are surfaced as plain text and must not be echoed into any publish path — tier 3 stays off until a separate review.
+- Member content never reaches the agent on prod: `messages_list` / `message_get` / `messages_search` / `pins_list` project metadata only (id, channel, timestamp, author id/username, references) — raw bodies are dropped inside the broker, so host call-event retention and the agent can never persist them. Research answers separate explicit requests, pain signals, and inference; disclose coverage (channels/windows searched). (TWO-5606 is now answered; this surface serves future bounded research.) `@everyone`/`@here` never appear because bodies never leave the broker. Tier 3 stays off until a separate review.
 - Invite/webhook strings in results are redacted (`discord.gg/[REDACTED]`).
 
 ## 6. Credential escape
@@ -54,11 +54,11 @@ Read-only: no persistent creations, no teardown obligation. Caps: 1 MiB response
 
 ## 10. Open control gaps
 
-As dev THREAT-MODEL §10 items 2–5, 7, 8, plus:
+As dev THREAT-MODEL §10 items 2–5, 8 (dev items 6–7 are resolved: lifecycle is exact-owned, and the prod surface returns no message bodies), plus:
 
 9. **Projectless research path:** TWO-5606 is projectless; `allowProjectless:true` for `researcher-read` is an explicit policy grant with profile + channel-allowlist-only binding. Acceptable for read-only research; requires Security sign-off before any tier 3 promotion.
 10. **T3/T4 not yet designed for native approval:** enabling publish needs preview + approval binding the exact action/target, and moderator separation; read-only acceptance must not be read as publish acceptance.
 
 ## 11. Acceptance status
 
-Fixture/unit tests only (7 prod tests: inventory read-only, guild/list, search, unknown-tool refusals, cross-env, schemas/allowlist, redaction). No live canary, no host verification, no Security Engineer acceptance, no Operator install. Blocks all use.
+Fixture/unit tests only (8 prod tests: inventory read-only, guild/list, metadata-only (no bodies) list/get/pins/search, unknown-tool refusals, cross-env, schemas/allowlist, redaction). No live canary, no host verification, no Security Engineer acceptance, no Operator install. Blocks all use.

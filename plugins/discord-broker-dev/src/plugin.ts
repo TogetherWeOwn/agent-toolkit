@@ -49,6 +49,7 @@ function hostFor(ctx: PluginContext, run: ToolRunContext, call: typeof hostCall)
     http: (req: Request, deadline?: number, onDispatch?: () => void) => discordHttp(ctx, req, deadline, call, onDispatch),
     kvGet: (key: string) => call(() => ctx.state.get({ scopeKind: "instance", stateKey: `discord:${key}` })),
     kvSet: (key: string, value: unknown) => call(() => ctx.state.set({ scopeKind: "instance", stateKey: `discord:${key}` }, value)),
+    kvDel: (key: string) => call(() => ctx.state.delete({ scopeKind: "instance", stateKey: `discord:${key}` })),
     audit: (record: Record<string, unknown>) => call(() => ctx.activity.log({ companyId: run.companyId, message: "discord-broker.call", metadata: { ...record } })),
     clock: Date.now,
   };

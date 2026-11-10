@@ -127,6 +127,29 @@ export function projectMessage(value: unknown): unknown {
   if (typeof m.message_reference === "object" && m.message_reference !== null) out.message_reference = pick(m.message_reference, ["message_id", "channel_id", "guild_id", "type"]);
   return out;
 }
+
+// Metadata-only projection for the prod research surface: bounded counts,
+// links and author metadata leave the broker; raw member message bodies do
+// not. Used by the prod plugin so host call-event retention can never persist
+// member message text (Security A2).
+export function projectMessageMeta(value: unknown): unknown {
+  const m = object(value);
+  const author = m.author && typeof m.author === "object" && !Array.isArray(m.author) ? pick(m.author, ["id", "username", "discriminator", "bot"]) : undefined;
+  const out: Record<string, unknown> = { ...pick(m, ["id", "channel_id", "guild_id", "timestamp", "pinned", "type"]) };
+  if (author) out.author = author;
+  if (typeof m.message_reference === "object" && m.message_reference !== null) out.message_reference = pick(m.message_reference, ["message_id", "channel_id", "guild_id", "type"]);
+  return out;
+}
+export function projectSearchMeta(value: unknown): unknown {
+  const v = object(value);
+  const total = typeof v.total_results === "number" && Number.isFinite(v.total_results) ? v.total_results : 0;
+  const raw = Array.isArray(v.messages) ? v.messages : [];
+  const messages = list(raw, 100).map(m => {
+    const first = Array.isArray(m) ? m[0] : m;
+    return first ? projectMessageMeta(first) : null;
+  }).filter((m): m is Record<string, unknown> => m !== null);
+  return { total_results: total, messages };
+}
 export function projectMember(value: unknown): unknown {
   const v = object(value);
   const out: Record<string, unknown> = { ...pick(v, ["id", "nick", "joined_at", "deaf", "mute", "flags", "pending", "communication_disabled_until"]) };

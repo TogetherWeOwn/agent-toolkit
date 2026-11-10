@@ -5,7 +5,7 @@ Status: **NOT ACCEPTED, NOT INSTALLED.** This record binds only the exact artifa
 ## Implementation under review
 
 - `packages/discord` 0.1.0 (secret-free REST v10 helpers, closed-schema building blocks, scrubbing) + `plugins/discord-broker-dev` 0.1.0 (`togetherweown.discord-broker-dev`, SDK `2026.1023.0`, Node `>=24.11 <25`).
-- Tool inventory: 21 (14 read + 7 dev writes), pinned by `test/broker.test.mjs` against `toolsFor("dev")` and the manifest.
+- Tool inventory: 24 (14 read + 7 dev writes + 3 exact-owned deletes), pinned by `test/broker.test.mjs` against `toolsFor("dev")` and the manifest.
 - Configuration envelope: `environment:"dev"`, `guildId:"1545644954272137297"`, `botUserId:"1469137636663758888"`, `botTokenSecretRef:{type:"secret_ref",secretId:<staging ref>}`. Policy limits: agents ≤64, `readChannelIds`/`writeChannelIds` ≤200 each, `revision ≥1`.
 
 ## Exact commands and results (2026-11-10, worktree `work/11516e1f-c38d-4c64-92d9-d1d4826954fb`)
@@ -14,7 +14,7 @@ Status: **NOT ACCEPTED, NOT INSTALLED.** This record binds only the exact artifa
 npx tsc -p plugins/discord-broker-dev/tsconfig.json
 npx tsc -p plugins/discord-broker-prod/tsconfig.json
 node --test --test-timeout=30000 plugins/discord-broker-dev/test/*.test.mjs plugins/discord-broker-prod/test/*.test.mjs
-# → 20 tests, 20 pass, 0 fail (13 dev + 7 prod)
+# → 28 tests, 28 pass, 0 fail (20 dev + 8 prod)
 ```
 
 Pre-push: bounded checks per two-operating-rules rule 16 (formatter/linter/typecheck/changed tests). CI of record is GitHub Actions; exact-head Actions run/job links to be appended on the PR before review.
@@ -33,6 +33,9 @@ Pre-push: bounded checks per two-operating-rules rule 16 (formatter/linter/typec
 | 401 pause / 429 Retry-After | `upstream.unauthorized` (guild pause); `rate.discord` with `retryAfterSeconds:17` |
 | Audit failure blocks | `failAudit` fixture → `audit.unavailable`, `secretCalls=0` |
 | Fixed origin | fake `http.fetch` asserts `https://discord.com/api/v10/` + `Authorization: Bot <token>` on every call; live `fetch` disabled |
+| Exact-owned delete + idempotent 404 | ledger-backed delete clears ledger; 404 → `{alreadyGone:true}` success; without ledger → `policy.ownership` pre-secret |
+| Lifecycle: expiry sweep, restart, ambiguous reconcile | expired entry swept via verify+DELETE+GET-404 with `sweep.deleted` audit; new Broker deletes via persisted KV after restart; failed POST keeps `pending` intent, sweep adopts exactly-one search match |
+| Immutable event window | start outside (1h, 7d] → `policy.expiry` preflight, zero secret/outbound |
 
 ## Governance / approval gaps
 
@@ -43,7 +46,7 @@ Pre-push: bounded checks per two-operating-rules rule 16 (formatter/linter/typec
 
 ## Lifecycle / spend caps
 
-1 MiB response cap, 262 KiB output cap, 30s per-request deadline, 30/min per-agent + 4000/hr per-guild budgets, 401 → 3600s pause. Threads/events created under tier 2 are persistent; **exact-owned cleanup (delete) is not wired** — staging fixtures accumulate until it is or the Operator cleans them. No auto-teardown claim.
+1 MiB response cap, 262 KiB output cap, 30s per-request deadline, 30/min per-agent + 4000/hr per-guild budgets, 401 → 3600s pause. Persistent creations carry intent-before-side-effect + immutable 7d expiry + exact-owned delete + opportunistic expiry sweep (§9 of THREAT-MODEL). Ledger ≤512 entries; sweep ≤10 deletions/call; failed verified delete blocks new creations until clean.
 
 ## Security acceptance
 

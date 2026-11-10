@@ -13,7 +13,7 @@ Status: **NOT ACCEPTED, NOT INSTALLED.** Binds only the exact artifact and confi
 ```bash
 npx tsc -p plugins/discord-broker-prod/tsconfig.json
 node --test --test-timeout=30000 plugins/discord-broker-dev/test/*.test.mjs plugins/discord-broker-prod/test/*.test.mjs
-# → 20 tests, 20 pass, 0 fail (13 dev + 7 prod)
+# → 28 tests, 28 pass, 0 fail (20 dev + 8 prod)
 ```
 
 Pre-push: bounded checks per rule 16. CI of record is GitHub Actions; exact-head run/job links to be appended on the PR.
@@ -26,7 +26,8 @@ Pre-push: bounded checks per rule 16. CI of record is GitHub Actions; exact-head
 | Publish refusal before secret/HTTP | 7 names (`message_post`…`webhook_create`) → `validation.unknown_tool`, 1 audit event each |
 | Cross-environment refusal | `environment:"dev"` config on prod plugin → `policy.environment` |
 | Closed schemas + allowlist + profile | `validation.schema`, `policy.channel`, `policy.profile` |
-| Search returns counts/links, no raw storage | `messages_search` test asserts `total_results`/message links without `secret-prod` leakage; usage policy: no embeddings/Hindsight ingest |
+| Search returns counts/links, no raw storage | `messages_search` test asserts `total_results`/message metadata without `secret-prod` leakage and without message bodies; usage policy: no embeddings/Hindsight ingest |
+| Metadata-only surface (no bodies) | `messages_list` / `message_get` / `pins_list` tests assert sentinel body text absent from results — bodies never leave the broker, so host retention cannot persist them |
 | Redaction | token/webhook/invite in guild description → absent from result/audit |
 
 ## TWO-5606 research protocol (post-install)
@@ -41,7 +42,7 @@ Pre-push: bounded checks per rule 16. CI of record is GitHub Actions; exact-head
 1. **Shared token coordination:** prod token is shared with the live Owen bot (`two-bot-next-production`); broker-local quotas do not bound Worker load. Fleet-wide Discord load plan + token least-privilege tightening (drop Administrator, scope to public channels) are Operator pre-install preconditions.
 2. **Projectless grant:** same residual as dev (profile + channel allowlists only). Acceptable for read-only research; Security sign-off required before tier 3.
 3. **Tier 3/tier 4 design:** publish needs exact-action/target approval binding + native risk mapping; moderation/admin needs separate preview/approval. Neither is designed or registered here.
-4. **Privacy retention:** host call-event audit may retain ~4000 chars of args/results; the no-raw-storage rule is a usage policy on the agent side, enforced by the counts/links reporting contract, not by host mechanics.
+4. **Privacy retention:** host call-event audit may retain ~4000 chars of args/results, but results now contain message metadata only — member bodies are dropped by the broker projection, so the host cannot retain what it never receives. No raw-storage by the broker is possible on this surface; agent-side report storage rules still apply.
 
 ## Lifecycle / spend caps
 

@@ -4,7 +4,7 @@ Version 0.1.0. Maintainer: agent-toolkit maintainers. **Not installed or securit
 
 Binds only its own secret ref (`DISCORD_BOT_TOKEN_STAGING`, bot Owen QA Test `1469137636663758888`) and its own guild allowlist (TWO Staging `1545644954272137297`). Agents never see the token. Prod (`plugins/discord-broker-prod`) is a separate plugin with separate secret ref, guild, and deployment; it cannot reach staging resources and vice versa. ADR: separate plugin bindings are not an OS sandbox or proof of Discord-side isolation; the tool split is the isolation mechanism.
 
-## Tools (21: 14 read + 7 dev writes)
+## Tools (24: 14 read + 7 dev writes + 3 exact-owned deletes)
 
 Each tool requires `issueId` + `workspaceId` selectors. The broker verifies the caller’s company/profile, the issue’s company/assignee/current run/active status, and (when bound to a project) the explicit workspace. Unknown fields and arguments fail closed; there is no generic HTTP proxy.
 
@@ -12,7 +12,9 @@ Tier 1 — read: `discord.guild_get`, `discord.channels_list`, `discord.channel_
 
 Tier 2 — dev writes (staging only): `discord.message_post`, `discord.message_reply`, `discord.message_edit_own`, `discord.reaction_add_own`, `discord.reaction_remove_own`, `discord.thread_create`, `discord.event_create`. Writes are plain text with `allowed_mentions:{parse:[]}` frozen. `message_edit_own` additionally requires a broker ownership-ledger entry (`own:<channelId>:<messageId>` via `plugin.state`) **and** upstream author == configured bot user; the ledger existence check runs before secret resolution (STANDARD §8 preflight).
 
-Tier 3 (prod publish) is off at first; tier 4 (moderation/admin: delete, timeout, roles, channels, bans, webhooks, commands) is not registered. Hard denies, never constructed: token disclosure, app/intent/permission changes, @everyone/@here escalation, mass DM, bulk ban/prune, guild leave/delete.
+Exact-owned teardown: `discord.message_delete_own`, `discord.thread_delete_own`, `discord.event_delete_own`. Each requires a durable ledger entry for the exact resource (agent + bot ownership) before secret resolution and upstream verify before DELETE; a 404 counts as already-gone. Every creation writes a pending intent before its side effect, lives at most an immutable 7 days, and is removed by the expiry sweep — see THREAT-MODEL §9.
+
+Tier 3 (prod publish) is off at first; tier 4 (moderation/admin: bulk delete, timeout, roles, channels, bans, webhooks, commands) is not registered. Hard denies, never constructed: token disclosure, app/intent/permission changes, @everyone/@here escalation, mass DM, bulk ban/prune, guild leave/delete.
 
 ## Profiles and budgets
 
