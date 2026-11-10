@@ -163,7 +163,7 @@ test('legacy Auth domain add: strict shared origin/provider/path bounds refuse i
   const t = createNeonMetadataTransport(() => { calls++; throw Error('not reached'); });
   const options = { credential: canary, signal: new AbortController().signal };
   for (const bad of badOrigins) assert.throws(() => t.addNeonAuthDomainToRedirectURIWhitelist('project-a', 'better_auth', bad, options));
-  assert.throws(() => t.addNeonAuthDomainToRedirectURIWhitelist('-p', 'better_auth', scope.domain, options));
+  assert.throws(() => t.addNeonAuthDomainToRedirectURIWhitelist('../p', 'better_auth', scope.domain, options));
   assert.throws(() => t.addNeonAuthDomainToRedirectURIWhitelist('project-a', 'other', scope.domain, options));
   await assert.rejects(t.addNeonAuthDomainToRedirectURIWhitelist('project-a', 'better_auth', scope.domain, { ...options, credential: 'bad\nheader' }));
   assert.equal(calls, 0);
