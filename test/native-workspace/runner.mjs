@@ -187,8 +187,12 @@ if (process.argv[2] === '--supervise') {
     child = spawn('unshare', ['--user', '--map-current-user', '--keep-caps', '--net', '--mount',
       '--pid', '--fork', '--kill-child=KILL', '--mount-proc', node, script, '--supervise', root,
       String(process.getuid()), evidence.chrootPath ?? '', evidence.setprivPath ?? ''], {
-      cwd: here, env: { PATH: path, LANG: 'C.UTF-8' }, stdio: ['ignore', 'ignore', 'ignore'], detached: true,
+      cwd: here, env: { PATH: path, LANG: 'C.UTF-8' }, stdio: ['ignore', 'ignore', 'pipe'], detached: true,
     });
+    // Sanitized outer diagnostics: unshare start-up failures never reach the
+    // supervisor, so map its stderr to an error code only (never raw output).
+    let outerStderr = '';
+    child.stderr?.on('data', chunk => { outerStderr = (outerStderr + chunk).slice(-2048); });
     const term = setTimeout(() => {
       try { process.kill(-child.pid, 'SIGTERM'); } catch { /* Checked below. */ }
     }, 150_000);
@@ -203,8 +207,12 @@ if (process.argv[2] === '--supervise') {
       try { process.kill(-child.pid, 'SIGKILL'); } catch { /* Checked below. */ }
     }
     evidence.exitCode = code;
+    evidence.unshareExitCode = code;
+    evidence.unshareErrorCode = /Operation not permitted/i.test(outerStderr) ? 'EPERM'
+      : /Permission denied/i.test(outerStderr) ? 'EACCES'
+      : /Invalid argument/i.test(outerStderr) ? 'EINVAL'
+      : outerStderr ? 'unknown' : null;
     evidence.descendantsStopped = groupAbsent(child.pid);
-    assert.ok(evidence.descendantsStopped, 'namespace/process group shutdown required');
     // Copy sanitized supervisor/child diagnostics even when assertions are absent.
     for (const name of ['supervise.json', 'child.json']) {
       try {
@@ -212,6 +220,7 @@ if (process.argv[2] === '--supervise') {
         if (sourceStat.isFile()) await copyFile(join(shared, name), join(reportDir, name));
       } catch { /* Optional diagnostics; missing files stay missing. */ }
     }
+    assert.ok(evidence.descendantsStopped, 'namespace/process group shutdown required');
     const source = join(shared, 'assertions.json');
     const stat = await lstat(source);
     assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.uid === process.getuid() && stat.size <= 1_000_000);
