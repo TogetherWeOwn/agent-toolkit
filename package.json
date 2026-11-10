@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "npm run build && npm run build --workspaces --if-present && node --test --test-timeout=30000 test/*.test.mjs && npm run test --workspaces --if-present",
     "check": "npm run typecheck && npm test",
+    "test:covering": "node scripts/test-covering.mjs",
     "work-supply": "node packages/work-supply/src/cli.mjs"
   },
   "devDependencies": {

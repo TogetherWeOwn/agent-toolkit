@@ -22,7 +22,7 @@ jobs:
   changes:
     uses: TogetherWeOwn/.github/.github/workflows/changes.yml@773ee91a904b9e1b65eddaaad4400d36e05fa717
     with:
-      areas-json: '{"code":["packages/**","plugins/**","test/**","policies/**","skills/**"],"docs":["*.md","docs/**"]}'
+      areas-json: '{"code":["packages/**","plugins/**","test/**","scripts/**","policies/**","skills/**"],"docs":["*.md","docs/**"]}'
       full-run-globs-json: '["package.json","**/package.json","package-lock.json","**/package-lock.json","npm-shrinkwrap.json","**/npm-shrinkwrap.json","tsconfig*.json","**/tsconfig*.json",".npmrc",".github/**"]'
       docs-areas-json: '["docs"]'
 
@@ -66,6 +66,32 @@ jobs:
           echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  $lint_dir/actionlint.tgz" | sha256sum -c -
           tar -xzf "$lint_dir/actionlint.tgz" -C "$lint_dir" actionlint
           "$lint_dir/actionlint" -shellcheck= -pyflakes=
+
+  source-checks:
+    name: Fresh source checks (no build)
+    needs: [changes]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: timeout -k 10 120 npm run typecheck --workspace packages/core
+      - run: timeout -k 10 120 npm run typecheck --workspace packages/github
+      - run: timeout -k 10 120 npm run typecheck --workspace plugins/github-broker
+      - run: timeout -k 10 120 npm run typecheck --workspace plugins/neon-broker
+      - run: timeout -k 10 300 npm run test:covering -- test/source-checks.test.mjs plugins/neon-broker/test/metadata.test.mjs plugins/github-broker/test/discovery.test.mjs
+      - name: Prove source checks emitted no build artifacts
+        run: |
+          test ! -d dist
+          test ! -d plugins/github-broker/dist
+          test ! -d plugins/neon-broker/dist
+          test -z "$(find packages plugins -name '*.tsbuildinfo' -print -quit)"
 
   test:
     needs: [changes, full_run]
@@ -121,7 +147,7 @@ jobs:
 
   ci-ok:
     name: ci-ok
-    needs: [changes, full_run, lint, test, neon-compat, native-policy]
+    needs: [changes, full_run, lint, source-checks, test, neon-compat, native-policy]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

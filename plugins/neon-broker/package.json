@@ -7,6 +7,7 @@
   "engines": { "node": ">=24.11.0 <25" },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --test --test-timeout=30000 test/*.test.mjs",
     "test:compat": "node --test --test-timeout=30000 test/core.compat.mjs"
   }
