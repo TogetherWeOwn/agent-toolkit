@@ -4,6 +4,30 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Configuration-profile detail preparation source increment
+
+Two pure Prepared bindings capture existing profile and profile-shard detail GETs.
+Closed host snapshots retain immutable parent/profile/shard IDs, parent names,
+revision and profile name. Empty arguments cannot inject targets, requests,
+configuration, credentials or authority. Every variable field enters plan/full
+hashes; the profile-shard resource includes the independently captured profile ID,
+not just its name-addressed route. Profile and ordinary shard namespaces remain
+separate. The redirect-only default-profile operation remains missing.
+
+`test/core-configuration-profile-read-preparation.test.mjs` supplies 18 synthetic
+fixed-request, capture/freeze, every-field hash, missing/extra/unsafe/accessor,
+projection-canary, rebound-ID/name and malformed-selected-field contracts.
+Profile responses match ID/name; shard responses match shard ID and profile name,
+not immutable profile/parent identity. Non-waking semantics remain unverified.
+State/default/metal/ready/authoritative flags never establish configuration,
+assignment, restart, wake, spend or native authority. Trusted current ownership,
+revision/name revalidation and broker transport/custody remain prerequisites.
+No executor, registration, credential resolution, authority consumption or live
+use is added. Exact-head Actions must execute these source contracts; no passing
+result is implied here. Coverage stays **134/291 offline adapters; 157 missing**,
+twelve previews and **40 pure preparations**, zero runtime-integrated/reviewed/
+enabled/adopted. Older increments below are historical.
+
 ## Routing-detail preparation source increment
 
 Three pure Prepared bindings capture existing router, dedicated-read-replica and

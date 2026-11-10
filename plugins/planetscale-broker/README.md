@@ -311,6 +311,25 @@ credential resolution or authority consumption is added.
 refusal/canary contracts. Thirty-eight pure preparations remain separate from
 runtime integration; coverage stays 134/291 with 157 missing adapters.
 
+Two configuration-profile detail seams additionally bind existing profile and
+profile-shard GETs. Closed host snapshots retain immutable parent/profile/shard
+IDs, parent names, revision and profile name used in paths. Resources use
+`planetscale/configuration-profile/<id>` and
+`planetscale/configuration-profile-shard/<profile-id>/<shard-id>`; the latter
+retains the profile identity independently of the name-addressed request.
+Every variable host field enters the plan hash; caller arguments remain empty.
+Profile projections match ID/name; shard projections match shard ID and profile
+name, not immutable profile/parent identity. Current ownership/name bindings,
+revision revalidation, broker transport/custody and non-waking semantics remain
+prerequisites. State/default/metal/ready/authoritative flags never grant assignment,
+configuration, restart, wake, spend or native authority. No executor, registration,
+credential resolution or authority consumption is added.
+`test/core-configuration-profile-read-preparation.test.mjs` supplies 18 synthetic
+snapshot/hash/refusal/canary contracts. Forty pure preparations remain separate
+from runtime integration; coverage stays 134/291 with 157 missing adapters.
+The redirect-only default-profile operation remains missing, not implemented by
+these detail preparations.
+
 All 291 entries remain `incomplete`, `implemented=false`, `reviewed=false`,
 `enabled=false`, and entitlement `unknown`. Existing offline read/preview test
 paths are linked as source evidence, never as full `ProviderOperation` tests.
