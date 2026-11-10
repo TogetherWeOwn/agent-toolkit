@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import ts from 'typescript';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -89,6 +89,15 @@ test('covering selection preserves a literal bracketed filename and runs only th
   assert.doesNotMatch(result.output, /sibling-case1-ran/);
 });
 
+function assertProcessDead(pid, label) {
+  const deadline = Date.now() + 5000;
+  for (;;) {
+    try { process.kill(pid, 0); } catch { return; }
+    assert.ok(Date.now() < deadline, `${label} ${pid} survived covering-runner teardown`);
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
+  }
+}
+
 test('covering runner tears down a SIGTERM-ignoring test and its descendant on timeout', t => {
   const dir = mkdtempSync(join(tmpdir(), 'covering-teardown-'));
   const pidFile = join(dir, 'descendant.pid');
@@ -100,10 +109,47 @@ test('covering runner tears down a SIGTERM-ignoring test and its descendant on t
   assert.notEqual(result.status, 2, result.output);
   const pid = Number(readFileSync(pidFile, 'utf8').trim());
   assert.ok(Number.isInteger(pid) && pid > 0, `descendant pid file: ${pidFile}`);
-  const deadline = Date.now() + 5000;
-  for (;;) {
-    try { process.kill(pid, 0); } catch { return; }
-    assert.ok(Date.now() < deadline, `descendant ${pid} survived covering-runner teardown`);
+  assertProcessDead(pid, 'descendant');
+});
+
+// External interruption must take the same bounded SIGTERM-to-SIGKILL path
+// as the watchdog timeout: the wrapper forwards the signal to its owned
+// group, escalates to SIGKILL after the grace period and exits nonzero, so
+// neither the SIGTERM-ignoring test nor its descendant outlives it.
+async function runInterrupted(signal, t) {
+  const dir = mkdtempSync(join(tmpdir(), `covering-interrupt-${signal}-`));
+  const pidFile = join(dir, 'descendant.pid');
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const env = { ...process.env, TEST_COVERING_TIMEOUT_MS: '60000', TEST_COVERING_GRACE_MS: '1000', COVERING_PROBE_PID_FILE: pidFile };
+  delete env.NODE_TEST_CONTEXT;
+  const child = spawn(process.execPath, ['scripts/test-covering.mjs', 'test/fixtures/source-checks/hang.test.mjs'], {
+    cwd: root, env, stdio: 'pipe',
+  });
+  t.after(() => { try { child.kill('SIGKILL'); } catch { /* already gone */ } });
+  let output = '';
+  child.stdout.on('data', chunk => { output += chunk; });
+  child.stderr.on('data', chunk => { output += chunk; });
+  const deadline = Date.now() + 15000;
+  while (!existsSync(pidFile)) {
+    assert.ok(Date.now() < deadline, `descendant pid file never appeared; wrapper output:\n${output}`);
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
   }
+  const pid = Number(readFileSync(pidFile, 'utf8').trim());
+  assert.ok(Number.isInteger(pid) && pid > 0, `descendant pid file: ${pidFile}`);
+  child.kill(signal);
+  const { code } = await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => { child.kill('SIGKILL'); reject(new Error(`wrapper did not exit within bound after ${signal}; output:\n${output}`)); }, 15000);
+    child.on('exit', (exitCode, exitSignal) => { clearTimeout(timer); resolve({ code: exitCode, signal: exitSignal }); });
+  });
+  assert.notEqual(code, 0, `wrapper must report nonzero after ${signal}; output:\n${output}`);
+  assert.notEqual(code, 2, output);
+  assertProcessDead(pid, 'descendant');
+}
+
+test('covering runner tears down a SIGTERM-ignoring test and its descendant on external SIGTERM', async t => {
+  await runInterrupted('SIGTERM', t);
+});
+
+test('covering runner tears down a SIGTERM-ignoring test and its descendant on external SIGINT', async t => {
+  await runInterrupted('SIGINT', t);
 });

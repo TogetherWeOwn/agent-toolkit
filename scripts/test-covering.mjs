@@ -34,10 +34,11 @@ const graceMs = boundedInt('TEST_COVERING_GRACE_MS', 5000, 0, 10000);
 const absoluteFiles = files.map(file => resolve(root, file));
 
 // The runner is the direct child in its own process group (detached), so the
-// timeout below owns the whole test process tree. On timeout it sends SIGTERM
-// to the group, then SIGKILL after the grace period, and always reports a
-// nonzero result. Process-group signals are POSIX; on other platforms this
-// falls back to signalling the direct child (documented Linux/POSIX workflow).
+// shutdown below owns the whole test process tree. On timeout or external
+// SIGINT/SIGTERM it sends the signal to the group, then SIGKILL after the
+// grace period, and always reports a nonzero result. Process-group signals
+// are POSIX; on other platforms this falls back to signalling the direct
+// child (documented Linux/POSIX workflow).
 const child = spawn(process.execPath, [
   '--experimental-transform-types', '--import', new URL('./source-resolver.mjs', import.meta.url).href,
   fileURLToPath(new URL('./test-covering-runner.mjs', import.meta.url)), ...absoluteFiles,
@@ -58,18 +59,30 @@ function finish() {
   process.exit(timedOut ? (exitCode || 1) : exitCode);
 }
 
-const timeoutTimer = setTimeout(() => {
-  timedOut = true;
-  signalGroup('SIGTERM');
-  setTimeout(() => {
-    killSent = true;
-    signalGroup('SIGKILL');
-    finish();
-  }, graceMs);
-}, timeoutMs);
+function escalate() {
+  if (killSent) return;
+  killSent = true;
+  signalGroup('SIGKILL');
+  finish();
+}
 
-process.on('SIGINT', () => signalGroup('SIGINT'));
-process.on('SIGTERM', () => signalGroup('SIGTERM'));
+// One bounded shutdown for the watchdog timeout and for external
+// SIGINT/SIGTERM alike: forward the signal to the owned group, then SIGKILL
+// after the grace period and exit nonzero. finish() waits for the escalation
+// before exiting, so a test that ignores the signal or leaves a descendant
+// cannot survive the wrapper, and no detached group outlives it.
+function shutdown(signal) {
+  if (timedOut) return;
+  timedOut = true;
+  clearTimeout(timeoutTimer);
+  signalGroup(signal);
+  setTimeout(escalate, graceMs);
+}
+
+const timeoutTimer = setTimeout(() => shutdown('SIGTERM'), timeoutMs);
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
 
 child.on('error', error => {
   console.error(error.message);
