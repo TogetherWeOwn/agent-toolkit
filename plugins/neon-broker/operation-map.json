@@ -1126,18 +1126,24 @@
       "tool": "neon.deleteBranchNeonAuthUser",
       "scope": "project_id/branch_id/auth_user_id",
       "sideEffects": [
+        "irreversible-auth-user-record-removal",
+        "user-presence-not-verified",
+        "independent-reconciliation-unavailable",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-user-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source and mocked reserved-authority contracts only. Trusted branch/user binding, independent directory reconciliation, native custody/durable journal, entitlement, provider effects and specialist/release qualification remain unresolved; no live deletion or runtime enablement."
     },
     {
       "id": "updateNeonAuthUserRole",

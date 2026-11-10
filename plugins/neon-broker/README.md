@@ -2345,13 +2345,32 @@ Three-request worst case/3.5s ceiling; fixed origin, redirection refusal, cancel
 deadlines and byte caps reused. Source/mocks only, no live network change. Effects,
 entitlement, native host/custody/durable recovery and independent review remain gates.
 
+## Branch-scoped auth-user deletion source
+
+`createNeonAuthUserDeleteOperations` supplies reserved `deleteBranchNeonAuthUser`.
+Copy one exact trusted project/branch/user-ID/revision binding (IDs restricted to
+1–64 alphanumeric/underscore/hyphen characters, starting alphanumeric), require a
+dedicated `neon/projects/<project>/branches/<branch>/auth/users/<user>/delete`
+grant and native exact-plan authority. Mandatory branch identity preflight precedes
+one bodyless branch-scoped DELETE. Provider documents irreversible removal of the
+user record from `neon_auth.users_sync`; no legacy/project-wide fallback is supplied.
+
+The pinned management schema has no user-detail/list GET. The trusted user binding
+is not independently observed user presence: no user existence, directory deletion,
+token/session revocation or connection-fencing proof is claimed. Only terminal empty
+HTTP204 yields a closed acknowledgement. An ambiguous response remains uncertain
+without an invented read, unrelated metadata observation or mutation retry. Independent
+directory reconciliation is a native qualification prerequisite, not source-complete
+credential/lifecycle enforcement. The permanent common journal blocks same-request
+replay/restart, not external writers. Source/mocks only; no live deletion or enablement.
+
 ## Coverage and verification
 
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 139 implemented
-source adapters, 55 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 140 implemented
+source adapters, 54 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

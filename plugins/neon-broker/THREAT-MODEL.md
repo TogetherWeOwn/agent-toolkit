@@ -1,5 +1,23 @@
 # Source-slice threat model
 
+## Branch-scoped auth-user deletion delta
+
+Copied trusted project/branch/user-ID binding requires a separate delete grant and
+reserved native exact-plan authority. Mandatory exact branch identity preflight
+precedes one bodyless DELETE; empty204 acknowledges only. Provider documents
+irreversible user-record removal. User presence and branch association are trusted
+configuration, not independently observed directory facts: the pinned management
+schema provides no user-detail/list GET. Do not substitute branch metadata as
+user-deletion reconciliation. A lost/invalid response stays uncertain without a
+retry or invented provider call. Independent directory reconciliation, native
+custody and durable recovery remain qualification prerequisites. No token/session
+revocation, connection-fencing, persistence or completeness proof is supplied.
+Preflight is not atomic CAS; branch replacement and external directory races remain.
+Fixed origin/redirect refusal/bounded transport and two-request worst case remain;
+no user email/profile/password/diagnostic data is fetched or emitted. Synthetic
+process-local authority/journal contracts do not qualify native custody/durability.
+Source/mocks only; no live deletion, mint, binding or enablement.
+
 ## Public OAuth-client creation delta
 
 Copied exact project/branch/name/single redirect and protected-resource origins
