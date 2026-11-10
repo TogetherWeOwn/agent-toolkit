@@ -1,5 +1,23 @@
 # Source-slice threat model
 
+## Existing organization VPC assignment label-update delta
+
+Copied exact organization/AWS-region/endpoint/expected-desired label/revision
+requires a dedicated assignment grant and reserved native exact-plan authority.
+Mandatory detail identity/current-label preflight precedes one label-only POST.
+New associations, region/endpoint switching, Azure and arbitrary body overrides
+refuse. Sensitive state and restricted-project counts/examples are never evaluated
+or emitted. This assignment endpoint can affect network configuration; label-only
+source does not guarantee no policy or connectivity effects. Empty200 acknowledges
+only, not independently verified policy preservation, network enforcement,
+persistence or session fencing. Preflight is not atomic CAS; external association,
+policy and label races remain unresolved. Ambiguity gets one bounded detail
+observation and stays uncertain even on desired label/absence; no retry. Permanent
+common journal blocks same-request replay, not external writers. Three-request
+worst case/3.5s ceiling retains fixed origin, cancellation, per-request deadlines,
+redirection refusal and byte bounds. Effects/entitlement, native host/custody/durable
+recovery and independent review remain gates. Source/mocks only, no live change.
+
 ## Existing project VPC restriction label-assignment delta
 
 Copied exact project/endpoint/expected-desired label/revision requires a dedicated
