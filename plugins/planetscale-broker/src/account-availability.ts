@@ -13,16 +13,19 @@ function bindings<T extends { readonly id: string }>(schema: Schema<T>): Schema<
     return Object.freeze(parsed);
   } };
 }
-const organizationBindings: Schema<readonly ReturnType<typeof organizationBinding.parse>[]> = { parse(value) {
+export const organizationBindings: Schema<readonly ReturnType<typeof organizationBinding.parse>[]> = { parse(value) {
   const parsed = bindings(organizationBinding).parse(value);
   requireThat(new Set(parsed.map(item => item.name)).size === parsed.length, "schema");
   return parsed;
 } };
+export { binding as accountRecordBinding };
+export const readOnlyRegionBindings = bindings(regionBinding);
+export const postgresVersionBindings = bindings(binding);
 // These are broker-owned bindings, not model arguments or upstream list authority.
 export const currentUserScope = closed({ user: binding });
 export const organizationListScope = closed({ organizations: organizationBindings });
-export const readOnlyRegionScope = closed({ organization: slug, database: slug, regions: bindings(regionBinding) });
-export const postgresVersionScope = closed({ engine: oneOf(["neki"] as const), versions: bindings(binding) });
+export const readOnlyRegionScope = closed({ organization: slug, database: slug, regions: readOnlyRegionBindings });
+export const postgresVersionScope = closed({ engine: oneOf(["neki"] as const), versions: postgresVersionBindings });
 
 export interface UserSummary { readonly id: string; readonly twoFactorAuthConfigured: boolean }
 export function userSummary(body: Record<string, unknown>, expected: ReturnType<typeof binding.parse>): UserSummary {

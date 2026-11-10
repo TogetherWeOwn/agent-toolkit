@@ -2,6 +2,11 @@ import type { Prepared } from "../../../packages/core/src/provider/contracts.js"
 import { closed, digest, identifier, jsonData, oneOf } from "../../../packages/core/src/schema.js";
 import { emptyArguments, pageArguments, slug, type PreparedRead } from "./metadata.js";
 import { resourceBindings } from "./discovery.js";
+import { accountRecordBinding, organizationBindings, readOnlyRegionBindings, postgresVersionBindings } from "./account-availability.js";
+import { prepare as prepareCurrentUser } from "./tools/get-current-user.js";
+import { prepare as prepareOrganizationList } from "./tools/list-organizations.js";
+import { prepare as prepareReadOnlyRegionList } from "./tools/list-read-only-regions.js";
+import { prepare as preparePostgresVersionList } from "./tools/list-postgres-versions.js";
 import { prepare as prepareDatabaseList } from "./tools/list-databases.js";
 import { prepare as prepareBranchList } from "./tools/list-branches.js";
 import { prepare as prepareDatabaseRegionList } from "./tools/list-database-regions.js";
@@ -152,6 +157,11 @@ const branchListTarget = closed({ ...databaseFields, branches: resourceBindings,
 const databaseRegionListTarget = closed({ ...databaseFields, regions: resourceBindings, pagination: pageArguments });
 const organizationRegionListTarget = closed({ ...organizationFields, regions: resourceBindings, pagination: pageArguments });
 const publicRegionListTarget = closed({ revision: digest, regions: resourceBindings, pagination: pageArguments });
+const currentUserTarget = closed({ user: accountRecordBinding, revision: digest });
+const organizationListTarget = closed({ userId: identifier, revision: digest,
+  organizations: organizationBindings, pagination: pageArguments });
+const readOnlyRegionListTarget = closed({ ...databaseFields, regions: readOnlyRegionBindings, pagination: pageArguments });
+const postgresVersionListTarget = closed({ revision: digest, engine: oneOf(["neki"] as const), versions: postgresVersionBindings });
 const moveTablesWorkflowStatusTarget = closed({ ...branchFields,
   workflow: slug, targetKeyspace: slug, keyspaceId: identifier });
 const maintenanceScheduleTarget = closed({ ...databaseFields, scheduleId: identifier });
@@ -309,7 +319,9 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof unifiedChangeListTarget.parse> | ReturnType<typeof replicaChangeListTarget.parse> |
   ReturnType<typeof querySummaryListTarget.parse> | ReturnType<typeof errorSummaryListTarget.parse> |
   ReturnType<typeof queryStatisticsTarget.parse> | ReturnType<typeof queryFingerprintSummaryTarget.parse> |
-  ReturnType<typeof branchQueryErrorTarget.parse> | ReturnType<typeof branchQueryTagListTarget.parse>;
+  ReturnType<typeof branchQueryErrorTarget.parse> | ReturnType<typeof branchQueryTagListTarget.parse> |
+  ReturnType<typeof currentUserTarget.parse> | ReturnType<typeof organizationListTarget.parse> |
+  ReturnType<typeof readOnlyRegionListTarget.parse> | ReturnType<typeof postgresVersionListTarget.parse>;
 type ReadOperation = "get_branch_query_error" | "list_branch_query_tags" | "get_query_statistics" | "get_query_summary" | "list_branch_queries" | "list_branch_query_errors" |
   "list_change_requests" | "list_dedicated_read_replica_change_requests" |
   "get_deploy_queue" | "list_deploy_operations" | "list_deploy_request_reviews" |
@@ -343,14 +355,16 @@ type ReadOperation = "get_branch_query_error" | "list_branch_query_tags" | "get_
   "get_keyspace_vschema" | "get_data_topology" | "lint_branch_schema" | "check_deploy_request_storage" |
   "get_instant_branch_metrics" | "get_instant_tablet_metrics" | "get_branch_metrics" | "get_tablet_metrics" |
   "get_branch_query_metrics" | "get_branch_tag_metrics" |
-  "get_maintenance_schedule" | "get_branch_maintenance_window" | "get_move_tables_workflow_status";
+  "get_maintenance_schedule" | "get_branch_maintenance_window" | "get_move_tables_workflow_status" |
+  "get_current_user" | "list_organizations" | "list_read_only_regions" | "list_postgres_versions";
 type ResponseIdentity = "name-only-not-immutable" | "record-id-only-parent-not-verified" |
   "record-and-source-ids-destination-not-verified" | "record-and-branch-ids-parent-not-verified" |
   "record-and-user-ids-parent-not-verified" | "record-and-number-parent-and-destination-not-verified" |
   "record-and-number-parent-not-verified" | "organization-id-matched" |
   "record-and-name-parent-not-verified" | "record-and-target-binding-parent-not-verified" |
   "absent-request-bound-only" | "keyspace-name-only-parent-not-verified" |
-  "branch-id-and-name-parent-not-verified";
+  "branch-id-and-name-parent-not-verified" | "user-id-only-principal-not-verified" |
+  "record-and-region-binding-parent-not-verified";
 
 // Pure preparation only. Host IDs/revisions bind a snapshot, not permission;
 // response projections still cannot authenticate every parent/destination ID.
@@ -768,6 +782,35 @@ export function bindListRegionsForOrganizationPreparation(rawTarget: unknown): (
   const read = prepareOrganizationRegionList({ organization: target.organization, regions: target.regions }, target.pagination);
   return bindRead(`planetscale/organization/${target.organizationId}`, target, "list_regions_for_organization", read.request,
     "record-and-name-parent-not-verified");
+}
+
+export function bindGetCurrentUserPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = currentUserTarget.parse(rawTarget);
+  const read = prepareCurrentUser({ user: target.user }, {});
+  return bindRead(`planetscale/user/${target.user.id}`, target, "get_current_user", read.request,
+    "user-id-only-principal-not-verified");
+}
+
+export function bindListOrganizationsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = organizationListTarget.parse(rawTarget);
+  const read = prepareOrganizationList({ organizations: target.organizations }, target.pagination);
+  return bindRead(`planetscale/user/${target.userId}`, target, "list_organizations", read.request,
+    "record-and-name-parent-not-verified");
+}
+
+export function bindListReadOnlyRegionsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = readOnlyRegionListTarget.parse(rawTarget);
+  const read = prepareReadOnlyRegionList({ organization: target.organization, database: target.database,
+    regions: target.regions }, target.pagination);
+  return bindRead(`planetscale/database/${target.databaseId}`, target, "list_read_only_regions", read.request,
+    "record-and-region-binding-parent-not-verified");
+}
+
+export function bindListPostgresVersionsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = postgresVersionListTarget.parse(rawTarget);
+  const read = preparePostgresVersionList({ engine: target.engine, versions: target.versions }, {});
+  return bindRead("planetscale/version-catalog/postgres", target, "list_postgres_versions", read.request,
+    "record-id-only-parent-not-verified");
 }
 
 export function bindListPublicRegionsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {

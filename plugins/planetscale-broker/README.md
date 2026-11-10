@@ -6,6 +6,33 @@ manifest, network executor, credential resolver, or tool registration is supplie
 The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
+## Account and availability preparation increment
+
+Four pure `Prepared` bindings cover existing current-user, organization-list,
+read-only-region-list and Postgres-version-list GETs. Closed host identities,
+revision, bounded child bindings and applicable host pagination bind fixed
+requests and empty caller arguments. Existing account binding parsers are
+exported/reused without behavior changes. Every variable field enters plan/full
+hashes, including user/child IDs absent from requests. The sole documented
+Postgres engine remains `neki`; its plain array has no invented pagination.
+
+`test/core-account-availability-read-preparation.test.mjs` supplies 39 synthetic
+contracts for fixed requests, hash binding, immutable captures, input/accessor/
+envelope/whole-response refusal and redacted projections. User ID matching does
+not authenticate the credential's principal; organization tuples do not prove
+user association. Read-only-region and nested region tuples do not prove parent
+ownership. The version-catalog resource is a local namespace, not provider
+identity. MFA/SSO/ready/enabled/default flags do not establish enforcement,
+upgrade readiness or native authority. Personal/contact/connection/billing/
+version text, actors and raw times are omitted. Independent principal/parent
+mapping, collection permission, credential entitlement, current revision,
+trusted transport/raw-body custody and non-waking proof remain prerequisites.
+No executor, credential resolution, registration or authority consumption.
+
+Coverage stays **134/291 offline adapters; 157 missing**, twelve previews and
+**124 pure preparations**, zero runtime-integrated/reviewed/enabled/adopted.
+New contracts require exact-head Actions; older counts below are historical.
+
 ## Query-error and tag-list preparation increment
 
 Two pure `Prepared` bindings cover the existing error-fingerprint query page and

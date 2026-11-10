@@ -4,7 +4,43 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
-## Query-error fixture repair (local, not yet Actions-verified)
+## Account and availability preparation source increment
+
+Four pure Prepared bindings cover existing current-user, organization-list,
+read-only-region-list and Postgres-version-list GETs. Closed host identities,
+revision, bounded child bindings and applicable pagination fix the request and
+empty caller arguments. All variable fields enter plan/full hashes; existing
+account parsers are exported/reused without behavior changes. Sole engine `neki`
+and plain-array versions remain fixed. No executor, credential resolution,
+registration or authority consumption. Adapter coverage stays **134/291; 157
+missing**, twelve previews and **124 pure preparations**, zero runtime-integrated/
+reviewed/enabled/adopted.
+
+`test/core-account-availability-read-preparation.test.mjs` supplies 39 synthetic
+contracts: fixed requests/resource namespaces, every-variable-field hashes,
+immutable captures, closed/bounded/accessor/injection/envelope/whole-response
+refusal and redacted projections. User matching does not authenticate credential
+principal; organization tuples do not prove user association. Nested read-only
+region tuples do not establish parent ownership. Version-catalog namespace is
+local, not provider identity. Flags never grant effective enforcement, upgrade,
+wake/spend or native authority. Personal/contact/connection/billing/version text,
+actors and raw times omitted. Independent principal/parent bindings, collection
+permission, entitlement, current revision, trusted transport/raw-body custody and
+non-waking evidence remain required. New-head execution awaits Actions.
+
+## Query-error fixture repair verified
+
+Repair `8ef8cf66943c8a43c824edd265b547d1857d2032`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42830797114)
+and [test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42830797114/job/129880035905)
+passed, including the repaired cases. Lint/typecheck/native-policy/Neon candidate
+contract/ci-ok, [Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42830796688)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42830786327)
+passed. Prior pending/local-only observations are superseded; no numeric totals
+extracted, runtime repair, earlier SDK recovery fix, specialist approval or merge
+claimed. The following source failure remains historical evidence.
+
+## Query-error fixture source failure and repair
 
 Source `5d982db3a49433ae50b98b95a6782fa822586a12`
 [Actions test](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42827779555/job/129869566215)
@@ -14,8 +50,8 @@ query `explainable`/`truncated` flags. Existing strict projection correctly refu
 `upstream`, preventing the intended scope/envelope assertions from being reached.
 The repair supplies both required flags, checks their exact projected values and
 exercises malformed values for each flag. No runtime/parser/tier change or new
-test-count credit. Repair-head Actions execution remains pending; source failure
-is retained, not converted into a pass. Other workspace tests passed (root 317,
+test-count credit. Repair-head Actions execution passed as recorded above; source
+failure is retained, not converted into a pass. Other workspace tests passed (root 317,
 helpers 122, GitHub 219, Neon 37), with no failures/skips/cancellations. Source
 lint/typecheck/native-policy/Gitleaks/all three CodeQL analyses passed; aggregate
 CI correctly failed. Earlier SDK recovery uncertainty remains unresolved.
