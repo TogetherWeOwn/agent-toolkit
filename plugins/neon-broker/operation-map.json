@@ -208,7 +208,30 @@
       "id": "getProjectAdvisorSecurityIssues",
       "apiArea": "project",
       "tool": "neon.getProjectAdvisorSecurityIssues",
-      "scope": "project_id",
+      "scope": "project_id/branch_id/database_name/advisors/security",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven",
+        "database-analysis"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/advisor.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Source and refusal contracts only; exact database-bound SECURITY/INFO analysis and closed severity observation counts. Provider analyzes the database and may wake compute. Native entitlement/effects, reviews and runtime integration remain unresolved; no live analysis or security verdict."
+    },
+    {
+      "id": "listApiKeys",
+      "apiArea": "api-key",
+      "tool": "neon.listApiKeys",
+      "scope": "user_id",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -216,31 +239,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
-      "reviewed": false,
-      "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
-    },
-    {
-      "id": "listApiKeys",
-      "apiArea": "api-key",
-      "tool": "neon.listApiKeys",
-      "scope": "trusted-account",
-      "sideEffects": [
-        "provider-effects-unverified",
-        "compute-wake-not-proven"
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/user-keys.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
       ],
-      "tier": "reserved",
-      "authorization": "native",
-      "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source and refusal contracts only; same-credential exact-user proof before collection and selected numeric-ID-only output. Entitlement, provider side effects, native reviews and runtime integration remain unresolved; no token access or credential authority."
     },
     {
       "id": "createApiKey",
@@ -265,20 +272,24 @@
       "id": "revokeApiKey",
       "apiArea": "api-key",
       "tool": "neon.revokeApiKey",
-      "scope": "key_id",
+      "scope": "user_id/key_id",
       "sideEffects": [
+        "api-key-revocation-request",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/user-key-revoke.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Reserved revocation-request source only; same-credential user proof, bounded exact numeric key-ID preflight, one DELETE and closed acknowledgement do not prove credential completeness, session fencing or cutover enforcement. Preflight is not atomic CAS. Native credential authority/host/policy/custody, durable common journal recovery, effects/entitlement and independent reviews unresolved."
     },
     {
       "id": "getProjectOperation",
@@ -292,18 +303,21 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/catalog.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "listProjects",
       "apiArea": "project",
       "tool": "neon.listProjects",
-      "scope": "trusted-account",
+      "scope": "org_id/projects",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -311,12 +325,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/projects.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "createProject",
@@ -341,7 +358,7 @@
       "id": "countProjects",
       "apiArea": "project",
       "tool": "neon.countProjects",
-      "scope": "trusted-account",
+      "scope": "org_id/projects/count",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -349,18 +366,21 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/project-count.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "listSharedProjects",
       "apiArea": "project",
       "tool": "neon.listSharedProjects",
-      "scope": "trusted-account",
+      "scope": "user_id/shared_projects",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -368,12 +388,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/shared-projects.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "getProject",
@@ -401,7 +424,7 @@
       "id": "updateProject",
       "apiArea": "project",
       "tool": "neon.updateProject",
-      "scope": "project_id",
+      "scope": "project_id/rename",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -409,31 +432,38 @@
       "tier": "write",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/project-update.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Name-only source subset and refusal contracts; settings/IP allowlist/quota, default compute and history retention unsupported. Exact project/expected-label preflight is not atomic CAS. One PATCH, closed exact-echo acknowledgement, bounded observation on ambiguity without retry; permanent core journal blocks restart/replay. Native concurrency/effects, entitlement, custody, durable recovery, host/policy integration and independent reviews unresolved; no live rename or enablement."
     },
     {
       "id": "deleteProject",
       "apiArea": "project",
       "tool": "neon.deleteProject",
-      "scope": "project_id",
+      "scope": "project_id/delete",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "project-cascade-deletion-request"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/project-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Mocked source only; dedicated project/delete grant and reserved native exact-plan authority required. Exact project/owner detail preflight then one bodyless DELETE, explicitly cascading to all endpoints, branches, databases and users. HTTP200 exact identity/owner echo is acknowledgement only, not completed deletion, fencing, zero sessions or recoverability proof. HTTP204/ambiguity stays uncertain after one observation including absence, never retried; permanent common journal blocks restart/replay. Native host/policy/custody, durable recovery, entitlement/effects, production deletion authority and independent reviews unresolved. No live deletion, cutover enforcement or enablement."
     },
     {
       "id": "recoverProject",
@@ -466,18 +496,21 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/catalog.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "listProjectPermissions",
       "apiArea": "project",
       "tool": "neon.listProjectPermissions",
-      "scope": "project_id",
+      "scope": "project_id/permissions",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -485,12 +518,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/project-access.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed source with mocked contracts only; credential entitlement, provider effects, compatible native integration and independent review remain unresolved. No live enablement."
     },
     {
       "id": "grantPermissionToProject",
@@ -515,7 +551,7 @@
       "id": "listProjectMembers",
       "apiArea": "project",
       "tool": "neon.listProjectMembers",
-      "scope": "project_id",
+      "scope": "project_id/members",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -523,50 +559,61 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/project-access.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed source with mocked contracts only; credential entitlement, provider effects, compatible native integration and independent review remain unresolved. No live enablement."
     },
     {
       "id": "setProjectMemberRole",
       "apiArea": "project",
       "tool": "neon.setProjectMemberRole",
-      "scope": "project_id/member_id",
+      "scope": "project_id/member_id/role/viewer",
       "sideEffects": [
+        "explicit-project-viewer-grant-request",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/project-member-role-update.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Viewer-only source from existing explicit EDITOR grant and exact expected member/editor org role. Bounded terminal identity/grant preflight then one fixed viewer PUT; no creation, promotion or self-demotion confirmation. Exact HTTP200 identity/explicit-VIEWER echo acknowledges only; organization defaults/creator fallback may retain higher effective access. No sessions/fencing proof. Preflight not atomic CAS; ambiguity stays uncertain after one bounded observation, no retry, permanent common replay journal. Native authority/host/policy/custody/durable recovery/effects/entitlement and independent reviews unresolved."
     },
     {
       "id": "removeProjectMemberRole",
       "apiArea": "project",
       "tool": "neon.removeProjectMemberRole",
-      "scope": "project_id/member_id",
+      "scope": "project_id/member_id/role/remove",
       "sideEffects": [
+        "explicit-project-grant-removal-request",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/project-member-role-remove.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Reserved explicit project-grant removal-request source only; terminal bounded member/user/org-role/explicit-permission preflight then one DELETE. Organization-default access remains; no self-lockout confirmation or bypass. Acknowledgement is not independent access removal, credential revocation, session fencing or cutover enforcement. Preflight not atomic CAS. Native authority/host/policy/custody, durable common journal recovery, effects/entitlement and independent reviews unresolved."
     },
     {
       "id": "revokePermissionFromProject",
@@ -574,18 +621,22 @@
       "tool": "neon.revokePermissionFromProject",
       "scope": "project_id/permission_id",
       "sideEffects": [
+        "project-permission-revocation-request",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/permission-revoke.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Reserved project-permission revocation-request source only; bounded exact permission-ID preflight, one DELETE and closed acknowledgement do not prove independent effective-access removal, completeness, session fencing or cutover enforcement. Preflight is not atomic CAS. Native authority/host/policy/custody, durable common journal recovery, effects/entitlement and independent reviews unresolved."
     },
     {
       "id": "getAvailablePreloadLibraries",
@@ -599,12 +650,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/capabilities.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "createProjectTransferRequest",
@@ -648,7 +702,7 @@
       "id": "getProjectJWKS",
       "apiArea": "project",
       "tool": "neon.getProjectJWKS",
-      "scope": "project_id",
+      "scope": "project_id/jwks",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -656,37 +710,21 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/project-security.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed source with mocked contracts only; credential entitlement, provider effects, compatible native integration and independent review remain unresolved. No live enablement."
     },
     {
       "id": "addProjectJWKS",
       "apiArea": "project",
       "tool": "neon.addProjectJWKS",
-      "scope": "project_id",
-      "sideEffects": [
-        "provider-effects-unverified",
-        "compute-wake-not-proven"
-      ],
-      "tier": "write",
-      "authorization": "policy",
-      "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
-      "reviewed": false,
-      "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
-    },
-    {
-      "id": "deleteProjectJWKS",
-      "apiArea": "project",
-      "tool": "neon.deleteProjectJWKS",
-      "scope": "project_id/jwks_id",
+      "scope": "project_id/branch_id/jwks/add",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -694,12 +732,38 @@
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/jwks-add.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Branch/single-existing-role/audience source and mocks only; fixed well-known HTTPS URL, explicit deprecated skip_role_creation=true. Tokens without audience remain accepted by provider contract. Native trust authority, URL custody/effects/entitlement, host/custody/durable recovery and independent review unresolved. No live trust registration or enablement."
+    },
+    {
+      "id": "deleteProjectJWKS",
+      "apiArea": "project",
+      "tool": "neon.deleteProjectJWKS",
+      "scope": "project_id/jwks_id/delete",
+      "sideEffects": [
+        "jwks-deletion-request",
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/jwks-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Reserved JWKS-deletion-request source only; bounded list identity/presence preflight then one DELETE and exact HTTP200 identity acknowledgement. Not independently verified JWT refusal or session closure. Preflight not atomic CAS; ambiguity stays uncertain after one observation even on absence, no retry. Native authority/host/policy/custody, durable common journal recovery, effects/entitlement and independent reviews unresolved."
     },
     {
       "id": "createProjectBranchDataAPI",
@@ -724,26 +788,30 @@
       "id": "updateProjectBranchDataAPI",
       "apiArea": "dataapi",
       "tool": "neon.updateProjectBranchDataAPI",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/database_name",
       "sideEffects": [
+        "schema-cache-refresh-request",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/data-api-refresh.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Refresh-only source/mocks; exact database/status preflight then one empty-object PATCH. Empty201 acknowledgement is not independent cache freshness/configuration preservation/persistence. Cached status not immutable identity; preflight not atomic CAS. Ambiguity stays uncertain after one observation, no retry. Native authority/host/custody, durable journal recovery, effects/entitlement and independent review unresolved."
     },
     {
       "id": "deleteProjectBranchDataAPI",
       "apiArea": "dataapi",
       "tool": "neon.deleteProjectBranchDataAPI",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/database_name",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -751,18 +819,21 @@
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/data-api-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only; native exact-plan authority, host/custody, durable recovery, entitlement/effects and independent review unresolved. Cached status is not immutable deployment identity; preflight is not atomic CAS. Empty JSON acknowledgement is not independently observed endpoint refusal, token/session revocation, fencing or lifecycle enforcement; ambiguity stays uncertain with no retry."
     },
     {
       "id": "getProjectBranchDataAPI",
       "apiArea": "dataapi",
       "tool": "neon.getProjectBranchDataAPI",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/database_name",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -770,12 +841,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/data-api.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed status-only source and mocked contracts authored; entitlement, provider effects, independent native review and runtime integration remain unresolved. No URL/settings/schema lookup, live qualification or enablement."
     },
     {
       "id": "createNeonAuthIntegration",
@@ -808,12 +882,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-integrations.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "createNeonAuth",
@@ -838,7 +915,7 @@
       "id": "disableNeonAuth",
       "apiArea": "auth",
       "tool": "neon.disableNeonAuth",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/auth/disable",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -846,12 +923,15 @@
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-disable.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Connection-only source with fixed delete_data=false; data erasure unsupported. Source delta review; native exact-plan authority, host/policy/permanent journal/custody integration and provider effects/entitlement qualification unresolved. Preflight not atomic CAS; no independent authentication refusal, token/session revocation or fencing proof. No live grant or enablement."
     },
     {
       "id": "listNeonAuthRedirectURIWhitelistDomains",
@@ -865,50 +945,58 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-domains.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. Deprecated endpoint sunset 2026-03-01 in pinned schema: native availability UNKNOWN, no fallback or live grant."
     },
     {
       "id": "addNeonAuthDomainToRedirectURIWhitelist",
       "apiArea": "auth-legacy",
       "tool": "neon.addNeonAuthDomainToRedirectURIWhitelist",
-      "scope": "project_id",
+      "scope": "project_id/auth/legacy/domains/auth_provider/origin/add",
       "sideEffects": [
-        "provider-effects-unverified",
-        "compute-wake-not-proven"
-      ],
-      "tier": "write",
-      "authorization": "policy",
-      "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
-      "reviewed": false,
-      "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
-    },
-    {
-      "id": "deleteNeonAuthDomainFromRedirectURIWhitelist",
-      "apiArea": "auth-legacy",
-      "tool": "neon.deleteNeonAuthDomainFromRedirectURIWhitelist",
-      "scope": "project_id",
-      "sideEffects": [
+        "redirect-trust-expansion",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/legacy-auth-domain-add.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Single canonical HTTPS redirect origin addition source/mocks only; separate project-legacy add grant and reserved native exact-plan authority. Bounded complete provider/origin absence preflight then one singular-domain POST; empty201 acknowledges only, not independent trust enforcement or persistence. Broadens trust; no live security change authorized. Preflight not atomic CAS; ambiguity stays uncertain after one observation, no retry, permanent common replay journal. Deprecated endpoint sunset 2026-03-01: availability UNKNOWN; no branch fallback. Native owner authority, host/policy/custody/durable recovery, entitlement/effects and independent reviews unresolved."
+    },
+    {
+      "id": "deleteNeonAuthDomainFromRedirectURIWhitelist",
+      "apiArea": "auth-legacy",
+      "tool": "neon.deleteNeonAuthDomainFromRedirectURIWhitelist",
+      "scope": "project_id/auth/legacy/domains/auth_provider/origin/delete",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven",
+        "trusted-redirect-origin-removal-request"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "implemented",
+      "tests": ["plugins/neon-broker/test/legacy-auth-domain-delete.test.mjs", "plugins/neon-broker/test/core.compat.mjs"],
+      "implemented": true,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Source/mocks only: copied exact project/provider/single HTTPS origin, separate legacy grant, native exact-plan authority, bounded list presence preflight and one singleton DELETE. Empty HTTP200 acknowledges only, not independent enforcement or token/session revocation. Preflight not atomic CAS; ambiguity stays uncertain after one observation, no retry; permanent common journal blocks replay. Deprecated endpoint sunset 2026-03-01: availability UNKNOWN; no branch fallback. Native entitlement, effects, custody/host integration and independent reviews remain unresolved."
     },
     {
       "id": "listBranchNeonAuthTrustedDomains",
@@ -922,50 +1010,58 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-domains.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "addBranchNeonAuthTrustedDomain",
       "apiArea": "auth",
       "tool": "neon.addBranchNeonAuthTrustedDomain",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/auth_provider/domain/add",
       "sideEffects": [
-        "provider-effects-unverified",
-        "compute-wake-not-proven"
-      ],
-      "tier": "write",
-      "authorization": "policy",
-      "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
-      "reviewed": false,
-      "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
-    },
-    {
-      "id": "deleteBranchNeonAuthTrustedDomain",
-      "apiArea": "auth",
-      "tool": "neon.deleteBranchNeonAuthTrustedDomain",
-      "scope": "project_id/branch_id",
-      "sideEffects": [
+        "redirect-trust-expansion",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-domain-add.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Single canonical HTTPS redirect origin addition source/mocks only; dedicated add grant and reserved native exact-plan authority. Bounded complete provider/origin absence preflight then one singular-domain POST; empty201 acknowledges only, not independently observed trust enforcement or persistence. Broadens redirect trust; no live security change authorized. Preflight not atomic CAS; ambiguity stays uncertain after one list observation, no retry, permanent common replay journal. Legacy/bulk/wildcard/path/port overrides unsupported. Native owner security authority, host/policy/custody/durable recovery, entitlement/effects and independent reviews unresolved."
+    },
+    {
+      "id": "deleteBranchNeonAuthTrustedDomain",
+      "apiArea": "auth",
+      "tool": "neon.deleteBranchNeonAuthTrustedDomain",
+      "scope": "project_id/branch_id/auth/domains/auth_provider/origin/delete",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven",
+        "trusted-redirect-origin-removal-request"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "implemented",
+      "tests": ["plugins/neon-broker/test/auth-domain-delete.test.mjs", "plugins/neon-broker/test/core.compat.mjs"],
+      "implemented": true,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Source/mocks only: copied exact branch/provider/single HTTPS origin, native exact-plan authority, bounded list presence preflight and one singleton DELETE. Empty HTTP200 acknowledges only, not independently verified enforcement or session/token revocation. Preflight not atomic CAS; ambiguity stays uncertain after one observation, no retry; permanent common journal blocks replay. Legacy/bulk/wildcard/path/query/port targets unsupported. Native entitlement, effects, custody/host integration and independent reviews remain unresolved."
     },
     {
       "id": "createNeonAuthProviderSDKKeys",
@@ -1030,43 +1126,30 @@
       "tool": "neon.deleteBranchNeonAuthUser",
       "scope": "project_id/branch_id/auth_user_id",
       "sideEffects": [
+        "irreversible-auth-user-record-removal",
+        "user-presence-not-verified",
+        "independent-reconciliation-unavailable",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-user-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source and mocked reserved-authority contracts only. Trusted branch/user binding, independent directory reconciliation, native custody/durable journal, entitlement, provider effects and specialist/release qualification remain unresolved; no live deletion or runtime enablement."
     },
     {
       "id": "updateNeonAuthUserRole",
       "apiArea": "auth",
       "tool": "neon.updateNeonAuthUserRole",
-      "scope": "project_id/branch_id/auth_user_id",
-      "sideEffects": [
-        "provider-effects-unverified",
-        "compute-wake-not-proven"
-      ],
-      "tier": "write",
-      "authorization": "policy",
-      "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
-      "reviewed": false,
-      "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
-    },
-    {
-      "id": "deleteNeonAuthUser",
-      "apiArea": "auth-legacy",
-      "tool": "neon.deleteNeonAuthUser",
-      "scope": "project_id/auth_user_id",
+      "scope": "project_id/branch_id/auth_user_id/role/user",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -1074,12 +1157,35 @@
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-user-role.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Built-in user role assignment source/mocks only; admin/custom/multiple roles unsupported. Trusted branch/user binding, independent directory-role reconciliation, native custody/durable journal, entitlement, provider effects and specialist/release qualification unresolved; no live permission change or runtime enablement."
+    },
+    {
+      "id": "deleteNeonAuthUser",
+      "apiArea": "auth-legacy",
+      "tool": "neon.deleteNeonAuthUser",
+      "scope": "project_id/auth_user_id/delete",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven",
+        "irreversible-user-removal"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "implemented",
+      "tests": ["plugins/neon-broker/test/legacy-auth-user-delete.test.mjs", "plugins/neon-broker/test/core.compat.mjs"],
+      "implemented": true,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Project-only legacy source/mocks; deprecated/sunset availability unknown. Dedicated exact-user delete grant/native exact-plan authority and mandatory project identity preflight. Empty204 acknowledges only, not user presence, independent deletion, token/session revocation or fencing. No documented user read; ambiguity remains uncertain without retry or branch fallback. Native directory reconciliation, effects, entitlement, custody, durable recovery and specialist reviews remain unresolved."
     },
     {
       "id": "transferNeonAuthProviderProject",
@@ -1112,18 +1218,21 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-integrations.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement. Legacy endpoint deprecated/sunset in pinned schema; current availability unknown; 404/410 refuse without fallback."
     },
     {
       "id": "listNeonAuthOauthProviders",
       "apiArea": "auth-legacy",
       "tool": "neon.listNeonAuthOauthProviders",
-      "scope": "project_id",
+      "scope": "project_id/auth/oauth_providers",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -1131,12 +1240,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/oauth-providers.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source and refusal contracts only; exact legacy collection grant, copied known provider-ID selection and closed ID/type-only output. Pinned GET schema documents masked secrets; client IDs, masked fingerprints and tenant/key metadata are not evaluated. Deprecated/sunset availability, native effects/entitlement, reviews and runtime integration remain unresolved. No OAuth flow or credential action."
     },
     {
       "id": "addNeonAuthOauthProvider",
@@ -1161,7 +1273,7 @@
       "id": "listBranchNeonAuthOauthProviders",
       "apiArea": "auth",
       "tool": "neon.listBranchNeonAuthOauthProviders",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/auth/oauth_providers",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -1169,12 +1281,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/oauth-providers.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source and refusal contracts only; exact branch collection grant, copied known provider-ID selection and closed ID/type-only output. Pinned GET schema documents masked secrets; client IDs, masked fingerprints and tenant/key metadata are not evaluated. Beta availability, native effects/entitlement, reviews and runtime integration remain unresolved. No OAuth flow or credential action."
     },
     {
       "id": "addBranchNeonAuthOauthProvider",
@@ -1218,20 +1333,24 @@
       "id": "deleteNeonAuthOauthProvider",
       "apiArea": "auth-legacy",
       "tool": "neon.deleteNeonAuthOauthProvider",
-      "scope": "project_id/oauth_provider_id",
+      "scope": "project_id/auth/legacy/oauth_providers/oauth_provider_id/delete",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "oauth-provider-removal-request"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/legacy-oauth-provider-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only: copied exact legacy project/provider ID/expected type, native exact-plan authority, bounded full-list presence/type preflight and one bodyless DELETE. Deprecated/sunset endpoint availability UNKNOWN; no branch fallback. Empty HTTP200 acknowledges only, not independently verified enforcement or session/token revocation. Provider ID/type are not immutable identity; preflight not atomic CAS. Ambiguity stays uncertain after one observation, no retry; permanent common journal blocks replay. Native entitlement, effects, custody/host integration and independent reviews remain unresolved."
     },
     {
       "id": "updateBranchNeonAuthOauthProvider",
@@ -1256,20 +1375,24 @@
       "id": "deleteBranchNeonAuthOauthProvider",
       "apiArea": "auth",
       "tool": "neon.deleteBranchNeonAuthOauthProvider",
-      "scope": "project_id/branch_id/oauth_provider_id",
+      "scope": "project_id/branch_id/auth/oauth_providers/oauth_provider_id/delete",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "oauth-provider-removal-request"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/oauth-provider-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only: copied exact branch/provider ID/expected type, native exact-plan authority, bounded full-list presence/type preflight and one bodyless DELETE. Empty HTTP200 acknowledges only, not independently verified enforcement or session/token revocation. Provider ID/type are not immutable identity; preflight not atomic CAS. Ambiguity stays uncertain after one observation, no retry; permanent common journal blocks replay. No legacy fallback. Native entitlement, effects, custody/host integration and independent reviews remain unresolved."
     },
     {
       "id": "getNeonAuthEmailServer",
@@ -1351,26 +1474,29 @@
       "id": "getNeonAuthEmailAndPasswordConfig",
       "apiArea": "auth",
       "tool": "neon.getNeonAuthEmailAndPasswordConfig",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/auth/email_and_password",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
-      "tier": "reserved",
-      "authorization": "native",
+      "tier": "read",
+      "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-email.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "updateNeonAuthEmailAndPasswordConfig",
       "apiArea": "auth",
       "tool": "neon.updateNeonAuthEmailAndPasswordConfig",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/auth/email_and_password/disable",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -1378,12 +1504,15 @@
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-email-disable.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Disable-only source: enabled=true preflight then fixed enabled=false PATCH; enabling, verification, sign-up/sign-in and password-reset session-policy overrides unsupported. Source delta review; native exact-plan authority, trusted host/custody, durable journal/recovery and provider effects/entitlement qualification remain. Preflight not atomic CAS; acknowledgement is not independently verified authentication refusal, token/session revocation or fencing. No live grant or enablement."
     },
     {
       "id": "getNeonAuthEmailProvider",
@@ -1427,20 +1556,25 @@
       "id": "deleteNeonAuthIntegration",
       "apiArea": "auth-legacy",
       "tool": "neon.deleteNeonAuthIntegration",
-      "scope": "project_id",
+      "scope": "project_id/auth_provider/expected_branch_id/expected_owned_by",
       "sideEffects": [
+        "auth-provider-connection-removal-requested",
+        "data-erasure-not-requested",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-integration-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only; sunset legacy availability unknown. Fixed delete_data=false; schema erasure unsupported. Unique-provider bounded list preflight is not atomic CAS; empty200 acknowledges only, ambiguity remains uncertain without retry. Actual native authority, host/custody, durable recovery, effects/entitlement and independent review gates unresolved."
     },
     {
       "id": "getConnectionURI",
@@ -1465,7 +1599,7 @@
       "id": "getNeonAuthAllowLocalhost",
       "apiArea": "auth",
       "tool": "neon.getNeonAuthAllowLocalhost",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/auth/allow_localhost",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -1473,31 +1607,37 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-status.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "updateNeonAuthAllowLocalhost",
       "apiArea": "auth",
       "tool": "neon.updateNeonAuthAllowLocalhost",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/auth/allow_localhost/disable",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-localhost-disable.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Disable-only source: true preflight then fixed false PATCH; enabling unsupported. Source delta review; native exact-plan authority, trusted host/custody, durable journal/recovery and provider effects/entitlement qualification remain. Preflight not atomic CAS; acknowledgement is not independently verified authentication refusal, token/session revocation or fencing. No live grant or enablement."
     },
     {
       "id": "updateNeonAuthLogsExport",
@@ -1508,15 +1648,18 @@
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-logs-disable.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Disable-only source: exact better_auth branch/no pending transfer preflight then fixed false PATCH; enabling unsupported. No dedicated logs-export GET exists; prior state and independent export stoppage/audit preservation are unverified, ambiguity stays uncertain without invented reads or retry. Source delta review, native exact-plan authority, host/custody, durable journal/recovery, provider effects/entitlement and observability qualification remain. No live grant or enablement."
     },
     {
       "id": "getNeonAuthPluginConfigs",
@@ -1584,21 +1727,24 @@
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-magic-link-disable.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Disable-only source: exact better_auth branch/no pending transfer preflight then fixed false PATCH; enabling, expiry and sign-up policy overrides unsupported. No dedicated magic-link GET exists; prior state and independent authentication refusal/outstanding-link invalidation/configuration preservation are unverified, ambiguity stays uncertain without invented reads or retry. Source delta review, native exact-plan authority, host/custody, durable journal/recovery and provider effects/entitlement qualification remain. No live grant or enablement."
     },
     {
       "id": "getNeonAuthPhoneNumberPlugin",
       "apiArea": "auth",
       "tool": "neon.getNeonAuthPhoneNumberPlugin",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/auth/plugins/phone-number",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -1606,151 +1752,21 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-status.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "updateNeonAuthPhoneNumberPlugin",
       "apiArea": "auth",
       "tool": "neon.updateNeonAuthPhoneNumberPlugin",
-      "scope": "project_id/branch_id",
-      "sideEffects": [
-        "provider-effects-unverified",
-        "compute-wake-not-proven"
-      ],
-      "tier": "write",
-      "authorization": "policy",
-      "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
-      "reviewed": false,
-      "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
-    },
-    {
-      "id": "getNeonAuthOAuthProviderPlugin",
-      "apiArea": "auth",
-      "tool": "neon.getNeonAuthOAuthProviderPlugin",
-      "scope": "project_id/branch_id",
-      "sideEffects": [
-        "provider-effects-unverified",
-        "compute-wake-not-proven"
-      ],
-      "tier": "read",
-      "authorization": "policy",
-      "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
-      "reviewed": false,
-      "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
-    },
-    {
-      "id": "updateNeonAuthOAuthProviderPlugin",
-      "apiArea": "auth",
-      "tool": "neon.updateNeonAuthOAuthProviderPlugin",
-      "scope": "project_id/branch_id",
-      "sideEffects": [
-        "provider-effects-unverified",
-        "compute-wake-not-proven"
-      ],
-      "tier": "write",
-      "authorization": "policy",
-      "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
-      "reviewed": false,
-      "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
-    },
-    {
-      "id": "listNeonAuthOAuthClients",
-      "apiArea": "auth",
-      "tool": "neon.listNeonAuthOAuthClients",
-      "scope": "project_id/branch_id",
-      "sideEffects": [
-        "provider-effects-unverified",
-        "compute-wake-not-proven"
-      ],
-      "tier": "read",
-      "authorization": "policy",
-      "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
-      "reviewed": false,
-      "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
-    },
-    {
-      "id": "createNeonAuthOAuthClient",
-      "apiArea": "auth",
-      "tool": "neon.createNeonAuthOAuthClient",
-      "scope": "project_id/branch_id",
-      "sideEffects": [
-        "provider-effects-unverified",
-        "compute-wake-not-proven"
-      ],
-      "tier": "write",
-      "authorization": "policy",
-      "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
-      "reviewed": false,
-      "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
-    },
-    {
-      "id": "getNeonAuthOAuthClient",
-      "apiArea": "auth",
-      "tool": "neon.getNeonAuthOAuthClient",
-      "scope": "project_id/branch_id/client_id",
-      "sideEffects": [
-        "provider-effects-unverified",
-        "compute-wake-not-proven"
-      ],
-      "tier": "read",
-      "authorization": "policy",
-      "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
-      "reviewed": false,
-      "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
-    },
-    {
-      "id": "updateNeonAuthOAuthClient",
-      "apiArea": "auth",
-      "tool": "neon.updateNeonAuthOAuthClient",
-      "scope": "project_id/branch_id/client_id",
-      "sideEffects": [
-        "provider-effects-unverified",
-        "compute-wake-not-proven"
-      ],
-      "tier": "write",
-      "authorization": "policy",
-      "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
-      "reviewed": false,
-      "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
-    },
-    {
-      "id": "deleteNeonAuthOAuthClient",
-      "apiArea": "auth",
-      "tool": "neon.deleteNeonAuthOAuthClient",
-      "scope": "project_id/branch_id/client_id",
+      "scope": "project_id/branch_id/auth/plugins/phone-number/disable",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -1758,12 +1774,172 @@
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-phone-disable.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Disable-only source: enabled=true preflight then fixed enabled=false PATCH; enabling and OTP lifetime changes unsupported. Source delta review; native exact-plan authority, trusted host/custody, durable journal/recovery and provider effects/entitlement qualification remain. Preflight not atomic CAS; acknowledgement is not independently verified authentication refusal, token/session revocation or fencing. No live grant or enablement."
+    },
+    {
+      "id": "getNeonAuthOAuthProviderPlugin",
+      "apiArea": "auth",
+      "tool": "neon.getNeonAuthOAuthProviderPlugin",
+      "scope": "project_id/branch_id/auth/plugins/oauth-provider",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-status.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
+    },
+    {
+      "id": "updateNeonAuthOAuthProviderPlugin",
+      "apiArea": "auth",
+      "tool": "neon.updateNeonAuthOAuthProviderPlugin",
+      "scope": "project_id/branch_id/auth/plugins/oauth-provider/disable",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-oauth-disable.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Disable-only source: enabled=true preflight then fixed enabled=false PATCH; enabling and login/consent/resource/MCP replacement unsupported. Source delta review; native exact-plan authority, trusted host/custody, durable journal/recovery and provider effects/entitlement qualification remain. Preflight not atomic CAS; acknowledgement is not independently verified authorization-server refusal, token/session revocation or fencing. No live grant or enablement."
+    },
+    {
+      "id": "listNeonAuthOAuthClients",
+      "apiArea": "auth",
+      "tool": "neon.listNeonAuthOAuthClients",
+      "scope": "project_id/branch_id/auth/oauth-provider/clients",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-clients.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. Beta availability unknown. No live grant or enablement."
+    },
+    {
+      "id": "createNeonAuthOAuthClient",
+      "apiArea": "auth",
+      "tool": "neon.createNeonAuthOAuthClient",
+      "scope": "project_id/branch_id/client_name/redirect_origin/resource_origin",
+      "sideEffects": [
+        "public-oauth-client-trust-creation-request",
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-client-create.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Public/no-secret, singleton HTTPS-origin source/mocks only; fixed consent-required creation broadens OAuth trust. Dedicated exact grant/native plan authority, bounded name-absence preflight and acknowledgement only. Confidential and arbitrary configuration unsupported. Native Security/Crypto/QA, provider effects/entitlement/configured resource, custody and durable journal/runtime integration remain unresolved; no live creation, mint, binding or enablement."
+    },
+    {
+      "id": "getNeonAuthOAuthClient",
+      "apiArea": "auth",
+      "tool": "neon.getNeonAuthOAuthClient",
+      "scope": "project_id/branch_id/auth/oauth-provider/clients/client_id",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-clients.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. Beta availability unknown. No live grant or enablement."
+    },
+    {
+      "id": "updateNeonAuthOAuthClient",
+      "apiArea": "auth",
+      "tool": "neon.updateNeonAuthOAuthClient",
+      "scope": "project_id/branch_id/auth/oauth-provider/clients/client_id/disable",
+      "sideEffects": [
+        "oauth-client-disable-request",
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-client-disable.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Disable-only source; enabling, names, redirects, resources and consent changes unsupported. Source delta review; Security provider effects and entitlement qualification; common-core integrator native exact-plan authority, trusted host/policy/permanent journal/audit and durable recovery; Operator approved custody placement. Preflight is not atomic CAS; client reconfiguration races unresolved. Acknowledgement is not independently observed client refusal, issued-token/session revocation, deletion or fencing. No live grant or enablement."
+    },
+    {
+      "id": "deleteNeonAuthOAuthClient",
+      "apiArea": "auth",
+      "tool": "neon.deleteNeonAuthOAuthClient",
+      "scope": "project_id/branch_id/client_id/delete",
+      "sideEffects": [
+        "oauth-client-deletion-request",
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-client-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Reserved OAuth-client deletion-request source only; exact detail preflight then one DELETE and empty HTTP204 acknowledgement. Already-issued tokens are not revoked. Preflight not atomic CAS; ambiguity stays uncertain after one observation even on absence, no retry. Native authority/host/policy/custody, durable common journal recovery, effects/entitlement and independent reviews unresolved."
     },
     {
       "id": "rotateNeonAuthOAuthClientSecret",
@@ -1788,7 +1964,7 @@
       "id": "getNeonAuthWebhookConfig",
       "apiArea": "auth",
       "tool": "neon.getNeonAuthWebhookConfig",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/auth/webhooks",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -1796,50 +1972,61 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-webhooks.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "updateNeonAuthWebhookConfig",
       "apiArea": "auth",
       "tool": "neon.updateNeonAuthWebhookConfig",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/auth/webhooks/disable",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "auth-webhook-disable-request"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-webhook-disable.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Disable-only source/mocks; dedicated exact webhooks/disable grant and reserved native exact-plan authority, enabled-state preflight then one fixed false PUT. Omitted destination/events/timeout retention is not promised. Acknowledgement only, not independent delivery stoppage, queued/in-flight cancellation, session revocation or fencing. No enabling/configuration override, URL follow or live call. Preflight not atomic CAS; ambiguity stays uncertain after one observation, no retry, permanent common replay journal. Native host/custody/durable recovery, effects/entitlement and independent reviews remain unresolved."
     },
     {
       "id": "createProjectBranch",
       "apiArea": "branch",
       "tool": "neon.createProjectBranch",
-      "scope": "project_id",
+      "scope": "project_id/parent_id/branches/create/name",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "schema-only-branch-creation"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/branch-create.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only: explicit parent-schema initialization without requested endpoints; dedicated create grant and reserved native exact-plan authority, parent identity and terminal bounded name-absence preflights then one fixed POST. Inherited features are provider-controlled. Exact201 acknowledges only, not independent isolation, no-spend, readiness or persistence. Password-bearing roles/connection URIs never evaluated/emitted. Preflight not atomic CAS; ambiguity stays uncertain after one bounded collection observation, no retry, permanent common replay journal. Native host/custody/durable recovery/effects/entitlement and independent reviews remain unresolved."
     },
     {
       "id": "listProjectBranches",
@@ -1894,12 +2081,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/catalog.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "getProjectBranch",
@@ -1927,39 +2117,47 @@
       "id": "deleteProjectBranch",
       "apiArea": "branch",
       "tool": "neon.deleteProjectBranch",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/delete",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "branch-deletion-request"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/branch-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Mocked source only; reserved native exact-target/plan authority and dedicated delete grant required. Exact project/branch/parent detail preflight refuses root/default/protected branches before one bodyless DELETE; provider retains child-branch constraints, no force/cascade or protection change. HTTP200 closed acknowledgement and bounded operation observations only, not completed deletion, fencing, zero sessions or no-reconnect proof. HTTP204/ambiguity remains uncertain after one observation including absence, never retried; permanent common journal blocks restart/replay. Native host/policy/custody, durable recovery, entitlement/effects, production deletion authority and independent reviews unresolved. No live deletion, cutover enforcement or enablement."
     },
     {
       "id": "updateProjectBranch",
       "apiArea": "branch",
       "tool": "neon.updateProjectBranch",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/rename",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "branch-label-update"
       ],
       "tier": "write",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/branch-update.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Name-only source subset and refusal contracts; protection and expiry unsupported. Exact branch detail/expected-label preflight is not atomic CAS. One PATCH, closed exact-echo acknowledgement, bounded observation on ambiguity without retry; permanent core journal blocks restart/replay. Native concurrency/effects, entitlement, custody, durable recovery, host/policy integration and independent reviews unresolved; no live rename or enablement."
     },
     {
       "id": "restoreProjectBranch",
@@ -1984,26 +2182,30 @@
       "id": "getProjectBranchSchema",
       "apiArea": "branch",
       "tool": "neon.getProjectBranchSchema",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/db_name/schema",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "database-schema-read"
       ],
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/branch-schema.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source and refusal contracts only; current-head database-bound JSON schema read with copied explicit selected column identities, dedicated schema grant and bounded tables/columns. No DDL, attributes or SQL fallback. Native entitlement/effects, reviews and runtime integration unresolved; no live schema read or non-waking claim."
     },
     {
       "id": "getProjectBranchSchemaComparison",
       "apiArea": "branch",
       "tool": "neon.getProjectBranchSchemaComparison",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/base_branch_id/db_name/schema-comparison",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -2011,18 +2213,21 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/schema-comparison.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source and refusal contracts only; exact directional branch-pair/database current-head comparison with closed has_diff observation, not schema equivalence. Native entitlement/effects, independent reviews and runtime integration remain unresolved; no live schema/SQL call or enablement."
     },
     {
       "id": "getMaskingRules",
       "apiArea": "branch",
       "tool": "neon.getMaskingRules",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/masking_rules",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -2030,12 +2235,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/masking-rules.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and Beta entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "updateMaskingRules",
@@ -2068,12 +2276,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/capabilities.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "startAnonymization",
@@ -2098,20 +2309,24 @@
       "id": "setDefaultProjectBranch",
       "apiArea": "branch",
       "tool": "neon.setDefaultProjectBranch",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/previous_default_id/branch_id/default-switch",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "default-designation-switch"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/branch-default.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only; exact previous-default and nondefault-target preflights, reserved directional switch grant/native plan authority and one bodyless POST. Acknowledgement only, not independent prior-designation removal, routing or persistence. Preflight is not atomic CAS; ambiguity remains uncertain after one target observation, no retry, permanent common replay journal. Native host/custody/durable recovery, effects/entitlement and reviews unresolved; no live designation change."
     },
     {
       "id": "finalizeRestoreBranch",
@@ -2166,37 +2381,44 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/catalog.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "createProjectBranchDatabase",
       "apiArea": "branch",
       "tool": "neon.createProjectBranchDatabase",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/database_name/create",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "database-creation"
       ],
       "tier": "write",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/database-create.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only; exact-owner database creation after bounded name-absence preflight. HTTP201 acknowledges only, not completed creation, persistence, readiness or access enforcement. Preflight not atomic CAS; ambiguity remains uncertain after one list observation, no retry, permanent common journal. Provider owner validation, entitlement/effects, native host/custody, integration and independent reviews unresolved; no live creation or spend."
     },
     {
       "id": "getProjectBranchDatabase",
       "apiArea": "branch",
       "tool": "neon.getProjectBranchDatabase",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/database_name",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -2204,50 +2426,61 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/catalog.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "updateProjectBranchDatabase",
       "apiArea": "branch",
       "tool": "neon.updateProjectBranchDatabase",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/database_name/database_id/rename",
       "sideEffects": [
+        "database-name-update",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "write",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/database-update.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Rename-only source subset; owner-role replacement unsupported. Exact numeric ID/name/branch preflight is not atomic CAS; name replacement races unresolved and destination collisions remain provider-enforced. One PATCH, closed identity/operation acknowledgement only, one old-name detail observation on ambiguity without retry. Permanent common journal blocks same-request replay, not external writers. Native host/policy/custody, durable recovery, effects/entitlement, production authority and independent reviews unresolved; no live rename or enablement."
     },
     {
       "id": "deleteProjectBranchDatabase",
       "apiArea": "branch",
       "tool": "neon.deleteProjectBranchDatabase",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/database_name/database_id",
       "sideEffects": [
+        "database-deletion-request",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/database-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Reserved deletion-request source only; exact immutable database ID/name/branch preflight, one DELETE and closed acknowledgement are not completed deletion, fencing or recovery proof. Native authority/host/policy/custody, durable common journal recovery, provider effects/entitlement, production deletion authority and independent reviews unresolved."
     },
     {
       "id": "listProjectBranchRoles",
@@ -2261,12 +2494,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/catalog.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "createProjectBranchRole",
@@ -2291,7 +2527,7 @@
       "id": "getProjectBranchRole",
       "apiArea": "branch",
       "tool": "neon.getProjectBranchRole",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/role_name",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -2299,31 +2535,38 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/catalog.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "deleteProjectBranchRole",
       "apiArea": "branch",
       "tool": "neon.deleteProjectBranchRole",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/role_name/expected_created_at",
       "sideEffects": [
+        "role-deletion-request",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/role-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Reserved deletion-request source only; exact name/branch/creation-fingerprint and unprotected preflight, one DELETE and closed acknowledgement are not completed deletion, ACL revocation or session fencing. No immutable role ID or conditional deletion; replacement race unresolved. Native authority/host/policy/custody, durable common journal recovery, provider effects/entitlement, production deletion authority and independent reviews unresolved."
     },
     {
       "id": "getProjectBranchRolePassword",
@@ -2356,12 +2599,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/branch-features.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "enableProjectBranchRealtime",
@@ -2386,20 +2632,25 @@
       "id": "disableProjectBranchRealtime",
       "apiArea": "realtime",
       "tool": "neon.disableProjectBranchRealtime",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/realtime/disable",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "asynchronous-deprovisioning",
+        "shared-secret-discard-request"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/realtime-disable.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only; exact dedicated disable grant and reserved native exact-plan authorization. Enabled/not-pending/exact-revision preflight then one DELETE; empty202 is asynchronous acceptance only, not deprovisioning completion, independently verified secret discard, token/session revocation or fencing. Revision not immutable identity; preflight not atomic CAS. Ambiguity stays uncertain after one observation, no retry; permanent common journal blocks replay. Native host/authority/durable recovery/custody, entitlement/effects and independent reviews unresolved; no live disable or runtime registration."
     },
     {
       "id": "getProjectBranchRealtimeSecret",
@@ -2462,7 +2713,7 @@
       "id": "listProjectVPCEndpoints",
       "apiArea": "project",
       "tool": "neon.listProjectVPCEndpoints",
-      "scope": "project_id",
+      "scope": "project_id/vpc_endpoints",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -2470,37 +2721,21 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/project-security.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed source with mocked contracts only; credential entitlement, provider effects, compatible native integration and independent review remain unresolved. No live enablement."
     },
     {
       "id": "assignProjectVPCEndpoint",
       "apiArea": "project",
       "tool": "neon.assignProjectVPCEndpoint",
-      "scope": "project_id/vpc_endpoint_id",
-      "sideEffects": [
-        "provider-effects-unverified",
-        "compute-wake-not-proven"
-      ],
-      "tier": "write",
-      "authorization": "policy",
-      "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
-      "reviewed": false,
-      "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
-    },
-    {
-      "id": "deleteProjectVPCEndpoint",
-      "apiArea": "project",
-      "tool": "neon.deleteProjectVPCEndpoint",
-      "scope": "project_id/vpc_endpoint_id",
+      "scope": "project_id/vpc_endpoint_id/assign",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -2508,31 +2743,62 @@
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/project-vpc-assign.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Existing sole project restriction label-update source/mocks only; exact endpoint/expected-label full-list preflight, dedicated assignment grant and reserved native exact-plan authority. New restrictions and endpoint switches unsupported. Provider requires parent-organization association. Empty200 acknowledges only, not policy preservation, independent network enforcement, connectivity or persistence. Preflight not atomic CAS; ambiguity stays uncertain after one observation, no retry, permanent common replay journal. Effects/entitlement, host/custody/durable recovery and independent native review/integration unresolved; no live network change."
+    },
+    {
+      "id": "deleteProjectVPCEndpoint",
+      "apiArea": "project",
+      "tool": "neon.deleteProjectVPCEndpoint",
+      "scope": "exact_project_id/vpc_endpoint_id/restriction_remove",
+      "sideEffects": [
+        "network-restriction-removal",
+        "may-broaden-network-access",
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/project-vpc-remove.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Source/mocks only: exact restriction/remove grant, native exact-plan authority, host/custody/durable recovery, provider effects/entitlement and independent reviews unresolved. Removal may broaden network access; empty200 acknowledges only, not endpoint deletion, effective policy/session/fencing evidence. Preflight not atomic CAS; ambiguity stays uncertain after one observation, no retry."
     },
     {
       "id": "createProjectEndpoint",
       "apiArea": "endpoint",
       "tool": "neon.createProjectEndpoint",
-      "scope": "project_id",
+      "scope": "exact_project_branch_endpoint_name_create",
       "sideEffects": [
-        "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-creation-request",
+        "compute-activation-and-spend-possible",
+        "disabled-not-independent-fence"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/endpoint-create.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only: named disabled read-only fixed0.25CU/k8s-neonvm/300second timeout creation. Exact branch and bounded complete name-absence preflights, one POST, exact201 acknowledgement only; no readiness/persistence/access enforcement/spend cap. Disabled may be periodically enabled by provider checks. Preflight not atomic CAS; ambiguity stays uncertain after one observation, no retry, permanent common journal. Native authority, custody/durable recovery, entitlement/effects and independent review remain unresolved; no live creation/spend or runtime registration."
     },
     {
       "id": "listProjectEndpoints",
@@ -2546,12 +2812,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/catalog.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "getProjectEndpoint",
@@ -2579,26 +2848,30 @@
       "id": "deleteProjectEndpoint",
       "apiArea": "endpoint",
       "tool": "neon.deleteProjectEndpoint",
-      "scope": "project_id/endpoint_id",
+      "scope": "project_id/branch_id/endpoint_id/delete",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "endpoint-deletion-request"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/endpoint-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Mocked source only; reserved native exact-target/plan authority and dedicated delete grant required. Exact endpoint/project/branch detail preflight then one bodyless DELETE; HTTP200 closed acknowledgement and operation observations only, not completed deletion, session closure, fencing or no-reconnect proof. HTTP204 absent/already-deleted is not success. Ambiguity remains uncertain after one observation including absence, never retried; permanent common journal blocks restart/replay. Native host/policy/custody, durable recovery, entitlement/effects, production deletion authority and independent reviews unresolved. No live deletion, cutover enforcement or enablement."
     },
     {
       "id": "updateProjectEndpoint",
       "apiArea": "endpoint",
       "tool": "neon.updateProjectEndpoint",
-      "scope": "project_id/endpoint_id",
+      "scope": "project_id/branch_id/endpoint_id/rename",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -2606,75 +2879,88 @@
       "tier": "write",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/endpoint-update.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Name-only source subset; unnamed endpoints and compute sizing, suspend timeout, connection/security, settings, pooling and branch changes unsupported. Exact endpoint/project/branch/expected-label preflight is not atomic CAS. Provider endpoint updates may activate idle compute. One PATCH, closed exact-echo acknowledgement only, not readiness; one ambiguity observation without retry. Permanent core journal blocks restart/replay. Native effects, entitlement, custody, durable recovery, host/policy integration and independent reviews unresolved; no live rename or enablement."
     },
     {
       "id": "startProjectEndpoint",
       "apiArea": "endpoint",
       "tool": "neon.startProjectEndpoint",
-      "scope": "project_id/endpoint_id",
+      "scope": "project_id/branch_id/endpoint_id/start",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-start-request"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/endpoint-start.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Mocked source only; reserved native exact-target/plan authority and dedicated start grant required. Exact endpoint/project/branch detail preflight then one bodyless POST; HTTP200 closed acknowledgement and operation observations only, not readiness or successful completion of the complete operation chain. Ambiguity remains uncertain after one observation including active state, never retried; permanent common journal blocks restart/replay. Compute start has explicit provider effects. Native host/policy/custody, durable recovery, entitlement/effects, applicable spend authority and independent reviews unresolved. No live start, cutover enforcement or enablement."
     },
     {
       "id": "suspendProjectEndpoint",
       "apiArea": "endpoint",
       "tool": "neon.suspendProjectEndpoint",
-      "scope": "project_id/endpoint_id",
+      "scope": "project_id/branch_id/endpoint_id/suspend",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "endpoint-suspension-request"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/endpoint-suspend.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Mocked source only; reserved native exact-target/plan authority and dedicated suspend grant required. Exact endpoint/project/branch detail preflight then one bodyless POST; HTTP200 closed acknowledgement and operation observations only, not completed suspension, fencing, session closure or no-reconnect proof. Ambiguity remains uncertain after one observation, never retried; permanent common journal blocks restart/replay. Native host/policy/custody, durable recovery, entitlement/effects and independent reviews unresolved. No live suspension, cutover enforcement or enablement."
     },
     {
       "id": "restartProjectEndpoint",
       "apiArea": "endpoint",
       "tool": "neon.restartProjectEndpoint",
-      "scope": "project_id/endpoint_id",
+      "scope": "project_id/branch_id/endpoint_id/restart",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-restart-request"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/endpoint-restart.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Mocked source only; reserved native exact-target/plan authority and dedicated restart grant required. Exact endpoint/project/branch detail preflight then one bodyless POST; HTTP200 closed acknowledgement and operation observations only, not readiness, successful completion of the complete operation chain, fencing or session closure. Provider immediately suspends then starts compute. Ambiguity remains uncertain after one observation including active state, never retried; permanent common journal blocks restart/replay. Native host/policy/custody, durable recovery, entitlement/effects, applicable production/spend authority and independent reviews unresolved. No live restart, cutover enforcement or enablement."
     },
     {
       "id": "getConsumptionHistoryPerProject",
       "apiArea": "consumption",
       "tool": "neon.getConsumptionHistoryPerProject",
-      "scope": "trusted-account",
+      "scope": "org_id/project_id/consumption/legacy",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -2682,18 +2968,21 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/legacy-consumption.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and legacy-plan entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "getConsumptionHistoryPerProjectV2",
       "apiArea": "consumption",
       "tool": "neon.getConsumptionHistoryPerProjectV2",
-      "scope": "trusted-account",
+      "scope": "org_id/project_id/consumption/v2",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -2701,18 +2990,21 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/consumption.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "getConsumptionHistoryPerBranchV2",
       "apiArea": "consumption",
       "tool": "neon.getConsumptionHistoryPerBranchV2",
-      "scope": "trusted-account",
+      "scope": "org_id/project_id/branch_id/consumption/v2",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -2720,12 +3012,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/branch-consumption.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "getOrganization",
@@ -2739,12 +3034,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "test/organization.test.mjs",
+        "test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed organization metadata source and mock refusal contracts only; provider effects, entitlement, credential placement and independent native review/integration remain unverified. No runtime registration or enablement."
     },
     {
       "id": "listOrgApiKeys",
@@ -2755,15 +3053,18 @@
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
-      "tier": "reserved",
-      "authorization": "native",
+      "tier": "read",
+      "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/organization-keys.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Selected numeric organization API-key identity source only; no tokens, creator/scope/expiry/custody completeness or credential actions. Provider effects, entitlement, credential placement and independent native review/integration remain unverified. No runtime registration or enablement."
     },
     {
       "id": "createOrgApiKey",
@@ -2790,18 +3091,22 @@
       "tool": "neon.revokeOrgApiKey",
       "scope": "org_id/key_id",
       "sideEffects": [
+        "organization-api-key-revocation-request",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/organization-key-revoke.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Reserved organization-key revocation-request source only; bounded exact numeric key-ID preflight, one DELETE and closed acknowledgement do not prove independent enforcement, credential completeness, session fencing or cutover enforcement. Preflight is not atomic CAS. Native credential authority/host/policy/custody, durable common journal recovery, effects/entitlement and independent reviews unresolved."
     },
     {
       "id": "getOrganizationSpendingLimit",
@@ -2815,18 +3120,21 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "test/organization.test.mjs",
+        "test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed nullable spending-configuration read source and mock refusal contracts only; Launch/Scale entitlement, provider effects, credential placement and independent native review/integration remain unverified. No spend enforcement, mutation or enablement."
     },
     {
       "id": "setOrganizationSpendingLimit",
       "apiArea": "organizations",
       "tool": "neon.setOrganizationSpendingLimit",
-      "scope": "org_id",
+      "scope": "exact-org-spending-threshold-decrease",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -2834,18 +3142,21 @@
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/spending-limit-update.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Decrease-only positive existing alert threshold source/mocks; dedicated decrease grant and reserved native exact-plan authority. Alert-only: computes are not suspended, notification delivery unverified. Increases, unset/zero/removal unsupported; preflight not atomic CAS. Ambiguity stays uncertain after one observation, no retry, permanent common replay journal. Effects, admin/plan entitlement, custody/host and independent native review/integration remain unresolved; no live billing or spend change."
     },
     {
       "id": "deleteOrganizationSpendingLimit",
       "apiArea": "organizations",
       "tool": "neon.deleteOrganizationSpendingLimit",
-      "scope": "org_id",
+      "scope": "exact-org-spending-threshold-delete",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -2853,12 +3164,15 @@
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/spending-limit-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Existing positive alert-threshold removal source/mocks only; dedicated delete grant and reserved native exact-plan authority. Exact value preflight then one bodyless DELETE; empty200 JSON acknowledgement only, no independent notification state, spend enforcement or persistence proof. Preflight not atomic CAS; ambiguity stays uncertain after one observation, no retry, permanent common replay journal. Admin/plan entitlement, effects, custody/host and independent native review/integration remain unresolved; no live billing or spend authority."
     },
     {
       "id": "getOrganizationMembers",
@@ -2872,12 +3186,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "test/organization-members.test.mjs",
+        "test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed organization membership read source and mock refusal contracts only; provider effects, entitlement, credential placement and independent native review/integration remain unverified. No member mutation, access enforcement or enablement."
     },
     {
       "id": "getOrganizationMember",
@@ -2891,12 +3208,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "test/organization-members.test.mjs",
+        "test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed organization membership read source and mock refusal contracts only; provider effects, entitlement, credential placement and independent native review/integration remain unverified. No member mutation, access enforcement or enablement."
     },
     {
       "id": "updateOrganizationMember",
@@ -2904,18 +3224,22 @@
       "tool": "neon.updateOrganizationMember",
       "scope": "org_id/member_id",
       "sideEffects": [
+        "organization-member-viewer-role-request",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/organization-member-update.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Viewer-only role update source from exact expected member/editor state; other source roles, promotions and arbitrary role selection unsupported. Mandatory organization/member/user/role preflight then one viewer PATCH; exact HTTP200 echo acknowledges only, not independent effective-access reduction, sessions or fencing. Provider enforces caller admin and role availability. Preflight not atomic CAS; ambiguity stays uncertain after one observation, no retry, permanent common replay journal. Native authority/host/policy/custody/durable recovery/effects/entitlement and independent reviews unresolved."
     },
     {
       "id": "removeOrganizationMember",
@@ -2923,18 +3247,22 @@
       "tool": "neon.removeOrganizationMember",
       "scope": "org_id/member_id",
       "sideEffects": [
+        "organization-member-removal-request",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/organization-member-remove.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Reserved organization-member removal-request source only; exact member/user/organization/role preflight, one DELETE and empty acknowledgement do not prove independent access removal, completeness, session fencing or cutover enforcement. Provider enforces admin and last-admin constraints; preflight is not atomic CAS. Native authority/host/policy/custody, durable common journal recovery, effects/entitlement and independent reviews unresolved."
     },
     {
       "id": "getOrganizationInvitations",
@@ -2948,12 +3276,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/organization-invitations.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed source and mocked contracts exist; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
     },
     {
       "id": "createOrganizationInvitations",
@@ -3005,12 +3336,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/organization-vpc.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "listOrganizationVPCEndpoints",
@@ -3024,12 +3358,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/organization-vpc.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "getOrganizationVPCEndpointDetails",
@@ -3043,56 +3380,67 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/organization-vpc.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Azure detail unsupported in pinned API; source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "assignOrganizationVPCEndpoint",
       "apiArea": "organizations",
       "tool": "neon.assignOrganizationVPCEndpoint",
-      "scope": "org_id/region_id/vpc_endpoint_id",
+      "scope": "org_id/region_id/vpc_endpoint_id/assign",
       "sideEffects": [
-        "provider-effects-unverified",
-        "compute-wake-not-proven"
-      ],
-      "tier": "write",
-      "authorization": "policy",
-      "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
-      "reviewed": false,
-      "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
-    },
-    {
-      "id": "deleteOrganizationVPCEndpoint",
-      "apiArea": "organizations",
-      "tool": "neon.deleteOrganizationVPCEndpoint",
-      "scope": "org_id/region_id/vpc_endpoint_id",
-      "sideEffects": [
+        "existing-organization-vpc-assignment-label-update-request",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/organization-vpc-assign.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Existing AWS assignment label-update only; new associations and Azure unsupported. Source delta review; Security effects/entitlement qualification; compatible common native host/policy/permanent-journal/audit integration; Operator approved credential custody. Empty200 acknowledges only, not network-policy preservation, connectivity, enforcement or persistence. No live grant or enablement."
+    },
+    {
+      "id": "deleteOrganizationVPCEndpoint",
+      "apiArea": "organizations",
+      "tool": "neon.deleteOrganizationVPCEndpoint",
+      "scope": "org_id/region_id/vpc_endpoint_id/delete",
+      "sideEffects": [
+        "irreversible-organization-vpc-endpoint-removal-request",
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/organization-vpc-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Source/mocks only. Exact AWS organization endpoint/detail preflight then one DELETE; empty200 acknowledgement only. Provider states endpoint cannot be added back. Azure unsupported. Preflight not atomic CAS; ambiguity remains uncertain/no retry. Native host/authority/custody, durable recovery, entitlement/effects and independent review remain unresolved; no live removal or cloud-deletion/network/session/fencing proof."
     },
     {
       "id": "getActiveRegions",
       "apiArea": "region",
       "tool": "neon.getActiveRegions",
-      "scope": "trusted-account",
+      "scope": "org_id/selected-region-catalog",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3100,18 +3448,21 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/regions.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed organization-filtered catalog source and mocked contracts authored; entitlement, provider effects, independent native review and runtime integration remain unresolved. No global fallback, provisioning authority, live qualification or enablement."
     },
     {
       "id": "getCurrentUserInfo",
       "apiArea": "users",
       "tool": "neon.getCurrentUserInfo",
-      "scope": "trusted-account",
+      "scope": "user_id/exact-profile",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3119,18 +3470,21 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/user-profile.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed exact-user profile source and mocked contracts authored; entitlement, provider effects, independent native review and runtime integration remain unresolved. No account enumeration, credential authority, live qualification or enablement."
     },
     {
       "id": "getCurrentUserOrganizations",
       "apiArea": "users-organizations",
       "tool": "neon.getCurrentUserOrganizations",
-      "scope": "trusted-account",
+      "scope": "user_id/exact-organizations-collection",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3138,12 +3492,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/user-organizations.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed selected-organization catalog source with exact-user identity proof and mocked contracts authored; entitlement, provider effects, independent native review and runtime integration remain unresolved. Userless credentials refuse; no account-wide fallback, membership mutation, live qualification or enablement."
     },
     {
       "id": "transferProjectsFromUserToOrg",
@@ -3168,7 +3525,7 @@
       "id": "getAuthDetails",
       "apiArea": "users",
       "tool": "neon.getAuthDetails",
-      "scope": "trusted-account",
+      "scope": "account_id/exact-auth",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3176,18 +3533,21 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/auth-details.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Exact-account authentication metadata source and mocked contracts authored; native source review, provider effects, credential completeness and trusted runtime integration remain unresolved. No auth_data disclosure, user/org identity inference, credential action, live grant or enablement."
     },
     {
       "id": "createSnapshot",
       "apiArea": "snapshot",
       "tool": "neon.createSnapshot",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/snapshot_name/create",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3195,12 +3555,12 @@
       "tier": "write",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": ["plugins/neon-broker/test/snapshot-create.test.mjs", "plugins/neon-broker/test/core.compat.mjs"],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Explicit-time snapshot creation source/mocks only; exact branch/name/capture/expiry scope, dedicated create grant and exact plan. Branch identity and bounded name-absence preflight then one POST; acknowledgement only, not completion/recoverability or guaranteed expiry deletion. Ambiguity stays uncertain, no retry; native entitlement/effects/custody/host/durable recovery, spend/production authority and independent reviews remain unresolved."
     },
     {
       "id": "listSnapshots",
@@ -3214,37 +3574,44 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/capabilities.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "deleteSnapshot",
       "apiArea": "snapshot",
       "tool": "neon.deleteSnapshot",
-      "scope": "project_id/snapshot_id",
+      "scope": "project_id/branch_id/snapshot_id/delete",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "asynchronous-snapshot-deletion"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/snapshot-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Mocked source only. Reserved native exact-target/plan authority, durable permanent journal and host/policy/custody integration remain unresolved. Bounded snapshot binding preflight, one DELETE and HTTP202 acceptance-only receipt; ambiguous effects remain uncertain after one bounded observation, never retried or called deleted. No live deletion, production authority or enablement; independent native reviews and provider-effect/entitlement qualification required."
     },
     {
       "id": "updateSnapshot",
       "apiArea": "snapshot",
       "tool": "neon.updateSnapshot",
-      "scope": "project_id/snapshot_id",
+      "scope": "project_id/branch_id/snapshot_id/rename",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3252,12 +3619,15 @@
       "tier": "write",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/snapshot-update.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Name-only mocked source; expiry/retention changes unsupported. Exact copied target/expected-desired label and rename grant; bounded binding/label preflight, one PATCH with name only, HTTP200 exact-echo receipt. Preflight is not atomic CAS. Ambiguity remains uncertain after one bounded observation, never retried; permanent common journal and trusted host/policy/custody/effect/entitlement/native reviews remain unresolved. No live rename or enablement."
     },
     {
       "id": "restoreSnapshot",
@@ -3290,75 +3660,21 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/capabilities.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "setSnapshotSchedule",
       "apiArea": "snapshot",
       "tool": "neon.setSnapshotSchedule",
-      "scope": "project_id/branch_id",
-      "sideEffects": [
-        "provider-effects-unverified",
-        "compute-wake-not-proven"
-      ],
-      "tier": "write",
-      "authorization": "policy",
-      "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
-      "reviewed": false,
-      "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
-    },
-    {
-      "id": "createProjectBranchBucket",
-      "apiArea": "buckets",
-      "tool": "neon.createProjectBranchBucket",
-      "scope": "project_id/branch_id",
-      "sideEffects": [
-        "provider-effects-unverified",
-        "compute-wake-not-proven"
-      ],
-      "tier": "write",
-      "authorization": "policy",
-      "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
-      "reviewed": false,
-      "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
-    },
-    {
-      "id": "listProjectBranchBuckets",
-      "apiArea": "buckets",
-      "tool": "neon.listProjectBranchBuckets",
-      "scope": "project_id/branch_id",
-      "sideEffects": [
-        "provider-effects-unverified",
-        "compute-wake-not-proven"
-      ],
-      "tier": "read",
-      "authorization": "policy",
-      "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
-      "reviewed": false,
-      "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
-    },
-    {
-      "id": "deleteProjectBranchBucket",
-      "apiArea": "buckets",
-      "tool": "neon.deleteProjectBranchBucket",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/backup_schedule/hour",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3366,12 +3682,82 @@
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/snapshot-schedule-update.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only. Existing single-daily-entry hour-only change, copied exact target/hours/explicit unchanged retention; dedicated backup_schedule/hour grant and reserved native exact-plan authority. Exact full-schedule preflight then one fixed PUT. Other schedule shapes, enabling/disabling and retention changes unsupported. Empty200 JSON acknowledges only, not scheduled execution, snapshot creation, recoverability or enforced expiry teardown. Preflight not atomic CAS; ambiguity remains uncertain after one observation, no retry, permanent common journal. Paid-plan entitlement/effects, native custody/host/durable recovery and independent reviews unresolved; no live scheduling or enablement."
+    },
+    {
+      "id": "createProjectBranchBucket",
+      "apiArea": "buckets",
+      "tool": "neon.createProjectBranchBucket",
+      "scope": "project_id/branch_id/bucket_name/create",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven",
+        "private-bucket-creation"
+      ],
+      "tier": "write",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/bucket-create.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Private-only source/mocks; dedicated create grant and exact plan/diff, bounded absence preflight then one fixed private POST. Exact201 name/private echo acknowledges only, not persistence, emptiness, origin ownership or access enforcement. Existing/inherited names and public access refuse. Preflight not atomic CAS; name race unresolved. Ambiguity stays uncertain after one bounded list observation, no retry; permanent common replay journal. Native entitlement/effects/policy/host/custody/durable recovery and reviews unresolved; no live creation, spend or runtime enablement."
+    },
+    {
+      "id": "listProjectBranchBuckets",
+      "apiArea": "buckets",
+      "tool": "neon.listProjectBranchBuckets",
+      "scope": "project_id/branch_id/buckets",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "read",
+      "authorization": "policy",
+      "entitlement": "unknown",
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/branch-resources.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Typed source with mocked contracts only; credential entitlement, provider effects, beta availability, compatible native integration and independent review remain unresolved. No live enablement."
+    },
+    {
+      "id": "deleteProjectBranchBucket",
+      "apiArea": "buckets",
+      "tool": "neon.deleteProjectBranchBucket",
+      "scope": "project_id/branch_id/bucket_name/delete",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/bucket-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Source/mocks only. Reserved native exact-plan authority and dedicated bucket/delete grant required. Bounded list presence/access preflight is not atomic CAS; names are not immutable identity and inherited visibility proves no origin ownership or deletion propagation. Empty204 acknowledges only; ambiguity remains uncertain after one list observation, no retry. Permanent common journal blocks restart/replay. Native host/custody/durable recovery, entitlement/effects and independent review unresolved; no live deletion or enablement."
     },
     {
       "id": "getProjectBranchStorage",
@@ -3385,12 +3771,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/branch-features.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "getProjectBranchAiGateway",
@@ -3404,18 +3793,21 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/branch-features.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "queryProjectBranchLogs",
       "apiArea": "logs",
       "tool": "neon.queryProjectBranchLogs",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/logs/query",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3423,18 +3815,21 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/log-query.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source and refusal contracts only; exact source and <=1h absolute window, fixed structured read-only POST, bounded nontruncated record-count observation only. Private Beta entitlement/effects, native reviews and runtime integration remain unresolved. No live query, content output or enablement."
     },
     {
       "id": "listProjectBranchLogFields",
       "apiArea": "logs",
       "tool": "neon.listProjectBranchLogFields",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/logs/fields",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3442,18 +3837,21 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/log-fields.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "listProjectBranchLogFieldValues",
       "apiArea": "logs",
       "tool": "neon.listProjectBranchLogFieldValues",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/logs/fields/field_name/values",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3461,18 +3859,21 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/log-values.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "listProjectBranchBucketObjects",
       "apiArea": "buckets",
       "tool": "neon.listProjectBranchBucketObjects",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/bucket_name/objects",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3480,37 +3881,41 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/bucket-objects.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. No live grant or enablement."
     },
     {
       "id": "deleteProjectBranchBucketObject",
       "apiArea": "buckets",
       "tool": "neon.deleteProjectBranchBucketObject",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/bucket_name/object_key/delete",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "object-deletion-request"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": ["plugins/neon-broker/test/object-delete.test.mjs", "plugins/neon-broker/test/core.compat.mjs"],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only. Reserved exact native plan authority and terminal bounded prefix-list exact key/size preflight precede one DELETE. Empty204 acknowledges only; key/size not immutable identity, preflight not atomic CAS, ambiguity remains uncertain after one observation without retry. Native host/custody, durable journal/recovery, session entitlement/effects and independent reviews unresolved; no live mutation or enablement."
     },
     {
       "id": "getProjectBranchBucketObject",
       "apiArea": "buckets",
       "tool": "neon.getProjectBranchBucketObject",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/bucket_name/object_key/download",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3518,12 +3923,15 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/object-download.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source and refusal contracts only; exact object download grant, bounded stream/discard and closed observed byte count, never content output. Beta session/Editor/OAuth-update entitlement, provider effects, reviews and native runtime integration unresolved; no live download or credential action."
     },
     {
       "id": "deleteProjectBranchBucketObjectsByPrefix",
@@ -3586,39 +3994,46 @@
       "id": "listCredentials",
       "apiArea": "credentials",
       "tool": "neon.listCredentials",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/credentials",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
-      "tier": "reserved",
-      "authorization": "native",
+      "tier": "read",
+      "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/credential-metadata.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. Beta metadata GET excludes secrets; selected identities only, not scope/expiry/ACL/custody completeness. No live grant or enablement."
     },
     {
       "id": "revokeCredential",
       "apiArea": "credentials",
       "tool": "neon.revokeCredential",
-      "scope": "project_id/branch_id/token_id",
+      "scope": "project_id/branch_id/token_id/revoke",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "credential-revocation-request"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/credential-revoke.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only; exact copied project/branch/opaque ID/revision, dedicated revoke grant and reserved native exact-plan authority. Bounded list preflight requires exact ID, explicit anchor branch and customer-managed user principal; one bodyless DELETE. Documented HTTP204 acknowledges only, not independently observed enforcement/session closure/cutover fencing or credential completeness. Preflight not atomic CAS; ambiguity stays uncertain after one observation even on absence, no retry; permanent journal blocks replay/restart. Entitlement/effects, credential authority/custody, native host/durable recovery and independent reviews unresolved. No live revoke or enablement."
     },
     {
       "id": "revealCredential",
@@ -3662,7 +4077,7 @@
       "id": "listProjectBranchFunctions",
       "apiArea": "functions",
       "tool": "neon.listProjectBranchFunctions",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/functions",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3670,18 +4085,21 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/functions.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. Beta availability unknown. No live grant or enablement."
     },
     {
       "id": "getProjectBranchFunction",
       "apiArea": "functions",
       "tool": "neon.getProjectBranchFunction",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/functions/slug",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3689,50 +4107,61 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/functions.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. Beta availability unknown. No live grant or enablement."
     },
     {
       "id": "updateProjectBranchFunction",
       "apiArea": "functions",
       "tool": "neon.updateProjectBranchFunction",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/slug/rename",
       "sideEffects": [
         "provider-effects-unverified",
+        "function-display-name-update",
         "compute-wake-not-proven"
       ],
       "tier": "write",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/function-update.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Name-only source/mocks with exact stable-ID/slug/current-name preflight and dedicated rename grant/plan; null clearing and deployment/source changes unsupported. Provider enforces branch-local-only updates. Closed acknowledgement only; preflight not atomic CAS and slug replacement race unresolved. Ambiguity stays uncertain after one observation, no retry, permanent common journal. Effects/entitlement, native host/custody/durable recovery and independent reviews remain unresolved; no live change or enablement."
     },
     {
       "id": "deleteProjectBranchFunction",
       "apiArea": "functions",
       "tool": "neon.deleteProjectBranchFunction",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/slug/delete",
       "sideEffects": [
         "provider-effects-unverified",
+        "branch-function-deletion-request",
         "compute-wake-not-proven"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/function-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Reserved exact-plan source/mocks only; stable-ID/slug preflight is not atomic CAS and slug replacement race remains. Empty204 acknowledges only, not invocation refusal or committed-work cancellation. No retry; permanent common journal and uncertain reconciliation required. Native authority/host/custody, durable recovery, effects/entitlement, beta availability and independent reviews unresolved. No live enablement."
     },
     {
       "id": "createProjectBranchFunctionDeployment",
@@ -3757,7 +4186,7 @@
       "id": "listProjectBranchTriggers",
       "apiArea": "functions",
       "tool": "neon.listProjectBranchTriggers",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/triggers",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3765,37 +4194,44 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/triggers.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. Beta availability unknown. No live grant or enablement."
     },
     {
       "id": "createProjectBranchTrigger",
       "apiArea": "functions",
       "tool": "neon.createProjectBranchTrigger",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/functions/function_slug/triggers/name/create",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "disabled-schedule-trigger-creation"
       ],
       "tier": "write",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/trigger-create.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Disabled daily schedule only, exact function identity then bounded visible-name absence preflights and one fixed disabled POST. Exact201 acknowledgement is not persistence or independently verified inactivity. Preflight not atomic CAS; ambiguity stays uncertain after one observation, no retry. Enabling, storage triggers and arbitrary cron/path unsupported. Native host/custody, effects/entitlement, independent reviews and integration remain unresolved; source/mocks only."
     },
     {
       "id": "getProjectBranchTrigger",
       "apiArea": "functions",
       "tool": "neon.getProjectBranchTrigger",
-      "scope": "project_id/branch_id/trigger_id",
+      "scope": "project_id/branch_id/triggers/trigger_id",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3803,37 +4239,69 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/triggers.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source delta review; Security provider-effect/non-waking and entitlement qualification; common-core integrator trusted host/policy/journal/audit integration; Operator approved credential-custody placement. Beta availability unknown. No live grant or enablement."
     },
     {
       "id": "updateProjectBranchTrigger",
       "apiArea": "functions",
       "tool": "neon.updateProjectBranchTrigger",
-      "scope": "project_id/branch_id/trigger_id",
+      "scope": "project_id/branch_id/trigger_id/disable",
       "sideEffects": [
         "provider-effects-unverified",
+        "branch-local-trigger-disable-request",
+        "committed-invocations-not-cancelled",
         "compute-wake-not-proven"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/trigger-disable.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Disable-only local enabled trigger source/mocks; inherited edits, enabling and configuration replacement unsupported. Exact detail/type/version preflight is not atomic CAS. Valid200 disabled/local/version echo acknowledges only, not independently observed stoppage or committed-invocation cancellation. No retry; permanent common journal and uncertain reconciliation required. Native authority/host/custody, durable recovery, effects/entitlement, beta availability and independent reviews unresolved. No live enablement."
     },
     {
       "id": "deleteProjectBranchTrigger",
       "apiArea": "functions",
       "tool": "neon.deleteProjectBranchTrigger",
-      "scope": "project_id/branch_id/trigger_id",
+      "scope": "project_id/branch_id/trigger_id/delete",
+      "sideEffects": [
+        "provider-effects-unverified",
+        "branch-local-trigger-deletion-or-tombstone-request",
+        "committed-invocations-not-cancelled",
+        "compute-wake-not-proven"
+      ],
+      "tier": "reserved",
+      "authorization": "native",
+      "entitlement": "unknown",
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/trigger-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
+      "reviewed": false,
+      "enabled": false,
+      "prerequisite": "Reserved exact-plan source/mocks only; effective-branch detail preflight is not atomic CAS. Empty204 acknowledges only; committed invocations not cancelled. No retry; permanent common journal and uncertain reconciliation required. Native authority/host/custody, durable recovery, effects/entitlement, beta availability and independent reviews unresolved. No live enablement."
+    },
+    {
+      "id": "registerProjectBranchCustomDomain",
+      "apiArea": "functions",
+      "tool": "neon.registerProjectBranchCustomDomain",
+      "scope": "project_id/branch_id/domain/register",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3841,37 +4309,21 @@
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
-      "reviewed": false,
-      "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
-    },
-    {
-      "id": "registerProjectBranchCustomDomain",
-      "apiArea": "functions",
-      "tool": "neon.registerProjectBranchCustomDomain",
-      "scope": "project_id/branch_id",
-      "sideEffects": [
-        "provider-effects-unverified",
-        "compute-wake-not-proven"
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/custom-domain-register.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
       ],
-      "tier": "write",
-      "authorization": "policy",
-      "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only. Dedicated registration grant and reserved native exact-plan authority required. Function-ID/slug and terminal bounded domain-absence preflights are not atomic CAS; function/name replacement races unresolved. Exact201 identity echo acknowledges only, not domain custody, DNS/certificate activation, independent routing or persistence. Activation target/status/diagnostics never evaluated. Ambiguity stays uncertain after one bounded list observation; no retry, permanent common replay journal. Native host/custody/durable recovery, entitlement/effects and independent review unresolved; no live registration or enablement."
     },
     {
       "id": "listProjectBranchCustomDomains",
       "apiArea": "functions",
       "tool": "neon.listProjectBranchCustomDomains",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/custom-domains",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3879,18 +4331,21 @@
       "tier": "read",
       "authorization": "policy",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/branch-resources.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Typed source with mocked contracts only; credential entitlement, provider effects, beta availability, compatible native integration and independent review remain unresolved. No live enablement."
     },
     {
       "id": "deleteProjectBranchCustomDomain",
       "apiArea": "functions",
       "tool": "neon.deleteProjectBranchCustomDomain",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/domain/delete",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3898,12 +4353,15 @@
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/custom-domain-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only. Reserved native exact-plan authority and dedicated domain/delete grant required. Terminal bounded list preflight binds exact domain/function target, not atomic CAS; domain names are not immutable identity. Empty204 acknowledges only, not independent routing stoppage, DNS/certificate removal or fencing. Ambiguity remains uncertain after one bounded list observation, no retry; permanent common journal blocks restart/replay. Native host/custody/durable recovery, entitlement/effects and independent review unresolved; no live deletion or enablement."
     }
   ]
 }

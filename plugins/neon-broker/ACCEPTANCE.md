@@ -2,12 +2,35 @@
 
 ## Implemented source, not accepted enablement
 
-- Five typed metadata operations with strict arguments, exact trusted scope and
-  parent-child binding, safe projections and fixed bounded injected transport.
-- Full 194-row management inventory; 189 operations remain explicitly incomplete.
+- Eighty-one typed source operations: name-only endpoint-label, project-label, branch-label and snapshot-label writes, three reserved
+  snapshot-deletion, endpoint-deletion and endpoint-suspension request adapters and 74 reads, including bounded binary-object byte-count observations,
+  selected OAuth-provider ID/type metadata,
+  bounded log-query counts, current-head schema comparison and selected log-value observations,
+  selected database-schema identities and database-bound advisor summaries,
+  exact-user/organization key and branch credential identities and exact-account authentication metadata,
+  selected masking-rule identities and legacy/project/branch consumption history,
+  selected bucket-object metadata and branch log-field catalogs, exact-user profile/organization/shared-project catalogs, project security/access,
+  email-auth configuration, auth webhook status and organization VPC/configuration/member/invitation metadata plus organization-filtered region/project catalogs and project count,
+  with strict arguments, exact trusted scope and parent-child binding, safe projections
+  and fixed bounded injected transport.
+- Full 194-row management inventory; 113 operations still lack source. Snapshot update
+  supports names only, not expiry/retention; branch update supports names only, not
+  protection/expiry; project update supports names only, not settings/IP allowlist/quota,
+  default compute or history retention. Endpoint update supports names only on already
+  named endpoints, not sizing, connection/security flags, suspend timeout, settings,
+  pooling, provisioner or branch changes. Provider endpoint updates may activate idle
+  compute; acknowledgement is not readiness. Their preflights are not atomic CAS; runtime
+  concurrency/effects, durable uncertainty recovery and policy qualification remain gates.
+  All rows remain
+  unqualified and disabled, with unknown entitlement. These adapters do not complete
+  the package. Prior source merge,
+  current source review, native qualification and runtime enablement are separate.
 - Mocked contracts and common-candidate compatibility fixtures authored; accept
   actual results only from the exact PR head's Actions jobs.
 - No native adapter, credential custody, SQL, installation or runtime registration.
+  Advisor source constructs database analysis, not passive catalog lookup; its
+  runtime use is held pending explicit provider-effect/entitlement qualification.
+  Zero observed issues is not a security verdict.
 
 ## Required before qualification/live use
 
@@ -17,12 +40,22 @@
 2. Accepted authenticated host identity and current project/task ownership adapter;
    exact agent AND resource policy for each tool, including explicit collection
    grants; current trusted scope/revision and provider parent-binding evidence.
-3. Verified metadata-only credential entitlement, broker-only credential custody,
-   bounded/revocable lease and reflected-value redactions. No new credential,
+3. Verified operation-specific credential entitlement, broker-only credential custody,
+   bounded/revocable lease and reflected-value redactions. Binary object observation
+   needs accepted session/Editor/OAuth-update authority, never inferred from metadata
+   access; its source only counts/discards bytes and returns no content. No new credential,
    mint/reset or placement is authorized by source delivery.
-4. Independent provider evidence for non-waking behavior on these exact selected
-   endpoints, API version/configuration and resources. GET/mocks/read labels are
-   insufficient. Missing/stale evidence means no runtime enablement.
+4. Independent provider-effect evidence on these exact selected endpoints, API
+   version/configuration and resources; any claimed non-waking read needs its own
+   proof. GET/mocks/read labels are insufficient. Reserved snapshot deletion needs
+   accepted exact-target/plan native authority and asynchronous/uncertain recovery;
+   HTTP202 is not deletion completion. Reserved endpoint suspension likewise needs
+   accepted exact-target/plan native authority: its HTTP200 acknowledgement and operation
+   observations are not completed suspension, fencing, zero sessions or no-reconnect proof.
+   Reserved endpoint deletion needs the same exact-target/plan native authority and its
+   separate delete grant; HTTP200 operation observations are not completed deletion or
+   session closure. HTTP204/absence never proves causal success; ambiguity stays uncertain.
+   No enforcing actor or scheduler is supplied. Missing/stale evidence means no live use.
 5. Accepted durable journal/audit/outbox and failure/uncertainty recovery; no
    process-local mock store is an installed adapter. No blind retry or fallback.
 6. Exact-head required Actions, CodeQL/Devin and finding dispositions; fresh-context
@@ -30,7 +63,8 @@
 7. Applicable exact-head production/release approval if a production path is
    introduced. Source merge is not installation, adoption or full package completion.
 
-All operations remain disabled. Remaining operations need their own typed source,
-per-operation tests, entitlement/effect evidence and applicable native authority;
-they are not authorized by this slice. Rollback removes this additive source
-package/compatibility job; do not remove real durable tombstones or recovery state.
+All operations remain disabled. Remaining operations need typed source and
+per-operation tests in cohesive follow-on tiers; their live use additionally needs
+entitlement/effect evidence and applicable native authority. This continuation does
+not stop at the eight catalog adapters. Rollback removes the additive source delta;
+do not remove real durable tombstones or recovery state.

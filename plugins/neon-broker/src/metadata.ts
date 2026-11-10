@@ -1,6 +1,7 @@
 import { closed, identifier, integer, jsonData, oneOf, text } from "../../../packages/core/src/schema.js";
 import type { Json, Prepared, ProviderOperation } from "../compat/provider-contracts.js";
 import { PAGE_SIZE, type NeonMetadataTransport } from "./transport.js";
+import { boolean, check, field, optional, rows } from "./projection.js";
 
 export const MAX_PAGES = 3;
 export const MAX_ITEMS = PAGE_SIZE * MAX_PAGES;
@@ -24,34 +25,6 @@ const branchState = oneOf(["init", "resetting", "ready", "archived"]);
 const endpointState = oneOf(["init", "active", "idle"]);
 const endpointType = oneOf(["read_only", "read_write"]);
 
-function check(value: unknown): asserts value {
-  if (!value) throw Error("OUTPUT_REFUSED");
-}
-function record(value: unknown): Record<string, unknown> {
-  check(value !== null && typeof value === "object" && !Array.isArray(value));
-  check(Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null);
-  return value as Record<string, unknown>;
-}
-function field(value: unknown, key: string): unknown {
-  const d = Object.getOwnPropertyDescriptor(record(value), key);
-  check(d?.enumerable && Object.hasOwn(d, "value"));
-  return d.value;
-}
-function optional(value: unknown, key: string): unknown {
-  return Object.hasOwn(record(value), key) ? field(value, key) : undefined;
-}
-function rows(value: unknown, max: number): unknown[] {
-  check(Array.isArray(value) && value.length <= max && Reflect.ownKeys(value).length === value.length + 1);
-  for (let i = 0; i < value.length; i++) {
-    const d = Object.getOwnPropertyDescriptor(value, String(i));
-    check(d?.enumerable && Object.hasOwn(d, "value"));
-  }
-  return value;
-}
-function boolean(value: unknown): boolean {
-  check(typeof value === "boolean");
-  return value;
-}
 function nextCursor(raw: unknown): string | null {
   const pagination = optional(raw, "pagination");
   if (pagination === undefined) return null;
