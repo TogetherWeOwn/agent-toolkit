@@ -23,6 +23,9 @@ import { configBinding } from "./change-records.js";
 import { prepare as prepareBranchChange } from "./tools/get-branch-change-request.js";
 import { prepare as prepareBranchConfigChange } from "./tools/get-branch-config-change-request.js";
 import { prepare as prepareKeyspaceConfigChange } from "./tools/get-keyspace-config-change-request.js";
+import { prepare as prepareRouter } from "./tools/get-router.js";
+import { prepare as prepareDedicatedReadReplica } from "./tools/get-dedicated-read-replica.js";
+import { prepare as prepareSwitchover } from "./tools/get-switchover.js";
 import { prepare as prepareBouncer } from "./tools/get-bouncer.js";
 import { prepare as prepareBranchResize } from "./tools/get-branch-resize-request.js";
 import { prepare as prepareKeyspaceResize } from "./tools/get-keyspace-resize-request.js";
@@ -52,6 +55,9 @@ const deploymentTarget = closed({ ...databaseFields,
   deployment: closed({ id: identifier, number: deployNumber, intoBranch: slug }), intoBranchId: identifier });
 const schemaRecommendationTarget = closed({ ...databaseFields,
   recommendation: closed({ id: identifier, number: deployNumber }) });
+const routerTarget = closed({ ...branchFields, router: closed({ id: identifier, name: slug }) });
+const replicaTarget = closed({ ...branchFields, replica: closed({ id: identifier, name: slug }) });
+const switchoverTarget = closed({ ...branchFields, switchoverId: identifier });
 const bouncerTarget = closed({ ...branchFields, bouncer: closed({ id: identifier, name: slug }) });
 const branchResizeTarget = closed({ ...branchFields, resize: closed({ id: identifier }) });
 const keyspaceResizeTarget = closed({ ...branchFields,
@@ -72,14 +78,16 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof schemaRecommendationTarget.parse> | ReturnType<typeof branchChangeTarget.parse> |
   ReturnType<typeof branchConfigChangeTarget.parse> | ReturnType<typeof keyspaceConfigChangeTarget.parse> |
   ReturnType<typeof bouncerTarget.parse> | ReturnType<typeof branchResizeTarget.parse> |
-  ReturnType<typeof keyspaceResizeTarget.parse>;
+  ReturnType<typeof keyspaceResizeTarget.parse> | ReturnType<typeof routerTarget.parse> |
+  ReturnType<typeof replicaTarget.parse> | ReturnType<typeof switchoverTarget.parse>;
 type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_backup" | "get_backup_policy" | "get_deploy_request" |
   "get_keyspace" | "get_shard" | "get_maintenance_event" |
   "get_organization_membership" | "get_organization_team" | "get_organization_team_member" |
   "get_service_token" | "get_oauth_token" | "get_webhook" | "get_deployment" | "get_schema_recommendation" |
   "get_branch_change_request" | "get_branch_config_change_request" | "get_keyspace_config_change_request" |
-  "get_bouncer" | "get_branch_resize_request" | "get_keyspace_resize_request";
+  "get_bouncer" | "get_branch_resize_request" | "get_keyspace_resize_request" |
+  "get_router" | "get_dedicated_read_replica" | "get_switchover";
 type ResponseIdentity = "name-only-not-immutable" | "record-id-only-parent-not-verified" |
   "record-and-source-ids-destination-not-verified" | "record-and-branch-ids-parent-not-verified" |
   "record-and-user-ids-parent-not-verified" | "record-and-number-parent-and-destination-not-verified" |
@@ -275,6 +283,30 @@ export function bindGetKeyspaceResizeRequestPreparation(rawTarget: unknown): (ra
     branch: target.branch, keyspace: target.keyspace, resize: target.resize }, {});
   return bindRead(`planetscale/keyspace-resize/${target.resize.id}`, target,
     "get_keyspace_resize_request", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindGetRouterPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = routerTarget.parse(rawTarget);
+  const read = prepareRouter({ organization: target.organization, database: target.database,
+    branch: target.branch, router: target.router }, {});
+  return bindRead(`planetscale/router/${target.router.id}`, target,
+    "get_router", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindGetDedicatedReadReplicaPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = replicaTarget.parse(rawTarget);
+  const read = prepareDedicatedReadReplica({ organization: target.organization, database: target.database,
+    branch: target.branch, replica: target.replica }, {});
+  return bindRead(`planetscale/dedicated-read-replica/${target.replica.id}`, target,
+    "get_dedicated_read_replica", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindGetSwitchoverPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = switchoverTarget.parse(rawTarget);
+  const read = prepareSwitchover({ organization: target.organization, database: target.database,
+    branch: target.branch, switchoverId: target.switchoverId }, {});
+  return bindRead(`planetscale/switchover/${target.switchoverId}`, target,
+    "get_switchover", read.request, "record-id-only-parent-not-verified");
 }
 
 export function bindGetWebhookPreparation(rawTarget: unknown): (raw: unknown) => Prepared {

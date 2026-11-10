@@ -294,6 +294,23 @@ registration or credential resolution is added.
 refusal/canary contracts. Thirty-five pure preparations remain separate from
 runtime integration; coverage stays 134/291 with 157 missing adapters.
 
+Three routing-detail seams additionally bind existing router, dedicated-read-replica
+and switchover GETs. Closed host snapshots retain organization/database/branch IDs
+and names, child ID, revision and router/replica name. Resources use distinct
+`planetscale/router/<id>`, `planetscale/dedicated-read-replica/<id>` and
+`planetscale/switchover/<id>` namespaces. Every host field enters the plan hash;
+caller arguments remain empty and requests remain fixed. Router/replica responses
+match ID/name; switchover responses match ID. None authenticates immutable parent
+identity, current name bindings, freshness or non-waking semantics. State, ready,
+autoscaling and timestamp-presence flags never grant failover, resize, wake, spend
+or native authority; failed switchover does not prove an unchanged primary,
+rollback or closure. Trusted current ownership, revision/name revalidation and
+broker transport/custody remain prerequisites. No executor, registration,
+credential resolution or authority consumption is added.
+`test/core-routing-read-preparation.test.mjs` supplies 25 synthetic snapshot/hash/
+refusal/canary contracts. Thirty-eight pure preparations remain separate from
+runtime integration; coverage stays 134/291 with 157 missing adapters.
+
 All 291 entries remain `incomplete`, `implemented=false`, `reviewed=false`,
 `enabled=false`, and entitlement `unknown`. Existing offline read/preview test
 paths are linked as source evidence, never as full `ProviderOperation` tests.

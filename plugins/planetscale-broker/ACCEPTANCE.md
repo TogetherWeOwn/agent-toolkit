@@ -4,6 +4,28 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Routing-detail preparation source increment
+
+Three pure Prepared bindings capture existing router, dedicated-read-replica and
+switchover detail GETs. Closed host snapshots retain immutable parent/child IDs,
+parent names, revision and router/replica names used in paths. Empty arguments
+cannot inject targets, requests, configuration, credentials or authority. Fixed
+GETs and every variable snapshot field enter plan/full hashes; distinct resource
+namespaces separate record kinds with identical IDs.
+
+`test/core-routing-read-preparation.test.mjs` supplies 25 synthetic contracts for
+fixed requests, capture/freeze, every-field hash sensitivity, missing/extra/unsafe/
+accessor refusals, canary omission, child ID/name rebound and unknown states.
+Response projections do not authenticate immutable parents or current name mappings;
+non-waking semantics remain unverified. State/ready/autoscaling/timestamp-presence
+never establishes native authority, unchanged primary, rollback or closure.
+Trusted ownership, current revision/name revalidation and broker transport/custody
+remain prerequisites. No executor, registration, credential resolution, authority
+consumption or live use is added. Exact-head Actions must execute these source
+contracts; no passing result is implied here. Coverage stays **134/291 offline
+adapters; 157 missing**, twelve previews and **38 pure preparations**, zero
+runtime-integrated/reviewed/enabled/adopted. Older increments below are historical.
+
 ## Change-detail preparation source increment
 
 Three pure Prepared bindings capture existing branch-change and branch/keyspace
