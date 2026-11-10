@@ -44,6 +44,10 @@ import { configBinding } from "./change-records.js";
 import { prepare as prepareBranchChange } from "./tools/get-branch-change-request.js";
 import { prepare as prepareBranchConfigChange } from "./tools/get-branch-config-change-request.js";
 import { prepare as prepareKeyspaceConfigChange } from "./tools/get-keyspace-config-change-request.js";
+import { routingBindings, routingIds } from "./routing-records.js";
+import { prepare as prepareRouterList } from "./tools/list-routers.js";
+import { prepare as prepareReplicaList } from "./tools/list-dedicated-read-replicas.js";
+import { prepare as prepareSwitchoverList } from "./tools/list-switchovers.js";
 import { prepare as prepareRouter } from "./tools/get-router.js";
 import { prepare as prepareDedicatedReadReplica } from "./tools/get-dedicated-read-replica.js";
 import { prepare as prepareSwitchover } from "./tools/get-switchover.js";
@@ -158,6 +162,9 @@ const deploymentTarget = closed({ ...databaseFields,
   deployment: closed({ id: identifier, number: deployNumber, intoBranch: slug }), intoBranchId: identifier });
 const schemaRecommendationTarget = closed({ ...databaseFields,
   recommendation: closed({ id: identifier, number: deployNumber }) });
+const routerListTarget = closed({ ...branchFields, routers: routingBindings });
+const replicaListTarget = closed({ ...branchFields, replicas: routingBindings });
+const switchoverListTarget = closed({ ...branchFields, switchoverIds: routingIds, pagination: pageArguments });
 const routerTarget = closed({ ...branchFields, router: closed({ id: identifier, name: slug }) });
 const replicaTarget = closed({ ...branchFields, replica: closed({ id: identifier, name: slug }) });
 const switchoverTarget = closed({ ...branchFields, switchoverId: identifier });
@@ -207,7 +214,8 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof maintenanceEventListTarget.parse> | ReturnType<typeof organizationMemberListTarget.parse> |
   ReturnType<typeof organizationTeamListTarget.parse> | ReturnType<typeof organizationTeamMemberListTarget.parse> |
   ReturnType<typeof serviceTokenListTarget.parse> | ReturnType<typeof oauthTokenListTarget.parse> |
-  ReturnType<typeof webhookListTarget.parse>;
+  ReturnType<typeof webhookListTarget.parse> | ReturnType<typeof routerListTarget.parse> |
+  ReturnType<typeof replicaListTarget.parse> | ReturnType<typeof switchoverListTarget.parse>;
 type ReadOperation = "list_databases" | "list_branches" | "list_database_regions" |
   "list_regions_for_organization" | "list_public_regions" | "get_organization" | "get_database" | "get_branch" |
   "list_backups" | "list_backup_policies" | "list_deploy_requests" |
@@ -220,6 +228,7 @@ type ReadOperation = "list_databases" | "list_branches" | "list_database_regions
   "get_service_token" | "get_oauth_token" | "get_webhook" | "get_deployment" | "get_schema_recommendation" |
   "get_branch_change_request" | "get_branch_config_change_request" | "get_keyspace_config_change_request" |
   "get_bouncer" | "get_branch_resize_request" | "get_keyspace_resize_request" |
+  "list_routers" | "list_dedicated_read_replicas" | "list_switchovers" |
   "get_router" | "get_dedicated_read_replica" | "get_switchover" |
   "get_shard_configuration_profile" | "get_shard_configuration_profile_shard" |
   "get_oauth_application" | "get_organization_sso" | "get_organization_sso_domain" |
@@ -262,6 +271,30 @@ function bindRead(
     jsonData(prepared);
     return prepared;
   };
+}
+
+export function bindListRoutersPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = routerListTarget.parse(rawTarget);
+  const read = prepareRouterList({ organization: target.organization, database: target.database,
+    branch: target.branch, routers: target.routers }, {});
+  return bindRead(`planetscale/branch/${target.branchId}`, target, "list_routers", read.request,
+    "record-and-name-parent-not-verified");
+}
+
+export function bindListDedicatedReadReplicasPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = replicaListTarget.parse(rawTarget);
+  const read = prepareReplicaList({ organization: target.organization, database: target.database,
+    branch: target.branch, replicas: target.replicas }, {});
+  return bindRead(`planetscale/branch/${target.branchId}`, target, "list_dedicated_read_replicas", read.request,
+    "record-and-name-parent-not-verified");
+}
+
+export function bindListSwitchoversPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = switchoverListTarget.parse(rawTarget);
+  const read = prepareSwitchoverList({ organization: target.organization, database: target.database,
+    branch: target.branch, switchoverIds: target.switchoverIds }, target.pagination);
+  return bindRead(`planetscale/branch/${target.branchId}`, target, "list_switchovers", read.request,
+    "record-id-only-parent-not-verified");
 }
 
 export function bindListServiceTokensPreparation(rawTarget: unknown): (raw: unknown) => Prepared {

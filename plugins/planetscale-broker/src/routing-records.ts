@@ -17,6 +17,7 @@ const ids: Schema<readonly string[]> = { parse(value) {
   requireThat(new Set(parsed).size === parsed.length, "schema");
   return Object.freeze(parsed);
 } };
+export { bindings as routingBindings, ids as routingIds };
 const branchFields = { organization: slug, database: slug, branch: slug };
 // Fixed paths and matching children do not establish trusted parent ownership.
 export const routerScope = closed({ ...branchFields, router: binding });

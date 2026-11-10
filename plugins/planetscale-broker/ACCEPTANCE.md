@@ -4,6 +4,40 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Routing collection preparation source increment
+
+Three pure Prepared bindings cover existing router/dedicated-read-replica/
+switchover list GETs. Closed immutable host parents/revision, unique bounded
+child ID/name pairs or switchover IDs, fixed requests and empty caller arguments.
+Existing routing parsers exported/reused without behavior changes. Router/replica
+collections stay plain arrays, refusing invented host pagination; switchovers
+capture bounded host pagination. Every field enters plan/full hashes, including
+children whose rebinding does not change the upstream request. No executor,
+registration, credential resolution or authority consumption.
+
+`test/core-routing-collection-read-preparation.test.mjs` supplies **27 synthetic
+contracts** for fixed requests, every-field hashes, captured snapshots, unique
+bounded bindings, host/caller/accessor refusals, whole-response refusal, exact
+shapes and canary omission. Child matching does not authenticate parents or grant
+upstream collection permission. State/flags do not grant topology/scaling/spend/
+wake/native authority; failed switchovers/completion presence do not prove unchanged
+primary, rollback or closure. Config/connections/SKU/cost/errors/actors/raw times
+are omitted. Current ownership/revision, collection permission, trusted transport/
+raw-body custody and independent non-waking proof remain prerequisites. Coverage
+stays **134/291 offline adapters; 157 missing**, twelve previews and **89 pure
+preparations**, zero runtime-integrated/reviewed/enabled/adopted. New execution
+requires exact-head Actions, not this source declaration.
+
+Prior exact `f3862d4d58f7ece07fe340245ce32100e0e8f27d`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42791178632)
+and [test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42791178632/job/129744790850)
+passed, including lint/typecheck/native-policy/ci-ok and Neon candidate contract.
+[Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42791178042)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42791172419)
+passed. No inline findings/submitted reviews returned. Earlier unchanged SDK
+recovery uncertainty remains unresolved; prior evidence does not cover new routing
+collection contracts. Older counts below are historical.
+
 ## Security-record collection preparation source increment
 
 Three pure Prepared bindings cover existing service-token/OAuth-token/webhook

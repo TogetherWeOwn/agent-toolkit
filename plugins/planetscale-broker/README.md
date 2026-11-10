@@ -6,6 +6,30 @@ manifest, network executor, credential resolver, or tool registration is supplie
 The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
+## Routing collection preparation increment
+
+Three pure `Prepared` bindings cover existing router, dedicated-read-replica and
+switchover list GETs. Closed immutable host parents/revision and 1–32 unique
+child ID/name pairs (switchover IDs only) reuse the existing routing parsers.
+Routers/replicas retain official plain-array collections with no pagination;
+switchovers capture host page 1–100/perPage 1–10. Empty caller arguments and
+fixed requests bind every field into plan/full hashes, including children whose
+rebinding leaves the upstream collection request unchanged.
+
+`test/core-routing-collection-read-preparation.test.mjs` supplies 27 synthetic
+contracts for requests, every-field hashes, deep snapshots, unique bounded
+bindings, host/caller/accessor refusals, whole-response refusal and redaction.
+Receipts match child ID/name or ID, not immutable parent ownership. Router and
+replica flags/state never grant topology, scaling, spend, wake or native authority.
+Switchover failure/completion presence does not establish unchanged primary,
+rollback or closure. Configuration, connections, SKU/cost, errors, actors and raw
+times are omitted. Current ownership/revision, upstream collection permission,
+trusted transport/raw-body custody and independent non-waking proof remain required.
+No executor, registration, credential resolution or authority consumption. Coverage
+stays **134/291 offline adapters; 157 missing**, twelve separate previews and
+**89 pure preparations**, zero runtime-integrated/reviewed/enabled/adopted. New
+execution requires exact-head Actions; older counts below are historical.
+
 ## Security-record collection preparation increment
 
 Three pure `Prepared` bindings in `src/core-read-preparation.ts` cover existing
