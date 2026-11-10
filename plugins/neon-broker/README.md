@@ -2180,13 +2180,39 @@ retry, permanent common journal prevents same-request replay, not external write
 Admin/plan entitlement, effects, custody/host/durable recovery and independent native
 reviews remain unresolved. Source/mocks only, no live billing or spend change.
 
+## Function-bound custom-domain registration source
+
+`createNeonCustomDomainRegisterOperations` copies an exact project/branch/canonical
+lowercase DNS name/stable function ID/slug/revision. A dedicated
+`custom-domains/<domain>/register` grant and conservative reserved native exact-plan
+authority precede credentials. Mandatory function-detail ID/slug proof then terminal
+bounded domain-list absence preflight precede one POST containing only `domain`,
+`entity_type:function` and the copied slug as `entity_id`. Same-entity idempotent
+re-registration is deliberately refused by the absence preflight. Provider enforces
+ownership/internal-name restrictions and project Admin/organization-key entitlement;
+source/mocks establish neither domain custody nor permission for live registration.
+
+Lists use 10-row pages, three-page ceiling and documented cursor/sort metadata;
+duplicate/ancestry/cycle/late-page drift refuses without partial success. Exact201
+domain/type/slug echo yields a closed acknowledgement only. CNAME activation input,
+DNS/certificate/routing status and arbitrary diagnostics are never evaluated/emitted.
+No DNS follow/change or certificate request is supplied. Acknowledgement is not
+independent routing, DNS activation, persistence or domain-custody evidence.
+Preflight is not atomic CAS; function-slug/name replacement races remain unresolved.
+Ambiguity gets one bounded list observation and remains uncertain even on presence
+or absence; no mutation retry. Permanent common journal blocks same-request replay,
+not external writers. Each request retains 64KiB/1s bounds; the eight-request
+worst-case path has an 8.5s operation ceiling. Native host/custody/durable recovery,
+effects/entitlement, Beta availability and independent review remain unresolved.
+Source/mocks only, no live registration, DNS, spend or runtime enablement.
+
 ## Coverage and verification
 
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 130 implemented
-source adapters, 64 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 131 implemented
+source adapters, 63 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

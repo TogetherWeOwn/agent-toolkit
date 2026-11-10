@@ -149,6 +149,122 @@ function safeEnvelope(f, result) {
   }
 }
 
+import { customDomainRegisterFixture, customDomainRegisterArgs, customDomainRegisterScope } from './helpers.mjs';
+function customDomainRegistrationBroker(value = null, overrides = {}, config = customDomainRegisterScope) {
+  const provider = customDomainRegisterFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId, domain: config.domain };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('registerProjectBranchCustomDomain').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.registerProjectBranchCustomDomain', args, context, key);
+  } };
+}
+
+test('Custom domain register: reserved native authority AND exact resource/agent grant precede credentials', async () => {
+  for (const overrides of [{ authority: null }, { authority: { async verify() { return null; }, async consume() { throw Error('not reached'); } } }]) {
+    const f = customDomainRegistrationBroker(null, overrides);
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = 'neon/projects/project-a/branches/br-a/custom-domains/app.example.invalid';
+  for (const resource of [target, target + '/delete', target.replace('br-a', 'other') + '/register',
+    target.replace('project-a', 'other') + '/register', target.replace('app.example.invalid', 'other.invalid') + '/register']) {
+    const f = customDomainRegistrationBroker(); f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = customDomainRegistrationBroker(); denied.common.vector.policy.agents = ['other'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.common.calls.secret, 0);
+  const f = customDomainRegistrationBroker(); const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.equal(result.value.acknowledged, true);
+  assert.equal(f.common.calls.consumed, 1);
+  safeEnvelope(f, result);
+});
+
+test('Custom domain register: stale/wrong-target/consume-denied native evidence each isolated', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = customDomainRegistrationBroker(); const base = f.common.authority; let consumed = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } : change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumed++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.registerProjectBranchCustomDomain', customDomainRegisterArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumed, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Custom domain register: host/resource TOCTOU and caller authority/target overrides refuse before credentials', async () => {
+  for (const host of [{ async authenticate() { return null; } }, { async revalidate() { return false; } }]) {
+    const f = customDomainRegistrationBroker(null, { host });
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = customDomainRegistrationBroker(); let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.call()).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { entity_id: 'other' }, { function_id: 'other' }, { domain: 'other.invalid' }, { retry: true }]) {
+    const g = customDomainRegistrationBroker();
+    assert.equal((await g.common.broker().call('neon.registerProjectBranchCustomDomain', { ...customDomainRegisterArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('Custom domain register: permanent complete/uncertain journal blocks restart replay without inferring activation', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = customDomainRegistrationBroker((url, init) => {
+      if (init.method === 'POST') {
+        if (ambiguous) throw Error(credentialCanary);
+        return response({ domain: customDomainRegisterScope.domain, entity_type: 'function', entity_id: 'hello' }, { status: 201 });
+      }
+      return response(url.includes('/functions/') ? { function: { id: 'fn-a', slug: 'hello' } } : { custom_domains: [] });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const count = f.provider.requests.length; f.common.vector.principal.run = 'restart';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, count);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'POST').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Custom domain register: reflected activation metadata is redacted and foreign preflight blocks POST', async () => {
+  const metadata = { domain: customDomainRegisterScope.domain, entity_type: 'function', entity_id: 'hello', cname_target: derivedCanary, status_reason: credentialCanary };
+  const f = customDomainRegistrationBroker((url, init) => init.method === 'POST' ? response(metadata, { status: 201 }) :
+    response(url.includes('/functions/') ? { function: { id: 'fn-a', slug: 'hello', invoke_url: derivedCanary } } : { custom_domains: [] }));
+  const result = await f.call(); assert.equal(result.ok, true); safeEnvelope(f, result);
+  for (const raw of [{ custom_domains: [metadata] }, { custom_domains: [], branch_id: 'other' }, { custom_domains: [], pagination: { cursor: credentialCanary } }]) {
+    const g = customDomainRegistrationBroker(url => response(url.includes('/functions/') ? { function: { id: 'fn-a', slug: 'hello' } } : raw));
+    const denied = await g.call(); assert.equal(denied.ok, false);
+    assert.equal(g.provider.requests.filter(({ init }) => init.method === 'POST').length, 0);
+    safeEnvelope(g, denied);
+  }
+});
+
+test('Custom domain register: exact maximum resource and prepared budgets fit real common core', async () => {
+  const overhead = 'neon/projects/project-a/branches/br-a/custom-domains//register'.length;
+  const domain = 'a'.repeat(63) + '.' + 'b'.repeat(63) + '.' + 'c'.repeat(63) + '.' + 'd'.repeat(256 - overhead - 192);
+  const f = customDomainRegistrationBroker(null, {}, { ...customDomainRegisterScope, domain, functionId: 'f'.repeat(80), functionSlug: 's'.repeat(20), revision: 'r'.repeat(80) });
+  const p = f.provider.operation('registerProjectBranchCustomDomain').prepare({ ...customDomainRegisterArgs, domain });
+  assert.equal(p.resource.id.length, 256);
+  assert(Buffer.byteLength(JSON.stringify(p)) <= 16384);
+  const result = await f.call(); assert.equal(result.ok, true); safeEnvelope(f, result);
+});
+
 function customDomainDeletionBroker(value = null, overrides = {}, config = customDomainDeleteScope) {
   const provider = customDomainDeleteFixture(value, config);
   const args = { project_id: config.projectId, branch_id: config.branchId, domain: config.domain };

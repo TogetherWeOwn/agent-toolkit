@@ -4255,20 +4255,23 @@
       "id": "registerProjectBranchCustomDomain",
       "apiArea": "functions",
       "tool": "neon.registerProjectBranchCustomDomain",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/domain/register",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/custom-domain-register.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only. Dedicated registration grant and reserved native exact-plan authority required. Function-ID/slug and terminal bounded domain-absence preflights are not atomic CAS; function/name replacement races unresolved. Exact201 identity echo acknowledges only, not domain custody, DNS/certificate activation, independent routing or persistence. Activation target/status/diagnostics never evaluated. Ambiguity stays uncertain after one bounded list observation; no retry, permanent common replay journal. Native host/custody/durable recovery, entitlement/effects and independent review unresolved; no live registration or enablement."
     },
     {
       "id": "listProjectBranchCustomDomains",

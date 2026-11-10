@@ -1,5 +1,23 @@
 # Source-slice threat model
 
+## Function-bound custom-domain registration delta
+
+One copied canonical DNS name and stable function-ID/slug target requires a distinct
+registration grant and reserved native exact-plan authority. Function identity and
+terminal bounded domain-list absence preflights precede one fixed function-domain
+POST. Existing names refuse, including idempotent same-entity registration. Unknown
+future list entity kinds remain bounded data, never target authority. Exact201
+identity echo acknowledges only; no domain-custody, DNS/certificate activation,
+independent routing or persistence proof. Activation targets and diagnostics never
+evaluate or escape. No DNS follow/change, live registration or certificate request.
+Provider retains ownership/internal-hostname/Admin/entitlement checks. Preflight is
+not atomic CAS; function/name replacement races remain unresolved. Ambiguity gets
+one bounded list observation then stays uncertain, never automatic retry. Permanent
+common journal blocks same-request replay, not external writers. Per-request bounds
+and eight-request worst-case/8.5s operation ceiling contain amplification. Native
+host/custody/durable recovery, effects/entitlement and independent review remain
+gates. Source/mocks only, no live permission or runtime qualification.
+
 ## Existing daily snapshot schedule hour-update delta
 
 `setSnapshotSchedule` copies the exact target, expected/desired hours and explicit

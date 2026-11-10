@@ -57,6 +57,7 @@ export interface NeonMetadataTransport {
   addBranchNeonAuthTrustedDomain(project: string, branch: string, provider: string, domain: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteBranchNeonAuthTrustedDomain(project: string, branch: string, provider: string, domain: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchBucketObject(project: string, branch: string, bucket: string, key: string, options: MetadataRequestOptions): Promise<unknown>;
+  registerProjectBranchCustomDomain(project: string, branch: string, domain: string, slug: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchCustomDomain(project: string, branch: string, domain: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchBucket(project: string, branch: string, bucket: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchFunction(project: string, branch: string, slug: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -396,6 +397,10 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     deleteProjectBranchBucketObject: (project: string, branch: string, bucket: string, key: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/buckets/${downloadBucketName.parse(bucket)}/objects/${encodeURIComponent(downloadObjectKey.parse(key))}`,
         new URLSearchParams(), options, undefined, false, 204),
+    registerProjectBranchCustomDomain: (project: string, branch: string, domain: string, slug: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/custom-domains`, new URLSearchParams(), options,
+        JSON.stringify({ domain: customDomainDeleteName.parse(domain), entity_type: "function", entity_id: functionSlug(slug) }),
+        false, false, false, false, false, 201),
     deleteProjectBranchCustomDomain: (project: string, branch: string, domain: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/custom-domains/${customDomainDeleteName.parse(domain)}`,
         new URLSearchParams(), options, undefined, false, 204),
