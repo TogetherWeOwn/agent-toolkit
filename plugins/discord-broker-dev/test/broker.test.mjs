@@ -13,14 +13,18 @@ const UNREGISTERED_WRITES = [
   'discord.message_delete_own', 'discord.thread_delete_own', 'discord.event_delete_own',
 ];
 
-test('exact tool inventory: dev is read-only (14 read, 0 write)', () => {
+test('exact tool inventory: dev is read-only (11 read, 0 write)', () => {
   const tools = toolsFor('dev');
-  assert.equal(tools.length, 14);
+  assert.equal(tools.length, 11);
   assert.ok(tools.every(t => t.tier === 'read'), 'dev registers read tools only');
   assert.deepEqual(manifest.tools.map(t => t.name), tools.map(t => t.name));
   assert.equal(manifest.id, 'togetherweown.discord-broker-dev');
   for (const name of UNREGISTERED_WRITES) assert.ok(!tools.some(t => t.name === name), `${name} must be unregistered`);
   for (const name of UNREGISTERED_WRITES) assert.ok(!manifest.tools.some(t => t.name === name), `${name} must be absent from manifest`);
+  for (const name of ['discord.member_get', 'discord.members_search', 'discord.roles_list']) {
+    assert.ok(!tools.some(t => t.name === name), `${name} must be unregistered (guild-wide personal data)`);
+    assert.ok(!manifest.tools.some(t => t.name === name), `${name} must be absent from manifest`);
+  }
 });
 
 test('dev writes are unregistered: any write name is refused as unknown tool before secret', async () => {
@@ -155,21 +159,36 @@ test('threads_active_list: restricted-parent threads are filtered out', async ()
   f.hygiene(result); f.done();
 });
 
-test('roles_list: guilds with over 100 roles succeed (provider cap 250)', async () => {
-  const roles = Array.from({ length: 120 }, (_, i) => ({ id: `15456449542723${String(i).padStart(4, '0')}`, name: `role-${i}`, color: 0, hoist: false, mentionable: false, position: i, managed: false }));
+test('events_list: restricted-channel events are filtered out', async () => {
   const f = fixture();
-  f.read(`/guilds/${guildId}/roles`, roles);
-  const result = await f.call('discord.roles_list', { ...base });
+  f.read(`/guilds/${guildId}/scheduled-events`, [
+    { id: '1545644954272137401', name: 'public-event', channel_id: channelId, guild_id: guildId, description: 'ok' },
+    { id: '1545644954272137402', name: 'restricted-event', channel_id: '1545644954272137300', guild_id: guildId, description: 'secret' },
+  ]);
+  const result = await f.call('discord.events_list', { ...base });
   assert.equal(result.data.ok, true);
-  assert.equal(result.data.page.length, 120);
-  f.done();
+  assert.deepEqual(result.data.page.map(e => e.name), ['public-event']);
+  assert.ok(!JSON.stringify(result.data).includes('restricted-event') && !JSON.stringify(result.data).includes('secret'), 'Restricted event leaked');
+  f.hygiene(result); f.done();
+});
+
+test('event_get outside allowlisted channels is refused', async () => {
+  const f = fixture();
+  f.read(`/guilds/${guildId}/scheduled-events/1545644954272137402`, { id: '1545644954272137402', name: 'restricted', channel_id: '1545644954272137300', guild_id: guildId });
+  const result = await f.call('discord.event_get', { ...base, eventId: '1545644954272137402' });
+  assert.equal(result.data.ok, false);
+  assert.equal(result.data.rule, 'policy.channel');
+  f.hygiene(result);
 });
 
 test('embedded foreign bot token and invite redacted; message links preserved', async () => {
   const otherToken = `${'A'.repeat(24)}.ABCDEF.${'B'.repeat(27)}`;
+  // Dev is metadata-only: scrub is verified via channel topic (free text in
+  // the retained surface). Message links (discord.com/channels/...) must
+  // survive invite redaction.
   const f = fixture();
-  f.read(`/channels/${channelId}/messages?limit=5`, [{ id: messageId, channel_id: channelId, timestamp: '2026-11-10T00:00:00.000Z', author: { id: '1'.repeat(17), username: 'synthetic' }, content: `leaked ${otherToken} join discord.gg/xyz789 see https://discord.com/channels/${guildId}/${channelId}/${messageId}` }]);
-  const result = await f.call('discord.messages_list', { ...base, channelId, limit: 5 });
+  f.read(`/channels/${channelId}`, { id: channelId, name: 'public', type: 0, guild_id: guildId, topic: `leaked ${otherToken} join DISCORD.GG/xyz789 see https://discord.com/channels/${guildId}/${channelId}/${messageId}` });
+  const result = await f.call('discord.channel_get', { ...base, channelId });
   assert.equal(result.data.ok, true);
   const text = JSON.stringify(result.data);
   assert.ok(!text.includes(otherToken) && !text.includes('xyz789'), 'Embedded token/invite escaped');
@@ -177,32 +196,35 @@ test('embedded foreign bot token and invite redacted; message links preserved', 
   f.hygiene(result); f.done();
 });
 
-test('members_search and messages_search limits are capped at their projection/provider maxima', async () => {
-  // members_search accepts at most 10 (projection cap); 11 must refuse pre-secret.
-  const a = fixture();
-  refused(a, await a.call('discord.members_search', { ...base, query: 'synthetic', limit: 11 }), 'validation.schema');
+test('messages_search limit is capped at the provider maximum; dropped guild-wide reads are unknown tools', async () => {
   // messages_search accepts at most 25 (Discord search maximum); 26 refuses.
   const b = fixture();
   refused(b, await b.call('discord.messages_search', { ...base, query: 'synthetic', channelId, limit: 26 }), 'validation.schema');
   // messages_list keeps its 100 cap.
   const c = fixture();
   refused(c, await c.call('discord.messages_list', { ...base, channelId, limit: 101 }), 'validation.schema');
+  // Guild-wide personal-data reads are unregistered: unknown tool, no secret.
+  for (const name of ['discord.member_get', 'discord.members_search', 'discord.roles_list']) {
+    const events = [];
+    const result = await new Broker().execute({ audit: async e => events.push(e), clock: Date.now }, 'dev', name, { ...base, userId: '1'.repeat(17), query: 'symthetic', limit: 5 }, run);
+    assert.equal(result.isError, true, name);
+    assert.equal(JSON.parse(result.content[0].text).rule, 'validation.unknown_tool', name);
+    assert.equal(events.length, 1, name);
+  }
 });
 
-test('legacy ledger cleanup: expired entries are still swept on dev calls', async () => {
-  // Writes are unregistered, so no new entries are created. Any legacy
-  // entry already in state is still removed via verify+DELETE+GET-404.
+test('read path performs zero outbound mutations; legacy sweep is dormant', async () => {
+  // The read-only envelope must not issue DELETEs on a read call. A legacy
+  // ledger row is left untouched and no sweep audit is emitted.
   const f = fixture();
   const life = `discord:life:message:${channelId}:${messageId}`;
   f.kv.set(life, { kind: 'message', channelId, resourceId: messageId, guildId, agentId: run.agentId, runId: run.runId, authorId: '1469137636663758888', createdAt: Date.now() - 8 * 86400000, expiresAt: Date.now() - 1000, state: 'owned' });
   f.kv.set('discord:life-index', [`life:message:${channelId}:${messageId}`]);
-  f.read(`/channels/${channelId}/messages/${messageId}`, { id: messageId, channel_id: channelId, author: { id: '1469137636663758888' } });
-  f.steps.push({ method: 'DELETE', path: `/api/v10/channels/${channelId}/messages/${messageId}`, status: 204, body: {} });
-  f.read(`/channels/${channelId}/messages/${messageId}`, { message: 'gone' }, { status: 404 });
   f.read(`/guilds/${guildId}`, { id: guildId, name: 'TWO Staging' });
   const result = await f.call('discord.guild_get', { ...base });
   assert.equal(result.data.ok, true);
-  assert.ok(!f.kv.has(life), 'Sweep cleared expired ledger');
-  assert.ok(f.events.some(e => e.rule === 'sweep.deleted'), 'Sweep audit emitted');
+  assert.ok(f.kv.has(life), 'Read call must not delete ledger rows');
+  assert.ok(!f.events.some(e => e.rule === 'sweep.deleted'), 'No sweep on read path');
+  assert.equal(f.calls.length, 1);
   f.done();
 });

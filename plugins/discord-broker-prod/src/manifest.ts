@@ -9,7 +9,7 @@ function closed(properties: Record<string, unknown>, optional: string[] = []): R
 const agent = closed({ agentId: identity, profile: { enum: ["builder", "lead", "researcher-read", "reviewer-read", "none"] }, allowProjectless: { type: "boolean" } } as unknown as Record<string, unknown>, ["allowProjectless"]);
 const manifest: PaperclipPluginManifestV1 = {
   id: "togetherweown.discord-broker-prod", apiVersion: 1, version: "0.1.0", displayName: "Discord Prod Broker",
-  description: "Scoped Discord tools for TogetherWeOwn (tier 1 read only at first) with a hidden bot token and deny-by-default per-agent policy.",
+  description: "Scoped Discord tools for TogetherWeOwn (tier 1 metadata-only read only at first; guild-wide personal-data reads unregistered) with a hidden bot token and deny-by-default per-agent policy.",
   author: "TogetherWeOwn", categories: ["automation"], minimumHostVersion: "2026.1023.0",
   capabilities: ["agent.tools.register", "issues.read", "projects.read", "project.workspaces.read", "http.outbound", "secrets.read-ref", "activity.log.write", "plugin.state.read", "plugin.state.write"],
   entrypoints: { worker: "./dist/plugins/discord-broker-prod/src/worker.js" },

@@ -5,13 +5,13 @@ Per STANDARD §2. This is a draft modeling aid for Security Engineer review, not
 ## 1. Credential ceiling vs exposed subset
 
 - **Ceiling (what the bot token can do, staging):** guild `1545644954272137297` Administrator for bot `1469137636663758888` — i.e. mutable moderation/admin surface at Discord. Wildly more than the exposed subset.
-- **Exposed subset (tools):** 14 reads only. Dev writes (post, reply, edit-own, react, thread/event create, and the three exact-owned deletes) are **unregistered**: the October security review retained the lifecycle finding (no independent teardown scheduler on this host; opportunistic sweep is not one, per commits c72e7ae and 388b473) and records a further authorization concern on the exact-ownership path (details held confidentially, not reproduced here). Per the review’s direction the write envelope is held out of registration rather than repaired in a third cycle. The implementations remain in `packages/discord` (`writeTools`) but `toolsFor("dev")` and the manifest register reads only; any write name is refused as `validation.unknown_tool` before secret resolution (tested). No delete, timeout, roles, bans, channels, webhooks, commands, guild leave/delete, mass DM, or token disclosure exists as a tool.
+- **Exposed subset (tools):** 11 metadata-only reads only (no message bodies; guild-wide personal-data reads `roles_list`/`member_get`/`members_search` unregistered; event reads channel-filtered). Dev writes (post, reply, edit-own, react, thread/event create, and the three exact-owned deletes) are **unregistered**: the October security review retained the lifecycle finding (no independent teardown scheduler on this host; opportunistic sweep is not one, per commits c72e7ae and 388b473) and records a further authorization concern on the exact-ownership path (details held confidentially, not reproduced here). Per the review’s direction the write envelope is held out of registration rather than repaired in a third cycle. The implementations remain in `packages/discord` (`writeTools`) but `toolsFor("dev")` and the manifest register reads only; any write name is refused as `validation.unknown_tool` before secret resolution (tested). No delete, timeout, roles, bans, channels, webhooks, commands, guild leave/delete, mass DM, or token disclosure exists as a tool.
 - **Enforcement:** the exposed subset is the maximum reachable; out-of-scope names (`discord.member_ban`, `discord.webhook_create`, `discord.channel_delete`, `discord.command_create`, `discord.bulk_delete`, `discord.guild_leave`, …) hit `validation.unknown_tool` before secret resolution (tested). Prototype keys (`constructor`, `__proto__`, `toString`) likewise.
 - **Residual:** the ceiling itself remains an Administrator token; a broker bug that escapes the closed surface equals the ceiling. Least-privilege tightening of the token (dropping Administrator, scoping to allowlisted channels) is an Operator action before live canary.
 
 ## 2. Data flows & trust boundaries
 
-Caller args → closed-schema dispatch → `authorize()` (company/profile/channel allowlist/issue binding) → rate reserve → audit `intent` → policy revalidation → `secrets.resolve` (call time) → fixed-origin `https://discord.com/api/v10` via `ctx.http.fetch` (host caller: in-flight <4, FIFO 4, 1 MiB cap, no redirects) → projection/scrub → audit `outcome` → tool result (≤262 KiB). (Ownership-ledger preflight belonged to the unregistered write envelope and is not on this read path.) Token never leaves the broker host except as `Authorization: Bot …` on that fixed origin. **Host-boundary residual:** downstream call-event audit may retain up to ~4000 chars of args/results outside this broker; in-broker no-logging is not end-to-end non-retention (see §10).
+Caller args → closed-schema dispatch → `authorize()` (company/profile/channel allowlist/issue binding) → rate reserve → audit `intent` → policy revalidation → `secrets.resolve` (call time) → fixed-origin `https://discord.com/api/v10` via `ctx.http.fetch` (host caller: in-flight <4, FIFO 4, 1 MiB cap, no redirects) → projection/scrub → audit `outcome` → tool result (≤262 KiB). (Ownership-ledger preflight belonged to the unregistered write envelope and is not on this read path.) Token never leaves the broker host except as `Authorization: Bot …` on that fixed origin. **Zero outbound mutations:** the read path issues GETs only (the legacy sweep DELETE path is dormant). **Host-boundary residual:** downstream call-event audit may retain up to ~4000 chars of args/results outside this broker; in-broker no-logging is not end-to-end non-retention (see §10).
 
 ## 3. Per-tool threat model
 
@@ -25,7 +25,7 @@ Common properties (all tools): closed schema (unknown/spoofed args refused, e.g.
 | `discord.messages_search` | read | yes | content search across allowlisted channel | bounded query/limit; webhook/invite scrub in results |
 | `discord.pins_list`, `reactions_list` | read | yes | pins/reactions read | channel allowlist |
 | `discord.threads_active_list`, `events_list`, `event_get` | read | yes | thread/event metadata | bounded projection; `threads_active_list` post-projection filtered to threads whose parent channel is allowlisted (tested) |
-| `discord.roles_list`, `member_get`, `members_search` | read | yes | role/member metadata (no assignment tool) | no role-write tool exists; bounded search |
+| `discord.roles_list`, `discord.member_get`, `discord.members_search` | **unregistered** | n/a | guild-wide personal-data reads with no channel tie; not needed for counts/links research | `validation.unknown_tool` before secret (tested) |
 | `discord.message_post`, `message_reply`, `message_edit_own`, `reaction_add_own`, `reaction_remove_own`, `thread_create`, `event_create`, `message_delete_own`, `thread_delete_own`, `event_delete_own` | **unregistered** | n/a | previously tier-2/on staging; held out of registration — see scope-reduction note in §1 | `validation.unknown_tool` before secret (tested); implementations retained unregistered in `packages/discord` |
 
 ## 4. Confused deputy
@@ -43,7 +43,7 @@ Common properties (all tools): closed schema (unknown/spoofed args refused, e.g.
 ## 6. Credential escape & leakage
 
 - Token resolved only after auth/policy; never in args, results, audit fields, logs, plugin state, or files. Tests assert token/`secret-dev` absence across result+events+logs+kv, including a guild payload echoing the token, a webhook URL, and `discord.gg/abc123` (tested both plugins).
-- Redaction layers: literal-needle scrub (lines ≥16 chars), `BOT_TOKEN` shape, webhook URL, invite `discord.gg/<code>`, echoed `Bot …` headers. Audit record carries policy hash/revision + request IDs only, never the token.
+- Redaction layers (case-insensitive): literal-needle scrub (lines ≥16 chars), `BOT_TOKEN` shape, webhook URL, invite `discord.gg/<code>`, echoed `Bot …` headers. Audit record carries policy hash/revision + request IDs only, never the token.
 - **Limit:** scrub cannot recover a token printed by an upstream error body into host-side call-event retention (§10); broker-local scrub is the control we own.
 
 ## 7. Rate, quota & load
@@ -60,7 +60,7 @@ All verified by tests with `secretCalls=0, calls=0`: unknown/prototype tool (inc
 
 - Caps: 1 MiB response, 262 KiB output, 30s deadline, rate budgets above, 401 pause 3600s.
 - **Registered tools are read-only.** Per STANDARD §5, read-only tools state that creation lifecycle requirements are not applicable and why: this plugin registers no resource-creating tool, so there is nothing to expire or tear down. State KV is used only for legacy ledger cleanup (below), never as a resource ledger for new work.
-- Legacy cleanup: the opportunistic sweep (≤10 expired entries per authorized dev call, verify + DELETE + GET-404 verification) is retained and tested, but it is **not** an independent scheduler and does not satisfy STANDARD §5 by itself. It exists solely to remove any ledger rows left behind by earlier builds; no new rows can be created while writes are unregistered.
+- Legacy cleanup: the opportunistic sweep is **dormant** — the read path performs zero outbound mutations and leaves legacy rows for operator manual cleanup. It is not an independent scheduler and does not satisfy STANDARD §5.
 - Re-registering any persistent-creation write requires: (a) an independent scheduled teardown that survives restart plus completion/cancellation hooks, (b) a favorable exact-artifact Security review of the write envelope, and (c) fixture evidence covering restart, expiry, and ambiguous-success reconcile. That work is deliberately out of scope for this reduced envelope.
 
 ## 10. Open control gaps (open; must not claim solved)
@@ -71,9 +71,9 @@ All verified by tests with `secretCalls=0, calls=0`: unknown/prototype tool (inc
 4. **Transport bounds:** `ctx.http` reconstructs 204/205/304 replies via `new Response("")` (throws) and the host buffers up to 200 MiB; abort is not forwarded; 30s is per-request, not an operation deadline. Mitigations here: 1 MiB cap, redirect refusal (3xx except 304), preserved 204 handling. Do not claim durable isolation/timeout beyond this.
 5. **State CAS:** `ctx.state` get-then-set is not compare-and-swap. No write tool is registered, so it cannot currently race ledger writes; any future write envelope must address non-atomic ledger updates.
 6. **Lifecycle for persistent creations:** n/a for this read-only plugin (§9). Persistent-creation writes are unregistered because STANDARD §5's independent teardown requirement cannot be met on this host; re-registration gates are listed in §9.
-7. **Retention boundary:** broker does not log, but host call-event audit may retain ~4000 chars of args/results. On prod this can no longer contain member message bodies (metadata-only surface). On dev (staging), bodies are returned for canary verification by design.
+7. **Retention boundary:** broker does not log, but host call-event audit may retain ~4000 chars of args/results. Both surfaces are now metadata-only, so results cannot contain member message bodies; any free text retained on the surface is channel topic / guild description / event description (scrubbed case-insensitively). Dev bodies were removed in this reduction.
 8. **Isolation:** two plugins ≠ OS sandbox ≠ proof of Discord-side isolation; isolation rests on disjoint secret refs + the closed tool set.
 
 ## 11. Acceptance status
 
-Testing: fixture/unit only (`node --test`, synthetic `ctx`), 17 dev tests for the read-only envelope. No live canary, no host verification, no Security Engineer acceptance yet. Blocks install.
+Testing: fixture/unit only (`node --test`, synthetic `ctx`), 18 dev tests for the read-only envelope. No live canary, no host verification, no Security Engineer acceptance yet. Blocks install.

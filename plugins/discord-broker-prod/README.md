@@ -8,9 +8,9 @@ Binds only its own secret ref (`DISCORD_BOT_TOKEN_PROD`, bot Owen `1539711683898
 
 The prod token is **shared with the live Owen bot** (Cloudflare Worker `two-bot-next-production`). The broker-local limiter (30/min per agent, 4000/hr per guild) does **not** bound the live bot’s usage. The Operator must coordinate fleet-wide Discord load before install; keep broker load far below Discord limits, honor `Retry-After`, and stop on 401. This coordination is an install precondition, not something the code enforces alone.
 
-## Tools (14 read-only)
+## Tools (11 read-only)
 
-Tier 1 — read only: `discord.guild_get`, `discord.channels_list`, `discord.channel_get`, `discord.messages_list`, `discord.message_get`, `discord.messages_search`, `discord.pins_list`, `discord.reactions_list`, `discord.threads_active_list`, `discord.events_list`, `discord.event_get`, `discord.roles_list`, `discord.member_get`, `discord.members_search`. Message tools (`messages_list`, `message_get`, `messages_search`, `pins_list`) return **metadata only** (counts, links, timestamps, author names) — raw member message bodies never leave the broker.
+Tier 1 — read only: `discord.guild_get`, `discord.channels_list`, `discord.channel_get`, `discord.messages_list`, `discord.message_get`, `discord.messages_search`, `discord.pins_list`, `discord.reactions_list`, `discord.threads_active_list`, `discord.events_list`, `discord.event_get`. Guild-wide personal-data reads (`discord.roles_list`, `discord.member_get`, `discord.members_search`) are **unregistered** — they have no channel tie and are not needed for bounded research. Message tools (`messages_list`, `message_get`, `messages_search`, `pins_list`) return **metadata only** (counts, links, timestamps, author names) — raw member message bodies never leave the broker.
 
 Tier 3 (prod publish: post/reply/edit-own) is **off at first** and registers no tool. Tier 4 (moderation/admin) is not registered. Hard denies, never constructed: token disclosure, app/intent/permission changes, @everyone/@here escalation, mass DM, bulk ban/prune, guild leave/delete.
 
@@ -28,7 +28,7 @@ Profiles: `builder`, `lead`, `researcher-read`, `reviewer-read`, `none`. Budgets
 
 ## Audit and redaction
 
-Intent + outcome audit per call; audit failure blocks side effects. Scrubbed: bot token, webhook tokens, invite codes, echoed `Bot …` headers.
+Intent + outcome audit per call; audit failure blocks side effects. Scrubbed (case-insensitive): bot token, webhook tokens, invite codes, echoed `Bot …` headers.
 
 ## Acceptance gates
 

@@ -23,9 +23,9 @@ export interface Tool {
   requiresChannel?: "read" | "write" | undefined;
   // Guild-wide list tools with no channel arg: their projected array is
   // filtered by Policy.readChannelIds in Broker.execute ("channel" filters
-  // items by id, "thread" by parent_id). authorize() cannot see them since
-  // they carry no channelId.
-  listScope?: "channel" | "thread" | undefined;
+  // items by id, "thread" by parent_id, "event" by channel_id). authorize()
+  // cannot see them since they carry no channelId.
+  listScope?: "channel" | "thread" | "event" | undefined;
 }
 
 export class Denied extends Error {
@@ -76,7 +76,7 @@ export const readTools: Tool[] = [
   define("discord.pins_list", "read", "List pinned messages in an allowlisted channel.", { channelId: snow }, { channelId: snowflakeJson }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/pins` }), b => list(b, 50).map(projectMessage), "read"),
   define("discord.reactions_list", "read", "List reactions on a message.", { channelId: snow, messageId: snow, emoji: emojiToken(64) }, { channelId: snowflakeJson, messageId: snowflakeJson, emoji: { type: "string", maxLength: 64 } }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/messages/${enc(a.messageId as string)}/reactions/${enc(a.emoji as string)}` }), b => list(b, 100).map(m => pick(m, ["id", "name", "count", "me"])), "read"),
   define("discord.threads_active_list", "read", "List active threads in the bound guild.", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/threads/active` }), b => { const t = object(b).threads; return list(t, 500).map(projectChannel); }, undefined, "thread"),
-  define("discord.events_list", "read", "List scheduled events in the bound guild.", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/scheduled-events` }), b => list(b, 100).map(projectEvent)),
+  define("discord.events_list", "read", "List scheduled events in allowlisted channels of the bound guild.", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/scheduled-events` }), b => list(b, 100).map(projectEvent), undefined, "event"),
   define("discord.event_get", "read", "Read one scheduled event.", { eventId: snow }, { eventId: snowflakeJson }, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/scheduled-events/${enc(a.eventId as string)}` }), b => projectEvent(b)),
   define("discord.roles_list", "read", "List roles in the bound guild.", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/roles` }), b => list(b, 250).map(projectRole)),
   define("discord.member_get", "read", "Read one guild member.", { userId: snow }, { userId: snowflakeJson }, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/members/${enc(a.userId as string)}` }), b => projectMember(b)),
@@ -95,7 +95,7 @@ export const readToolsMeta: Tool[] = [
   define("discord.pins_list", "read", "List pinned message metadata in an allowlisted channel. Bodies are not returned.", { channelId: snow }, { channelId: snowflakeJson }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/pins` }), b => list(b, 50).map(projectMessageMeta), "read"),
   define("discord.reactions_list", "read", "List reactions on a message.", { channelId: snow, messageId: snow, emoji: emojiToken(64) }, { channelId: snowflakeJson, messageId: snowflakeJson, emoji: { type: "string", maxLength: 64 } }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/messages/${enc(a.messageId as string)}/reactions/${enc(a.emoji as string)}` }), b => list(b, 100).map(m => pick(m, ["id", "name", "count", "me"])), "read"),
   define("discord.threads_active_list", "read", "List active threads in the bound guild.", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/threads/active` }), b => { const t = object(b).threads; return list(t, 500).map(projectChannel); }, undefined, "thread"),
-  define("discord.events_list", "read", "List scheduled events in the bound guild.", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/scheduled-events` }), b => list(b, 100).map(projectEvent)),
+  define("discord.events_list", "read", "List scheduled events in allowlisted channels of the bound guild.", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/scheduled-events` }), b => list(b, 100).map(projectEvent), undefined, "event"),
   define("discord.event_get", "read", "Read one scheduled event.", { eventId: snow }, { eventId: snowflakeJson }, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/scheduled-events/${enc(a.eventId as string)}` }), b => projectEvent(b)),
   define("discord.roles_list", "read", "List roles in the bound guild.", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/roles` }), b => list(b, 250).map(projectRole)),
   define("discord.member_get", "read", "Read one guild member.", { userId: snow }, { userId: snowflakeJson }, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/members/${enc(a.userId as string)}` }), b => projectMember(b)),
@@ -142,14 +142,24 @@ function pick(m: unknown, fields: string[]): Record<string, unknown> {
 }
 
 export function toolsFor(kind: EnvKind): Tool[] {
-  // Scope reduction: dev writes are unregistered. Security review of the
-  // tier-1/2 envelope retained the lifecycle finding (no independent
+  // Scope reduction (prior): dev writes are unregistered. Security review of
+  // the tier-1/2 envelope retained the lifecycle finding (no independent
   // scheduled teardown available on this host; sweep is opportunistic) and
   // invalidated the exact-ownership claim for the write path. Per the
-  // review's direction, dev is registered read-only (tier 1) while prod is
+  // review's direction, dev was registered read-only while prod was
   // metadata-only read. `writeTools` below is retained unregistered pending
   // an independent teardown scheduler and a favorable review.
-  return kind === "dev" ? [...readTools] : [...readToolsMeta];
+  //
+  // Further scope reduction (this head): the reduced envelopes were not
+  // accepted, so both plugins now expose only the minimal
+  // metadata-only research surface (counts/links/timestamps/authors, no
+  // message bodies) and drop guild-wide personal-data reads
+  // (member_get / members_search / roles_list) that have no channel tie
+  // and are not needed for bounded research. Event reads are
+  // channel-filtered. `readTools` (body-bearing) is retained
+  // unregistered but not reachable.
+  const reduced = readToolsMeta.filter(t => !["discord.member_get", "discord.members_search", "discord.roles_list"].includes(t.name));
+  return kind === "dev" ? [...reduced] : [...reduced];
 }
 
 export function operationNames(kind: EnvKind): string[] { return toolsFor(kind).map(t => t.name); }
@@ -490,12 +500,10 @@ export class Broker {
       let token: string;
       try { token = await host.secret(config.botTokenSecretRef, caller.companyId); } catch { throw new Denied("secret.unavailable"); }
       guard(typeof token === "string" && token.trim().length > 0, "secret.unavailable");
-      // Expiry sweep runs under the same token after authentication, before
-      // this call's side effect (opportunistic; no host scheduler exists).
-      if (kind === "dev") await this.sweep(host, config, token, requestIds, async (op, outcome, rule) => {
-        if (phase === "intent") phase = "outcome";
-        await emit(outcome === "success" ? "allow" : "deny", rule, outcome);
-      });
+      // Read-only envelope: zero outbound mutations on this path. The
+      // legacy opportunistic sweep (which issued DELETEs) is dormant;
+      // any ledger rows left by earlier builds require operator manual
+      // cleanup and are not deleted by a read call.
       // Body for writes: plain text + allowed_mentions parse []
       let body: string | undefined;
       let intentKey: string | null = null;
@@ -552,11 +560,29 @@ export class Broker {
       try { value = res.status === 204 ? null : tool.project(parse(res), args!); } catch { throw new DiscordFailure("upstream.shape"); }
       // Guild-wide list tools carry no channel arg, so authorize() cannot
       // scope them: filter the projection by readChannelIds here (fail closed
-      // — items without a matching id/parent_id are dropped).
+      // — items without a matching id/parent_id/channel_id are dropped).
       if (tool.listScope && Array.isArray(value)) {
         const allowed = new Set(config.policy.readChannelIds);
-        const key = tool.listScope === "channel" ? "id" : "parent_id";
+        const key = tool.listScope === "channel" ? "id" : tool.listScope === "thread" ? "parent_id" : "channel_id";
         value = (value as unknown[]).filter(item => item !== null && typeof item === "object" && allowed.has(String((item as Record<string, unknown>)[key])));
+      }
+      // Defense in depth: the upstream object must belong to the bound
+      // guild. Channel-scoped endpoints are not guild-scoped by Discord,
+      // so a channel ID from another guild must not pass the allowlist.
+      const assertGuild = (v: unknown): void => {
+        if (Array.isArray(v)) { v.forEach(assertGuild); return; }
+        if (v !== null && typeof v === "object") {
+          const o = v as Record<string, unknown>;
+          if (typeof o.guild_id === "string" && o.guild_id !== guild) throw new Denied("upstream.guild");
+          Object.values(o).forEach(assertGuild);
+        }
+      };
+      assertGuild(value);
+      // event_get carries only an event ID, so its channel tie is only
+      // visible after fetch: refuse when its channel is not allowlisted.
+      if (tool.name === "discord.event_get" && value !== null && typeof value === "object") {
+        const ch = (value as Record<string, unknown>).channel_id;
+        if (typeof ch === "string" && !config.policy.readChannelIds.includes(ch)) throw new Denied("policy.channel");
       }
       const clean = (v: unknown) => scrub(v, [token]) as unknown;
       value = clean(value);

@@ -4,14 +4,14 @@ Status: **NOT ACCEPTED, NOT INSTALLED.** This record binds only the exact artifa
 
 ## Scope reduction (why this file no longer describes writes)
 
-Earlier revisions of this envelope registered dev writes (tier 2) plus exact-owned deletes. Security review (including the re-review of exact head 388b473) withheld acceptance of that envelope: the lifecycle finding was retained because this host offers no independent teardown scheduler (the opportunistic sweep is not one; STANDARD §5), and the review records a further authorization concern on the exact-ownership path. Per the review’s direction, dev writes are now **unregistered** — this file covers only the read-only envelope. The write implementations remain in `packages/discord` (`writeTools`) but are not reachable dispatch targets (see Policy matrix: writes → `validation.unknown_tool`, zero secret resolution).
+Earlier revisions of this envelope registered dev writes (tier 2) plus exact-owned deletes. Security review (including the re-review of exact head 388b473) withheld acceptance of that envelope: the lifecycle finding was retained because this host offers no independent teardown scheduler (the opportunistic sweep is not one; STANDARD §5), and the review records a further authorization concern on the exact-ownership path. Per the review’s direction, dev writes are now **unregistered** and both plugins are **metadata-only** (no message bodies) with guild-wide personal-data reads (`roles_list` / `member_get` / `members_search`) unregistered and event reads channel-filtered — this file covers only the further-reduced 11-tool envelope. The write implementations remain in `packages/discord` (`writeTools`) but are not reachable dispatch targets (see Policy matrix: writes → `validation.unknown_tool`, zero secret resolution).
 
 Do not expand this envelope back to writes without an independent teardown scheduler, favorable exact-artifact review, and the fixture evidence listed in THREAT-MODEL §9.
 
 ## Implementation under review
 
 - `packages/discord` 0.1.0 (secret-free REST v10 helpers, closed-schema building blocks, scrubbing) + `plugins/discord-broker-dev` 0.1.0 (`togetherweown.discord-broker-dev`, SDK `2026.1023.0`, Node `>=24.11 <25`).
-- Tool inventory: 14 read tools, pinned by `test/broker.test.mjs` against `toolsFor("dev")` and the manifest. Zero write tools registered.
+- Tool inventory: 11 read tools, pinned by `test/broker.test.mjs` against `toolsFor("dev")` and the manifest. Zero write tools registered.
 - Configuration envelope: `environment:"dev"`, `guildId:"1545644954272137297"`, `botUserId:"1469137636663758888"`, `botTokenSecretRef:{type:"secret_ref",secretId:<staging ref>}`. Policy limits: agents ≤64, `readChannelIds`/`writeChannelIds` ≤200 each, `revision ≥1`.
 
 ## Exact commands and results (2026-11-10, worktree `work/11516e1f-c38d-4c64-92d9-d1d4826954fb`)
@@ -20,7 +20,7 @@ Do not expand this envelope back to writes without an independent teardown sched
 npx tsc -p plugins/discord-broker-dev/tsconfig.json
 npx tsc -p plugins/discord-broker-prod/tsconfig.json
 node --test --test-timeout=30000 plugins/discord-broker-dev/test/*.test.mjs plugins/discord-broker-prod/test/*.test.mjs
-# → 28 tests, 28 pass, 0 fail (17 dev + 11 prod)
+# → 31 tests, 31 pass, 0 fail (18 dev + 13 prod)
 ```
 
 Pre-push: bounded checks per two-operating-rules rule 16 (formatter/linter/typecheck/changed tests). CI of record is GitHub Actions; exact-head Actions run/job links to be appended on the PR before review.
@@ -29,18 +29,18 @@ Pre-push: bounded checks per two-operating-rules rule 16 (formatter/linter/typec
 
 | Policy | Test evidence |
 | --- | --- |
-| Read-only inventory; writes unregistered | inventory test: exactly 14 read tools, manifest matches `toolsFor("dev")`, all 10 write names absent; write-names test: every write name → `validation.unknown_tool`, 1 deny event, 0 secret/outbound |
+| Read-only inventory; writes unregistered | inventory test: exactly 11 read tools, manifest matches `toolsFor("dev")`, all 10 write names absent; write-names test: every write name → `validation.unknown_tool`, 1 deny event, 0 secret/outbound |
 | Closed tool set; prototype dispatch refused | unknown/prototype test (9 names incl. `member_ban`, `webhook_create`, `guild_leave`) → `validation.unknown_tool`, 1 deny event, 0 secret/outbound |
 | Closed schemas; spoofed args refused | schema test: `limit` 0/101/1.5, `channelId:'123'`, `token`/`url`/`guildId`/`secretRef` extras, `null`/`[]`/`{}` → `validation.schema` |
 | Identity binding (company/run/profile) | `identity.issue_company`, `policy.profile` (`none` read attempt), `identity.issue_run` |
 | Channel allowlist | `policy.channel` (read list excludes channel); `channels_list`/`threads_active_list` post-projection filter (restricted channel/thread absent; 150-channel and 120-role inventories succeed within provider caps) |
-| Bounded limits | `members_search` limit 11 and `messages_search` limit 26 → `validation.schema`; `messages_list` keeps 100; guild `features` array accepted; search uses documented `content` parameter (fixture path asserts it) |
+| Bounded limits | `messages_search` limit 26 → `validation.schema` (dropped `members_search` is `validation.unknown_tool`); `messages_list` keeps 100; guild `features` array accepted; search uses documented `content` parameter (fixture path asserts it) |
 | Redaction | token/webhook/invite in guild payload → absent from result/audit; embedded foreign bot token in message content redacted while message links survive; `hygiene` scans result+events+logs+kv |
 | 401 pause / 429 Retry-After | `upstream.unauthorized` (guild pause); `rate.discord` with `retryAfterSeconds:17` |
 | Audit failure blocks | `failAudit` fixture → `audit.unavailable`, `secretCalls=0` |
 | Fixed origin | fake `http.fetch` asserts `https://discord.com/api/v10/` + `Authorization: Bot <token>` on every call; live `fetch` disabled |
-| Legacy ledger cleanup | pre-seeded expired entry is removed via verify+DELETE+GET-404 with `sweep.deleted` audit; no new entries are created (no creation path exists) |
-| Legacy-quarter note | Former tier-2 tests (ownership ledger, post/edit, expiry sweep creation-side, restart, ambiguous reconcile, 404-gone) have been removed with the writes; only the legacy-cleanup sweep test remains (above). |
+| Zero outbound mutations; legacy sweep dormant | pre-seeded expired entry is left untouched; read issues 1 GET only, no `sweep.deleted` audit, no DELETE |
+| Legacy-quarter note | Former tier-2 tests (ownership ledger, post/edit, expiry sweep creation-side, restart, ambiguous reconcile, 404-gone) have been removed with the writes; the dormant-sweep test asserts no DELETE on read. |
 
 ## Governance / approval gaps
 
@@ -51,7 +51,7 @@ Pre-push: bounded checks per two-operating-rules rule 16 (formatter/linter/typec
 
 ## Lifecycle / spend caps
 
-Registered tools are read-only; creation lifecycle is not applicable (THREAT-MODEL §9). Caps: 1 MiB response, 262 KiB output, 30s per-request deadline, 30/min per-agent + 4000/hr per-guild budgets, 401 → 3600s pause. The legacy sweep (≤10 deletions/call) remains implemented for rows left by earlier builds only.
+Registered tools are read-only; creation lifecycle is not applicable (THREAT-MODEL §9). Caps: 1 MiB response, 262 KiB output, 30s per-request deadline, 30/min per-agent + 4000/hr per-guild budgets, 401 → 3600s pause. The legacy sweep is dormant; any legacy rows require operator manual cleanup and are not deleted by reads.
 
 ## Security acceptance
 

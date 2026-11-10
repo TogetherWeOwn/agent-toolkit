@@ -6,14 +6,18 @@ import manifest from '../dist/plugins/discord-broker-prod/src/manifest.js';
 
 globalThis.fetch = () => { throw Error('Live network is forbidden in fixtures'); };
 
-test('prod inventory is read-only: 14 reads, no publish tools registered', () => {
+test('prod inventory is read-only: 11 reads, no publish tools registered', () => {
   const tools = toolsFor('prod');
-  assert.equal(tools.length, 14);
+  assert.equal(tools.length, 11);
   assert.ok(tools.every(t => t.tier === 'read'));
   assert.deepEqual(manifest.tools.map(t => t.name), tools.map(t => t.name));
   assert.equal(manifest.id, 'togetherweown.discord-broker-prod');
   for (const name of ['discord.message_post', 'discord.message_reply', 'discord.message_edit_own', 'discord.reaction_add_own', 'discord.thread_create', 'discord.event_create']) {
     assert.ok(!manifest.tools.some(t => t.name === name), `${name} must be off at first`);
+    assert.ok(!tools.some(t => t.name === name));
+  }
+  for (const name of ['discord.member_get', 'discord.members_search', 'discord.roles_list']) {
+    assert.ok(!manifest.tools.some(t => t.name === name), `${name} must be unregistered (guild-wide personal data)`);
     assert.ok(!tools.some(t => t.name === name));
   }
 });
@@ -120,11 +124,17 @@ test('prod embedded foreign bot token redacted; message links preserved', async 
   g.hygiene(r);
 });
 
-test('prod limits: members_search at most 10, search at most 25', async () => {
-  const a = fixture();
-  refused(a, await a.call('discord.members_search', { ...base, query: 'synthetic', limit: 11 }), 'validation.schema');
+test('prod limits: search at most 25; dropped guild-wide reads are unknown tools', async () => {
   const b = fixture();
   refused(b, await b.call('discord.messages_search', { ...base, query: 'synthetic', channelId, limit: 26 }), 'validation.schema');
+  for (const name of ['discord.member_get', 'discord.members_search', 'discord.roles_list']) {
+    const events = [];
+    const { Broker: BrokerProd } = await import('../dist/plugins/discord-broker-prod/src/broker.js');
+    const result = await new BrokerProd().execute({ audit: async e => events.push(e), clock: Date.now }, 'prod', name, { ...base }, run);
+    assert.equal(result.isError, true, name);
+    assert.equal(JSON.parse(result.content[0].text).rule, 'validation.unknown_tool', name);
+    assert.equal(events.length, 1, name);
+  }
 });
 
 test('token canary / webhook / invite redaction on prod too', async () => {
@@ -134,5 +144,26 @@ test('token canary / webhook / invite redaction on prod too', async () => {
   assert.equal(result.data.ok, true);
   const visible = JSON.stringify({ result, events: f.events });
   assert.ok(!visible.includes('should-redact') && !visible.includes('abc123'));
+  f.hygiene(result);
+});
+
+test('prod events_list restricts to allowlisted channels', async () => {
+  const f = fixture();
+  f.read(`/guilds/${guildId}/scheduled-events`, [
+    { id: '326474832151838740', name: 'public-event', channel_id: channelId, guild_id: guildId },
+    { id: '326474832151838741', name: 'restricted-event', channel_id: '326474832151838739', guild_id: guildId },
+  ]);
+  const result = await f.call('discord.events_list', { ...base });
+  assert.equal(result.data.ok, true);
+  assert.deepEqual(result.data.page.map(e => e.name), ['public-event']);
+  f.hygiene(result); f.done();
+});
+
+test('prod channel_get from another guild is refused (guild binding)', async () => {
+  const f = fixture();
+  f.read(`/channels/${channelId}`, { id: channelId, name: 'other-guild-channel', guild_id: '9999999999999999999', type: 0 });
+  const result = await f.call('discord.channel_get', { ...base, channelId });
+  assert.equal(result.data.ok, false);
+  assert.equal(result.data.rule, 'upstream.guild');
   f.hygiene(result);
 });

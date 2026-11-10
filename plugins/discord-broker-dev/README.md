@@ -4,15 +4,15 @@ Version 0.1.0. Maintainer: agent-toolkit maintainers. **Not installed or securit
 
 Binds only its own secret ref (`DISCORD_BOT_TOKEN_STAGING`, bot Owen QA Test `1469137636663758888`) and its own guild allowlist (TWO Staging `1545644954272137297`). Agents never see the token. Prod (`plugins/discord-broker-prod`) is a separate plugin with separate secret ref, guild, and deployment; it cannot reach staging resources and vice versa. ADR: separate plugin bindings are not an OS sandbox or proof of Discord-side isolation; the tool split is the isolation mechanism.
 
-## Tools (14: read only)
+## Tools (11: read only)
 
 Each tool requires `issueId` + `workspaceId` selectors. The broker verifies the caller’s company/profile, the issue’s company/assignee/current run/active status, and (when bound to a project) the explicit workspace. Unknown fields and arguments fail closed; there is no generic HTTP proxy.
 
-Tier 1 — read: `discord.guild_get`, `discord.channels_list`, `discord.channel_get`, `discord.messages_list`, `discord.message_get`, `discord.messages_search`, `discord.pins_list`, `discord.reactions_list`, `discord.threads_active_list`, `discord.events_list`, `discord.event_get`, `discord.roles_list`, `discord.member_get`, `discord.members_search`.
+Tier 1 — read (metadata-only, both plugins): `discord.guild_get`, `discord.channels_list`, `discord.channel_get`, `discord.messages_list`, `discord.message_get`, `discord.messages_search`, `discord.pins_list`, `discord.reactions_list`, `discord.threads_active_list`, `discord.events_list`, `discord.event_get`. Guild-wide personal-data reads (`discord.roles_list`, `discord.member_get`, `discord.members_search`) are **unregistered** — they have no channel tie and are not needed for bounded research. Event reads are filtered to allowlisted channels.
 
 ## Scope reduction (writes unregistered)
 
-Dev writes (post/reply/edit-own/react/thread/event create and the exact-owned deletes) are **unregistered** in this build. Security review found the write envelope does not meet STANDARD §5 (this host offers no independent teardown scheduler; the opportunistic sweep is not a scheduler) and invalidated its exact-ownership claim. Per the review’s direction, the dev plugin ships read-only while the write design is held for an independent scheduler and a favorable review. The write implementations remain in `packages/discord` unregistered; they are not reachable dispatch targets, and any write name is refused as `validation.unknown_tool` before secret resolution (tested).
+Dev message tools are **metadata-only** in this build (no message bodies on either plugin). Dev writes (post/reply/edit-own/react/thread/event create and the exact-owned deletes) are **unregistered** in this build. The read path performs zero outbound mutations (legacy sweep is dormant). Security review found the write envelope does not meet STANDARD §5 (this host offers no independent teardown scheduler; the opportunistic sweep is not a scheduler) and invalidated its exact-ownership claim. Per the review’s direction, the dev plugin ships read-only while the write design is held for an independent scheduler and a favorable review. The write implementations remain in `packages/discord` unregistered; they are not reachable dispatch targets, and any write name is refused as `validation.unknown_tool` before secret resolution (tested).
 
 Tier 3 (prod publish) is off at first; tier 4 (moderation/admin: bulk delete, timeout, roles, channels, bans, webhooks, commands) is not registered. Hard denies, never constructed: token disclosure, app/intent/permission changes, @everyone/@here escalation, mass DM, bulk ban/prune, guild leave/delete.
 
@@ -24,7 +24,7 @@ Tier 3 (prod publish) is off at first; tier 4 (moderation/admin: bulk delete, ti
 
 ## Audit and redaction
 
-Every call emits an `intent` and an `outcome` audit record; audit failure blocks side effects (`audit.unavailable`). Outputs, audit, logs, and plugin state are scrubbed for the bot token, webhook tokens (`discord.com/api/webhooks/<id>/<token>`), and invite codes (`discord.gg/<code>`), plus any echoed `Bot …` auth header.
+Every call emits an `intent` and an `outcome` audit record; audit failure blocks side effects (`audit.unavailable`). Outputs, audit, logs, and plugin state are scrubbed (case-insensitive) for the bot token, webhook tokens (`discord.com/api/webhooks/<id>/<token>`), and invite codes (`discord.gg/<code>`), plus any echoed `Bot …` auth header.
 
 ## Acceptance gates
 

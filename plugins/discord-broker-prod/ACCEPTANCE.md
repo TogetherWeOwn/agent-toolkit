@@ -5,7 +5,7 @@ Status: **NOT ACCEPTED, NOT INSTALLED.** Binds only the exact artifact and confi
 ## Implementation under review
 
 - `packages/discord` 0.1.0 + `plugins/discord-broker-prod` 0.1.0 (`togetherweown.discord-broker-prod`, SDK `2026.1023.0`, Node `>=24.11 <25`).
-- Tool inventory: 14 reads, zero writes, pinned by `test/broker.test.mjs` (asserts `message_post`/`message_reply`/`message_edit_own`/`reaction_add_own`/`thread_create`/`event_create` absent from manifest and `toolsFor("prod")`).
+- Tool inventory: 11 reads, zero writes, pinned by `test/broker.test.mjs` (asserts `message_post`/`message_reply`/`message_edit_own`/`reaction_add_own`/`thread_create`/`event_create` absent from manifest and `toolsFor("prod")`).
 - Configuration envelope: `environment:"prod"`, `guildId:"326474832151838730"`, `botUserId:"1539711683898118154"`, `botTokenSecretRef:{type:"secret_ref",secretId:<prod ref>}`.
 
 ## Exact commands and results (2026-11-10, branch `work/11516e1f-c38d-4c64-92d9-d1d4826954fb`)
@@ -13,7 +13,7 @@ Status: **NOT ACCEPTED, NOT INSTALLED.** Binds only the exact artifact and confi
 ```bash
 npx tsc -p plugins/discord-broker-prod/tsconfig.json
 node --test --test-timeout=30000 plugins/discord-broker-dev/test/*.test.mjs plugins/discord-broker-prod/test/*.test.mjs
-# → 28 tests, 28 pass, 0 fail (17 dev + 11 prod)
+# → 31 tests, 31 pass, 0 fail (18 dev + 13 prod)
 ```
 
 Pre-push: bounded checks per rule 16. CI of record is GitHub Actions; exact-head run/job links to be appended on the PR.
@@ -22,12 +22,14 @@ Pre-push: bounded checks per rule 16. CI of record is GitHub Actions; exact-head
 
 | Policy | Test evidence |
 | --- | --- |
-| Read-only tool set | inventory test: 14 tools, all `tier:"read"`, 6 write names absent |
+| Read-only tool set | inventory test: 11 tools, all `tier:"read"`, 6 write names + 3 guild-wide personal-data names absent |
 | Publish refusal before secret/HTTP | 7 names (`message_post`…`webhook_create`) → `validation.unknown_tool`, 1 audit event each |
 | Cross-environment refusal | `environment:"dev"` config on prod plugin → `policy.environment` |
 | Closed schemas + allowlist + profile | `validation.schema`, `policy.channel`, `policy.profile`; `channels_list`/`threads_active_list` post-projection filter (restricted entries absent) |
-| Bounded limits | `members_search` limit 11 and `messages_search` limit 26 → `validation.schema`; search uses documented `content` parameter (fixture path asserts it) |
+| Bounded limits | `messages_search` limit 26 → `validation.schema` (dropped `members_search` is `validation.unknown_tool`); search uses documented `content` parameter (fixture path asserts it) |
 | Search returns counts/links, no raw storage | `messages_search` test asserts `total_results`/message metadata without `secret-prod` leakage and without message bodies; usage policy: no embeddings/Hindsight ingest |
+| Events restricted to allowlisted channels; guild binding | `events_list` filter test, `channel_get` cross-guild refusal test (`upstream.guild`) |
+| Guild-wide personal-data reads unregistered | `member_get` / `members_search` / `roles_list` → `validation.unknown_tool` (inventory + refusal tests) |
 | Metadata-only surface (no bodies) | `messages_list` / `message_get` / `pins_list` tests assert sentinel body text absent from results — bodies never leave the broker, so host retention cannot persist them |
 | Redaction | token/webhook/invite in guild description → absent from result/audit; embedded foreign bot token redacted |
 

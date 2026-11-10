@@ -172,11 +172,11 @@ export function projectEvent(value: unknown): unknown {
   return pick(value, ["id", "name", "description", "scheduled_start_time", "scheduled_end_time", "privacy_level", "status", "channel_id", "entity_type", "guild_id"]);
 }
 
-const BOT_TOKEN = /(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{24,}\.[A-Za-z0-9_-]{6}\.[A-Za-z0-9_-]{27,}(?![A-Za-z0-9_-])/g;
-const WEBHOOK = /discord\.com\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+/g;
+const BOT_TOKEN = /(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{24,}\.[A-Za-z0-9_-]{6}\.[A-Za-z0-9_-]{27,}(?![A-Za-z0-9_-])/gi;
+const WEBHOOK = /discord\.com\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+/gi;
 // Invite URLs only: require /invite/ on discord.com so ordinary paths such as
 // message links (discord.com/channels/<guild>/<channel>/<message>) survive.
-const INVITE = /\b(?:https?:\/\/)?(?:discord(?:app)?\.com\/invite|discord\.gg(?:\/invite)?)\/[A-Za-z0-9-]{2,}/g;
+const INVITE = /\b(?:https?:\/\/)?(?:discord(?:app)?\.com\/invite|discord\.gg(?:\/invite)?)\/[A-Za-z0-9_-]{2,}/gi;
 
 export function scrub(value: unknown, secrets: string[]): unknown {
   const needles = [...new Set(secrets.flatMap(s => [s, ...s.split(/\r?\n/).filter((line: string) => line.length >= 16)]).filter(Boolean))].sort((a, b) => b.length - a.length);
@@ -186,7 +186,7 @@ export function scrub(value: unknown, secrets: string[]): unknown {
       for (const s of needles) out = out.split(s).join("[REDACTED]");
       out = out.replace(BOT_TOKEN, "[REDACTED]").replace(WEBHOOK, "[REDACTED]").replace(INVITE, "discord.gg/[REDACTED]");
       // Strip any echoed Bot/Authorization headers
-      out = out.replace(/Bot [A-Za-z0-9_\-.]+/g, "Bot [REDACTED]");
+      out = out.replace(/Bot\s+[A-Za-z0-9_\-.]+/gi, "Bot [REDACTED]");
       return out;
     }
     if (Array.isArray(v)) return v.map(visit);
