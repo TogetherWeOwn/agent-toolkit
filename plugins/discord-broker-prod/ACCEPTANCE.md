@@ -13,7 +13,7 @@ Status: **NOT ACCEPTED, NOT INSTALLED.** Binds only the exact artifact and confi
 ```bash
 npx tsc -p plugins/discord-broker-prod/tsconfig.json
 node --test --test-timeout=30000 plugins/discord-broker-dev/test/*.test.mjs plugins/discord-broker-prod/test/*.test.mjs
-# → 20 tests, 20 pass, 0 fail (12 dev + 8 prod)
+# → 28 tests, 28 pass, 0 fail (17 dev + 11 prod)
 ```
 
 Pre-push: bounded checks per rule 16. CI of record is GitHub Actions; exact-head run/job links to be appended on the PR.
@@ -25,17 +25,19 @@ Pre-push: bounded checks per rule 16. CI of record is GitHub Actions; exact-head
 | Read-only tool set | inventory test: 14 tools, all `tier:"read"`, 6 write names absent |
 | Publish refusal before secret/HTTP | 7 names (`message_post`…`webhook_create`) → `validation.unknown_tool`, 1 audit event each |
 | Cross-environment refusal | `environment:"dev"` config on prod plugin → `policy.environment` |
-| Closed schemas + allowlist + profile | `validation.schema`, `policy.channel`, `policy.profile` |
+| Closed schemas + allowlist + profile | `validation.schema`, `policy.channel`, `policy.profile`; `channels_list`/`threads_active_list` post-projection filter (restricted entries absent) |
+| Bounded limits | `members_search` limit 11 and `messages_search` limit 26 → `validation.schema`; search uses documented `content` parameter (fixture path asserts it) |
 | Search returns counts/links, no raw storage | `messages_search` test asserts `total_results`/message metadata without `secret-prod` leakage and without message bodies; usage policy: no embeddings/Hindsight ingest |
 | Metadata-only surface (no bodies) | `messages_list` / `message_get` / `pins_list` tests assert sentinel body text absent from results — bodies never leave the broker, so host retention cannot persist them |
-| Redaction | token/webhook/invite in guild description → absent from result/audit |
+| Redaction | token/webhook/invite in guild description → absent from result/audit; embedded foreign bot token redacted |
 
-## TWO-5606 research protocol (post-install)
+## Research protocol (post-install)
 
 1. Operator sets `readChannelIds` to public community channels only.
-2. Queries bounded (`query` per TWO ID, `limit≤100`); agents `lead`/`researcher-read` with `allowProjectless:true`.
-3. Report per TWO ID: count, message links, channel, date window, coverage limits. Explicitly separate “asked for” from “mentioned/pain/adjacent” and state “no matches in coverage” where applicable.
+2. Queries bounded (`query` per research term, `limit≤25`, the Discord search maximum); agents `lead`/`researcher-read` with `allowProjectless:true`.
+3. Report per queried term: count, message links, channel, date window, coverage limits. Explicitly separate “asked for” from “mentioned/pain/adjacent” and state “no matches in coverage” where applicable.
 4. No raw member message storage anywhere (broker state, issues, Hindsight).
+5. Live canary must confirm Discord accepts bot-token guild search (`discord.messages_search` with the `content` query parameter) before research use; fixture success alone is not evidence for this endpoint.
 
 ## Governance / approval gaps
 

@@ -14,9 +14,9 @@ Tier 1 — read only: `discord.guild_get`, `discord.channels_list`, `discord.cha
 
 Tier 3 (prod publish: post/reply/edit-own) is **off at first** and registers no tool. Tier 4 (moderation/admin) is not registered. Hard denies, never constructed: token disclosure, app/intent/permission changes, @everyone/@here escalation, mass DM, bulk ban/prune, guild leave/delete.
 
-## Research use (TWO-5606)
+## Research use
 
-Read-only answers to “has anyone in the TWO Discord asked for TWO-1081/1082/1083/1084/1087?”:
+Bounded read-only research answers (e.g. “has anyone in the Discord asked for this feature?”):
 
 - Public community channels only — the Operator sets `readChannelIds` to that set; nothing outside the allowlist is reachable.
 - Bounded queries with the `profile: researcher-read` + `allowProjectless:true` grant (projectless research path; residual risk documented in THREAT-MODEL).

@@ -20,11 +20,11 @@ Common properties (all tools): closed schema (unknown/spoofed args refused, e.g.
 | Tool | Tier | Reads credential? | Effect / risk | Key control |
 | --- | --- | --- | --- | --- |
 | `discord.guild_get` | read | yes, call-time | guild metadata exposure | guild = config; audit both phases |
-| `discord.channels_list` / `channel_get` | read | yes | channel enumeration within guild | bounded projection; no token in output |
+| `discord.channels_list` / `channel_get` | read | yes | channel enumeration within guild | bounded projection; `channels_list` post-projection filtered to `readChannelIds` (tested: restricted channels absent); no token in output |
 | `discord.messages_list` / `message_get` | read | yes | member message content read (allowlisted channels only) | channel allowlist; 1 MiB cap; **store no raw member messages** |
 | `discord.messages_search` | read | yes | content search across allowlisted channel | bounded query/limit; webhook/invite scrub in results |
 | `discord.pins_list`, `reactions_list` | read | yes | pins/reactions read | channel allowlist |
-| `discord.threads_active_list`, `events_list`, `event_get` | read | yes | thread/event metadata | bounded projection |
+| `discord.threads_active_list`, `events_list`, `event_get` | read | yes | thread/event metadata | bounded projection; `threads_active_list` post-projection filtered to threads whose parent channel is allowlisted (tested) |
 | `discord.roles_list`, `member_get`, `members_search` | read | yes | role/member metadata (no assignment tool) | no role-write tool exists; bounded search |
 | `discord.message_post`, `message_reply`, `message_edit_own`, `reaction_add_own`, `reaction_remove_own`, `thread_create`, `event_create`, `message_delete_own`, `thread_delete_own`, `event_delete_own` | **unregistered** | n/a | previously tier-2/on staging; held out of registration — see scope-reduction note in §1 | `validation.unknown_tool` before secret (tested); implementations retained unregistered in `packages/discord` |
 
@@ -65,7 +65,7 @@ All verified by tests with `secretCalls=0, calls=0`: unknown/prototype tool (inc
 
 ## 10. Open control gaps (open; must not claim solved)
 
-1. **Projectless grant:** TWO-5606 needs `allowProjectless:true`; project binding gap means projectless callers rely on profile + channel allowlists, not project/workspaces. Acceptable for product-lead/research reads; requires Security sign-off before prod publish.
+1. **Projectless grant:** the research use needs `allowProjectless:true`; project binding gap means projectless callers rely on profile + channel allowlists, not project/workspaces. Acceptable for product-lead/research reads; requires Security sign-off before prod publish.
 2. **Native risk/governance:** host risk inference is name-regex (e.g. `discord.message_reply`, `member_timeout`, `thread_lock`, `member_ban` may classify as `read`; `reaction_remove_own` as `destructive`; `discord.*` not reserved for `core`). Tiers 3–4 need a native approval mapping before enabling; tier 1 is intentionally small and all-read for that reason.
 3. **Nested errors:** host gateway may not inspect nested `result.error`; the plugin maps failures to the SDK `error` field (commented pattern from GitHub broker). Verify on exact host before relying on MCP error propagation.
 4. **Transport bounds:** `ctx.http` reconstructs 204/205/304 replies via `new Response("")` (throws) and the host buffers up to 200 MiB; abort is not forwarded; 30s is per-request, not an operation deadline. Mitigations here: 1 MiB cap, redirect refusal (3xx except 304), preserved 204 handling. Do not claim durable isolation/timeout beyond this.
@@ -76,4 +76,4 @@ All verified by tests with `secretCalls=0, calls=0`: unknown/prototype tool (inc
 
 ## 11. Acceptance status
 
-Testing: fixture/unit only (`node --test`, synthetic `ctx`), 12 dev tests for the read-only envelope. No live canary, no host verification, no Security Engineer acceptance yet. Blocks install.
+Testing: fixture/unit only (`node --test`, synthetic `ctx`), 17 dev tests for the read-only envelope. No live canary, no host verification, no Security Engineer acceptance yet. Blocks install.

@@ -35,7 +35,8 @@ test('dev writes are unregistered: any write name is refused as unknown tool bef
 
 test('discord.guild_get: fixed origin, bounded read, audit, no token in output', async () => {
   const f = fixture();
-  f.read(`/guilds/${guildId}`, { id: guildId, name: 'TWO Staging', description: 'synthetic' });
+  // Real guild payloads carry a `features` array; guild_get must succeed.
+  f.read(`/guilds/${guildId}`, { id: guildId, name: 'TWO Staging', description: 'synthetic', features: ['COMMUNITY', 'CHANNEL_PERMISSIONS'] });
   const result = await f.call('discord.guild_get', { ...base });
   assert.equal(result.error, undefined); assert.equal(result.data.ok, true);
   assert.equal(f.secretCalls, 1); assert.equal(f.events.length, 2);
@@ -52,8 +53,9 @@ test('discord.messages_list: allowlisted channel only', async () => {
 
 test('discord.messages_search: bounded query in allowlisted channel; webhook/invite redaction', async () => {
   const f = fixture();
-  f.read(`/guilds/${guildId}/messages/search?q=${encodeURIComponent('TWO-1081')}&channel_id=${channelId}&limit=10`, { total_results: 1, messages: [[{ id: messageId, channel_id: channelId, content: 'see https://discord.com/api/webhooks/123/abcETE' }]] });
-  const result = await f.call('discord.messages_search', { ...base, query: 'TWO-1081', channelId, limit: 10 });
+  // Discord documents the text filter as `content` (limit 1-25).
+  f.read(`/guilds/${guildId}/messages/search?content=${encodeURIComponent('feature-request')}&channel_id=${channelId}&limit=10`, { total_results: 1, messages: [[{ id: messageId, channel_id: channelId, content: 'see https://discord.com/api/webhooks/123/abcETE' }]] });
+  const result = await f.call('discord.messages_search', { ...base, query: 'feature-request', channelId, limit: 10 });
   assert.equal(result.data.ok, true);
   assert.ok(!JSON.stringify(result.data).includes('abcETE'), 'Webhook token must be redacted');
   f.hygiene(result); f.done();
@@ -123,6 +125,68 @@ test('hydration: audit failure blocks side effects; policy change refuses', asyn
   const f = fixture(); f.failAudit = true;
   const r = await f.call('discord.guild_get', { ...base });
   assert.equal(r.data.rule, 'audit.unavailable'); assert.equal(f.secretCalls, 0);
+});
+
+test('channels_list: large guild inventories succeed and restrict to allowlisted channels', async () => {
+  const restrictedId = '1545644954272137300';
+  // 150-channel guild (over the old 100 cap): only the allowlisted channel returns.
+  const channels = [{ id: channelId, name: 'public', type: 0, topic: 'ok' }, { id: restrictedId, name: 'restricted-secret', type: 0, topic: 'hidden-topic' }];
+  for (let i = 0; i < 148; i++) channels.push({ id: `15456449542722${String(i).padStart(4, '0')}`, name: `ch-${i}`, type: 0 });
+  const f = fixture();
+  f.read(`/guilds/${guildId}/channels`, channels);
+  const result = await f.call('discord.channels_list', { ...base });
+  assert.equal(result.data.ok, true);
+  assert.equal(result.data.page.length, 1);
+  assert.equal(result.data.page[0].id, channelId);
+  assert.ok(!JSON.stringify(result.data).includes('restricted-secret') && !JSON.stringify(result.data).includes('hidden-topic'), 'Restricted channel leaked');
+  f.hygiene(result); f.done();
+});
+
+test('threads_active_list: restricted-parent threads are filtered out', async () => {
+  const f = fixture();
+  f.read(`/guilds/${guildId}/threads/active`, { threads: [
+    { id: '1545644954272137301', name: 'public-thread', parent_id: channelId, type: 11 },
+    { id: '1545644954272137302', name: 'restricted-thread', parent_id: '1545644954272137300', type: 11 },
+    { id: '1545644954272137303', name: 'orphan-thread', type: 11 },
+  ] });
+  const result = await f.call('discord.threads_active_list', { ...base });
+  assert.equal(result.data.ok, true);
+  assert.deepEqual(result.data.page.map(t => t.name), ['public-thread']);
+  f.hygiene(result); f.done();
+});
+
+test('roles_list: guilds with over 100 roles succeed (provider cap 250)', async () => {
+  const roles = Array.from({ length: 120 }, (_, i) => ({ id: `15456449542723${String(i).padStart(4, '0')}`, name: `role-${i}`, color: 0, hoist: false, mentionable: false, position: i, managed: false }));
+  const f = fixture();
+  f.read(`/guilds/${guildId}/roles`, roles);
+  const result = await f.call('discord.roles_list', { ...base });
+  assert.equal(result.data.ok, true);
+  assert.equal(result.data.page.length, 120);
+  f.done();
+});
+
+test('embedded foreign bot token and invite redacted; message links preserved', async () => {
+  const otherToken = `${'A'.repeat(24)}.ABCDEF.${'B'.repeat(27)}`;
+  const f = fixture();
+  f.read(`/channels/${channelId}/messages?limit=5`, [{ id: messageId, channel_id: channelId, timestamp: '2026-11-10T00:00:00.000Z', author: { id: '1'.repeat(17), username: 'synthetic' }, content: `leaked ${otherToken} join discord.gg/xyz789 see https://discord.com/channels/${guildId}/${channelId}/${messageId}` }]);
+  const result = await f.call('discord.messages_list', { ...base, channelId, limit: 5 });
+  assert.equal(result.data.ok, true);
+  const text = JSON.stringify(result.data);
+  assert.ok(!text.includes(otherToken) && !text.includes('xyz789'), 'Embedded token/invite escaped');
+  assert.ok(text.includes('discord.com/channels/'), 'Message link must survive invite redaction');
+  f.hygiene(result); f.done();
+});
+
+test('members_search and messages_search limits are capped at their projection/provider maxima', async () => {
+  // members_search accepts at most 10 (projection cap); 11 must refuse pre-secret.
+  const a = fixture();
+  refused(a, await a.call('discord.members_search', { ...base, query: 'synthetic', limit: 11 }), 'validation.schema');
+  // messages_search accepts at most 25 (Discord search maximum); 26 refuses.
+  const b = fixture();
+  refused(b, await b.call('discord.messages_search', { ...base, query: 'synthetic', channelId, limit: 26 }), 'validation.schema');
+  // messages_list keeps its 100 cap.
+  const c = fixture();
+  refused(c, await c.call('discord.messages_list', { ...base, channelId, limit: 101 }), 'validation.schema');
 });
 
 test('legacy ledger cleanup: expired entries are still swept on dev calls', async () => {

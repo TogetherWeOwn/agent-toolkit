@@ -65,6 +65,13 @@ export const snowflakeJson = { type: "string", pattern: "^[0-9]{17,20}$", maxLen
 export const identifier = ((): Schema<string> => text(80, /^[A-Za-z0-9][A-Za-z0-9_-]*$/))();
 export const limit = integer(1, 100);
 export const limitJson = { type: "integer", minimum: 1, maximum: 100 };
+// Member search projection is capped at 10 results; the accepted input limit
+// must not exceed it, or valid requests would fail projection.
+export const limit10 = integer(1, 10);
+export const limit10Json = { type: "integer", minimum: 1, maximum: 10 };
+// Discord GET /guilds/{id}/messages/search documents limit 1-25 (default 25).
+export const searchLimit = integer(1, 25);
+export const searchLimitJson = { type: "integer", minimum: 1, maximum: 25 };
 
 export function messageContent(max = 2000): Schema<string> {
   return { parse(v) {
@@ -110,7 +117,9 @@ export function pick(value: unknown, fields: string[]): Record<string, string | 
 }
 export function projectGuild(value: unknown): unknown {
   const g = object(value);
-  return { ...pick(g, ["id", "name", "description", "icon", "owner_id", "member_count", "preferred_locale", "nsfw_level", "verification_level", "features"]), members: typeof g.approximate_member_count === "number" ? g.approximate_member_count : undefined };
+  // `features` is an array; pick() accepts scalars only, so it is omitted
+  // (fail-closed) rather than failing every guild response.
+  return { ...pick(g, ["id", "name", "description", "icon", "owner_id", "member_count", "preferred_locale", "nsfw_level", "verification_level"]), members: typeof g.approximate_member_count === "number" ? g.approximate_member_count : undefined };
 }
 export function projectChannel(value: unknown): unknown {
   const c = object(value);
@@ -163,9 +172,11 @@ export function projectEvent(value: unknown): unknown {
   return pick(value, ["id", "name", "description", "scheduled_start_time", "scheduled_end_time", "privacy_level", "status", "channel_id", "entity_type", "guild_id"]);
 }
 
-const BOT_TOKEN = /^[A-Za-z0-9_-]{24,}\.[A-Za-z0-9_-]{6}\.[A-Za-z0-9_-]{27,}$/;
+const BOT_TOKEN = /(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{24,}\.[A-Za-z0-9_-]{6}\.[A-Za-z0-9_-]{27,}(?![A-Za-z0-9_-])/g;
 const WEBHOOK = /discord\.com\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+/g;
-const INVITE = /(?:\b(?:https?:\/\/)?discord(?:\.com|\.gg)\/(?:invite\/)?([A-Za-z0-9-]{2,})|\bdiscord\.gg\/([A-Za-z0-9-]{2,}))/g;
+// Invite URLs only: require /invite/ on discord.com so ordinary paths such as
+// message links (discord.com/channels/<guild>/<channel>/<message>) survive.
+const INVITE = /\b(?:https?:\/\/)?(?:discord(?:app)?\.com\/invite|discord\.gg(?:\/invite)?)\/[A-Za-z0-9-]{2,}/g;
 
 export function scrub(value: unknown, secrets: string[]): unknown {
   const needles = [...new Set(secrets.flatMap(s => [s, ...s.split(/\r?\n/).filter((line: string) => line.length >= 16)]).filter(Boolean))].sort((a, b) => b.length - a.length);

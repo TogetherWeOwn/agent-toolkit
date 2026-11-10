@@ -49,14 +49,15 @@ test('prod message_get and pins_list return metadata only (no bodies)', async ()
 
 test('prod messages_search returns counts/links without storing raw member messages', async () => {
   const f = fixture();
-  f.read(`/guilds/${guildId}/messages/search?q=${encodeURIComponent('TWO-1081')}&channel_id=${channelId}&limit=5`, { total_results: 2, messages: [[{ id: messageId, channel_id: channelId, content: 'asked for TWO-1081' }]] });
-  const result = await f.call('discord.messages_search', { ...base, query: 'TWO-1081', channelId, limit: 5 });
+  // Discord documents the text filter as `content` (limit 1-25).
+  f.read(`/guilds/${guildId}/messages/search?content=${encodeURIComponent('feature-request')}&channel_id=${channelId}&limit=5`, { total_results: 2, messages: [[{ id: messageId, channel_id: channelId, content: 'asked for a feature' }]] });
+  const result = await f.call('discord.messages_search', { ...base, query: 'feature-request', channelId, limit: 5 });
   assert.equal(result.data.ok, true);
   assert.ok(!JSON.stringify(result.data).includes('secret-prod'));
   // A2: only counts + metadata links leave the broker.
   assert.equal(result.data.page.total_results, 2);
   assert.equal(result.data.page.messages[0].id, messageId);
-  assert.ok(!JSON.stringify(result.data).includes('asked for TWO-1081'), 'Message body escaped search');
+  assert.ok(!JSON.stringify(result.data).includes('asked for a feature'), 'Message body escaped search');
   f.hygiene(result); f.done();
 });
 
@@ -84,6 +85,46 @@ test('closed schemas + channel allowlist + profile refusals', async () => {
   refused(g, await g.call('discord.messages_list', { ...base, channelId, limit: 1 }), 'policy.channel');
   const h = fixture(); h.config.policy.agents[0].profile = 'none';
   refused(h, await h.call('discord.guild_get', { ...base }), 'policy.profile');
+});
+
+test('prod channels_list + threads_active_list restrict to allowlisted channels', async () => {
+  const restrictedId = '326474832151838739';
+  const f = fixture();
+  f.read(`/guilds/${guildId}/channels`, [ { id: channelId, name: 'public', type: 0 }, { id: restrictedId, name: 'restricted-prod', type: 0, topic: 'hidden' } ]);
+  const r1 = await f.call('discord.channels_list', { ...base });
+  assert.equal(r1.data.ok, true);
+  assert.deepEqual(r1.data.page.map(c => c.id), [channelId]);
+  assert.ok(!JSON.stringify(r1.data).includes('restricted-prod'));
+  const g = fixture();
+  g.read(`/guilds/${guildId}/threads/active`, { threads: [
+    { id: '326474832151838740', name: 'public-thread', parent_id: channelId, type: 11 },
+    { id: '326474832151838741', name: 'restricted-thread', parent_id: restrictedId, type: 11 },
+  ] });
+  const r2 = await g.call('discord.threads_active_list', { ...base });
+  assert.equal(r2.data.ok, true);
+  assert.deepEqual(r2.data.page.map(t => t.name), ['public-thread']);
+  f.hygiene(r1); g.hygiene(r2); f.done(); g.done();
+});
+
+test('prod embedded foreign bot token redacted; message links preserved', async () => {
+  const otherToken = `${'C'.repeat(24)}.ABCDEF.${'D'.repeat(27)}`;
+  // Prod returns metadata only, so verify the scrub path via guild description
+  // carrying the embedded token (message-link preservation is covered on the
+  // dev full-body surface).
+  const g = fixture();
+  g.read(`/guilds/${guildId}`, { id: guildId, name: 'prod', description: `copy ${otherToken} plus discord.gg/abc123` });
+  const r = await g.call('discord.guild_get', { ...base });
+  assert.equal(r.data.ok, true);
+  const visible = JSON.stringify({ result: r, events: g.events });
+  assert.ok(!visible.includes(otherToken) && !visible.includes('abc123'), 'Embedded token/invite escaped');
+  g.hygiene(r);
+});
+
+test('prod limits: members_search at most 10, search at most 25', async () => {
+  const a = fixture();
+  refused(a, await a.call('discord.members_search', { ...base, query: 'synthetic', limit: 11 }), 'validation.schema');
+  const b = fixture();
+  refused(b, await b.call('discord.messages_search', { ...base, query: 'synthetic', channelId, limit: 26 }), 'validation.schema');
 });
 
 test('token canary / webhook / invite redaction on prod too', async () => {
