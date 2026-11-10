@@ -30,12 +30,13 @@ async function persistSteps(reportDir) {
   try { await writeFile(join(reportDir, 'supervise.json'), JSON.stringify(steps, null, 2) + '\n'); } catch { /* Diagnostics must not fail setup. */ }
 }
 async function step(name, fn) {
+  const started = Date.now();
   try {
     const value = await fn();
-    steps.push({ name, ok: true });
+    steps.push({ name, ok: true, durationMs: Date.now() - started });
     return value;
   } catch (error) {
-    steps.push({ name, ok: false, code: error?.code ?? 'unknown' });
+    steps.push({ name, ok: false, code: error?.code ?? 'unknown', durationMs: Date.now() - started });
     throw error;
   }
 }
@@ -46,8 +47,11 @@ async function sandboxFilesystem(root) {
   async function bind(source, target, readonly = true) {
     await mkdir(join(fsRoot, target), { recursive: true });
     // Read-only sockets still confer authority. Refuse them in every exposed tree.
+    // A full /usr scan can exceed the default 10s on a cold hosted-runner
+    // overlay (observed ETIMEDOUT at socket-check-usr); allow 30s so the
+    // check stays strict without timing out on scan cost alone.
     await step(`socket-check-${target}`, () =>
-      assert.equal(run('find', [source, '-type', 's', '-print', '-quit']).toString(), ''));
+      assert.equal(run('find', [source, '-type', 's', '-print', '-quit'], { timeout: 30_000 }).toString(), ''));
     await step(`bind-${target}`, () => run('mount', ['--bind', source, join(fsRoot, target)]));
     if (readonly) await step(`bind-ro-${target}`, () => run('mount', ['-o', 'remount,bind,ro,nosuid,nodev', join(fsRoot, target)]));
   }
