@@ -3,7 +3,7 @@ import { flag, slug } from "./metadata.js";
 
 const binding = closed({ id: identifier, name: slug });
 export type ResourceBinding = ReturnType<typeof binding.parse>;
-const bindings: Schema<readonly ResourceBinding[]> = { parse(value) {
+export const resourceBindings: Schema<readonly ResourceBinding[]> = { parse(value) {
   requireThat(Array.isArray(value) && value.length > 0 && value.length <= 32, "schema");
   const parsed = value.map(item => binding.parse(item));
   requireThat(new Set(parsed.map(item => item.id)).size === parsed.length, "schema");
@@ -13,11 +13,11 @@ const bindings: Schema<readonly ResourceBinding[]> = { parse(value) {
 
 // Broker-owned collection AND child scope, not tool arguments. Child checks do
 // not authorize a parent-wide upstream list; the common core must do that first.
-export const databaseDiscoveryScope = closed({ organization: slug, databases: bindings });
-export const branchDiscoveryScope = closed({ organization: slug, database: slug, branches: bindings });
-export const databaseRegionScope = closed({ organization: slug, database: slug, regions: bindings });
-export const organizationRegionScope = closed({ organization: slug, regions: bindings });
-export const publicRegionScope = closed({ regions: bindings });
+export const databaseDiscoveryScope = closed({ organization: slug, databases: resourceBindings });
+export const branchDiscoveryScope = closed({ organization: slug, database: slug, branches: resourceBindings });
+export const databaseRegionScope = closed({ organization: slug, database: slug, regions: resourceBindings });
+export const organizationRegionScope = closed({ organization: slug, regions: resourceBindings });
+export const publicRegionScope = closed({ regions: resourceBindings });
 export type DatabaseDiscoveryScope = ReturnType<typeof databaseDiscoveryScope.parse>;
 export type BranchDiscoveryScope = ReturnType<typeof branchDiscoveryScope.parse>;
 export type DatabaseRegionScope = ReturnType<typeof databaseRegionScope.parse>;

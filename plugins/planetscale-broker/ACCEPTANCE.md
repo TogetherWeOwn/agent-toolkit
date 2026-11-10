@@ -4,6 +4,39 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Discovery collection preparation source increment
+
+Five pure Prepared bindings capture existing database/branch and database,
+organization and public-region collection reads. Closed immutable host parent IDs,
+names/revision, 1–32 unique child ID/name bindings and bounded host pagination
+(page 1–100, perPage 1–10) bind fixed GETs and empty caller arguments. Reuse the
+existing discovery resource-binding parser. Public region catalog has a fixed
+local resource namespace, not provider identity. Every host field/child/page
+enters plan/full hashes. No executor, registration, credential resolution or
+authority consumption is added; parent collection permission remains independent.
+
+`test/core-discovery-read-preparation.test.mjs` supplies **47 synthetic contracts**
+for exact requests, hashes/rebinding, deep snapshots, host/caller/accessor/injection
+refusals, limits, projection redaction, whole-page refusal and cross-operation
+separation. Projections retain bound child names and strict metadata flags, never
+password/connection/config/actor/time fields or unverified parent claims. Child
+matching does not authenticate immutable parents, freshness, effective authority
+or non-waking behavior. The reported cursor is not trusted exhaustive inventory.
+Current ownership/revision, upstream collection permission, transport/raw-body
+custody and non-waking proof remain prerequisites. Coverage stays **134/291 offline
+adapters; 157 missing**, twelve previews and **74 pure preparations**, zero runtime-
+integrated/reviewed/enabled/adopted. New-contract execution requires exact-head
+Actions; this source declaration is not a pass. Older counts below are historical.
+
+Prior exact `63dd7f0749179e931ffa749bb0a9b2b8bbc0db09`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42774678886)
+and [test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42774678886/job/129690347715)
+passed, including lint/typecheck/native-policy/ci-ok and Neon candidate contract.
+[Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42774678271)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42774670634)
+passed. Earlier unchanged SDK recovery uncertainty remains unresolved. Prior-head
+evidence does not cover the new discovery preparation contracts.
+
 ## Maintenance schedule preparation source increment
 
 Two pure Prepared bindings capture existing database maintenance-schedule and

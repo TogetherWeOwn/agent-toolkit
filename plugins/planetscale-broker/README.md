@@ -6,6 +6,33 @@ manifest, network executor, credential resolver, or tool registration is supplie
 The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
+## Discovery collection preparation increment
+
+Five pure `Prepared` bindings in `src/core-read-preparation.ts` cover existing
+list-databases, list-branches and database/organization/public-region reads. Closed
+host snapshots capture immutable parent IDs/names where applicable, revision,
+1–32 unique child ID/name pairs and bounded pagination (page 1–100, perPage 1–10).
+The existing discovery binding parser is shared, not copied. Caller arguments
+stay empty: callers cannot change the captured page, allowlist or transport.
+Every host field and child binding enters the plan/full hashes, including IDs
+absent from the path. Public regions use a fixed local catalog resource namespace,
+not a claimed immutable provider identity.
+
+`test/core-discovery-read-preparation.test.mjs` supplies 47 synthetic contracts
+for exact requests, every-field hashes, child rebinding, nested immutable captures,
+closed/accessor/injection refusals, limits, whole-page refusal and redaction.
+Receipts intentionally retain allowlisted child names and strict metadata flags;
+secret/connection/config/actor/time fields and unverified parent claims are omitted.
+Response child ID/name matching does not prove immutable parent ownership or
+authorize a parent-wide upstream collection. Pagination completeness describes
+only the reported cursor, not an exhaustive trusted inventory or freshness.
+Current ownership/revision, collection permission, trusted transport/raw-body
+custody and independent non-waking proof remain prerequisites. No executor,
+registration, credential resolution or authority consumption is supplied.
+Coverage stays **134/291 offline adapters; 157 missing**, twelve previews and
+**74 pure preparations**, zero runtime-integrated/reviewed/enabled/adopted.
+Exact-head Actions must execute the contracts; older counts below are historical.
+
 ## MoveTables status preparation increment
 
 One pure `Prepared` binding in `src/core-read-preparation.ts` covers the existing

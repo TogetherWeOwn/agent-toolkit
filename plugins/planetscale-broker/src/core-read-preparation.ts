@@ -1,6 +1,12 @@
 import type { Prepared } from "../../../packages/core/src/provider/contracts.js";
 import { closed, digest, identifier, jsonData, oneOf } from "../../../packages/core/src/schema.js";
-import { emptyArguments, slug, type PreparedRead } from "./metadata.js";
+import { emptyArguments, pageArguments, slug, type PreparedRead } from "./metadata.js";
+import { resourceBindings } from "./discovery.js";
+import { prepare as prepareDatabaseList } from "./tools/list-databases.js";
+import { prepare as prepareBranchList } from "./tools/list-branches.js";
+import { prepare as prepareDatabaseRegionList } from "./tools/list-database-regions.js";
+import { prepare as prepareOrganizationRegionList } from "./tools/list-regions-for-organization.js";
+import { prepare as preparePublicRegionList } from "./tools/list-public-regions.js";
 import { prepare as prepareOrganization } from "./tools/get-organization.js";
 import { prepare as prepareDatabase } from "./tools/get-database.js";
 import { prepare as prepareBranch } from "./tools/get-branch.js";
@@ -72,6 +78,11 @@ const organizationTarget = closed(organizationFields);
 const databaseTarget = closed(databaseFields);
 const branchFields = { ...databaseFields, branch: slug, branchId: identifier };
 const branchTarget = closed(branchFields);
+const databaseListTarget = closed({ ...organizationFields, databases: resourceBindings, pagination: pageArguments });
+const branchListTarget = closed({ ...databaseFields, branches: resourceBindings, pagination: pageArguments });
+const databaseRegionListTarget = closed({ ...databaseFields, regions: resourceBindings, pagination: pageArguments });
+const organizationRegionListTarget = closed({ ...organizationFields, regions: resourceBindings, pagination: pageArguments });
+const publicRegionListTarget = closed({ revision: digest, regions: resourceBindings, pagination: pageArguments });
 const moveTablesWorkflowStatusTarget = closed({ ...branchFields,
   workflow: slug, targetKeyspace: slug, keyspaceId: identifier });
 const maintenanceScheduleTarget = closed({ ...databaseFields, scheduleId: identifier });
@@ -158,8 +169,12 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof deployStorageCheckTarget.parse> | ReturnType<typeof instantBranchMetricsTarget.parse> |
   ReturnType<typeof instantTabletMetricsTarget.parse> | ReturnType<typeof branchMetricsTarget.parse> |
   ReturnType<typeof tabletMetricsTarget.parse> | ReturnType<typeof maintenanceScheduleTarget.parse> |
-  ReturnType<typeof branchMaintenanceWindowTarget.parse> | ReturnType<typeof moveTablesWorkflowStatusTarget.parse>;
-type ReadOperation = "get_organization" | "get_database" | "get_branch" |
+  ReturnType<typeof branchMaintenanceWindowTarget.parse> | ReturnType<typeof moveTablesWorkflowStatusTarget.parse> |
+  ReturnType<typeof databaseListTarget.parse> | ReturnType<typeof branchListTarget.parse> |
+  ReturnType<typeof databaseRegionListTarget.parse> | ReturnType<typeof organizationRegionListTarget.parse> |
+  ReturnType<typeof publicRegionListTarget.parse>;
+type ReadOperation = "list_databases" | "list_branches" | "list_database_regions" |
+  "list_regions_for_organization" | "list_public_regions" | "get_organization" | "get_database" | "get_branch" |
   "get_backup" | "get_backup_policy" | "get_deploy_request" |
   "get_keyspace" | "get_shard" | "get_maintenance_event" |
   "get_organization_membership" | "get_organization_team" | "get_organization_team_member" |
@@ -208,6 +223,43 @@ function bindRead(
     jsonData(prepared);
     return prepared;
   };
+}
+
+export function bindListDatabasesPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = databaseListTarget.parse(rawTarget);
+  const read = prepareDatabaseList({ organization: target.organization, databases: target.databases }, target.pagination);
+  return bindRead(`planetscale/organization/${target.organizationId}`, target, "list_databases", read.request,
+    "record-and-name-parent-not-verified");
+}
+
+export function bindListBranchesPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = branchListTarget.parse(rawTarget);
+  const read = prepareBranchList({ organization: target.organization, database: target.database,
+    branches: target.branches }, target.pagination);
+  return bindRead(`planetscale/database/${target.databaseId}`, target, "list_branches", read.request,
+    "record-and-name-parent-not-verified");
+}
+
+export function bindListDatabaseRegionsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = databaseRegionListTarget.parse(rawTarget);
+  const read = prepareDatabaseRegionList({ organization: target.organization, database: target.database,
+    regions: target.regions }, target.pagination);
+  return bindRead(`planetscale/database/${target.databaseId}`, target, "list_database_regions", read.request,
+    "record-and-name-parent-not-verified");
+}
+
+export function bindListRegionsForOrganizationPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = organizationRegionListTarget.parse(rawTarget);
+  const read = prepareOrganizationRegionList({ organization: target.organization, regions: target.regions }, target.pagination);
+  return bindRead(`planetscale/organization/${target.organizationId}`, target, "list_regions_for_organization", read.request,
+    "record-and-name-parent-not-verified");
+}
+
+export function bindListPublicRegionsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = publicRegionListTarget.parse(rawTarget);
+  const read = preparePublicRegionList({ regions: target.regions }, target.pagination);
+  return bindRead("planetscale/region-catalog/public", target, "list_public_regions", read.request,
+    "record-and-name-parent-not-verified");
 }
 
 export function bindGetMoveTablesWorkflowStatusPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
