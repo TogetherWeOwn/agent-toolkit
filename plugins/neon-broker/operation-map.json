@@ -1168,20 +1168,21 @@
       "id": "deleteNeonAuthUser",
       "apiArea": "auth-legacy",
       "tool": "neon.deleteNeonAuthUser",
-      "scope": "project_id/auth_user_id",
+      "scope": "project_id/auth_user_id/delete",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "irreversible-user-removal"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": ["plugins/neon-broker/test/legacy-auth-user-delete.test.mjs", "plugins/neon-broker/test/core.compat.mjs"],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Project-only legacy source/mocks; deprecated/sunset availability unknown. Dedicated exact-user delete grant/native exact-plan authority and mandatory project identity preflight. Empty204 acknowledges only, not user presence, independent deletion, token/session revocation or fencing. No documented user read; ambiguity remains uncertain without retry or branch fallback. Native directory reconciliation, effects, entitlement, custody, durable recovery and specialist reviews remain unresolved."
     },
     {
       "id": "transferNeonAuthProviderProject",

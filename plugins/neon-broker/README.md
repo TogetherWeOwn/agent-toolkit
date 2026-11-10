@@ -2364,13 +2364,31 @@ directory reconciliation is a native qualification prerequisite, not source-comp
 credential/lifecycle enforcement. The permanent common journal blocks same-request
 replay/restart, not external writers. Source/mocks only; no live deletion or enablement.
 
+## Legacy project-scoped auth-user deletion source
+
+`createNeonLegacyAuthUserDeleteOperations` supplies reserved `deleteNeonAuthUser`
+with a strictly project-only scope and `neon/projects/<project>/auth/users/<user>/delete`
+grant. Mandatory project identity preflight precedes one bodyless legacy DELETE;
+no branch selection or fallback is accepted. The endpoint is deprecated, with
+sunset 2026-03-01 in the pinned schema; actual availability remains unknown.
+Preflight 404/410 refuses without mutation, while a mutation failure stays uncertain.
+The same bounded user-ID parser, acknowledgement validation and uncertainty handling
+are shared with the branch factory; their scopes, grants and paths remain distinct.
+
+Empty204 acknowledges only, not user existence, independent directory deletion,
+token/session revocation or fencing. No user-detail/list GET is documented; project
+metadata cannot reconcile deletion, so ambiguity remains uncertain without a
+fabricated read or retry. Preflight is not atomic CAS. The common permanent journal
+blocks same-request replay, not external writers. Source/mocks only; no live
+user deletion, credential retrieval or runtime enablement.
+
 ## Coverage and verification
 
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 140 implemented
-source adapters, 54 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 141 implemented
+source adapters, 53 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

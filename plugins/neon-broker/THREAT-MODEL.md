@@ -1,5 +1,21 @@
 # Source-slice threat model
 
+## Legacy project-scoped auth-user deletion delta
+
+A separate project-only factory binds one trusted project/user/revision, dedicated
+legacy delete grant and reserved native exact-plan authority. Mandatory project
+identity preflight precedes one bodyless project auth-user DELETE. Branch arguments,
+grants and fallback are not interchangeable. Shared parsing/acknowledgement/ambiguity
+logic retains the branch operation's exact scope. The legacy endpoint is deprecated
+and sunset in the pinned schema; availability remains unknown, not silently covered
+by the branch route. Preflight errors refuse before mutation; mutation errors remain
+uncertain, including 404/410. Empty204 acknowledges only, never directory presence,
+independent deletion, token/session revocation or connection fencing. No user read
+exists in the pinned management schema; parent metadata is not reconciliation.
+Preflight is not atomic CAS; external project/directory races remain. Native directory
+reconciliation, durable recovery and custody remain prerequisites. Source/mocks only;
+no live deletion, credential retrieval, minting, binding or enablement.
+
 ## Branch-scoped auth-user deletion delta
 
 Copied trusted project/branch/user-ID binding requires a separate delete grant and

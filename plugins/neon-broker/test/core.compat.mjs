@@ -4624,6 +4624,130 @@ test('JWKS delete: maximum copied IDs and project-wide binding fit common budget
   }
 });
 
+import { legacyAuthUserDeleteFixture, legacyAuthUserDeleteArgs, legacyAuthUserDeleteScope, legacyAuthUserDeleteMetadata } from './helpers.mjs';
+function legacyAuthUserDeletionBroker(value = null, overrides = {}, config = legacyAuthUserDeleteScope) {
+  const provider = legacyAuthUserDeleteFixture(value, config);
+  const args = { project_id: config.projectId, auth_user_id: config.userId };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('deleteNeonAuthUser').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.deleteNeonAuthUser', args, context, key);
+  } };
+}
+
+test('Legacy auth user delete: reserved authority and exact credential/revoke AND agent grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = legacyAuthUserDeletionBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = 'neon/projects/project-a/auth/users/user_a';
+  for (const resource of [target, target + '/reveal', 'neon/projects/project-a/branches/br-a/auth/users/user_a/delete',
+    target.replace('project-a', 'other') + '/delete', target.replace('user_a', 'other') + '/delete',
+    'neon/projects/project-a/branches/br-a/credentials']) {
+    const f = legacyAuthUserDeletionBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = legacyAuthUserDeletionBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = legacyAuthUserDeletionBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { acknowledged: true });
+  assert.equal(f.common.calls.consumed, 1);
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('Legacy auth user delete: native authorization rejects stale, wrong-target and unconsumable evidence', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = legacyAuthUserDeletionBroker();
+    const base = f.common.authority;
+    let consumeCalls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.deleteNeonAuthUser', legacyAuthUserDeleteArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.ok, false);
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Legacy auth user delete: identity/resource TOCTOU and caller authority/target overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = legacyAuthUserDeletionBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = legacyAuthUserDeletionBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.deleteNeonAuthUser', legacyAuthUserDeleteArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { project_id: 'other' }, { branch_id: 'other' }, { auth_user_id: 'other' }, { token: 'not-a-token' }, { retry: true }]) {
+    const g = legacyAuthUserDeletionBroker();
+    assert.equal((await g.common.broker().call('neon.deleteNeonAuthUser', { ...legacyAuthUserDeleteArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('Legacy auth user delete: permanent journal blocks complete and uncertain replay after restart despite provider idempotence', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = legacyAuthUserDeletionBroker((url, init) => {
+      if (init.method === 'DELETE') { if (ambiguous) throw Error(credentialCanary); return new Response(null, { status: 204 }); }
+      return response(legacyAuthUserDeleteMetadata);
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Legacy auth user delete: malformed/foreign detail refuses before deletion; secrets never enter envelopes', async () => {
+  for (const change of [{ branch_id: 'other' }, { project_id: 'other' }, { project: { id: 'other' } }, { pagination: {} }]) {
+    const f = legacyAuthUserDeletionBroker(() => response({ ...legacyAuthUserDeleteMetadata, ...change }));
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'DELETE').length, 0);
+    safeEnvelope(f, result);
+  }
+  const f = legacyAuthUserDeletionBroker((url, init) => init.method === 'DELETE' ? new Response(null, { status: 204 }) :
+    response({ ...legacyAuthUserDeleteMetadata, client_secret: credentialCanary, name: derivedCanary, redirect_uris: [credentialCanary] }));
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
+test('Legacy auth user delete: maximum copied project/opaque IDs fit common budgets', async () => {
+  const config = { projectId: 'p'.repeat(60), userId: 'c'.repeat(64), revision: 'r'.repeat(80) };
+  const f = legacyAuthUserDeletionBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
 import { authUserDeleteFixture, authUserDeleteArgs, authUserDeleteScope, authUserDeleteMetadata } from './helpers.mjs';
 function authUserDeletionBroker(value = null, overrides = {}, config = authUserDeleteScope) {
   const provider = authUserDeleteFixture(value, config);

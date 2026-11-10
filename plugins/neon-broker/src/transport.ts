@@ -74,6 +74,7 @@ export interface NeonMetadataTransport {
   deleteProjectBranchTrigger(project: string, branch: string, trigger: string, options: MetadataRequestOptions): Promise<unknown>;
   addProjectJWKS(project: string, branch: string, role: string, url: string, provider: string, audience: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectJWKS(project: string, jwks: string, options: MetadataRequestOptions): Promise<unknown>;
+  deleteNeonAuthUser(project: string, user: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteBranchNeonAuthUser(project: string, branch: string, user: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteNeonAuthOAuthClient(project: string, branch: string, client: string, options: MetadataRequestOptions): Promise<unknown>;
   removeProjectMemberRole(project: string, member: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -457,6 +458,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
           jwt_audience: jwksAddLabel.parse(audience), role_names: [jwksAddRole.parse(role)], skip_role_creation: true }), false, false, false, false, false, 201),
     deleteProjectJWKS: (project: string, jwks: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/jwks/${identifier.parse(jwks)}`, new URLSearchParams(), options, undefined, false, 200),
+    deleteNeonAuthUser: (project: string, user: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/auth/users/${authUserDeleteId.parse(user)}`,
+        new URLSearchParams(), options, undefined, false, 204),
     deleteBranchNeonAuthUser: (project: string, branch: string, user: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/users/${authUserDeleteId.parse(user)}`,
         new URLSearchParams(), options, undefined, false, 204),
