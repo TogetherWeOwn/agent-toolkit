@@ -13,7 +13,7 @@ Status: **NOT ACCEPTED, NOT INSTALLED.** Binds only the exact artifact and confi
 ```bash
 npx tsc -p plugins/discord-broker-prod/tsconfig.json
 node --test --test-timeout=30000 plugins/discord-broker-dev/test/*.test.mjs plugins/discord-broker-prod/test/*.test.mjs
-# → 28 tests, 28 pass, 0 fail (20 dev + 8 prod)
+# → 20 tests, 20 pass, 0 fail (12 dev + 8 prod)
 ```
 
 Pre-push: bounded checks per rule 16. CI of record is GitHub Actions; exact-head run/job links to be appended on the PR.

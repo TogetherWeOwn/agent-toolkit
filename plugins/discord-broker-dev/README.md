@@ -4,22 +4,22 @@ Version 0.1.0. Maintainer: agent-toolkit maintainers. **Not installed or securit
 
 Binds only its own secret ref (`DISCORD_BOT_TOKEN_STAGING`, bot Owen QA Test `1469137636663758888`) and its own guild allowlist (TWO Staging `1545644954272137297`). Agents never see the token. Prod (`plugins/discord-broker-prod`) is a separate plugin with separate secret ref, guild, and deployment; it cannot reach staging resources and vice versa. ADR: separate plugin bindings are not an OS sandbox or proof of Discord-side isolation; the tool split is the isolation mechanism.
 
-## Tools (24: 14 read + 7 dev writes + 3 exact-owned deletes)
+## Tools (14: read only)
 
 Each tool requires `issueId` + `workspaceId` selectors. The broker verifies the caller’s company/profile, the issue’s company/assignee/current run/active status, and (when bound to a project) the explicit workspace. Unknown fields and arguments fail closed; there is no generic HTTP proxy.
 
 Tier 1 — read: `discord.guild_get`, `discord.channels_list`, `discord.channel_get`, `discord.messages_list`, `discord.message_get`, `discord.messages_search`, `discord.pins_list`, `discord.reactions_list`, `discord.threads_active_list`, `discord.events_list`, `discord.event_get`, `discord.roles_list`, `discord.member_get`, `discord.members_search`.
 
-Tier 2 — dev writes (staging only): `discord.message_post`, `discord.message_reply`, `discord.message_edit_own`, `discord.reaction_add_own`, `discord.reaction_remove_own`, `discord.thread_create`, `discord.event_create`. Writes are plain text with `allowed_mentions:{parse:[]}` frozen. `message_edit_own` additionally requires a broker ownership-ledger entry (`own:<channelId>:<messageId>` via `plugin.state`) **and** upstream author == configured bot user; the ledger existence check runs before secret resolution (STANDARD §8 preflight).
+## Scope reduction (writes unregistered)
 
-Exact-owned teardown: `discord.message_delete_own`, `discord.thread_delete_own`, `discord.event_delete_own`. Each requires a durable ledger entry for the exact resource (agent + bot ownership) before secret resolution and upstream verify before DELETE; a 404 counts as already-gone. Every creation writes a pending intent before its side effect, lives at most an immutable 7 days, and is removed by the expiry sweep — see THREAT-MODEL §9.
+Dev writes (post/reply/edit-own/react/thread/event create and the exact-owned deletes) are **unregistered** in this build. Security review found the write envelope does not meet STANDARD §5 (this host offers no independent teardown scheduler; the opportunistic sweep is not a scheduler) and invalidated its exact-ownership claim. Per the review’s direction, the dev plugin ships read-only while the write design is held for an independent scheduler and a favorable review. The write implementations remain in `packages/discord` unregistered; they are not reachable dispatch targets, and any write name is refused as `validation.unknown_tool` before secret resolution (tested).
 
 Tier 3 (prod publish) is off at first; tier 4 (moderation/admin: bulk delete, timeout, roles, channels, bans, webhooks, commands) is not registered. Hard denies, never constructed: token disclosure, app/intent/permission changes, @everyone/@here escalation, mass DM, bulk ban/prune, guild leave/delete.
 
 ## Profiles and budgets
 
-- Profiles: `builder` (read + dev writes), `lead`, `researcher-read`, `reviewer-read`, `none`. A write tool requires a write-capable profile; prod registers no write tools.
-- `allowProjectless:true` grant: agents running outside a project binding (TWO-5606 research) must have this explicit grant in policy. This is a documented residual-risk path (see THREAT-MODEL §10), not a blanket bypass — channel allowlists and profile checks still apply.
+- Profiles: `builder` (read), `lead`, `researcher-read`, `reviewer-read`, `none`. There are no write tools for a profile to authorize.
+- `allowProjectless:true` grant: agents running outside a project binding must have this explicit grant in policy. This is a documented residual-risk path (see THREAT-MODEL §10), not a blanket bypass — channel allowlists and profile checks still apply.
 - Budgets: 30 calls/min per agent, 4000/hr per guild, 2 concurrent per worker. Honors `Retry-After`/`retry_after`/`X-RateLimit-*`; 401 pauses the guild 3600s and stops credential use. Responses capped at 1 MiB, output at 262 KiB, 30s per-request deadline.
 
 ## Audit and redaction
@@ -28,4 +28,4 @@ Every call emits an `intent` and an `outcome` audit record; audit failure blocks
 
 ## Acceptance gates
 
-Unmet and blocking: Security Engineer review and acceptance of this artifact + policy envelope; Operator install; live canary on TWO Staging. See ACCEPTANCE.md for exact commands/results and the open-control-gap register. Do not mark tiers 1–2 ready for install until those gates pass.
+Unmet and blocking: Security Engineer review and acceptance of this artifact + policy envelope; Operator install; live canary on TWO Staging. See ACCEPTANCE.md for exact commands/results and the open-control-gap register. This read-only envelope is not ready for install until those gates pass.

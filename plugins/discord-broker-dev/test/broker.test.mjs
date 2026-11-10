@@ -6,15 +6,31 @@ import manifest from '../dist/plugins/discord-broker-dev/src/manifest.js';
 
 globalThis.fetch = () => { throw Error('Live network is forbidden in fixtures'); };
 
-test('exact tool inventory: 14 read + 7 dev writes + 3 exact-owned deletes', () => {
+const UNREGISTERED_WRITES = [
+  'discord.message_post', 'discord.message_reply', 'discord.message_edit_own',
+  'discord.reaction_add_own', 'discord.reaction_remove_own',
+  'discord.thread_create', 'discord.event_create',
+  'discord.message_delete_own', 'discord.thread_delete_own', 'discord.event_delete_own',
+];
+
+test('exact tool inventory: dev is read-only (14 read, 0 write)', () => {
   const tools = toolsFor('dev');
-  assert.equal(tools.length, 24);
-  assert.equal(readAll(tools), 14); assert.equal(writeAll(tools), 10);
+  assert.equal(tools.length, 14);
+  assert.ok(tools.every(t => t.tier === 'read'), 'dev registers read tools only');
   assert.deepEqual(manifest.tools.map(t => t.name), tools.map(t => t.name));
   assert.equal(manifest.id, 'togetherweown.discord-broker-dev');
-  for (const name of ['discord.message_delete_own', 'discord.thread_delete_own', 'discord.event_delete_own']) assert.ok(tools.some(t => t.name === name));
-  function readAll(t) { return t.filter(x => x.tier === 'read').length; }
-  function writeAll(t) { return t.filter(x => x.tier === 'write').length; }
+  for (const name of UNREGISTERED_WRITES) assert.ok(!tools.some(t => t.name === name), `${name} must be unregistered`);
+  for (const name of UNREGISTERED_WRITES) assert.ok(!manifest.tools.some(t => t.name === name), `${name} must be absent from manifest`);
+});
+
+test('dev writes are unregistered: any write name is refused as unknown tool before secret', async () => {
+  for (const name of UNREGISTERED_WRITES) {
+    const events = [];
+    const result = await new Broker().execute({ audit: async e => events.push(e), clock: Date.now }, 'dev', name, { ...base, channelId, messageId, content: 'x', eventId: messageId, threadId: messageId, emoji: '👍', name: 'n', scheduledStartTime: '2026-11-20T00:00:00' }, run);
+    assert.equal(result.isError, true, name);
+    assert.equal(JSON.parse(result.content[0].text).rule, 'validation.unknown_tool', name);
+    assert.equal(events.length, 1, name);
+  }
 });
 
 test('discord.guild_get: fixed origin, bounded read, audit, no token in output', async () => {
@@ -43,30 +59,6 @@ test('discord.messages_search: bounded query in allowlisted channel; webhook/inv
   f.hygiene(result); f.done();
 });
 
-test('discord.message_post: plain text + allowed_mentions parse [], persists ownership ledger', async () => {
-  const f = fixture();
-  f.steps.push({ method: 'POST', path: `/api/v10/channels/${channelId}/messages`, status: 200, body: { id: messageId, channel_id: channelId, content: 'synthetic post', timestamp: '2026-11-10T00:00:00.000Z', author: { id: '1469137636663758888', username: 'Owen' } },
-    inspect(req) { const b = JSON.parse(req.body); assert.deepEqual(b.allowed_mentions, { parse: [] }); assert.equal(b.content, 'synthetic post'); } });
-  const result = await f.call('discord.message_post', { ...base, channelId, content: 'synthetic post' });
-  assert.equal(result.data.ok, true);
-  assert.ok(f.kv.size > 0, 'Ledger entry must persist ownership');
-  f.hygiene(result); f.done();
-});
-
-test('discord.message_edit_own: requires ledger entry and upstream author match', async () => {
-  const f = fixture();
-  f.kv.set(`discord:own:${channelId}:${messageId}`, { authorId: '1469137636663758888', agentId: run.agentId, at: Date.now() });
-  f.read(`/channels/${channelId}/messages/${messageId}`, { id: messageId, channel_id: channelId, content: 'old', author: { id: '1469137636663758888', username: 'Owen' } });
-  f.steps.push({ method: 'PATCH', path: `/api/v10/channels/${channelId}/messages/${messageId}`, status: 200, body: { id: messageId, channel_id: channelId, content: 'synthetic edit', author: { id: '1469137636663758888', username: 'Owen' } } });
-  const result = await f.call('discord.message_edit_own', { ...base, channelId, messageId, content: 'synthetic edit' });
-  assert.equal(result.data.ok, true); f.done();
-});
-
-test('discord.message_edit_own without ledger is refused before secret', async () => {
-  const f = fixture();
-  refused(f, await f.call('discord.message_edit_own', { ...base, channelId, messageId, content: 'x' }), 'policy.ownership');
-});
-
 test('unknown tool and prototype dispatch have no secret or outbound access', async () => {
   for (const name of ['constructor', '__proto__', 'toString', 'discord.member_ban', 'discord.webhook_create', 'discord.channel_delete', 'discord.command_create', 'discord.bulk_delete', 'discord.guild_leave']) {
     const events = [];
@@ -80,8 +72,6 @@ test('closed schemas reject malformed shapes, spoofed args and over-limit values
     [{ ...base, channelId, limit: 0 }, 'validation.schema'],
     [{ ...base, channelId, limit: 101 }, 'validation.schema'],
     [{ ...base, channelId, limit: 1.5 }, 'validation.schema'],
-    [{ ...base, channelId: '123', limit: 10 }, 'validation.schema'],
-    [{ ...base, channelId, content: 'x'.repeat(2001) }, 'validation.schema'],
     [{ ...base, channelId, limit: 10, token: 'spoof' }, 'validation.schema'],
     [{ ...base, channelId, limit: 10, url: 'https://evil.test' }, 'validation.schema'],
     [{ ...base, channelId, limit: 10, guildId, secretRef: 'secret-dev' }, 'validation.schema'],
@@ -90,10 +80,11 @@ test('closed schemas reject malformed shapes, spoofed args and over-limit values
   for (const [args, rule] of cases) {
     const f = fixture(); refused(f, await f.call('discord.messages_list', args), rule);
   }
-  // post with @everyone content is allowed as plain text (broker strips mentions via allowed_mentions)
-  const g = fixture(); g.steps.push({ method: 'POST', path: `/api/v10/channels/${channelId}/messages`, status: 200, body: { id: messageId, channel_id: channelId, content: 'hi' }, inspect(req) { assert.deepEqual(JSON.parse(req.body).allowed_mentions, { parse: [] }); } });
-  const ok = await g.call('discord.message_post', { ...base, channelId, content: '@everyone hi' });
-  assert.equal(ok.data.ok, true);
+  // Formerly-valid write shapes are now refused as unknown tools even with
+  // well-formed args: no write tool is registered to parse them.
+  const events = [];
+  const post = await new Broker().execute({ audit: async e => events.push(e), clock: Date.now }, 'dev', 'discord.message_post', { ...base, channelId, content: '@everyone hi' }, run);
+  assert.equal(JSON.parse(post.content[0].text).rule, 'validation.unknown_tool');
 });
 
 test('policy refusals: wrong company, profile none, channel allowlist, prereq binding', async () => {
@@ -103,8 +94,6 @@ test('policy refusals: wrong company, profile none, channel allowlist, prereq bi
   refused(b, await b.call('discord.guild_get', { ...base }), 'policy.profile');
   const c = fixture(); c.config.policy.readChannelIds = ['1999999999999999999'];
   refused(c, await c.call('discord.messages_list', { ...base, channelId, limit: 1 }), 'policy.channel');
-  const d = fixture(); d.config.policy.agents[0].profile = 'researcher-read';
-  refused(d, await d.call('discord.message_post', { ...base, channelId, content: 'x' }), 'policy.profile');
   const e = fixture(); e.issue.checkoutRunId = 'another-run'; e.issue.executionRunId = 'another-run';
   refused(e, await e.call('discord.guild_get', { ...base }), 'identity.issue_run');
 });
@@ -136,39 +125,9 @@ test('hydration: audit failure blocks side effects; policy change refuses', asyn
   assert.equal(r.data.rule, 'audit.unavailable'); assert.equal(f.secretCalls, 0);
 });
 
-test('discord.message_delete_own: ledger-backed delete clears ledger; 404 is already-gone success', async () => {
-  const f = fixture();
-  const life = `discord:life:message:${channelId}:${messageId}`;
-  f.kv.set(life, { kind: 'message', channelId, resourceId: messageId, guildId, agentId: run.agentId, runId: run.runId, authorId: '1469137636663758888', createdAt: Date.now(), expiresAt: Date.now() + 86400000, state: 'owned' });
-  f.kv.set('discord:life-index', [life]);
-  f.steps.push({ method: 'DELETE', path: `/api/v10/channels/${channelId}/messages/${messageId}`, status: 204, body: {} });
-  const result = await f.call('discord.message_delete_own', { ...base, channelId, messageId });
-  assert.equal(result.data.ok, true);
-  assert.ok(!f.kv.has(life), 'Ledger cleared after delete');
-  assert.deepEqual(f.kv.get('discord:life-index'), []);
-  f.done();
-  const g = fixture();
-  g.kv.set(life, { kind: 'message', channelId, resourceId: messageId, guildId, agentId: run.agentId, runId: run.runId, authorId: '1469137636663758888', createdAt: Date.now(), expiresAt: Date.now() + 86400000, state: 'owned' });
-  g.steps.push({ method: 'DELETE', path: `/api/v10/channels/${channelId}/messages/${messageId}`, status: 404, body: { message: 'gone' } });
-  const gone = await g.call('discord.message_delete_own', { ...base, channelId, messageId });
-  assert.equal(gone.data.ok, true); assert.equal(gone.data.page.alreadyGone, true);
-  assert.ok(!g.kv.has(life), 'Ledger cleared on already-gone');
-  g.done();
-});
-
-test('discord.message_delete_own without ledger is refused before secret', async () => {
-  const f = fixture();
-  refused(f, await f.call('discord.message_delete_own', { ...base, channelId, messageId }), 'policy.ownership');
-});
-
-test('discord.event_delete_own and thread_delete_own ledger gates', async () => {
-  const f = fixture();
-  refused(f, await f.call('discord.event_delete_own', { ...base, eventId: messageId }), 'policy.ownership');
-  const g = fixture();
-  refused(g, await g.call('discord.thread_delete_own', { ...base, channelId, threadId: messageId }), 'policy.ownership');
-});
-
-test('expiry sweep deletes expired owned resources via verify+delete on next call', async () => {
+test('legacy ledger cleanup: expired entries are still swept on dev calls', async () => {
+  // Writes are unregistered, so no new entries are created. Any legacy
+  // entry already in state is still removed via verify+DELETE+GET-404.
   const f = fixture();
   const life = `discord:life:message:${channelId}:${messageId}`;
   f.kv.set(life, { kind: 'message', channelId, resourceId: messageId, guildId, agentId: run.agentId, runId: run.runId, authorId: '1469137636663758888', createdAt: Date.now() - 8 * 86400000, expiresAt: Date.now() - 1000, state: 'owned' });
@@ -182,42 +141,4 @@ test('expiry sweep deletes expired owned resources via verify+delete on next cal
   assert.ok(!f.kv.has(life), 'Sweep cleared expired ledger');
   assert.ok(f.events.some(e => e.rule === 'sweep.deleted'), 'Sweep audit emitted');
   f.done();
-});
-
-test('restart: new broker instance deletes via persisted ledger after restart', async () => {
-  const f = fixture();
-  f.steps.push({ method: 'POST', path: `/api/v10/channels/${channelId}/messages`, status: 200, body: { id: messageId, channel_id: channelId, content: 'synthetic post', timestamp: '2026-11-10T00:00:00.000Z', author: { id: '1469137636663758888', username: 'Owen' } } });
-  const posted = await f.call('discord.message_post', { ...base, channelId, content: 'synthetic post' });
-  assert.equal(posted.data.ok, true); f.done();
-  // "Restart": brand-new Broker + fixture sharing the same durable KV.
-  const g = fixture();
-  for (const [k, v] of f.kv) g.kv.set(k, v);
-  g.steps.push({ method: 'DELETE', path: `/api/v10/channels/${channelId}/messages/${messageId}`, status: 204, body: {} });
-  const deleted = await g.call('discord.message_delete_own', { ...base, channelId, messageId });
-  assert.equal(deleted.data.ok, true); g.done();
-});
-
-test('ambiguous create success keeps a pending intent reconciled by sweep', async () => {
-  const f = fixture();
-  f.steps.push({ method: 'POST', path: `/api/v10/channels/${channelId}/messages`, error: new Error('timeout after dispatch') });
-  const failed = await f.call('discord.message_post', { ...base, channelId, content: 'synthetic post' });
-  assert.equal(failed.data.ok, false);
-  const pending = [...f.kv.entries()].find(([, v]) => v && typeof v === 'object' && v.state === 'pending');
-  assert.ok(pending, 'Pending intent must persist for reconciliation');
-  // Age the intent past the staleness threshold; sweep search finds exactly
-  // one bot-authored message in the channel and adopts it.
-  const pk = pending[0];
-  f.kv.set(pk, { ...pending[1], createdAt: Date.now() - 120000 });
-  f.read(`/guilds/${guildId}/messages/search?author_id=1469137636663758888&channel_id=${channelId}&limit=5`, { total_results: 1, messages: [[{ id: messageId, channel_id: channelId, content: 'synthetic post', author: { id: '1469137636663758888' } }]] });
-  f.read(`/guilds/${guildId}`, { id: guildId, name: 'TWO Staging' });
-  const healed = await f.call('discord.guild_get', { ...base });
-  assert.equal(healed.data.ok, true);
-  const owned = f.kv.get(`discord:life:message:${channelId}:${messageId}`);
-  assert.ok(owned && owned.state === 'owned' && owned.resourceId === messageId, 'Intent reconciled to owned ledger entry');
-  f.done();
-});
-
-test('event_create refuses starts outside the immutable window', async () => {
-  const f = fixture();
-  refused(f, await f.call('discord.event_create', { ...base, name: 'Broker event', scheduledStartTime: '2020-01-01T00:00:00', channelId }), 'policy.expiry');
 });

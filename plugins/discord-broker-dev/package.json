@@ -2,7 +2,7 @@
   "name": "@togetherweown/paperclip-plugin-discord-broker-dev",
   "version": "0.1.0",
   "private": true,
-  "description": "Scoped Discord broker (TWO Staging) — tier 1 read + tier 2 dev writes",
+  "description": "Scoped Discord broker (TWO Staging) — tier 1 read only; dev writes unregistered",
   "type": "module",
   "engines": { "node": ">=24.11.0 <25" },
   "files": ["dist", "README.md", "THREAT-MODEL.md", "ACCEPTANCE.md"],

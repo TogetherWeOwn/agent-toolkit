@@ -137,7 +137,14 @@ function pick(m: unknown, fields: string[]): Record<string, unknown> {
 }
 
 export function toolsFor(kind: EnvKind): Tool[] {
-  return kind === "dev" ? [...readTools, ...writeTools] : [...readToolsMeta];
+  // Scope reduction: dev writes are unregistered. Security review of the
+  // tier-1/2 envelope retained the lifecycle finding (no independent
+  // scheduled teardown available on this host; sweep is opportunistic) and
+  // invalidated the exact-ownership claim for the write path. Per the
+  // review's direction, dev is registered read-only (tier 1) while prod is
+  // metadata-only read. `writeTools` below is retained unregistered pending
+  // an independent teardown scheduler and a favorable review.
+  return kind === "dev" ? [...readTools] : [...readToolsMeta];
 }
 
 export function operationNames(kind: EnvKind): string[] { return toolsFor(kind).map(t => t.name); }
