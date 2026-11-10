@@ -8,6 +8,7 @@
   "files": ["dist", "README.md", "THREAT-MODEL.md", "ACCEPTANCE.md"],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "npm run build && node --test --test-timeout=30000 test/*.test.mjs"
   },
   "dependencies": { "@paperclipai/plugin-sdk": "2026.1023.0" },
