@@ -49,8 +49,11 @@ jobs:
         # default, which makes unshare fail before the supervisor starts.
         # Hosted-runner sudo is passwordless; the witness itself still runs
         # unprivileged with dropped capabilities. Best effort: failure here is
-        # still diagnosed via runner.json unshareErrorCode.
+        # still diagnosed via runner.json unshareErrorCode. The original
+        # value is captured and restored after the witness step.
         run: |
+          original="$(sysctl -n kernel.apparmor_restrict_unprivileged_userns 2>/dev/null || echo 1)"
+          echo "orig_userns_restrict=$original" >> "$GITHUB_ENV"
           sysctl kernel.apparmor_restrict_unprivileged_userns || true
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
           sysctl kernel.apparmor_restrict_unprivileged_userns || true
@@ -59,6 +62,12 @@ jobs:
           set -euo pipefail
           env -i PATH="$PATH" GITHUB_ACTIONS=true \
             node test/native-workspace/runner.mjs "$RUNNER_TEMP/native-workspace-report"
+      - name: Restore user namespace restriction
+        if: always()
+        run: |
+          if [ -n "${orig_userns_restrict:-}" ]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns="$orig_userns_restrict" || true
+          fi
       - name: Sanitized evidence only
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

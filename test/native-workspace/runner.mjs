@@ -43,28 +43,41 @@ async function assertNoSockets(source) {
   const queue = [source];
   let head = 0;
   let found = false;
+  let active = 0;
   async function worker() {
-    while (head < queue.length && !found) {
-      const dir = queue[head++];
-      let entries;
-      try {
-        entries = await readdir(dir, { withFileTypes: true });
-      } catch {
+    while (!found) {
+      if (head >= queue.length) {
+        // Idle workers wait while other workers still discover entries,
+        // and exit only when the queue is empty and nothing is in flight.
+        if (active === 0) return;
+        await new Promise(resolveTick => setImmediate(resolveTick));
         continue;
       }
-      for (const entry of entries) {
-        if (Date.now() - started > 60_000) {
-          const error = new Error('socket-check wall-time budget exceeded');
-          error.code = 'ETIMEDOUT';
-          throw error;
+      const dir = queue[head++];
+      active++;
+      try {
+        let entries;
+        try {
+          entries = await readdir(dir, { withFileTypes: true });
+        } catch {
+          continue;
         }
-        if (entry.isSocket()) { found = true; return; }
-        if (entry.isDirectory()) queue.push(join(dir, entry.name));
-        else if (!entry.isFile() && !entry.isSymbolicLink()) {
-          const stat = await lstat(join(dir, entry.name)).catch(() => null);
-          if (stat?.isSocket()) { found = true; return; }
-          if (stat?.isDirectory()) queue.push(join(dir, entry.name));
+        for (const entry of entries) {
+          if (Date.now() - started > 60_000) {
+            const error = new Error('socket-check wall-time budget exceeded');
+            error.code = 'ETIMEDOUT';
+            throw error;
+          }
+          if (entry.isSocket()) { found = true; return; }
+          if (entry.isDirectory()) queue.push(join(dir, entry.name));
+          else if (!entry.isFile() && !entry.isSymbolicLink()) {
+            const stat = await lstat(join(dir, entry.name)).catch(() => null);
+            if (stat?.isSocket()) { found = true; return; }
+            if (stat?.isDirectory()) queue.push(join(dir, entry.name));
+          }
         }
+      } finally {
+        active--;
       }
     }
   }
@@ -92,11 +105,17 @@ async function assertNoBoundSockets(root) {
     }
   };
   await readTable('/proc/net/unix');
-  let pids = [];
-  try { pids = await readdir('/proc'); } catch { /* Sweep is best-effort. */ }
+  const pids = await readdir('/proc');
   for (const pid of pids) {
     if (!/^\d+$/.test(pid)) continue;
-    try { await readTable(`/proc/${pid}/net/unix`); } catch { /* Unreadable tables stay uncovered. */ }
+    try {
+      await readTable(`/proc/${pid}/net/unix`);
+    } catch (error) {
+      // A process that exits mid-sweep is benign; any other read failure
+      // means its bound sockets are uncovered, so fail closed instead of
+      // passing with unknown isolation.
+      if (error?.code !== 'ENOENT') throw error;
+    }
   }
   for (const socketPath of bound) {
     assert(socketPath !== root && !socketPath.startsWith(`${root}/`),
