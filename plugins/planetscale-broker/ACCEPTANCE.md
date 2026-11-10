@@ -4,6 +4,39 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Deployment collection preparation source increment
+
+Four pure Prepared bindings cover existing deploy queue, deploy-operation,
+deploy-review and schema-recommendation collection GETs. Closed immutable host
+parents/revision, unique bounded child bindings, applicable request ID/number/source
+snapshot and host pagination bind fixed requests and empty caller arguments.
+Existing binding parsers exported/reused without behavior changes; every field
+enters plan/full hashes, including independent IDs absent from paths. No executor,
+registration, credential resolution or authority consumption.
+
+`test/core-deployment-collection-read-preparation.test.mjs` supplies **39 synthetic
+contracts** for exact requests, every-field hashes, deep immutable capture,
+closed/bounded input, accessor/page/whole-response refusals, operation separation
+and canary omission. Queue receipts match ID/number/destination name, not immutable
+destination/parent ownership. Recommendations match ID/number; operations/reviews
+match child ID, not request association. Child confinement is not upstream
+collection permission. Provider approval is not native approval; state/flags do
+not prove safety, DDL execution, rollback or closure. SQL/DDL/errors/actors/raw times
+are omitted. Current ownership/revision/bindings, collection permission, trusted
+transport/raw-body custody and independent non-waking proof remain prerequisites.
+Coverage stays **134/291 offline adapters; 157 missing**, twelve previews and
+**112 pure preparations**, zero runtime-integrated/reviewed/enabled/adopted.
+New contracts require exact-head Actions, not this declaration.
+
+Prior exact `8a36f3bfb1a5b0b6c60386151de347b035aa7ecf`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42813163486)
+and [test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42813163486/job/129819511697)
+passed, as did [Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42813162719)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42813156171).
+Earlier pending scanner observation is superseded; no numeric totals extracted.
+Earlier recurring unchanged SDK recovery uncertainty remains unresolved, not
+repaired. No inline findings/submitted reviews returned. Older counts are historical.
+
 ## Audit-log preparation source increment
 
 One pure Prepared binding covers the existing organization audit-log first-page

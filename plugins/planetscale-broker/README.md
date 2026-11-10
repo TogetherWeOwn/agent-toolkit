@@ -6,6 +6,30 @@ manifest, network executor, credential resolver, or tool registration is supplie
 The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
+## Deployment collection preparation increment
+
+Four pure `Prepared` bindings cover the existing deploy queue, deploy-operation,
+deploy-review and schema-recommendation collection GETs. Closed immutable host
+parents/revision, unique bounded child bindings, applicable request ID/number/source
+snapshot and host pagination bind fixed GETs and empty caller arguments. Existing
+binding parsers are exported/reused without behavior changes. Every field enters
+plan/full hashes, including independent IDs absent from paths. No executor,
+registration, credential resolution or authority consumption.
+
+`test/core-deployment-collection-read-preparation.test.mjs` supplies 39 synthetic
+contracts for fixed requests, every-field hashes, immutable captures, closed and
+bounded inputs, accessor/page/whole-response refusals and redacted projections.
+Queue receipts match ID/number/destination name, not immutable destination or parent
+ownership. Recommendation receipts match ID/number; operations/reviews match child
+ID, not their request association. Child confinement is not upstream collection
+permission. Provider approval is explicitly not native approval; states/flags never
+prove safety, DDL execution, rollback or closure. SQL/DDL/errors/actors/raw times
+are omitted. Current ownership/revision/bindings, collection permission, trusted
+transport/raw-body custody and independent non-waking proof remain prerequisites.
+Coverage stays **134/291 offline adapters; 157 missing**, twelve previews and **112
+pure preparations**, zero runtime-integrated/reviewed/enabled/adopted. New contracts
+require exact-head Actions; older counts below are historical.
+
 ## Audit-log preparation increment
 
 One pure `Prepared` binding covers the existing organization audit-log first-page

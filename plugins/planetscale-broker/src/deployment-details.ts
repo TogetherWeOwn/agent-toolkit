@@ -11,7 +11,7 @@ function bindings<T extends { readonly id: string; readonly number: number }>(sc
     return Object.freeze(parsed);
   } };
 }
-const childIds: Schema<readonly string[]> = { parse(value) {
+export const childIds: Schema<readonly string[]> = { parse(value) {
   requireThat(Array.isArray(value) && value.length > 0 && value.length <= 32, "schema");
   const parsed = value.map(item => identifier.parse(item));
   requireThat(new Set(parsed).size === parsed.length, "schema");
@@ -23,11 +23,13 @@ const deploymentBinding = closed({ id: identifier, number: deployNumber, intoBra
 const recommendationBinding = closed({ id: identifier, number: deployNumber });
 export type DeploymentBinding = ReturnType<typeof deploymentBinding.parse>;
 export type RecommendationBinding = ReturnType<typeof recommendationBinding.parse>;
+export const deploymentBindings = bindings(deploymentBinding);
+export const recommendationBindings = bindings(recommendationBinding);
 export const deploymentScope = closed({ organization: slug, database: slug, deployment: deploymentBinding });
-export const deployQueueScope = closed({ organization: slug, database: slug, deployments: bindings(deploymentBinding) });
+export const deployQueueScope = closed({ organization: slug, database: slug, deployments: deploymentBindings });
 export const deployChildScope = closed({ organization: slug, database: slug, request: deployBinding, childIds });
 export const recommendationScope = closed({ organization: slug, database: slug, recommendation: recommendationBinding });
-export const recommendationListScope = closed({ organization: slug, database: slug, recommendations: bindings(recommendationBinding) });
+export const recommendationListScope = closed({ organization: slug, database: slug, recommendations: recommendationBindings });
 
 export interface DeploymentSummary {
   readonly id: string;

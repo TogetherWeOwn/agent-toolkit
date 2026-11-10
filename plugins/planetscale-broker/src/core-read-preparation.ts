@@ -17,6 +17,11 @@ import { deployBinding, deployBindings, deployNumber, lifecycleIds } from "./lif
 import { prepare as prepareBackupList } from "./tools/list-backups.js";
 import { prepare as prepareBackupPolicyList } from "./tools/list-backup-policies.js";
 import { prepare as prepareDeployRequestList } from "./tools/list-deploy-requests.js";
+import { childIds, deploymentBindings, recommendationBindings } from "./deployment-details.js";
+import { prepare as prepareDeployQueue } from "./tools/get-deploy-queue.js";
+import { prepare as prepareDeployOperationList } from "./tools/list-deploy-operations.js";
+import { prepare as prepareDeployReviewList } from "./tools/list-deploy-request-reviews.js";
+import { prepare as prepareSchemaRecommendationList } from "./tools/list-schema-recommendations.js";
 import { prepare as prepareDeployment } from "./tools/get-deployment.js";
 import { prepare as prepareSchemaRecommendation } from "./tools/get-schema-recommendation.js";
 import { keyspaceBindings, shardBindings, maintenanceEventBindings } from "./topology.js";
@@ -146,6 +151,9 @@ const branchMetricsTarget = closed({ ...branchFields, ...metricWindowFields, met
 const tabletMetricsTarget = closed({ ...branchFields, ...metricWindowFields, metric: oneOf(historicalTabletMetricNames) });
 const lintBranchTarget = closed({ ...branchFields, keyspaceNames: lintKeyspaceNames });
 const deployStorageCheckTarget = closed({ ...databaseFields, requestId: identifier, number: deployNumber });
+const deployQueueTarget = closed({ ...databaseFields, deployments: deploymentBindings, pagination: pageArguments });
+const deployChildListTarget = closed({ ...databaseFields, request: deployBinding, childIds, pagination: pageArguments });
+const schemaRecommendationListTarget = closed({ ...databaseFields, recommendations: recommendationBindings, pagination: pageArguments });
 const auditLogListTarget = closed({ ...organizationFields, eventIds: auditEventIds });
 const anomalyListTarget = closed({ ...branchFields, anomalyIds, pagination: pageArguments });
 const trafficBudgetListTarget = closed({ ...branchFields, budgetIds: trafficBudgetIds, pagination: pageArguments });
@@ -275,8 +283,10 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof organizationInvitationListTarget.parse> | ReturnType<typeof invoiceListTarget.parse> |
   ReturnType<typeof invoiceLineItemListTarget.parse> | ReturnType<typeof anomalyListTarget.parse> |
   ReturnType<typeof trafficBudgetListTarget.parse> | ReturnType<typeof queryReportListTarget.parse> |
-  ReturnType<typeof auditLogListTarget.parse>;
-type ReadOperation = "list_audit_logs" | "list_databases" | "list_branches" | "list_database_regions" |
+  ReturnType<typeof auditLogListTarget.parse> | ReturnType<typeof deployQueueTarget.parse> |
+  ReturnType<typeof deployChildListTarget.parse> | ReturnType<typeof schemaRecommendationListTarget.parse>;
+type ReadOperation = "get_deploy_queue" | "list_deploy_operations" | "list_deploy_request_reviews" |
+  "list_schema_recommendations" | "list_audit_logs" | "list_databases" | "list_branches" | "list_database_regions" |
   "list_regions_for_organization" | "list_public_regions" | "get_organization" | "get_database" | "get_branch" |
   "list_backups" | "list_backup_policies" | "list_deploy_requests" |
   "get_backup" | "get_backup_policy" | "get_deploy_request" |
@@ -338,6 +348,38 @@ function bindRead(
     jsonData(prepared);
     return prepared;
   };
+}
+
+export function bindGetDeployQueuePreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = deployQueueTarget.parse(rawTarget);
+  const read = prepareDeployQueue({ organization: target.organization, database: target.database,
+    deployments: target.deployments }, target.pagination);
+  return bindRead(`planetscale/database/${target.databaseId}`, target,
+    "get_deploy_queue", read.request, "record-and-number-parent-and-destination-not-verified");
+}
+
+export function bindListDeployOperationsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = deployChildListTarget.parse(rawTarget);
+  const read = prepareDeployOperationList({ organization: target.organization, database: target.database,
+    request: target.request, childIds: target.childIds }, target.pagination);
+  return bindRead(`planetscale/deploy-request/${target.request.id}`, target,
+    "list_deploy_operations", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindListDeployRequestReviewsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = deployChildListTarget.parse(rawTarget);
+  const read = prepareDeployReviewList({ organization: target.organization, database: target.database,
+    request: target.request, childIds: target.childIds }, target.pagination);
+  return bindRead(`planetscale/deploy-request/${target.request.id}`, target,
+    "list_deploy_request_reviews", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindListSchemaRecommendationsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = schemaRecommendationListTarget.parse(rawTarget);
+  const read = prepareSchemaRecommendationList({ organization: target.organization, database: target.database,
+    recommendations: target.recommendations }, target.pagination);
+  return bindRead(`planetscale/database/${target.databaseId}`, target,
+    "list_schema_recommendations", read.request, "record-and-number-parent-not-verified");
 }
 
 export function bindListAuditLogsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
