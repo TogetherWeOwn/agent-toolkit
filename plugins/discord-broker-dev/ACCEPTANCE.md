@@ -33,7 +33,7 @@ Pre-push: bounded checks per two-operating-rules rule 16 (formatter/linter/typec
 | Closed tool set; prototype dispatch refused | unknown/prototype test (9 names incl. `member_ban`, `webhook_create`, `guild_leave`) → `validation.unknown_tool`, 1 deny event, 0 secret/outbound |
 | Closed schemas; spoofed args refused | schema test: `limit` 0/101/1.5, `channelId:'123'`, `token`/`url`/`guildId`/`secretRef` extras, `null`/`[]`/`{}` → `validation.schema` |
 | Identity binding (company/run/profile) | `identity.issue_company`, `policy.profile` (`none` read attempt), `identity.issue_run` |
-| Channel allowlist | `policy.channel` (read list excludes channel); `channels_list`/`threads_active_list` post-projection filter (restricted channel/thread absent; 150-channel and 120-role inventories succeed within provider caps) |
+| Channel allowlist | `policy.channel` (read list excludes channel); `channels_list`/`threads_active_list` post-projection filter (restricted channel/thread absent; private threads under allowlisted parents dropped; 150-channel and 120-role inventories succeed within provider caps) |
 | Bounded limits | `messages_search` limit 26 → `validation.schema` (dropped `members_search` is `validation.unknown_tool`); `messages_list` keeps 100; guild `features` array accepted; search uses documented `content` parameter (fixture path asserts it) |
 | Redaction | token/webhook/invite in guild payload → absent from result/audit; embedded foreign bot token in message content redacted while message links survive; `hygiene` scans result+events+logs+kv |
 | 401 pause / 429 Retry-After | `upstream.unauthorized` (guild pause); `rate.discord` with `retryAfterSeconds:17` |

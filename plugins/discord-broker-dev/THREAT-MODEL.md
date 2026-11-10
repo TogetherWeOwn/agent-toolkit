@@ -24,7 +24,7 @@ Common properties (all tools): closed schema (unknown/spoofed args refused, e.g.
 | `discord.messages_list` / `message_get` | read | yes | member message content read (allowlisted channels only) | channel allowlist; 1 MiB cap; **store no raw member messages** |
 | `discord.messages_search` | read | yes | content search across allowlisted channel | bounded query/limit; webhook/invite scrub in results |
 | `discord.pins_list`, `reactions_list` | read | yes | pins/reactions read | channel allowlist |
-| `discord.threads_active_list`, `events_list`, `event_get` | read | yes | thread/event metadata | bounded projection; `threads_active_list` post-projection filtered to threads whose parent channel is allowlisted (tested) |
+| `discord.threads_active_list`, `events_list`, `event_get` | read | yes | thread/event metadata | bounded projection; `threads_active_list` post-projection filtered to public/announcement threads (type 10/11) whose parent channel is allowlisted; private threads (type 12) are dropped even under an allowlisted parent (tested) |
 | `discord.roles_list`, `discord.member_get`, `discord.members_search` | **unregistered** | n/a | guild-wide personal-data reads with no channel tie; not needed for counts/links research | `validation.unknown_tool` before secret (tested) |
 | `discord.message_post`, `message_reply`, `message_edit_own`, `reaction_add_own`, `reaction_remove_own`, `thread_create`, `event_create`, `message_delete_own`, `thread_delete_own`, `event_delete_own` | **unregistered** | n/a | previously tier-2/on staging; held out of registration — see scope-reduction note in §1 | `validation.unknown_tool` before secret (tested); implementations retained unregistered in `packages/discord` |
 

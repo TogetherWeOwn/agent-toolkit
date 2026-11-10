@@ -152,10 +152,13 @@ test('threads_active_list: restricted-parent threads are filtered out', async ()
     { id: '1545644954272137301', name: 'public-thread', parent_id: channelId, type: 11 },
     { id: '1545644954272137302', name: 'restricted-thread', parent_id: '1545644954272137300', type: 11 },
     { id: '1545644954272137303', name: 'orphan-thread', type: 11 },
+    { id: '1545644954272137304', name: 'private-thread', parent_id: channelId, type: 12 },
+    { id: '1545644954272137305', name: 'announce-thread', parent_id: channelId, type: 10 },
   ] });
   const result = await f.call('discord.threads_active_list', { ...base });
   assert.equal(result.data.ok, true);
-  assert.deepEqual(result.data.page.map(t => t.name), ['public-thread']);
+  assert.deepEqual(result.data.page.map(t => t.name), ['public-thread', 'announce-thread']);
+  assert.ok(!JSON.stringify(result.data).includes('private-thread'), 'Private thread leaked through parent grant');
   f.hygiene(result); f.done();
 });
 

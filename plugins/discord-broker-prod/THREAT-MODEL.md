@@ -23,7 +23,7 @@ Common: guild = config; channel args checked against `policy.readChannelIds`; sn
 | `discord.messages_list`, `message_get` | message **metadata** reads (public channels only) | channel allowlist; bodies never returned (metadata-only projection); counts/links for research |
 | `discord.messages_search` (research workhorse) | bounded search returning `total_results` + message metadata links | query ≤512, limit ≤25 (Discord search maximum); webhook/invite scrub; no bodies; report “no matches in coverage”, never “nobody asked” |
 | `discord.pins_list`, `reactions_list` | pins metadata / reactions | channel allowlist; pins return metadata only |
-| `discord.threads_active_list`, `events_list`, `event_get` | threads/events | bounded projection |
+| `discord.threads_active_list`, `events_list`, `event_get` | threads/events | `threads_active_list` public/announcement threads (types 10/11) under allowlisted parents only; private (12) dropped; events channel-filtered |
 | `discord.roles_list`, `discord.member_get`, `discord.members_search` | **unregistered** (guild-wide personal data, no channel tie; not needed for research) | `validation.unknown_tool` before secret |
 | `discord.message_post` / `message_reply` / `message_edit_own` / `reaction_*` / `thread_create` / `event_create` | **NOT REGISTERED (tier 3 off)** — absent, not permission-gated | tool set contains zero writes; `validation.unknown_tool` + single deny event (tested) |
 

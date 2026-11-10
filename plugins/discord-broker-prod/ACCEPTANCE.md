@@ -25,7 +25,7 @@ Pre-push: bounded checks per rule 16. CI of record is GitHub Actions; exact-head
 | Read-only tool set | inventory test: 11 tools, all `tier:"read"`, 6 write names + 3 guild-wide personal-data names absent |
 | Publish refusal before secret/HTTP | 7 names (`message_post`…`webhook_create`) → `validation.unknown_tool`, 1 audit event each |
 | Cross-environment refusal | `environment:"dev"` config on prod plugin → `policy.environment` |
-| Closed schemas + allowlist + profile | `validation.schema`, `policy.channel`, `policy.profile`; `channels_list`/`threads_active_list` post-projection filter (restricted entries absent) |
+| Closed schemas + allowlist + profile | `validation.schema`, `policy.channel`, `policy.profile`; `channels_list`/`threads_active_list` post-projection filter (restricted entries and private threads absent) |
 | Bounded limits | `messages_search` limit 26 → `validation.schema` (dropped `members_search` is `validation.unknown_tool`); search uses documented `content` parameter (fixture path asserts it) |
 | Search returns counts/links, no raw storage | `messages_search` test asserts `total_results`/message metadata without `secret-prod` leakage and without message bodies; usage policy: no embeddings/Hindsight ingest |
 | Events restricted to allowlisted channels; guild binding | `events_list` filter test, `channel_get` cross-guild refusal test (`upstream.guild`) |

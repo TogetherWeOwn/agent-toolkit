@@ -103,10 +103,12 @@ test('prod channels_list + threads_active_list restrict to allowlisted channels'
   g.read(`/guilds/${guildId}/threads/active`, { threads: [
     { id: '326474832151838740', name: 'public-thread', parent_id: channelId, type: 11 },
     { id: '326474832151838741', name: 'restricted-thread', parent_id: restrictedId, type: 11 },
+    { id: '326474832151838742', name: 'private-thread', parent_id: channelId, type: 12 },
   ] });
   const r2 = await g.call('discord.threads_active_list', { ...base });
   assert.equal(r2.data.ok, true);
   assert.deepEqual(r2.data.page.map(t => t.name), ['public-thread']);
+  assert.ok(!JSON.stringify(r2.data).includes('private-thread'), 'Private thread leaked through parent grant');
   f.hygiene(r1); g.hygiene(r2); f.done(); g.done();
 });
 

@@ -564,7 +564,16 @@ export class Broker {
       if (tool.listScope && Array.isArray(value)) {
         const allowed = new Set(config.policy.readChannelIds);
         const key = tool.listScope === "channel" ? "id" : tool.listScope === "thread" ? "parent_id" : "channel_id";
-        value = (value as unknown[]).filter(item => item !== null && typeof item === "object" && allowed.has(String((item as Record<string, unknown>)[key])));
+        value = (value as unknown[]).filter(item => {
+          if (item === null || typeof item !== "object") return false;
+          const o = item as Record<string, unknown>;
+          if (!allowed.has(String(o[key]))) return false;
+          // A parent grant must not leak private threads: only public
+          // (11) and announcement (10) threads are returned; private
+          // threads (12) and typeless entries are dropped fail-closed.
+          if (tool.listScope === "thread" && o.type !== 10 && o.type !== 11) return false;
+          return true;
+        });
       }
       // Defense in depth: the upstream object must belong to the bound
       // guild. Channel-scoped endpoints are not guild-scoped by Discord,
