@@ -72,6 +72,13 @@ export function githubHttp(ctx: Pick<PluginContext, "http">, req: Request, deadl
       // Other rejections (including the SDK's own timeout) prove no settlement.
       if (error instanceof TypeError && /^Response constructor: Invalid response status code (204|205|304)$/.test(error.message)) settled();
       if (error instanceof TypeError && error.message === "Response constructor: Invalid response status code 204" && req.method === "DELETE" && req.url === "https://api.github.com/installation/token") throw new SdkNullBodyRevokeFailure();
+      // The same SDK defect hides a successful workflow-dispatch 204. Recover
+      // only that exact fixed-origin POST shape (a 204 reconstruction failure
+      // proves the host returned 204, which is dispatch's sole success status);
+      // headers/request ID are unrecoverable and stay empty, never fabricated.
+      if (error instanceof TypeError && error.message === "Response constructor: Invalid response status code 204" && req.method === "POST" && /^https:\/\/api\.github\.com\/repos\/[^/]+\/[^/]+\/actions\/workflows\/[^/]+\/dispatches$/.test(req.url)) {
+        return { status: 204, headers: {}, body: "" };
+      }
       throw error;
     }
     const receivedAt = performance.now(); // Before body handling; part of the recovery window.
@@ -93,7 +100,7 @@ function hostFor(ctx: PluginContext, run: ToolRunContext, call: typeof hostCall)
 }
 export function register(ctx: PluginContext, call = createHostCaller()): void {
   const broker = new Broker();
-  for (const tool of tools) ctx.tools.register(tool.name, { displayName: tool.name, description: `READ ONLY. ${tool.description}`, parametersSchema: tool.inputSchema }, async (args, run) => {
+  for (const tool of tools) ctx.tools.register(tool.name, { displayName: tool.name, description: `${tool.write ? "WRITE. " : "READ ONLY. "}${tool.description}`, parametersSchema: tool.inputSchema }, async (args, run) => {
     // Gateway identity is the only identity source. Do not merge args into run.
     const result = await broker.execute(hostFor(ctx, run, call), tool.name, args, run);
     const content = result.content[0]!.text;

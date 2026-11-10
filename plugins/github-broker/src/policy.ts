@@ -15,7 +15,7 @@ function array<T>(schema: Schema<T>, max: number): Schema<T[]> {
   } };
 }
 const repositorySchema = closed({ id, owner: text(39, /^[A-Za-z0-9][A-Za-z0-9-]*$/), name: text(100, /^[A-Za-z0-9_][A-Za-z0-9_.-]*$/), projectId: identifier, workspaceId: identifier });
-const agentSchema = closed({ agentId: identifier, identityLane: oneOf(["app", "owner"]), profile: oneOf(["builder", "lead", "reviewer-read", "release", "coordinator-read", "none"]), repositoryIds: array(id, 32) });
+const agentSchema = closed({ agentId: identifier, identityLane: oneOf(["app", "owner"]), profile: oneOf(["builder", "lead", "reviewer-read", "release", "coordinator-read", "devops", "none"]), repositoryIds: array(id, 32) });
 // Board sections compose independently bounded leaf records instead of running
 // the tool-input 256-node cap over the whole 32-repository/32-agent policy.
 // Inspect descriptors before reading values, preserving closed JSON semantics.
@@ -47,6 +47,9 @@ const profiles: Record<Profile, { identityLanes: readonly IdentityLane[]; operat
   "reviewer-read": { identityLanes: ["app"], operations: new Set(allReads) },
   release: { identityLanes: ["app"], operations: new Set(allReads) },
   "coordinator-read": { identityLanes: ["app"], operations: new Set(["github.pr_list", "github.pr_get", "github.checks_get", "github.rulesets_get", "github.actions_runs_list", "github.issue_read"]) },
+  // Least privilege: devops dispatches allowlisted staging workflows and nothing else.
+  // It deliberately cannot read repository content, PRs or issue bodies.
+  devops: { identityLanes: ["app"], operations: new Set(["github.workflow_dispatch_allowlisted"]) },
   none: { identityLanes: [], operations: new Set() },
 };
 export function parseCaller(value: unknown): Caller { return callerSchema.parse(value); }
@@ -69,6 +72,7 @@ export async function authorize(host: Host, policy: Policy, caller: Caller, tool
   guard(agent.repositoryIds.includes(args.repoId), "policy.repository");
   const repo = policy.repositories.find(r => r.id === args.repoId);
   guard(repo && repo.projectId === caller.projectId && repo.workspaceId === args.workspaceId, "policy.workspace");
+  guard(!tool.repoAllowlist || tool.repoAllowlist.has(`${repo.owner}/${repo.name}`), "policy.repository_allowlist");
   const issue = await host.issue(args.issueId);
   guard(issue && issue.companyId === caller.companyId && issue.projectId === caller.projectId, "identity.issue_project");
   guard(issue.assigneeAgentId === caller.agentId, "identity.issue_assignee");

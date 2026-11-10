@@ -53,7 +53,7 @@ for (const [name, args, permissions, reads] of cases) test(`registered ${name} $
 });
 
 test('exact tool inventory and read-only capability surface', () => {
-  assert.equal(tools.length, 8); assert.deepEqual(manifest.tools.map(t => t.name), tools.map(t => t.name));
+  assert.equal(tools.length, 9); assert.deepEqual(manifest.tools.map(t => t.name), tools.map(t => t.name));
   assert.deepEqual([...manifest.capabilities].sort(), ['agent.tools.register', 'issues.read', 'projects.read', 'project.workspaces.read', 'http.outbound', 'secrets.read-ref', 'activity.log.write'].sort());
 });
 
@@ -74,7 +74,7 @@ test('mint hard guard rejects missing, broad and malformed scopes before signing
     { repository_ids: [101, 102], permissions: { contents: 'read' } }, { repository_ids: [101], permissions: {} },
     { repository_ids: [101], permissions: { contents: 'write' } }, { repository_ids: [101], permissions: { workflows: 'read' } },
     { repository_ids: [101], permissions: { administration: 'read' } }, { repository_ids: [101], permissions: { statuses: 'write' } },
-    { repository_ids: [101], permissions: { checks: 'write' } }, { repository_ids: [101], permissions: { actions: 'write' } },
+    { repository_ids: [101], permissions: { checks: 'write' } }, { repository_ids: [101], permissions: { actions: 'write', checks: 'write' } },
     { repository_ids: [101], permissions: { workflows: 'write' } }, { repository_ids: [101], permissions: { contents: 'read' }, extra: true }]) {
     assert.throws(() => mintScope(scope)); let calls = 0;
     await assert.rejects(withInstallationToken({ scope, transport: async () => { calls++; throw Error('must not call'); }, privateKey: 'invalid', appId: 42, installationId: 99, now: Date.now(), observe() {} }, async () => {}));
@@ -704,4 +704,90 @@ test('transport refuses other origins and malformed destinations before outbound
   let calls = 0; const transport = async () => { calls++; throw Error('no'); };
   for (const path of ['//evil.invalid/', 'https://evil.invalid/', '/\\evil.invalid/', '/a\r\nb']) await assert.rejects(request(transport, 'GET', path, token));
   assert.equal(calls, 0);
+});
+
+function dispatchFixture() {
+  const f = fixture();
+  f.config.policy.agents[0].profile = 'devops';
+  f.config.policy.repositories[0].owner = 'TogetherWeOwn';
+  f.config.policy.repositories[0].name = 'two-bot-next';
+  f.workspace.repoUrl = 'https://github.com/TogetherWeOwn/two-bot-next';
+  return f;
+}
+const planHash = 'a'.repeat(64);
+for (const [label, args, workflow] of [
+  ['plan', { workflow: 'staging-migrate.yml', ref: 'main', inputs: { mode: 'plan' } }, 'staging-migrate.yml'],
+  ['apply', { workflow: 'staging-migrate.yml', ref: 'main', inputs: { mode: 'apply', plan_hash: planHash } }, 'staging-migrate.yml'],
+  ['deploy', { workflow: 'deploy-staging.yml', ref: 'main', inputs: {} }, 'deploy-staging.yml'],
+  ['rollback drill', { workflow: 'staging-rollback-drill.yml', ref: 'main', inputs: {} }, 'staging-rollback-drill.yml'],
+]) test(`github.workflow_dispatch_allowlisted ${label}: scoped actions:write mint, POST 204 dispatch, revoke and audit`, async () => {
+  const f = dispatchFixture(); f.mint({ actions: 'write' }); f.identity();
+  f.dispatch(workflow, { inspect: req => assert.deepEqual(JSON.parse(req.body), { ref: 'main', inputs: args.inputs }) }); f.revoke();
+  const result = await f.call('github.workflow_dispatch_allowlisted', { ...base, ...args });
+  assert.equal(result.error, undefined); assert.equal(result.data.ok, true);
+  assert.deepEqual(result.data.pages[0], { workflow, ref: 'main', inputs: args.inputs, dispatched: true });
+  assert.equal(f.calls.length, 4); assert.equal(f.calls[2].method, 'POST');
+  assert.equal(f.secretCalls, 1); assert.equal(f.events.length, 2); assert.equal(f.events[1].outcome, 'success');
+  assert.equal(f.events[0].operation, 'github.workflow_dispatch_allowlisted'); f.hygiene(result); f.done();
+});
+
+test('workflow dispatch is never cached and identical dispatches mint again', async () => {
+  const f = dispatchFixture(); const args = { ...base, workflow: 'deploy-staging.yml', ref: 'main', inputs: {} };
+  for (let i = 0; i < 2; i++) { f.mint({ actions: 'write' }); f.identity(); f.dispatch('deploy-staging.yml'); f.revoke(); }
+  assert.equal((await f.call('github.workflow_dispatch_allowlisted', args)).error, undefined);
+  assert.equal((await f.call('github.workflow_dispatch_allowlisted', args)).error, undefined);
+  assert.equal(f.calls.length, 8); assert.equal(f.secretCalls, 2); f.hygiene({}); f.done();
+});
+
+test('workflow dispatch refuses non-allowlisted repositories before secrets', async () => {
+  const f = fixture(); f.config.policy.agents[0].profile = 'devops'; // synthetic-org/sandbox
+  refused(f, await f.call('github.workflow_dispatch_allowlisted', { ...base, workflow: 'deploy-staging.yml', ref: 'main', inputs: {} }), 'policy.repository_allowlist');
+});
+
+test('workflow dispatch is devops-profile only and devops has no reads', async () => {
+  for (const profile of ['builder', 'lead', 'reviewer-read', 'release', 'coordinator-read', 'none']) {
+    const f = dispatchFixture(); f.config.policy.agents[0].profile = profile;
+    refused(f, await f.call('github.workflow_dispatch_allowlisted', { ...base, workflow: 'deploy-staging.yml', ref: 'main', inputs: {} }), 'policy.profile');
+  }
+  const g = dispatchFixture();
+  refused(g, await g.call('github.pr_get', { ...base, number: 1 }), 'policy.profile');
+  const h = dispatchFixture();
+  refused(h, await h.call('github.repo_read', { ...base, mode: 'tree', ref: 'main' }), 'policy.profile');
+});
+
+test('workflow dispatch refuses production workflows, other refs and malformed inputs before secrets', async () => {
+  for (const args of [
+    { workflow: 'deploy.yml', ref: 'main', inputs: {} },
+    { workflow: 'release.yml', ref: 'main', inputs: {} },
+    { workflow: 'staging-migrate.yaml', ref: 'main', inputs: { mode: 'plan' } },
+    { workflow: 'deploy-staging.yml', ref: 'production', inputs: {} },
+    { workflow: 'deploy-staging.yml', ref: 'topic', inputs: {} },
+    { workflow: 'staging-migrate.yml', ref: 'main', inputs: { mode: 'apply' } },
+    { workflow: 'staging-migrate.yml', ref: 'main', inputs: { mode: 'plan', plan_hash: planHash } },
+    { workflow: 'staging-migrate.yml', ref: 'main', inputs: { mode: 'apply', plan_hash: 'not-hex' } },
+    { workflow: 'staging-migrate.yml', ref: 'main', inputs: { mode: 'delete' } },
+    { workflow: 'deploy-staging.yml', ref: 'main', inputs: { mode: 'plan' } },
+    { workflow: 'staging-rollback-drill.yml', ref: 'main', inputs: { confirm: 'yes' } },
+    { workflow: 'deploy-staging.yml', ref: 'main', inputs: { token } },
+  ]) {
+    const f = dispatchFixture(); refused(f, await f.call('github.workflow_dispatch_allowlisted', { ...base, ...args }), 'validation.schema');
+  }
+});
+
+test('workflow dispatch non-204 upstream failures and mint scope guards fail closed', async () => {
+  const f = dispatchFixture(); f.mint({ actions: 'write' }); f.identity(); f.dispatch('deploy-staging.yml', { status: 404, body: { message: key + token } }); f.revoke();
+  const result = await f.call('github.workflow_dispatch_allowlisted', { ...base, workflow: 'deploy-staging.yml', ref: 'main', inputs: {} });
+  assert.equal(result.error, 'upstream.dispatch'); f.hygiene(result); f.done();
+  for (const scope of [{ repository_ids: [101], permissions: { actions: 'write', workflows: 'write' } }, { repository_ids: [101], permissions: { actions: 'write', contents: 'write' } }]) {
+    assert.throws(() => mintScope(scope));
+  }
+  const writeScope = mintScope({ repository_ids: [101], permissions: { actions: 'write' } });
+  assert.deepEqual(writeScope.repository_ids, [101]); assert.deepEqual({ ...writeScope.permissions }, { actions: 'write' });
+});
+
+test('policy board accepts devops binding and rejects unknown profile before secrets', async () => {
+  const f = dispatchFixture();
+  // devops binding already accepted via fixture config parse inside call path; unknown profile is a schema refusal.
+  f.config.policy.agents[0].profile = 'operator';
+  refused(f, await f.call('github.workflow_dispatch_allowlisted', { ...base, workflow: 'deploy-staging.yml', ref: 'main', inputs: {} }), 'validation.schema');
 });

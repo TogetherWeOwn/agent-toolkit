@@ -1,14 +1,15 @@
-# GitHub read broker acceptance record
+# GitHub broker acceptance record
 
 **NOT ACCEPTED FOR ENABLEMENT.** Source and offline fixtures are not evidence of a working live service. The pinned SDK's empty-body response reconstruction is addressed by the temporary mitigation below, pending renewed verification; the host MCP result-envelope defect remains unchanged, with an alternative run-scoped REST caller path pending acceptance. See [README](README.md#known-host-compatibility-blockers). Acceptance of the design is **not** acceptance of an artifact, configuration, installation or running service. Offline fixtures use synthetic RSA keys and installation tokens; historical green results do not apply to a new mitigation head. No runtime changes or live credential calls are part of this source repair.
 
 ## Version envelope
 
-- Plugin 0.1.0; core 0.1.0; extracted GitHub helpers 0.1.0.
+- Plugin 0.2.0; core 0.1.0; extracted GitHub helpers 0.1.0.
 - Exact SDK dependency: `@paperclipai/plugin-sdk@2026.1023.0` and lockfile integrity.
 - Native host baseline: 2026.1023.0; Node 24.11+; GitHub REST 2022-11-28.
-- Tools and per-tool endpoints/permission/refusal matrix: [README](README.md), [endpoint/null-body inventory](THREAT-MODEL.md#endpoint-and-null-body-inventory), and `test/broker.test.mjs` through actual `register()` handlers. The inventory covers mint, immutable repository-ID verification, revoke, the contract's at-most-two cleanup probes, and every path/query variant in all eight tool modules. It is source-derived, not live endpoint/status evidence; only DELETE has an intended 204 success, no endpoint has an accepted 205 success, and no conditional GET/304 success is allowed by the mitigation.
-- Intended credential ceiling: narrow App with contents, pull requests, issues, checks, statuses and Actions read plus metadata read (the sole explicit permission for ruleset GETs). Administration, all write permissions and the `workflows` permission are excluded from minting; workflow-run metadata reads use `actions: read`. Only the separately approved narrow App may be bound; there is no broad interim-key fallback.
+- Tools and per-tool endpoints/permission/refusal matrix: [README](README.md), [endpoint/null-body inventory](THREAT-MODEL.md#endpoint-and-null-body-inventory), and `test/broker.test.mjs` through actual `register()` handlers. The inventory covers mint, immutable repository-ID verification, revoke, the contract's at-most-two cleanup probes, and every path/query variant in all nine tool modules. It is source-derived, not live endpoint/status evidence; DELETE and the dispatch POST have intended 204 successes, no endpoint has an accepted 205 success, and no conditional GET/304 success is allowed by the mitigation.
+- Intended credential ceiling: narrow App with contents, pull requests, issues, checks, statuses and Actions read plus metadata read (the sole explicit permission for ruleset GETs), plus `actions:write` minted only for the allowlisted dispatch call. Administration, all other write permissions and the `workflows` permission are excluded from minting; workflow-run metadata reads use `actions: read`. Only the separately approved narrow App may be bound; there is no broad interim-key fallback.
+- Write-tool evidence (TWO-5764 tier 1, pending): `test/broker.test.mjs` covers plan/apply/deploy/rollback dispatch with scoped `actions:write` mint, POST 204, revoke and audit, never-cached behavior, non-allowlisted repository refusal, devops-only profile matrix, production-workflow/other-ref/malformed-input refusals, and upstream-404/mint-scope fail-closed cases. **Pending before enablement**: DevOps confirmation of the live workflows' `on.workflow_dispatch.inputs`, owner names and `main`-only ref rule; Security Engineer acceptance of the write; exact-head Actions evidence.
 
 ## Accepted temporary mitigation: required evidence, not a sign-off
 
@@ -33,7 +34,7 @@ The [sandbox runbook](README.md#install-and-rollback-runbook) replaces the old E
 
 ### REST caller acceptance and retirement
 
-`test/client.test.mjs` adds offline caller-contract fixtures for the exact shipped REST request/wrapper, eight closed read schemas, run-claim/task/workspace mismatch refusal, HTTP/nested denial and approval propagation, no retries/redirects, bounds/timeouts and bearer hygiene. Synthetic HTTP/CLI fixtures do not authenticate a real principal or prove native policy coverage. New exact-head Actions and independent Security/Crypto review remain required.
+`test/client.test.mjs` adds offline caller-contract fixtures for the exact shipped REST request/wrapper, nine closed schemas (eight reads plus the allowlisted dispatch), run-claim/task/workspace mismatch refusal, HTTP/nested denial and approval propagation, no retries/redirects, bounds/timeouts and bearer hygiene. Synthetic HTTP/CLI fixtures do not authenticate a real principal or prove native policy coverage. New exact-head Actions and independent Security/Crypto review remain required.
 
 The actual caller must pass the runbook's per-caller/sandbox checks before enablement. Baseline host 2026.1023.0 records a returned plugin wrapper as a succeeded invocation even if `result.error` is populated. The client returns failure, and the broker emits its own outcome/denial activity; neither repairs that host row. Reviewers must assess/correlate both audit paths and must not treat a native succeeded row alone as a successful read. Native approvals are not overridden: the baseline automatic executor may return `approved_execution_unsupported` for plugins; preserve the interaction/outcome and route that actual prerequisite, never blindly retry or assume execution.
 
@@ -74,7 +75,9 @@ The historical rows below remain scoped to their named heads and are not verific
 | Independent applied cryptography review of signing/mint/secret path | [Source accepted at `640aa16`](https://github.com/TogetherWeOwn/agent-toolkit/pull/6#pullrequestreview-5806024026); follow-up delta and installed-envelope acceptance remain pending |
 | Native governance / honest isError / durable audit evidence on exact installed host | Pending sandbox verification |
 | Operator install, secret binding, approved configuration | Not performed; gated |
-| QA sandbox calls and eight-tool inventory visibility | Pending after authorized installation |
+| QA sandbox calls and nine-tool inventory visibility | Pending after authorized installation |
+| DevOps confirmation of allowlisted workflow inputs/owners/ref (TWO-5764 tier 1) | Pending; blocks enablement of the dispatch write |
+| Security+RM decision on `staging-migrate-apply` environment protection (TWO-5764 tier 3) | Pending; separate owner, not decided by this change |
 | Reviewed package SHA-256 and independent installability | Pending reviewed Actions artifact |
 
 Source inspection establishes that the baseline native HTTP host performs a single DNS-pinned HTTPS request without following redirects and enforces DNS/request timeouts; the SDK drops caller `redirect` and `signal`. Host buffering is 200 MiB before the broker's 1-MiB bound. Source inspection is not a sandbox execution result or an approval of host telemetry/credential isolation.
@@ -82,10 +85,10 @@ Source inspection establishes that the baseline native HTTP host performs a sing
 ## Review controls to record explicitly
 
 1. Preflight-refused calls resolve no secret and issue no HTTP requests. Post-mint refusals can follow secret resolution and mint/repository-verification HTTP: policy is revalidated after mint and before each data read, and immutable repository ID is checked before tool data access. These checks fail closed and still attempt token revocation; they do not undo earlier HTTP or data reads.
-2. Mint cannot omit explicit repository IDs or permissions, cannot request writes/workflows, and verifies returned scope and expiry.
+2. Mint cannot omit explicit repository IDs or permissions, cannot request writes other than the sole `actions:write` for the allowlisted dispatch, cannot request workflows, and verifies returned scope and expiry.
 3. Generated key/token/JWT canaries remain absent from result/error/log/audit/cache-visible data, including reflected content and decoded files.
 4. Activity sink durability/retention/integrity, gateway provenance/failure mapping and native access governance cover the exact plugin path.
-5. Read-only lifecycle exception is understood: per-call revoke plus provider-enforced expiry, no persisted credential; ambiguous mint/crash can leave an expiring token. Process-local cleanup pause/rate limits reset on restart.
+5. Lifecycle exception is understood: per-call revoke plus provider-enforced expiry, no persisted credential; ambiguous mint/crash can leave an expiring token. Process-local cleanup pause/rate limits reset on restart. The dispatch write adds no persisted state: it is never cached, and its only effect is the dispatched staging workflow run.
 6. Host same-user access to unrelated credentials is outside this plugin's enforcement and must not be represented as remediated.
 7. Operator follows the [runbook](README.md#install-and-rollback-runbook); no install is allowed on the basis of this pending document.
 

@@ -37,6 +37,8 @@ export function filePath(value: unknown): string {
   return v.split("/").map(encodeURIComponent).join("/");
 }
 export function pagination(args: Arguments): string { return `per_page=${size.parse(args.perPage)}&page=${page.parse(args.page)}`; }
+/** Lower-hex plan hash binding a staging-migrate apply to its reviewed plan. */
+export const planHash = text(64, /^[a-f0-9]{64}$/);
 export const listShape = { page, perPage: size };
 export const listJson = { page: pageJson, perPage: pageJson };
 export { oneOf };

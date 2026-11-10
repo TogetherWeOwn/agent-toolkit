@@ -52,6 +52,9 @@ async function readJson(response: Response): Promise<unknown> {
 
 // Temporary supported REST path until a containing stable MCP fix is installed
 // and QA verifies structured output, errors and per-caller authorization.
+// Name retained for caller compatibility; it now also passes the sole allowlisted
+// dispatch write through the same closed-schema validation. Server-side broker
+// authorization (devops profile, repository/workflow allowlist, audit) is unchanged.
 export async function executeBrokerRead(env: Environment, projectId: unknown, operation: unknown, input: unknown, fetcher: typeof fetch = fetch): Promise<ClientResult> {
   let call: ReturnType<typeof context>, parameters: RecordValue, name: string;
   try {
