@@ -4,6 +4,39 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Insight collection preparation source increment
+
+Three pure Prepared bindings cover existing branch-anomaly, traffic-budget and
+generated-query-report collection GETs. Closed immutable host parents/revision,
+unique bounded child IDs and applicable host pagination bind fixed requests and
+empty caller arguments. Reports retain fixed first-page limit=10 and their cursor
+envelope, not invented generic pagination. Existing ID parsers are exported/reused
+without behavior changes. Every field enters plan/full hashes, including IDs absent
+from paths. No executor, registration, credential resolution or authority consumption.
+
+`test/core-insight-collection-read-preparation.test.mjs` supplies **28 synthetic
+contracts** for exact requests, every-field hashes, deep snapshots, closed/bounded
+input and accessor refusals, whole-response refusal, operation separation and
+canary omission. Receipts match child IDs, not immutable parent ownership. Child
+confinement does not authorize upstream collections. Active/mode/state metadata
+never proves remediation, effective enforcement, download permission, safe retry,
+closure or native authority. SQL/correlations/fingerprints, rules/tags/thresholds,
+metrics, report contents/URLs, actors and raw times are omitted. Current
+ownership/revision, collection permission, trusted transport/raw-body custody and
+independent non-waking proof remain prerequisites. Coverage stays **134/291 offline
+adapters; 157 missing**, twelve previews and **107 pure preparations**; zero
+runtime-integrated/reviewed/enabled/adopted. New contracts require exact-head
+Actions, not this declaration.
+
+Prior exact `14404bca2709fdc8b716da6425d42635d69fadd1`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42807747110)
+and [test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42807747110/job/129801222313)
+passed, as did [Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42807746221)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42807737019).
+No numeric totals extracted. Earlier recurring unchanged SDK recovery failure
+remains unresolved; no repair claim. No inline findings/submitted reviews returned.
+Older counts below are historical.
+
 ## Billing collection preparation source increment
 
 Two pure Prepared bindings cover existing invoice and invoice-line-item collection

@@ -6,6 +6,30 @@ manifest, network executor, credential resolver, or tool registration is supplie
 The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
+## Insight collection preparation increment
+
+Three pure `Prepared` bindings cover existing branch-anomaly, traffic-budget and
+generated-query-report collection GETs. Closed immutable host parents/revision,
+unique bounded child IDs and applicable host pagination bind fixed requests and
+empty caller arguments. Reports retain their fixed first page (`limit=10`) and
+cursor envelope, not invented generic pagination. Existing ID parsers are
+exported/reused without behavior changes. Every field enters plan/full hashes,
+including independent parent/child IDs absent from paths. No executor, credential
+resolution, registration or authority consumption.
+
+`test/core-insight-collection-read-preparation.test.mjs` supplies 28 synthetic
+contracts for requests, every-field hashes, deep snapshots, closed/bounded input,
+accessor and whole-response refusals, operation separation and canary omission.
+Receipts match child IDs, not parent ownership. Child confinement is not upstream
+collection permission. Active/mode/state metadata never proves remediation,
+effective enforcement, download permission, safe retry, closure or native authority.
+SQL/correlations/fingerprints, rules/tags/thresholds, metrics, report contents/URLs,
+actors and raw times are omitted. Current ownership/revision, collection permission,
+trusted transport/raw-body custody and independent non-waking proof remain required.
+Coverage stays **134/291 offline adapters; 157 missing**, twelve previews and
+**107 pure preparations**, zero runtime-integrated/reviewed/enabled/adopted.
+New contracts require exact-head Actions; older counts below are historical.
+
 ## Billing collection preparation increment
 
 Two pure `Prepared` bindings cover existing invoice and invoice-line-item collection

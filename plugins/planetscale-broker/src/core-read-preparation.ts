@@ -81,6 +81,12 @@ import { prepare as prepareInvoiceLineItemList } from "./tools/get-invoice-line-
 import { prepare as prepareInvoice } from "./tools/get-invoice.js";
 import { prepare as preparePaymentMethod } from "./tools/get-organization-billing-payment-method.js";
 import { prepare as preparePaymentSetup } from "./tools/get-payment-method-setup.js";
+import { anomalyIds } from "./anomalies.js";
+import { trafficBudgetIds } from "./traffic-budgets.js";
+import { queryReportIds } from "./query-reports.js";
+import { prepare as prepareBranchAnomalyList } from "./tools/list-branch-anomalies.js";
+import { prepare as prepareTrafficBudgetList } from "./tools/list-traffic-budgets.js";
+import { prepare as prepareQueryReportList } from "./tools/list-generated-query-patterns-reports.js";
 import { prepare as prepareBranchAnomaly } from "./tools/get-branch-anomaly.js";
 import { prepare as prepareTrafficBudget } from "./tools/get-traffic-budget.js";
 import { prepare as prepareQueryReportStatus } from "./tools/get-query-patterns-report-status.js";
@@ -138,6 +144,9 @@ const branchMetricsTarget = closed({ ...branchFields, ...metricWindowFields, met
 const tabletMetricsTarget = closed({ ...branchFields, ...metricWindowFields, metric: oneOf(historicalTabletMetricNames) });
 const lintBranchTarget = closed({ ...branchFields, keyspaceNames: lintKeyspaceNames });
 const deployStorageCheckTarget = closed({ ...databaseFields, requestId: identifier, number: deployNumber });
+const anomalyListTarget = closed({ ...branchFields, anomalyIds, pagination: pageArguments });
+const trafficBudgetListTarget = closed({ ...branchFields, budgetIds: trafficBudgetIds, pagination: pageArguments });
+const queryReportListTarget = closed({ ...branchFields, reportIds: queryReportIds });
 const anomalyTarget = closed({ ...branchFields, anomalyId: identifier });
 const trafficBudgetTarget = closed({ ...branchFields, budgetId: identifier });
 const queryReportTarget = closed({ ...branchFields, reportId: identifier });
@@ -261,7 +270,8 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof configurationProfileListTarget.parse> | ReturnType<typeof configurationProfileShardListTarget.parse> |
   ReturnType<typeof oauthApplicationListTarget.parse> | ReturnType<typeof organizationSsoDomainListTarget.parse> |
   ReturnType<typeof organizationInvitationListTarget.parse> | ReturnType<typeof invoiceListTarget.parse> |
-  ReturnType<typeof invoiceLineItemListTarget.parse>;
+  ReturnType<typeof invoiceLineItemListTarget.parse> | ReturnType<typeof anomalyListTarget.parse> |
+  ReturnType<typeof trafficBudgetListTarget.parse> | ReturnType<typeof queryReportListTarget.parse>;
 type ReadOperation = "list_databases" | "list_branches" | "list_database_regions" |
   "list_regions_for_organization" | "list_public_regions" | "get_organization" | "get_database" | "get_branch" |
   "list_backups" | "list_backup_policies" | "list_deploy_requests" |
@@ -285,6 +295,7 @@ type ReadOperation = "list_databases" | "list_branches" | "list_database_regions
   "get_oauth_application" | "get_organization_sso" | "get_organization_sso_domain" |
   "list_invoices" | "get_invoice_line_items" |
   "get_invoice" | "get_organization_billing_payment_method" | "get_payment_method_setup" |
+  "list_branch_anomalies" | "list_traffic_budgets" | "list_generated_query_patterns_reports" |
   "get_branch_anomaly" | "get_traffic_budget" | "get_query_patterns_report_status" |
   "get_database_postgres_cidr" | "get_database_throttler" | "get_deploy_request_throttler" |
   "get_branch_query" | "get_branch_query_tag" | "get_change_request" | "get_vtctld_operation" |
@@ -323,6 +334,30 @@ function bindRead(
     jsonData(prepared);
     return prepared;
   };
+}
+
+export function bindListBranchAnomaliesPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = anomalyListTarget.parse(rawTarget);
+  const read = prepareBranchAnomalyList({ organization: target.organization, database: target.database,
+    branch: target.branch, anomalyIds: target.anomalyIds }, target.pagination);
+  return bindRead(`planetscale/branch/${target.branchId}`, target,
+    "list_branch_anomalies", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindListTrafficBudgetsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = trafficBudgetListTarget.parse(rawTarget);
+  const read = prepareTrafficBudgetList({ organization: target.organization, database: target.database,
+    branch: target.branch, budgetIds: target.budgetIds }, target.pagination);
+  return bindRead(`planetscale/branch/${target.branchId}`, target,
+    "list_traffic_budgets", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindListGeneratedQueryPatternsReportsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = queryReportListTarget.parse(rawTarget);
+  const read = prepareQueryReportList({ organization: target.organization, database: target.database,
+    branch: target.branch, reportIds: target.reportIds }, {});
+  return bindRead(`planetscale/branch/${target.branchId}`, target,
+    "list_generated_query_patterns_reports", read.request, "record-id-only-parent-not-verified");
 }
 
 export function bindListInvoicesPreparation(rawTarget: unknown): (raw: unknown) => Prepared {

@@ -1,7 +1,7 @@
 import { closed, identifier, oneOf, requireThat, type Schema } from "../../../packages/core/src/schema.js";
 import { flag, record, slug } from "./metadata.js";
 
-const ids: Schema<readonly string[]> = { parse(value) {
+export const queryReportIds: Schema<readonly string[]> = { parse(value) {
   requireThat(Array.isArray(value) && value.length > 0 && value.length <= 32, "schema");
   const parsed = value.map(item => identifier.parse(item));
   requireThat(new Set(parsed).size === parsed.length, "schema");
@@ -10,7 +10,7 @@ const ids: Schema<readonly string[]> = { parse(value) {
 
 // Bound report IDs constrain output, not parent collection access or downloads.
 export const queryReportScope = closed({ organization: slug, database: slug, branch: slug, reportId: identifier });
-export const queryReportListScope = closed({ organization: slug, database: slug, branch: slug, reportIds: ids });
+export const queryReportListScope = closed({ organization: slug, database: slug, branch: slug, reportIds: queryReportIds });
 const state = oneOf(["pending", "completed", "failed"] as const);
 export interface QueryReportSummary {
   readonly id: string;
