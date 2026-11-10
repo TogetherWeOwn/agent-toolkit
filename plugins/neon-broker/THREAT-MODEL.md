@@ -1,5 +1,27 @@
 # Source-slice threat model
 
+## Explicit branch JWT-trust registration delta
+
+Copied exact project/branch/existing-role/provider/audience/well-known HTTPS URL and
+revision require a dedicated branch/JWKS/add grant and reserved native exact-plan
+authority. Mandatory role identity and bounded complete project-JWKS URL-absence
+preflights precede one POST with explicit branch/singleton role/audience and fixed
+deprecated skip_role_creation:true. No caller overrides, default roles/branch or
+role-creation request. Deprecated mapping flags remain unqualified; this is not an
+independent role-creation-prevention guarantee. Configuring trust may cause provider
+URL retrieval and broaden JWT access. URL syntax does not establish domain custody,
+public DNS resolution or SSRF safety; no URL is followed locally. Provider accepts
+tokens without audience even with jwt_audience set. Exact201 configuration echo is
+acknowledgement only, not independent JWT enforcement, persistence or session proof.
+Passwords, key material, timestamps and operation chains are never evaluated/emitted.
+Preflight is not atomic CAS; role-name/trust replacement races remain unresolved.
+Ambiguity gets one bounded list observation then stays uncertain even on presence
+or absence, no retry. Permanent common journal blocks same-request replay, not
+external writers. Four-request worst case/4.5s ceiling retains fixed Neon origin,
+redirect refusal, per-request deadlines, cancellation and byte bounds. Native trust
+authority/custody/effects/entitlement/durable recovery and independent review remain
+gates. Source/mocks only; no live security change, key retrieval or runtime grant.
+
 ## Existing organization VPC assignment label-update delta
 
 Copied exact organization/AWS-region/endpoint/expected-desired label/revision

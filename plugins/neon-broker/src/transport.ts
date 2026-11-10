@@ -16,6 +16,7 @@ import { snapshotCreateTime } from "./snapshot-create.js";
 import { snapshotScheduleHour, snapshotScheduleRetention } from "./snapshot-schedule-update.js";
 import { spendingLimitCents } from "./spending-limit-update.js";
 import { triggerCreateHour, triggerCreateMinute, triggerCreateName, triggerCreateSlug } from "./trigger-create.js";
+import { jwksAddLabel, jwksAddRole, jwksAddUrl } from "./jwks-add.js";
 
 export const NEON_ORIGIN = "https://console.neon.tech";
 export const RESPONSE_BYTES = 65_536;
@@ -65,6 +66,7 @@ export interface NeonMetadataTransport {
   deleteProjectBranchBucket(project: string, branch: string, bucket: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchFunction(project: string, branch: string, slug: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchTrigger(project: string, branch: string, trigger: string, options: MetadataRequestOptions): Promise<unknown>;
+  addProjectJWKS(project: string, branch: string, role: string, url: string, provider: string, audience: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectJWKS(project: string, jwks: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteNeonAuthOAuthClient(project: string, branch: string, client: string, options: MetadataRequestOptions): Promise<unknown>;
   removeProjectMemberRole(project: string, member: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -426,6 +428,10 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     deleteProjectBranchTrigger: (project: string, branch: string, trigger: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/triggers/${id(trigger)}`,
         new URLSearchParams(), options, undefined, false, 204),
+    addProjectJWKS: (project: string, branch: string, role: string, url: string, provider: string, audience: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/jwks`, new URLSearchParams(), options,
+        JSON.stringify({ jwks_url: jwksAddUrl.parse(url), provider_name: jwksAddLabel.parse(provider), branch_id: authPathId(branch),
+          jwt_audience: jwksAddLabel.parse(audience), role_names: [jwksAddRole.parse(role)], skip_role_creation: true }), false, false, false, false, false, 201),
     deleteProjectJWKS: (project: string, jwks: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/jwks/${identifier.parse(jwks)}`, new URLSearchParams(), options, undefined, false, 200),
     deleteNeonAuthOAuthClient: (project: string, branch: string, client: string, options: MetadataRequestOptions) =>

@@ -724,20 +724,23 @@
       "id": "addProjectJWKS",
       "apiArea": "project",
       "tool": "neon.addProjectJWKS",
-      "scope": "project_id",
+      "scope": "project_id/branch_id/jwks/add",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/jwks-add.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Branch/single-existing-role/audience source and mocks only; fixed well-known HTTPS URL, explicit deprecated skip_role_creation=true. Tokens without audience remain accepted by provider contract. Native trust authority, URL custody/effects/entitlement, host/custody/durable recovery and independent review unresolved. No live trust registration or enablement."
     },
     {
       "id": "deleteProjectJWKS",

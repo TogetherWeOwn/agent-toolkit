@@ -769,6 +769,129 @@ test('Organization VPC delete: maximum identity selection fits actual common pre
   safeEnvelope(f, result);
 });
 
+import { jwksAddFixture, jwksAddScope, jwksAddArgs, jwksAddReceipt } from './helpers.mjs';
+function jwksAddBroker(value = null, overrides = {}, config = jwksAddScope) {
+  const provider = jwksAddFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId, role_name: config.roleName,
+    jwks_url: config.jwksUrl, provider_name: config.providerName, jwt_audience: config.audience };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('addProjectJWKS').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.addProjectJWKS', args, context, key);
+  } };
+}
+
+test('JWKS add: reserved authority and exact branch-add resource AND agent grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = jwksAddBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  for (const resource of ['neon/projects/project-a/jwks', 'neon/projects/project-a/branches/br-a/jwks',
+    'neon/projects/project-a/branches/br-other/jwks/add', 'neon/projects/other/branches/br-a/jwks/add',
+    'neon/projects/project-a/jwks/jwks-new/delete']) {
+    const f = jwksAddBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+  }
+  const denied = jwksAddBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = jwksAddBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { id: 'jwks-new', branch_id: 'br-a', acknowledged: true });
+  assert.equal(f.common.calls.consumed, 1);
+  safeEnvelope(f, result);
+});
+
+test('JWKS add: wrong-target expired and consumed native evidence have isolated refusal controls', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = jwksAddBroker();
+    const base = f.common.authority;
+    let calls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { calls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.addProjectJWKS', jwksAddArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(calls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('JWKS add: identity scope TOCTOU and caller trust/body overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = jwksAddBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = jwksAddBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.call()).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { branch_id: 'other' }, { jwks_url: 'https://other.example.invalid/.well-known/jwks.json' },
+    { jwt_audience: 'other' }, { provider_name: 'other' }, { role_name: 'other' }, { skip_role_creation: false }, { role_names: ['admin'] }, { retry: true }]) {
+    const g = jwksAddBroker();
+    assert.equal((await g.common.broker().call('neon.addProjectJWKS', { ...jwksAddArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('JWKS add: complete and uncertain permanent journal prevent restart replay without JWT proof', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = jwksAddBroker((url, init, n) => {
+      if (init.method === 'POST') { if (ambiguous) throw Error(credentialCanary); return response(jwksAddReceipt, { status: 201 }); }
+      return response(url.endsWith('/jwks') ? { jwks: n > 3 ? [jwksAddReceipt.jwks] : [] } : { role: { name: jwksAddScope.roleName, branch_id: jwksAddScope.branchId } });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'POST').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('JWKS add: foreign ancestry and reflected lease strings cannot enter result error or audit', async () => {
+  for (const row of [{ ...jwksAddReceipt.jwks, project_id: 'other' }, { ...jwksAddReceipt.jwks, branch_id: 'other' },
+    { ...jwksAddReceipt.jwks, id: credentialCanary }, { ...jwksAddReceipt.jwks, jwt_audience: credentialCanary }]) {
+    const f = jwksAddBroker({ jwks: row, password: credentialCanary, keys: [derivedCanary] });
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    safeEnvelope(f, result);
+  }
+  const f = jwksAddBroker((url, init) => init.method === 'POST' ? response({ error: credentialCanary }, { status: 500 }) :
+    response(url.endsWith('/jwks') ? { jwks: [] } : { role: { name: jwksAddScope.roleName, branch_id: 'br-other' } }));
+  assert.equal((await f.call()).ok, false);
+  assert.equal(f.provider.requests.filter(({ init }) => init.method === 'POST').length, 0);
+});
+
+test('JWKS add: maximum explicit configuration fits actual common prepared resource and JSON budgets', async () => {
+  const config = { ...jwksAddScope, projectId: 'p'.repeat(60), branchId: 'b'.repeat(60), roleName: 'r'.repeat(63),
+    providerName: 'P'.repeat(80), audience: 'A'.repeat(80), revision: 'r'.repeat(80),
+    jwksUrl: `https://${['h'.repeat(63), 'i'.repeat(63), 'j'.repeat(63), 'k'.repeat(61)].join('.')}/.well-known/jwks.json` };
+  const f = jwksAddBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
 import { organizationVPCAssignFixture, organizationVPCAssignScope, organizationVPCAssignArgs, organizationVPCAssignMetadata } from './helpers.mjs';
 function organizationVPCAssignBroker(value = null, overrides = {}, config = organizationVPCAssignScope) {
   const provider = organizationVPCAssignFixture(value, config);

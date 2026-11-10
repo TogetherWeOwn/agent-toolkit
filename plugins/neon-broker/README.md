@@ -7,6 +7,26 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonJWKSAddOperations` supplies reserved `addProjectJWKS` source for one
+explicit branch, existing role, provider label, audience and canonical HTTPS DNS
+host at `/.well-known/jwks.json`. Copied configuration/revision requires a dedicated
+branch/JWKS/add grant and native exact-plan authority. Mandatory role identity and
+bounded complete project-JWKS URL-absence preflights precede one POST with explicit
+branch, singleton role, audience and deprecated skip_role_creation:true. Defaults,
+role creation, arbitrary paths/queries/body overrides and direct URL following are
+unsupported. Exact201 configuration echo yields closed ID/branch acknowledgement
+only, not independent JWT acceptance, persistence, domain custody or sessions.
+Provider may retrieve the JWKS URL; syntax checks do not prove public resolution,
+SSRF safety or non-waking effects. Tokens **without audience remain accepted** under
+the provider contract; this is not strict audience enforcement. Deprecated role
+mapping/skip flags need native qualification, not a role-creation guarantee.
+Preflight is not atomic CAS; external role/trust races remain unresolved. Ambiguity
+gets one list observation then stays uncertain even on presence/absence; no retry.
+Permanent common journal blocks same-request replay, not external writers. Four
+requests maximum/4.5s ceiling reuses fixed origin/deadline/cancellation/byte bounds.
+Key material, passwords and operation chains are never evaluated/emitted. Source/
+mocks only; no live authentication-trust change or runtime registration.
+
 `createNeonOrganizationVPCAssignOperations` supplies reserved
 `assignOrganizationVPCEndpoint` source limited to changing a selected existing AWS
 assignment's label. Copied organization/region/endpoint/expected-desired labels and
@@ -2263,8 +2283,8 @@ entitlement, native host/custody/durable recovery and independent review remain 
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 134 implemented
-source adapters, 60 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 135 implemented
+source adapters, 59 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable
