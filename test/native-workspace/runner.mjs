@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { spawn, execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { mkdtemp, mkdir, lstat, realpath, readFile, writeFile, copyFile, access, rm, symlink } from 'node:fs/promises';
+import { mkdtemp, mkdir, lstat, realpath, readFile, writeFile, copyFile, access, rm, symlink, readdir } from 'node:fs/promises';
 import { dirname, basename, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -29,6 +29,37 @@ const steps = [];
 async function persistSteps(reportDir) {
   try { await writeFile(join(reportDir, 'supervise.json'), JSON.stringify(steps, null, 2) + '\n'); } catch { /* Diagnostics must not fail setup. */ }
 }
+// In-process socket refusal walk: a serial `find <dir> -type s` can exceed
+// any fixed timeout on a cold hosted-runner overlay (observed ETIMEDOUT at
+// 10s and again at 30s), so walk with bounded parallelism instead. Unreadable
+// directories are skipped, matching `find` output semantics; symlinks are
+// never followed.
+async function assertNoSockets(source) {
+  const queue = [source];
+  let found = false;
+  async function worker() {
+    while (queue.length && !found) {
+      const dir = queue.shift();
+      let entries;
+      try {
+        entries = await readdir(dir, { withFileTypes: true });
+      } catch {
+        continue;
+      }
+      for (const entry of entries) {
+        if (entry.isSocket()) { found = true; return; }
+        if (entry.isDirectory()) queue.push(join(dir, entry.name));
+        else if (!entry.isFile() && !entry.isSymbolicLink()) {
+          const stat = await lstat(join(dir, entry.name)).catch(() => null);
+          if (stat?.isSocket()) { found = true; return; }
+          if (stat?.isDirectory()) queue.push(join(dir, entry.name));
+        }
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: 32 }, worker));
+  assert.equal(found, false, 'socket in exposed tree refused');
+}
 async function step(name, fn) {
   const started = Date.now();
   try {
@@ -47,11 +78,7 @@ async function sandboxFilesystem(root) {
   async function bind(source, target, readonly = true) {
     await mkdir(join(fsRoot, target), { recursive: true });
     // Read-only sockets still confer authority. Refuse them in every exposed tree.
-    // A full /usr scan can exceed the default 10s on a cold hosted-runner
-    // overlay (observed ETIMEDOUT at socket-check-usr); allow 30s so the
-    // check stays strict without timing out on scan cost alone.
-    await step(`socket-check-${target}`, () =>
-      assert.equal(run('find', [source, '-type', 's', '-print', '-quit'], { timeout: 30_000 }).toString(), ''));
+    await step(`socket-check-${target}`, () => assertNoSockets(source));
     await step(`bind-${target}`, () => run('mount', ['--bind', source, join(fsRoot, target)]));
     if (readonly) await step(`bind-ro-${target}`, () => run('mount', ['-o', 'remount,bind,ro,nosuid,nodev', join(fsRoot, target)]));
   }
@@ -179,7 +206,7 @@ if (process.argv[2] === '--supervise') {
     command: 'capability-dropped Node built-in runner; selection-revision.test.mjs; timeout 120000ms', tools: {} };
   let child;
   try {
-    for (const tool of ['unshare', 'setpriv', 'ip', 'nft', 'mount', 'chroot', 'find']) {
+    for (const tool of ['unshare', 'setpriv', 'ip', 'nft', 'mount', 'chroot']) {
       evidence.stage = `required isolation tool: ${tool}`;
       evidence.tools[tool] = run(tool, [tool === 'ip' ? '-Version' : '--version']).toString().split('\n')[0].trim();
     }
