@@ -4,6 +4,37 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Query-summary first-page preparation source increment
+
+Two pure Prepared bindings cover existing query-summary/error-summary list GETs.
+Closed immutable host parents/revision and reused bounded unique summary IDs or
+error ID/fingerprint pairs bind fixed first-page requests and empty arguments.
+Every field enters plan/full hashes, including response-only bindings absent from
+paths. Existing parsers exported/reused without behavior changes. No executor,
+registration, credential resolution or authority consumption.
+
+`test/core-query-summary-read-preparation.test.mjs` supplies **21 synthetic contracts**
+for fixed requests, every-field hashes, immutable captures, closed/bounded inputs,
+accessor/envelope/whole-page refusal and redacted projections. Summary IDs are not
+individual-query IDs; error fingerprints bind records but do not establish query
+provenance or parent ownership. Receipts omit SQL/password objects, fingerprints,
+error text, metrics, actors and raw times. Flags never grant execution authority.
+Distinct official first-page envelopes and first-page-only coverage remain; later
+pages/filters are unsupported. Child confinement is not collection authorization.
+Current ownership/revision/bindings, trusted transport/raw-body custody and
+independent non-waking proof remain prerequisites. Coverage stays **134/291 offline
+adapters; 157 missing**, twelve previews and **116 pure preparations**, zero runtime-
+integrated/reviewed/enabled/adopted. New contracts require exact-head Actions.
+
+Prior exact `0400f5f0ff08911380bda06d7bbdfb9b0f956d1f`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42818783412)
+and [test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42818783412/job/129838677940)
+passed, as did [Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42818782852)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42818776385).
+Earlier pending observations are superseded; no numeric totals extracted. Earlier
+unchanged GitHub SDK recovery uncertainty remains unresolved, not repaired.
+All specialist, scanner-scope delta, exact-head and live-use gates remain.
+
 ## Unified/replica change collection preparation source increment
 
 Two pure Prepared bindings cover existing unified change-request and dedicated-

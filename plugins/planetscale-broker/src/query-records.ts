@@ -1,7 +1,7 @@
 import { closed, identifier, requireThat, type Schema } from "../../../packages/core/src/schema.js";
 import { flag, slug } from "./metadata.js";
 
-const ids: Schema<readonly string[]> = { parse(value) {
+export const querySummaryIds: Schema<readonly string[]> = { parse(value) {
   requireThat(Array.isArray(value) && value.length > 0 && value.length <= 32, "schema");
   const parsed = value.map(item => identifier.parse(item));
   requireThat(new Set(parsed).size === parsed.length, "schema");
@@ -10,7 +10,7 @@ const ids: Schema<readonly string[]> = { parse(value) {
 
 // Summary IDs and individual query IDs have separate upstream meanings and bindings.
 export const queryRecordScope = closed({ organization: slug, database: slug, branch: slug, queryId: identifier });
-export const querySummaryListScope = closed({ organization: slug, database: slug, branch: slug, summaryIds: ids });
+export const querySummaryListScope = closed({ organization: slug, database: slug, branch: slug, summaryIds: querySummaryIds });
 export interface QueryRecordMetadata {
   readonly id: string;
   readonly explainable: boolean;

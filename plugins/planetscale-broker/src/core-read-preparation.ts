@@ -101,6 +101,10 @@ import { throttlerKeyspaceNames } from "./network-throttler.js";
 import { prepare as prepareDatabaseCidr } from "./tools/get-database-postgres-cidr.js";
 import { prepare as prepareDatabaseThrottler } from "./tools/get-database-throttler.js";
 import { prepare as prepareDeployThrottler } from "./tools/get-deploy-request-throttler.js";
+import { querySummaryIds } from "./query-records.js";
+import { errorSummaryBindings } from "./query-errors.js";
+import { prepare as prepareBranchQueryList } from "./tools/list-branch-queries.js";
+import { prepare as prepareBranchQueryErrorList } from "./tools/list-branch-query-errors.js";
 import { prepare as prepareBranchQuery } from "./tools/get-branch-query.js";
 import { prepare as prepareBranchQueryTag } from "./tools/get-branch-query-tag.js";
 import { changeBinding, unifiedChangeBindings, replicaChangeBindings } from "./unified-change-records.js";
@@ -167,6 +171,8 @@ const unifiedChangeTarget = closed({ ...branchFields, change: changeBinding });
 const unifiedChangeListTarget = closed({ ...branchFields, changes: unifiedChangeBindings, pagination: pageArguments });
 const replicaChangeListTarget = closed({ ...branchFields, changes: replicaChangeBindings, pagination: pageArguments });
 const vtctldOperationTarget = closed({ ...branchFields, operationId: identifier });
+const querySummaryListTarget = closed({ ...branchFields, summaryIds: querySummaryIds });
+const errorSummaryListTarget = closed({ ...branchFields, errors: errorSummaryBindings });
 const branchQueryTarget = closed({ ...branchFields, queryId: identifier });
 const branchQueryTagTarget = closed({ ...branchFields, tag: closed({ id: identifier, name: identifier }) });
 const databaseCidrTarget = closed({ ...databaseFields, cidrId: identifier });
@@ -289,8 +295,10 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof trafficBudgetListTarget.parse> | ReturnType<typeof queryReportListTarget.parse> |
   ReturnType<typeof auditLogListTarget.parse> | ReturnType<typeof deployQueueTarget.parse> |
   ReturnType<typeof deployChildListTarget.parse> | ReturnType<typeof schemaRecommendationListTarget.parse> |
-  ReturnType<typeof unifiedChangeListTarget.parse> | ReturnType<typeof replicaChangeListTarget.parse>;
-type ReadOperation = "list_change_requests" | "list_dedicated_read_replica_change_requests" |
+  ReturnType<typeof unifiedChangeListTarget.parse> | ReturnType<typeof replicaChangeListTarget.parse> |
+  ReturnType<typeof querySummaryListTarget.parse> | ReturnType<typeof errorSummaryListTarget.parse>;
+type ReadOperation = "list_branch_queries" | "list_branch_query_errors" |
+  "list_change_requests" | "list_dedicated_read_replica_change_requests" |
   "get_deploy_queue" | "list_deploy_operations" | "list_deploy_request_reviews" |
   "list_schema_recommendations" | "list_audit_logs" | "list_databases" | "list_branches" | "list_database_regions" |
   "list_regions_for_organization" | "list_public_regions" | "get_organization" | "get_database" | "get_branch" |
@@ -386,6 +394,22 @@ export function bindListSchemaRecommendationsPreparation(rawTarget: unknown): (r
     recommendations: target.recommendations }, target.pagination);
   return bindRead(`planetscale/database/${target.databaseId}`, target,
     "list_schema_recommendations", read.request, "record-and-number-parent-not-verified");
+}
+
+export function bindListBranchQueriesPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = querySummaryListTarget.parse(rawTarget);
+  const read = prepareBranchQueryList({ organization: target.organization, database: target.database,
+    branch: target.branch, summaryIds: target.summaryIds }, {});
+  return bindRead(`planetscale/branch/${target.branchId}`, target,
+    "list_branch_queries", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindListBranchQueryErrorsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = errorSummaryListTarget.parse(rawTarget);
+  const read = prepareBranchQueryErrorList({ organization: target.organization, database: target.database,
+    branch: target.branch, errors: target.errors }, {});
+  return bindRead(`planetscale/branch/${target.branchId}`, target,
+    "list_branch_query_errors", read.request, "record-and-target-binding-parent-not-verified");
 }
 
 export function bindListAuditLogsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {

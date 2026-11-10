@@ -6,6 +6,29 @@ manifest, network executor, credential resolver, or tool registration is supplie
 The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
+## Query-summary first-page preparation increment
+
+Two pure `Prepared` bindings cover existing query-summary and error-summary list
+GETs. Closed immutable host parents/revision and reused bounded unique summary IDs
+or error ID/fingerprint pairs bind fixed first-page requests and empty arguments.
+Every field enters plan/full hashes, including response-only bindings absent from
+paths. Existing parsers are exported/reused without behavior changes. No executor,
+registration, credential resolution or authority consumption.
+
+`test/core-query-summary-read-preparation.test.mjs` supplies 21 synthetic contracts
+for fixed requests, every-field hashes, immutable captures, closed/bounded inputs,
+accessor/envelope/whole-page refusal and redacted projections. Summary IDs are not
+individual-query IDs; error fingerprints bind records but never prove error-query
+provenance or parent ownership. Receipts omit SQL/password objects, fingerprints,
+error text, metrics, actors and raw times; flags never grant execution authority.
+Both collections retain their distinct official first-page envelopes and explicit
+first-page-only coverage. Later pages/filters remain unsupported. Child confinement
+is not upstream collection permission. Current ownership/revision/bindings, trusted
+transport/raw-body custody and independent non-waking proof remain prerequisites.
+Coverage stays **134/291 offline adapters; 157 missing**, twelve previews and
+**116 pure preparations**, zero runtime-integrated/reviewed/enabled/adopted. New
+contracts require exact-head Actions; older counts below are historical.
+
 ## Unified/replica change collection preparation increment
 
 Two pure `Prepared` bindings cover existing unified change-request and dedicated-

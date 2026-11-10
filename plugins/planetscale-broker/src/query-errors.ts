@@ -3,7 +3,7 @@ import { record, slug } from "./metadata.js";
 import { queryRecordMetadata, type QueryRecordMetadata } from "./query-records.js";
 
 const errorBinding = closed({ id: identifier, fingerprint: identifier });
-const bindings: Schema<readonly ReturnType<typeof errorBinding.parse>[]> = { parse(value) {
+export const errorSummaryBindings: Schema<readonly ReturnType<typeof errorBinding.parse>[]> = { parse(value) {
   requireThat(Array.isArray(value) && value.length > 0 && value.length <= 32, "schema");
   const parsed = value.map(item => errorBinding.parse(item));
   requireThat(new Set(parsed.map(item => item.id)).size === parsed.length, "schema");
@@ -17,7 +17,7 @@ const ids: Schema<readonly string[]> = { parse(value) {
   return Object.freeze(parsed);
 } };
 
-export const errorSummaryScope = closed({ organization: slug, database: slug, branch: slug, errors: bindings });
+export const errorSummaryScope = closed({ organization: slug, database: slug, branch: slug, errors: errorSummaryBindings });
 export const errorQueryScope = closed({ organization: slug, database: slug, branch: slug, errorFingerprint: identifier, queryIds: ids });
 export interface ErrorSummaryMetadata {
   readonly id: string;
