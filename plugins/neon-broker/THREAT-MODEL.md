@@ -1,5 +1,22 @@
 # Source-slice threat model
 
+## Auth event logs-export disable delta
+
+A copied exact branch/revision, dedicated disable grant and reserved native exact-plan
+authority precede exact-branch better_auth/no-pending-transfer preflight and one fixed
+false PATCH. Enabling and caller-body overrides are unsupported. Disabling export
+can reduce auth-event observability; no live security change is authorized. There is
+no dedicated logs-export GET in the pinned management schema, so previous state is
+unverified and parent auth metadata cannot reconcile the mutation. Exact200 false
+echo acknowledges only, not independently observed export stoppage, preserved audit
+coverage, queued-event cancellation, persistence or session fencing. Ambiguity stays
+uncertain without fabricated reads or retry. Preflight is not atomic CAS; external
+reconfiguration races remain. Unused auth metadata and diagnostics are never read or
+emitted; shared fixed-origin, redirect-refusal and bounded transport are retained.
+Permanent mock authority/journal contracts are not native custody or durable recovery
+qualification. Independent observability/effect/authority and specialist/release gates
+remain. Source/mocks only; no runtime grant, live call, binding or enablement.
+
 ## Built-in user role assignment delta
 
 One copied trusted branch/user binding, dedicated role/user grant and reserved native

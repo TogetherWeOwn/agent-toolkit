@@ -74,6 +74,7 @@ export interface NeonMetadataTransport {
   deleteProjectBranchTrigger(project: string, branch: string, trigger: string, options: MetadataRequestOptions): Promise<unknown>;
   addProjectJWKS(project: string, branch: string, role: string, url: string, provider: string, audience: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectJWKS(project: string, jwks: string, options: MetadataRequestOptions): Promise<unknown>;
+  updateNeonAuthLogsExport(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   updateNeonAuthUserRole(project: string, branch: string, user: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteNeonAuthUser(project: string, user: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteBranchNeonAuthUser(project: string, branch: string, user: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -459,6 +460,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
           jwt_audience: jwksAddLabel.parse(audience), role_names: [jwksAddRole.parse(role)], skip_role_creation: true }), false, false, false, false, false, 201),
     deleteProjectJWKS: (project: string, jwks: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/jwks/${identifier.parse(jwks)}`, new URLSearchParams(), options, undefined, false, 200),
+    updateNeonAuthLogsExport: (project: string, branch: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/logs_export`,
+        new URLSearchParams(), options, JSON.stringify({ enabled: false }), false, false, true),
     updateNeonAuthUserRole: (project: string, branch: string, user: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/auth/users/${authUserDeleteId.parse(user)}/role`,
         new URLSearchParams(), options, JSON.stringify({ roles: ["user"] }), false, false, false, false, false, 200, true),

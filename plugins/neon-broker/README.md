@@ -7,6 +7,23 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonAuthLogsDisableOperations` supplies reserved `updateNeonAuthLogsExport`
+source for one copied exact project/branch/revision. A dedicated disable grant and
+native exact-plan authority precede an exact-branch `better_auth` preflight with no
+pending ownership transfer, then one PATCH sends only `enabled: false`. Enabling,
+arbitrary body overrides and legacy fallback are unsupported. Disabling export can
+reduce auth-event observability; this source does not authorize a live security
+change. The pinned management schema has no dedicated logs-export GET: previous
+state is unverified, and parent auth metadata is not export-state reconciliation.
+Exact200 false echo yields closed acknowledgement only, not independent export
+stoppage, retained audit coverage, queued-event cancellation or persistence.
+Preflight is not atomic CAS; reconfiguration races remain unresolved. Ambiguity
+stays uncertain without invented reads or retry; permanent common journaling blocks
+same-request replay, not external writers. Unused auth metadata and diagnostics
+are never evaluated/emitted. Fixed origin, redirects refused, two requests maximum
+and reused byte/deadline/cancellation bounds. Source/mocks only; no live change,
+credential action, runtime registration or enablement.
+
 `createNeonAuthClientCreateOperations` supplies reserved `createNeonAuthOAuthClient`
 source for one copied project/branch/name/redirect-origin/resource-origin/revision.
 Public/no-secret clients only; singleton canonical HTTPS origins and fixed
@@ -2409,8 +2426,8 @@ provider effects and independent specialist/release qualification remain prerequ
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 142 implemented
-source adapters, 52 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 143 implemented
+source adapters, 51 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable
