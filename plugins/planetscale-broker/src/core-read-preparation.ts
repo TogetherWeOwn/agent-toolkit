@@ -64,6 +64,7 @@ import { prepare as prepareBranchQueryMetrics } from "./tools/get-branch-query-m
 import { prepare as prepareBranchTagMetrics } from "./tools/get-branch-tag-metrics.js";
 import { prepare as prepareMaintenanceSchedule } from "./tools/get-maintenance-schedule.js";
 import { prepare as prepareBranchMaintenanceWindow } from "./tools/get-branch-maintenance-window.js";
+import { prepare as prepareMoveTablesWorkflowStatus } from "./tools/get-move-tables-workflow-status.js";
 
 const organizationFields = { organization: slug, organizationId: identifier, revision: digest };
 const databaseFields = { ...organizationFields, database: slug, databaseId: identifier };
@@ -71,6 +72,8 @@ const organizationTarget = closed(organizationFields);
 const databaseTarget = closed(databaseFields);
 const branchFields = { ...databaseFields, branch: slug, branchId: identifier };
 const branchTarget = closed(branchFields);
+const moveTablesWorkflowStatusTarget = closed({ ...branchFields,
+  workflow: slug, targetKeyspace: slug, keyspaceId: identifier });
 const maintenanceScheduleTarget = closed({ ...databaseFields, scheduleId: identifier });
 const branchMaintenanceWindowTarget = closed({ ...branchFields, scheduleId: identifier });
 const instantBranchMetricsTarget = closed({ ...branchFields, metric: oneOf(branchMetricNames) });
@@ -155,7 +158,7 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof deployStorageCheckTarget.parse> | ReturnType<typeof instantBranchMetricsTarget.parse> |
   ReturnType<typeof instantTabletMetricsTarget.parse> | ReturnType<typeof branchMetricsTarget.parse> |
   ReturnType<typeof tabletMetricsTarget.parse> | ReturnType<typeof maintenanceScheduleTarget.parse> |
-  ReturnType<typeof branchMaintenanceWindowTarget.parse>;
+  ReturnType<typeof branchMaintenanceWindowTarget.parse> | ReturnType<typeof moveTablesWorkflowStatusTarget.parse>;
 type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_backup" | "get_backup_policy" | "get_deploy_request" |
   "get_keyspace" | "get_shard" | "get_maintenance_event" |
@@ -173,7 +176,7 @@ type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_keyspace_vschema" | "get_data_topology" | "lint_branch_schema" | "check_deploy_request_storage" |
   "get_instant_branch_metrics" | "get_instant_tablet_metrics" | "get_branch_metrics" | "get_tablet_metrics" |
   "get_branch_query_metrics" | "get_branch_tag_metrics" |
-  "get_maintenance_schedule" | "get_branch_maintenance_window";
+  "get_maintenance_schedule" | "get_branch_maintenance_window" | "get_move_tables_workflow_status";
 type ResponseIdentity = "name-only-not-immutable" | "record-id-only-parent-not-verified" |
   "record-and-source-ids-destination-not-verified" | "record-and-branch-ids-parent-not-verified" |
   "record-and-user-ids-parent-not-verified" | "record-and-number-parent-and-destination-not-verified" |
@@ -205,6 +208,15 @@ function bindRead(
     jsonData(prepared);
     return prepared;
   };
+}
+
+export function bindGetMoveTablesWorkflowStatusPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = moveTablesWorkflowStatusTarget.parse(rawTarget);
+  const read = prepareMoveTablesWorkflowStatus({ organization: target.organization, database: target.database,
+    branch: target.branch, branchId: target.branchId, workflow: target.workflow,
+    targetKeyspace: target.targetKeyspace, keyspaceId: target.keyspaceId }, {});
+  return bindRead(`planetscale/keyspace/${target.keyspaceId}`, target, "get_move_tables_workflow_status", read.request,
+    "absent-request-bound-only");
 }
 
 export function bindGetMaintenanceSchedulePreparation(rawTarget: unknown): (raw: unknown) => Prepared {

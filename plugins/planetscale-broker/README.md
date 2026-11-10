@@ -6,6 +6,30 @@ manifest, network executor, credential resolver, or tool registration is supplie
 The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
+## MoveTables status preparation increment
+
+One pure `Prepared` binding in `src/core-read-preparation.ts` covers the existing
+MoveTables workflow-status GET. A closed host snapshot captures immutable parent
+and target-keyspace IDs, revision, workflow name and target-keyspace name. The
+fixed request includes the required `target_keyspace` query; empty caller arguments
+cannot retarget it. The keyspace resource and every target field enter the hashes,
+including workflow names for which the schema supplies no immutable workflow ID.
+The response has no branch/keyspace/workflow identity: request-bound IDs never
+establish response provenance, current name ownership or freshness.
+
+`test/core-move-tables-read-preparation.test.mjs` supplies ten synthetic contracts
+for fixed requests, every-field hashes, immutable capture, host/caller/accessor
+refusal, query injection, projection limits and cross-operation separation.
+Receipts report presence only, never traffic text, copy progress, stream contents,
+names, actors or times. Presence is not copy completion, safe traffic, rollback,
+closure or authority. Trusted current ownership/name bindings, transport/custody
+and independent non-waking proof remain prerequisites. No executor, registration,
+credential resolution or authority consumption is supplied. Coverage stays
+134/291 offline adapters, 157 missing, twelve separate previews and **69 pure
+preparations**; zero runtime-integrated/reviewed/enabled/adopted. Opaque workflow
+list/detail contracts remain separate missing adapters. Exact-head Actions must
+execute these contracts; source declarations are not passing evidence.
+
 ## Maintenance schedule preparation increment
 
 Two pure `Prepared` bindings in `src/core-read-preparation.ts` cover the existing
