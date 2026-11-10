@@ -249,3 +249,58 @@ test('read path performs zero outbound mutations; legacy sweep is dormant', asyn
   assert.equal(f.calls.length, 1);
   f.done();
 });
+
+test('message links use the bound guild when upstream omits guild_id (list/get/pins/search)', async () => {
+  const expected = `https://discord.com/channels/${guildId}/${channelId}/${messageId}`;
+  // Discord omits the optional guild_id on channel messages.
+  const noGuild = { id: messageId, channel_id: channelId, timestamp: '2026-11-10T00:00:00.000Z', author: { id: '1'.repeat(17) } };
+  const listF = fixture();
+  listF.read(`/channels/${channelId}/messages?limit=5`, [noGuild]);
+  const list = await listF.call('discord.messages_list', { ...base, channelId, limit: 5 });
+  assert.equal(list.data.ok, true);
+  assert.equal(list.data.page[0].url, expected);
+  assert.equal(list.data.page[0].guild_id, guildId);
+  listF.hygiene(list); listF.done();
+  const getF = fixture();
+  getF.read(`/channels/${channelId}/messages/${messageId}`, noGuild);
+  const got = await getF.call('discord.message_get', { ...base, channelId, messageId });
+  assert.equal(got.data.ok, true);
+  assert.equal(got.data.page.url, expected);
+  getF.hygiene(got); getF.done();
+  const pinsF = fixture();
+  pinsF.read(`/channels/${channelId}/pins`, [noGuild]);
+  const pins = await pinsF.call('discord.pins_list', { ...base, channelId });
+  assert.equal(pins.data.ok, true);
+  assert.equal(pins.data.page[0].url, expected);
+  pinsF.hygiene(pins); pinsF.done();
+  const searchF = fixture();
+  searchF.read(`/guilds/${guildId}/messages/search?content=${encodeURIComponent('feature-request')}&channel_id=${channelId}&limit=5`, { total_results: 1, messages: [[noGuild]] });
+  const search = await searchF.call('discord.messages_search', { ...base, query: 'feature-request', channelId, limit: 5 });
+  assert.equal(search.data.ok, true);
+  assert.equal(search.data.page.messages[0].url, expected);
+  searchF.hygiene(search); searchF.done();
+});
+
+test('mismatching upstream guild_id is refused upstream.guild, never relabelled', async () => {
+  const foreign = { id: messageId, channel_id: channelId, guild_id: '9999999999999999999', timestamp: '2026-11-10T00:00:00.000Z' };
+  const listF = fixture();
+  listF.read(`/channels/${channelId}/messages?limit=5`, [foreign]);
+  const list = await listF.call('discord.messages_list', { ...base, channelId, limit: 5 });
+  assert.equal(list.data.ok, false);
+  assert.equal(list.data.rule, 'upstream.guild');
+  assert.ok(!JSON.stringify(list.data).includes('discord.com/channels/9999999999999999999'));
+  listF.hygiene(list);
+  const searchF = fixture();
+  searchF.read(`/guilds/${guildId}/messages/search?content=${encodeURIComponent('feature-request')}&channel_id=${channelId}&limit=5`, { total_results: 1, messages: [[foreign]] });
+  const search = await searchF.call('discord.messages_search', { ...base, query: 'feature-request', channelId, limit: 5 });
+  assert.equal(search.data.ok, false);
+  assert.equal(search.data.rule, 'upstream.guild');
+  searchF.hygiene(search);
+});
+
+test('caller-supplied guildId/url context is refused (trusted guild only)', async () => {
+  for (const extra of [{ guildId }, { guildId: '9999999999999999999' }, { url: 'https://evil.test' }]) {
+    const f = fixture();
+    refused(f, await f.call('discord.messages_list', { ...base, channelId, limit: 5, ...extra }), 'validation.schema');
+  }
+});

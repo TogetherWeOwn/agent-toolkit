@@ -148,26 +148,36 @@ export function projectMessage(value: unknown): unknown {
 // counts, links and timestamps leave the broker; raw member message bodies
 // and arbitrary descriptive/personal metadata do not. Username/discriminator
 // are excluded in favor of the author identifier.
-export function projectMessageMeta(value: unknown): unknown {
+export function projectMessageMeta(value: unknown, trustedGuildId?: string): unknown {
   const m = object(value);
   const author = m.author && typeof m.author === "object" && !Array.isArray(m.author) ? pick(m.author, ["id", "bot"]) : undefined;
   const out: Record<string, unknown> = { ...pick(m, ["id", "channel_id", "guild_id", "timestamp", "pinned", "type"]) };
   if (author) out.author_id = author.id;
   if (author?.bot !== undefined) out.author_bot = author.bot;
   // Canonical link constructed from identifiers only (never upstream text).
-  if (typeof m.guild_id === "string" && typeof m.channel_id === "string" && typeof m.id === "string") {
-    out.url = `https://discord.com/channels/${m.guild_id}/${m.channel_id}/${m.id}`;
+  // Discord omits the optional guild_id on channel messages: fall back to
+  // the broker's trusted bound guild (config, never caller-supplied).
+  // A present-but-mismatching upstream guild is refused, never relabelled.
+  const trusted = typeof trustedGuildId === "string" && /^[0-9]{17,20}$/.test(trustedGuildId) ? trustedGuildId : undefined;
+  if (typeof m.guild_id === "string") {
+    if (trusted !== undefined && m.guild_id !== trusted) throw new DiscordFailure("upstream.guild");
+  } else if (trusted !== undefined) {
+    out.guild_id = trusted;
+  }
+  const guildForLink = typeof m.guild_id === "string" ? m.guild_id : trusted;
+  if (typeof guildForLink === "string" && typeof m.channel_id === "string" && typeof m.id === "string") {
+    out.url = `https://discord.com/channels/${guildForLink}/${m.channel_id}/${m.id}`;
   }
   if (typeof m.message_reference === "object" && m.message_reference !== null) out.message_reference = pick(m.message_reference, ["message_id", "channel_id", "guild_id", "type"]);
   return out;
 }
-export function projectSearchMeta(value: unknown): unknown {
+export function projectSearchMeta(value: unknown, trustedGuildId?: string): unknown {
   const v = object(value);
   const total = typeof v.total_results === "number" && Number.isFinite(v.total_results) ? v.total_results : 0;
   const raw = Array.isArray(v.messages) ? v.messages : [];
   const messages = list(raw, 100).map(m => {
     const first = Array.isArray(m) ? m[0] : m;
-    return first ? projectMessageMeta(first) : null;
+    return first ? projectMessageMeta(first, trustedGuildId) : null;
   }).filter((m): m is Record<string, unknown> => m !== null);
   return { total_results: total, messages };
 }

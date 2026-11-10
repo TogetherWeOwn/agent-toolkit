@@ -19,7 +19,7 @@ export interface Tool {
   inputSchema: Record<string, unknown>;
   schema: Schema<Record<string, unknown>>;
   requests(args: Record<string, unknown>, guildId: string): { method: string; path: string };
-  project(body: unknown, args: Record<string, unknown>): unknown;
+  project(body: unknown, args: Record<string, unknown>, guildId: string): unknown;
   requiresChannel?: "read" | "write" | undefined;
   // Guild-wide list tools with no channel arg: their projected array is
   // filtered by Policy.readChannelIds in Broker.execute ("channel" filters
@@ -89,10 +89,10 @@ export const readToolsMeta: Tool[] = [
   define("discord.guild_get", "read", "Read guild metadata for the bound guild.", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}` }), b => projectGuild(b)),
   define("discord.channels_list", "read", "List channels in the bound guild (counts/metadata only when paginated).", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/channels` }), b => list(b, 500).map(projectChannel), undefined, "channel"),
   define("discord.channel_get", "read", "Read one channel by ID.", { channelId: snow }, { channelId: snowflakeJson }, (a, g) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}` }), b => projectChannel(b), "read"),
-  define("discord.messages_list", "read", "List recent message metadata in an allowlisted channel. Bodies are not returned.", { channelId: snow, limit }, { channelId: snowflakeJson, ...listJson }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/messages?limit=${a.limit}` }), b => list(b, 100).map(projectMessageMeta), "read"),
-  define("discord.message_get", "read", "Read one message's metadata in an allowlisted channel. Body is not returned.", { channelId: snow, messageId: snow }, { channelId: snowflakeJson, messageId: snowflakeJson }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/messages/${enc(a.messageId as string)}` }), b => projectMessageMeta(b), "read"),
-  define("discord.messages_search", "read", "Search messages in an allowlisted guild channel. Returns total_results plus message metadata links only; no message bodies.", { query: searchQuery(512), channelId: snow, limit: searchLimit }, { query: { type: "string", maxLength: 512 }, channelId: snowflakeJson, limit: searchLimitJson }, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/messages/search?content=${enc(a.query as string)}&channel_id=${enc(a.channelId as string)}&limit=${a.limit}` }), b => projectSearchMeta(b), "read"),
-  define("discord.pins_list", "read", "List pinned message metadata in an allowlisted channel. Bodies are not returned.", { channelId: snow }, { channelId: snowflakeJson }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/pins` }), b => list(b, 50).map(projectMessageMeta), "read"),
+  define("discord.messages_list", "read", "List recent message metadata in an allowlisted channel. Bodies are not returned.", { channelId: snow, limit }, { channelId: snowflakeJson, ...listJson }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/messages?limit=${a.limit}` }), (b, _a, g) => list(b, 100).map(m => projectMessageMeta(m, g)), "read"),
+  define("discord.message_get", "read", "Read one message's metadata in an allowlisted channel. Body is not returned.", { channelId: snow, messageId: snow }, { channelId: snowflakeJson, messageId: snowflakeJson }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/messages/${enc(a.messageId as string)}` }), (b, _a, g) => projectMessageMeta(b, g), "read"),
+  define("discord.messages_search", "read", "Search messages in an allowlisted guild channel. Returns total_results plus message metadata links only; no message bodies.", { query: searchQuery(512), channelId: snow, limit: searchLimit }, { query: { type: "string", maxLength: 512 }, channelId: snowflakeJson, limit: searchLimitJson }, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/messages/search?content=${enc(a.query as string)}&channel_id=${enc(a.channelId as string)}&limit=${a.limit}` }), (b, _a, g) => projectSearchMeta(b, g), "read"),
+  define("discord.pins_list", "read", "List pinned message metadata in an allowlisted channel. Bodies are not returned.", { channelId: snow }, { channelId: snowflakeJson }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/pins` }), (b, _a, g) => list(b, 50).map(m => projectMessageMeta(m, g)), "read"),
   define("discord.reactions_list", "read", "List reactions on a message.", { channelId: snow, messageId: snow, emoji: emojiToken(64) }, { channelId: snowflakeJson, messageId: snowflakeJson, emoji: { type: "string", maxLength: 64 } }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/messages/${enc(a.messageId as string)}/reactions/${enc(a.emoji as string)}` }), b => list(b, 100).map(m => pick(m, ["id", "count", "me"])), "read"),
   define("discord.threads_active_list", "read", "List active threads in the bound guild.", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/threads/active` }), b => { const t = object(b).threads; return list(t, 500).map(projectChannel); }, undefined, "thread"),
   define("discord.events_list", "read", "List scheduled events in allowlisted channels of the bound guild.", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/scheduled-events` }), b => list(b, 100).map(projectEvent), undefined, "event"),
@@ -564,7 +564,11 @@ export class Broker {
       guard(res.status >= 200 && res.status < 300, "upstream.read");
       let value: unknown;
       // Fail closed on unexpected shape — never return raw upstream bodies.
-      try { value = res.status === 204 ? null : tool.project(parse(res), args!); } catch { throw new DiscordFailure("upstream.shape"); }
+      // Preserve DiscordFailure rules from projection (e.g. upstream.guild
+      // on a mismatched upstream guild) instead of masking them as shape.
+      let parsedBody: unknown;
+      try { parsedBody = res.status === 204 ? null : parse(res); } catch { throw new DiscordFailure("upstream.shape"); }
+      try { value = res.status === 204 ? null : tool.project(parsedBody, args!, guild); } catch (e) { if (e instanceof DiscordFailure) throw e; throw new DiscordFailure("upstream.shape"); }
       // Guild-wide list tools carry no channel arg, so authorize() cannot
       // scope them: filter the projection by readChannelIds here (fail closed
       // — items without a matching id/parent_id/channel_id are dropped).
