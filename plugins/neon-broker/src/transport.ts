@@ -28,6 +28,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  createProjectEndpoint(project: string, branch: string, name: string, options: MetadataRequestOptions): Promise<unknown>;
   createProjectBranchTrigger(project: string, branch: string, slug: string, name: string, hour: number, minute: number, options: MetadataRequestOptions): Promise<unknown>;
   setOrganizationSpendingLimit(organization: string, cents: number, options: MetadataRequestOptions): Promise<unknown>;
   deleteOrganizationSpendingLimit(organization: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -303,6 +304,11 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    createProjectEndpoint: (project: string, branch: string, name: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/endpoints`, new URLSearchParams(), options,
+        JSON.stringify({ endpoint: { branch_id: authPathId(branch), name: endpointLabel.parse(name), type: "read_only", disabled: true,
+          autoscaling_limit_min_cu: 0.25, autoscaling_limit_max_cu: 0.25, provisioner: "k8s-neonvm", suspend_timeout_seconds: 300 } }),
+        false, false, false, false, false, 201),
     createProjectBranchTrigger: (project: string, branch: string, slug: string, name: string, hour: number, minute: number, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/triggers`, new URLSearchParams(), options,
         JSON.stringify({ type: "schedule", function_slug: triggerCreateSlug.parse(slug), name: triggerCreateName.parse(name), function_path: "/",

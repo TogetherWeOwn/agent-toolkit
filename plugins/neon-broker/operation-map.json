@@ -2757,20 +2757,24 @@
       "id": "createProjectEndpoint",
       "apiArea": "endpoint",
       "tool": "neon.createProjectEndpoint",
-      "scope": "project_id",
+      "scope": "exact_project_branch_endpoint_name_create",
       "sideEffects": [
-        "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-creation-request",
+        "compute-activation-and-spend-possible",
+        "disabled-not-independent-fence"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/endpoint-create.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only: named disabled read-only fixed0.25CU/k8s-neonvm/300second timeout creation. Exact branch and bounded complete name-absence preflights, one POST, exact201 acknowledgement only; no readiness/persistence/access enforcement/spend cap. Disabled may be periodically enabled by provider checks. Preflight not atomic CAS; ambiguity stays uncertain after one observation, no retry, permanent common journal. Native authority, custody/durable recovery, entitlement/effects and independent review remain unresolved; no live creation/spend or runtime registration."
     },
     {
       "id": "listProjectEndpoints",

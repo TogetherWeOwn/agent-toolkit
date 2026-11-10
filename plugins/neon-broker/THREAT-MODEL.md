@@ -1,5 +1,24 @@
 # Source-slice threat model
 
+## Disabled fixed-size read-only endpoint creation delta
+
+Copied exact project/branch/name/revision needs a dedicated create grant and
+reserved native exact-plan authority. Mandatory branch identity and complete
+bounded branch-endpoint name-absence preflights precede one POST with fixed
+read_only/disabled/0.25CU/k8s-neonvm/300second suspend configuration. No arbitrary
+settings, read-write, autoscaling or caller body override. Provisioning may start
+compute/incur spend; disabled is not an independent fence because provider
+check_availability may enable it periodically. Exact201 identity/configuration echo
+acknowledges only, not readiness, persistence, access enforcement or a spend cap.
+Preflight is not atomic CAS; branch/name races remain unresolved. Ambiguity gets
+one bounded endpoint-list observation then remains uncertain even on exact desired
+presence or absence; no retry. Permanent common journal blocks same-request replay,
+not external writers. Hostnames/settings/timestamps and diagnostics never evaluated
+or emitted. Four-request worst case/4.5s ceiling retains fixed origin, redirect
+refusal and per-request deadline/cancellation/byte bounds. Native authority,
+custody/durable recovery/effects/entitlement and independent reviews remain gates.
+Source/mocks only; no live resource creation, spend or runtime registration.
+
 ## Refresh-only database Data API update delta
 
 Copied exact project/branch/database/expected status/revision requires a dedicated

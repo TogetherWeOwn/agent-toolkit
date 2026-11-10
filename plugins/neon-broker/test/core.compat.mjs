@@ -2881,6 +2881,132 @@ test('Realtime disable: maximum identity selection fits actual common prepared b
   safeEnvelope(f, result);
 });
 
+import { endpointCreateFixture, endpointCreateArgs, endpointCreateScope, endpointCreateReceipt } from './helpers.mjs';
+function endpointCreateBroker(value = null, overrides = {}, config = endpointCreateScope) {
+  const provider = endpointCreateFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId, name: config.name };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('createProjectEndpoint').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.createProjectEndpoint', args, context, key);
+  } };
+}
+const endpointCreatePreflight = url => response(url.endsWith('/endpoints') ? { endpoints: [] } : { branch: { id: 'br-a', project_id: 'project-a' } });
+
+test('Endpoint create: reserved exact-plan authority and exact creation AND agent grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = endpointCreateBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = 'neon/projects/project-a/branches/br-a/endpoints/create/replica_a';
+  for (const resource of [target.replace('/create/', '/'), target.replace('/create/', '/delete/'), target.replace('br-a', 'other'),
+    target.replace('project-a', 'other'), target.replace('replica_a', 'other'), 'neon/projects/project-a/branches/br-a']) {
+    const f = endpointCreateBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = endpointCreateBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.common.calls.secret, 0);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = endpointCreateBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { id: 'ep-new', branch_id: 'br-a', acknowledged: true, operations: [] });
+  assert.equal(f.common.calls.consumed, 1);
+  safeEnvelope(f, result);
+});
+
+test('Endpoint create: stale, wrong-target and unconsumable evidence are isolated native controls', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = endpointCreateBroker();
+    const base = f.common.authority;
+    let consumeCalls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.createProjectEndpoint', endpointCreateArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Endpoint create: host identity/resource TOCTOU and configuration overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = endpointCreateBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = endpointCreateBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.call()).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { project_id: 'other' }, { branch_id: 'other' }, { name: 'other' },
+    { type: 'read_write' }, { retry: true }, { settings: {} }, { disabled: false }, { autoscaling_limit_max_cu: 16 }, { body: {} }]) {
+    const g = endpointCreateBroker();
+    assert.equal((await g.common.broker().call('neon.createProjectEndpoint', { ...endpointCreateArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('Endpoint create: complete/uncertain journal permanently blocks restart replay without readiness proof', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = endpointCreateBroker((url, init, n) => {
+      if (init.method === 'POST') { if (ambiguous) throw Error(credentialCanary); return response(endpointCreateReceipt, { status: 201 }); }
+      if (n > 3) return response({ endpoints: [endpointCreateReceipt.endpoint] });
+      return endpointCreatePreflight(url);
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'POST').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Endpoint create: foreign bindings and reflected credentials cannot enter safe envelopes', async () => {
+  for (const raw of [{ endpoints: [{ ...endpointCreateReceipt.endpoint, project_id: 'other' }] },
+    { endpoints: [{ ...endpointCreateReceipt.endpoint, branch_id: 'br-b' }] }, { endpoints: [endpointCreateReceipt.endpoint] }, { endpoints: [], pagination: {} }]) {
+    const f = endpointCreateBroker(url => url.endsWith('/endpoints') ? response(raw) : endpointCreatePreflight(url));
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'POST').length, 0);
+    safeEnvelope(f, result);
+  }
+  const f = endpointCreateBroker((url, init) => init.method === 'POST' ? response({ ...endpointCreateReceipt,
+    endpoint: { ...endpointCreateReceipt.endpoint, id: credentialCanary } }, { status: 201 }) : endpointCreatePreflight(url));
+  const result = await f.call();
+  assert.equal(result.ok, false);
+  safeEnvelope(f, result);
+});
+
+test('Endpoint create: maximum identity and name selection fit actual common prepared budgets', async () => {
+  const config = { ...endpointCreateScope, projectId: 'p'.repeat(60), branchId: 'br-' + 'b'.repeat(57), name: 'n'.repeat(64), revision: 'r'.repeat(80) };
+  const f = endpointCreateBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
 import { dataAPIRefreshFixture, dataAPIRefreshArgs, dataAPIRefreshScope } from './helpers.mjs';
 function dataAPIRefreshBroker(value = null, overrides = {}, config = dataAPIRefreshScope) {
   const provider = dataAPIRefreshFixture(value, config);
