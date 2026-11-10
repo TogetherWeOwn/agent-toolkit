@@ -5282,6 +5282,140 @@ test('project deletion: maximum copied project and organization fit common budge
   safeEnvelope(f, result);
 });
 
+import { branchDefaultFixture, branchDefaultArgs, branchDefaultScope, branchDefaultReceipt } from './helpers.mjs';
+function branchDefaultBroker(value = null, overrides = {}, config = branchDefaultScope) {
+  const provider = branchDefaultFixture(value, config);
+  const args = { project_id: config.projectId, branch_id: config.branchId };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('setDefaultProjectBranch').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.setDefaultProjectBranch', args, context, key);
+  } };
+}
+
+test('branch default: reserved exact agent AND directional switch grant precede credentials and transport', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = branchDefaultBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  for (const resource of ['neon/projects/project-a', 'neon/projects/project-a/branches/br-a',
+    'neon/projects/project-a/branches/br-a/rename', 'neon/projects/project-a/default-branch/br-a/to/br-previous',
+    'neon/projects/project-a/default-branch/br-other/to/br-a']) {
+    const f = branchDefaultBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = branchDefaultBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = branchDefaultBroker(branchDefaultReceipt);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { id: 'br-a', default: true, acknowledged: true,
+    operations: branchDefaultReceipt.operations.map(({ id, status }) => ({ id, status })) });
+  assert.equal(f.common.calls.consumed, 1);
+  assert.equal([...f.common.journal.values()][0].outcome, 'complete');
+  safeEnvelope(f, result);
+});
+
+test('branch default: native authorization isolates wrong target, expiry and consume denial', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = branchDefaultBroker();
+    const base = f.common.authority;
+    let consumeCalls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.setDefaultProjectBranch', branchDefaultArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('branch default: identity/resource TOCTOU and caller previous-default/config overrides refuse', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = branchDefaultBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = branchDefaultBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.common.broker().call('neon.setDefaultProjectBranch', branchDefaultArgs, 'verified-runtime', 'request-a')).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { protected: false }, { default: true }, { previous_default_id: 'br-other' }, { force: true }, { branch_id: 'br-b' }]) {
+    const g = branchDefaultBroker();
+    assert.equal((await g.common.broker().call('neon.setDefaultProjectBranch', { ...branchDefaultArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('branch default: permanent journal blocks complete and uncertain replay after restart', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = branchDefaultBroker((url, init, n) => {
+      if (init.method === 'POST') {
+        if (ambiguous) throw Error(credentialCanary);
+        return response(branchDefaultReceipt);
+      }
+      return response({ branch: { id: n === 1 ? 'br-previous' : 'br-a', project_id: 'project-a', default: n === 1 || n > 3 } });
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'POST').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('branch default: malformed or reflected receipts stay uncertain while unused metadata cannot escape', async () => {
+  for (const raw of [{ ...branchDefaultReceipt, operations: [{ ...branchDefaultReceipt.operations[0], status: credentialCanary }] },
+    { ...branchDefaultReceipt, branch: { ...branchDefaultReceipt.branch, default: false } }]) {
+    const f = branchDefaultBroker(raw);
+    const result = await f.call();
+    assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, 'uncertain');
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'POST').length, 1);
+    safeEnvelope(f, result);
+  }
+  const f = branchDefaultBroker({ ...branchDefaultReceipt, password: credentialCanary,
+    operations: branchDefaultReceipt.operations.map(op => ({ ...op, error: credentialCanary, action: derivedCanary })) });
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
+test('branch default: maximum directional target and bounded observations fit common budgets', async () => {
+  const config = { projectId: 'p'.repeat(60), branchId: `br-${'b'.repeat(57)}`, previousDefaultId: `br-${'a'.repeat(57)}`, revision: 'r'.repeat(80) };
+  const operations = Array.from({ length: 30 }, (_, n) => ({ id: `00000000-0000-0000-0000-${n.toString(16).padStart(12, '0')}`,
+    project_id: config.projectId, branch_id: config.branchId, status: 'running' }));
+  const f = branchDefaultBroker({ branch: { id: config.branchId, project_id: config.projectId, default: true }, operations }, {}, config);
+  const p = f.provider.operation('setDefaultProjectBranch').prepare({ project_id: config.projectId, branch_id: config.branchId });
+  assert(p.resource.id.length <= 256);
+  assert(Buffer.byteLength(JSON.stringify(p)) <= 16384);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.equal(result.value.operations.length, 30);
+  safeEnvelope(f, result);
+});
+
 function branchDeletionBroker(value = branchDeleteReceipt, overrides = {}, config = branchDeleteScope) {
   const provider = branchDeleteFixture(value, config);
   const args = { project_id: config.projectId, branch_id: config.branchId };

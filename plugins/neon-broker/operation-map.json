@@ -2278,20 +2278,24 @@
       "id": "setDefaultProjectBranch",
       "apiArea": "branch",
       "tool": "neon.setDefaultProjectBranch",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/previous_default_id/branch_id/default-switch",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "default-designation-switch"
       ],
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/branch-default.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only; exact previous-default and nondefault-target preflights, reserved directional switch grant/native plan authority and one bodyless POST. Acknowledgement only, not independent prior-designation removal, routing or persistence. Preflight is not atomic CAS; ambiguity remains uncertain after one target observation, no retry, permanent common replay journal. Native host/custody/durable recovery, effects/entitlement and reviews unresolved; no live designation change."
     },
     {
       "id": "finalizeRestoreBranch",

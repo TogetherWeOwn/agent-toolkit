@@ -73,6 +73,7 @@ export interface NeonMetadataTransport {
   deleteProjectBranchRole(project: string, branch: string, role: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchDatabase(project: string, branch: string, database: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProject(project: string, options: MetadataRequestOptions): Promise<unknown>;
+  setDefaultProjectBranch(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranch(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectEndpoint(project: string, endpoint: string, options: MetadataRequestOptions): Promise<unknown>;
   startProjectEndpoint(project: string, endpoint: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -451,6 +452,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/databases/${catalogName(database)}`, new URLSearchParams(), options, undefined, false, 200),
     deleteProject: (project: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}`, new URLSearchParams(), options, undefined, false, 200),
+    setDefaultProjectBranch: (project: string, branch: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/set_as_default`, new URLSearchParams(), options,
+        undefined, false, false, false, true),
     deleteProjectBranch: (project: string, branch: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}`, new URLSearchParams(), options, undefined, false, 200),
     deleteProjectEndpoint: (project: string, endpoint: string, options: MetadataRequestOptions) =>

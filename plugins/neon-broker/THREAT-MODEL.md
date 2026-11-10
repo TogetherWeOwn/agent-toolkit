@@ -1,5 +1,22 @@
 # Source-slice threat model
 
+## Default-branch designation switch delta
+
+Copied exact project/previous-default/target/revision require a directional switch
+grant and reserved native exact-plan authority before credentials. Two mandatory
+detail preflights require the selected previous branch to be default and the target
+not default before one fixed bodyless POST. No default discovery, protection/expiry
+change or caller-body override. The provider removes the old designation, but the
+closed target/default/operation acknowledgement does not independently prove prior
+removal, routing, connectivity, completion or persistence. Preflight is not atomic
+CAS and concurrent designation changes remain unresolved. Ambiguity gets one target
+detail observation then stays uncertain even on desired state/absence; no retry.
+Permanent common journal blocks same-request replay, not external writers. Names,
+usage, protection and arbitrary diagnostics never evaluated/emitted. Four-request
+worst case/4.5s ceiling reuses fixed origin, cancellation, deadlines, redirection
+refusal and byte limits. Effects/entitlement, native host/custody/durable recovery
+and independent review remain gates. Source/mocks only; no live designation change.
+
 ## Function-bound custom-domain registration delta
 
 One copied canonical DNS name and stable function-ID/slug target requires a distinct

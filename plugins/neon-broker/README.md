@@ -7,6 +7,23 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonBranchDefaultOperations` supplies reserved `setDefaultProjectBranch`
+source. Copied project/target/expected previous default/revision require a dedicated
+`neon/projects/<project>/default-branch/<previous>/to/<target>` grant and native exact
+plan authority. Mandatory previous-default=true and target-default=false detail
+preflights precede one bodyless POST to the fixed target `/set_as_default` path.
+Same-branch switches, already-default targets, discovery and body/configuration
+changes are unsupported. The provider automatically removes the previous default
+flag, but target-default=true HTTP200 echo and bounded operation observations are
+acknowledgement only, not independent prior removal, routing, connectivity,
+completion or persistence evidence. Preflight is not atomic CAS; concurrent
+switches remain unresolved. Ambiguity receives one target detail observation and
+stays uncertain even on desired state or absence. No retry; permanent common journal
+blocks same-request replay, not external writers. Four requests maximum with a
+4.5s operation ceiling and shared per-request bounds. Effects/entitlement, native
+host/custody/durable recovery and independent reviews remain gates. Source/mocks
+only; no live default designation change or runtime registration.
+
 `createNeonTriggerCreateOperations` supplies `createProjectBranchTrigger` source
 limited to an explicitly disabled daily UTC schedule. Copied exact project/effective
 branch/stable function ID/slug/name/hour/minute/revision require a dedicated exact
@@ -2211,8 +2228,8 @@ Source/mocks only, no live registration, DNS, spend or runtime enablement.
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 131 implemented
-source adapters, 63 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 132 implemented
+source adapters, 62 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable
