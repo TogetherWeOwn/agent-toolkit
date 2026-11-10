@@ -49,6 +49,8 @@ import { prepare as prepareBranchQueryTag } from "./tools/get-branch-query-tag.j
 import { changeBinding } from "./unified-change-records.js";
 import { prepare as prepareChangeRequest } from "./tools/get-change-request.js";
 import { prepare as prepareVtctldOperation } from "./tools/get-vtctld-operation.js";
+import { prepare as prepareKeyspaceVschema } from "./tools/get-keyspace-vschema.js";
+import { prepare as prepareDataTopology } from "./tools/get-data-topology.js";
 
 const organizationFields = { organization: slug, organizationId: identifier, revision: digest };
 const databaseFields = { ...organizationFields, database: slug, databaseId: identifier };
@@ -141,12 +143,14 @@ type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_invoice" | "get_organization_billing_payment_method" | "get_payment_method_setup" |
   "get_branch_anomaly" | "get_traffic_budget" | "get_query_patterns_report_status" |
   "get_database_postgres_cidr" | "get_database_throttler" | "get_deploy_request_throttler" |
-  "get_branch_query" | "get_branch_query_tag" | "get_change_request" | "get_vtctld_operation";
+  "get_branch_query" | "get_branch_query_tag" | "get_change_request" | "get_vtctld_operation" |
+  "get_keyspace_vschema" | "get_data_topology";
 type ResponseIdentity = "name-only-not-immutable" | "record-id-only-parent-not-verified" |
   "record-and-source-ids-destination-not-verified" | "record-and-branch-ids-parent-not-verified" |
   "record-and-user-ids-parent-not-verified" | "record-and-number-parent-and-destination-not-verified" |
   "record-and-number-parent-not-verified" | "organization-id-matched" |
-  "record-and-name-parent-not-verified" | "record-and-target-binding-parent-not-verified";
+  "record-and-name-parent-not-verified" | "record-and-target-binding-parent-not-verified" |
+  "absent-request-bound-only";
 
 // Pure preparation only. Host IDs/revisions bind a snapshot, not permission;
 // response projections still cannot authenticate every parent/destination ID.
@@ -171,6 +175,22 @@ function bindRead(
     jsonData(prepared);
     return prepared;
   };
+}
+
+export function bindGetKeyspaceVschemaPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = keyspaceTarget.parse(rawTarget);
+  const read = prepareKeyspaceVschema({ organization: target.organization, database: target.database,
+    branch: target.branch, keyspace: target.keyspace }, {});
+  return bindRead(`planetscale/keyspace/${target.keyspace.id}`, target, "get_keyspace_vschema", read.request,
+    "absent-request-bound-only");
+}
+
+export function bindGetDataTopologyPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = branchTarget.parse(rawTarget);
+  const read = prepareDataTopology({ organization: target.organization, database: target.database,
+    branch: target.branch, branchId: target.branchId }, {});
+  return bindRead(`planetscale/branch/${target.branchId}`, target, "get_data_topology", read.request,
+    "absent-request-bound-only");
 }
 
 export function bindGetChangeRequestPreparation(rawTarget: unknown): (raw: unknown) => Prepared {

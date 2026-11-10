@@ -4,6 +4,37 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Availability preparation source increment
+
+Two pure Prepared bindings capture existing keyspace VSchema and branch data-
+topology GETs. Closed immutable host parent/resource/revision snapshots, empty
+caller arguments and every-field plan/full hashes bind fixed requests, not
+permission. Both official responses lack target identity: the explicit
+absent-request-bound-only plan marker and request-prefixed receipt IDs avoid
+claiming authenticated response identity. No executor, registration, credential
+resolution or authority consumption is added.
+
+`test/core-availability-read-preparation.test.mjs` supplies 19 synthetic contracts
+for requests, immutable capture, hashes, nested/host/caller refusals, canary omission
+and presence-only semantics. Raw schema/topology contents/keys/actors/times remain
+omitted. Empty values mean no reported presence; arbitrary bounded sync strings
+are not timestamps or freshness proof. Current ownership/revision, trusted
+transport/raw-body custody, collection permission and independent non-waking
+proof remain prerequisites. Coverage stays **134/291 offline adapters; 157
+missing**, twelve previews and **58 pure preparations**, zero runtime-integrated/
+reviewed/enabled/adopted. Exact-head Actions must execute the new contracts;
+no new-head success is implied. Older counts below are historical.
+
+Prior exact `2f736a8a8284667044acc6697aa38a4ea481989a`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42763724138)
+and [test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42763724138/job/129655250833)
+passed, including lint/typecheck/native-policy/ci-ok and Neon candidate contract.
+[Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42763723556)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42763718842)
+passed. No numeric totals extracted this run; earlier unchanged SDK recovery
+uncertainty remains unresolved. This evidence covers the prior change/operation
+contracts, not the new availability contracts.
+
 ## Change/operation-detail preparation source increment
 
 Two pure Prepared bindings capture existing unified change-request and vtctld

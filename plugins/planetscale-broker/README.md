@@ -1227,6 +1227,33 @@ ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.
 
+## Availability core preparation
+
+`bindGetKeyspaceVschemaPreparation` and `bindGetDataTopologyPreparation` capture
+closed immutable host organization/database/branch IDs and names, revision and
+keyspace ID/name where applicable. They bind existing fixed GETs to empty caller
+arguments and every-field plan/full hashes. Resources retain the existing
+`planetscale/keyspace/<id>` and `planetscale/branch/<id>` identity; operation IDs
+and proposed paths distinguish these reads from other operations on those resources.
+
+Both official responses lack target identity. Plans explicitly report
+`responseIdentity: absent-request-bound-only`: projected requestKeyspaceId and
+requestBranchId come from the request binding, not authenticated response IDs.
+Existing receipts retain only raw-schema/topology/sync-string presence and
+not-established provenance, freshness or execution-authority disclaimers where
+applicable. Raw schema, topology keys/contents, actors and times are omitted.
+Presence never proves validity, topology, freshness, ownership or closure. Current
+ownership/revision, trusted transport/raw-body custody, collection permission and
+independent non-waking proof remain prerequisites. No executor, registration,
+credential resolution or authority consumption is added.
+
+`test/core-availability-read-preparation.test.mjs` supplies 19 synthetic contracts
+for fixed requests, deep immutable capture, every-field hashes, host/caller and
+nested-accessor refusal, presence semantics, canary omission and request-only
+identity. Coverage stays 134/291 offline adapters, 157 missing; twelve previews and
+58 pure preparations are separate counts. All operations remain runtime-
+unintegrated, unreviewed, disabled and unadopted. Earlier counts below are historical.
+
 ## Change/operation-detail core preparation
 
 `bindGetChangeRequestPreparation` and `bindGetVtctldOperationPreparation` capture
