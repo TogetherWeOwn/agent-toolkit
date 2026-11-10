@@ -4,6 +4,22 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Query-error fixture repair (local, not yet Actions-verified)
+
+Source `5d982db3a49433ae50b98b95a6782fa822586a12`
+[Actions test](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42827779555/job/129869566215)
+passed **2122/2126 PlanetScale contracts**, failing four new error-query cases.
+The fixture incorrectly supplied summary-only `multishard` instead of individual
+query `explainable`/`truncated` flags. Existing strict projection correctly refused
+`upstream`, preventing the intended scope/envelope assertions from being reached.
+The repair supplies both required flags, checks their exact projected values and
+exercises malformed values for each flag. No runtime/parser/tier change or new
+test-count credit. Repair-head Actions execution remains pending; source failure
+is retained, not converted into a pass. Other workspace tests passed (root 317,
+helpers 122, GitHub 219, Neon 37), with no failures/skips/cancellations. Source
+lint/typecheck/native-policy/Gitleaks/all three CodeQL analyses passed; aggregate
+CI correctly failed. Earlier SDK recovery uncertainty remains unresolved.
+
 ## Query-error and tag-list preparation source increment
 
 Two pure Prepared bindings cover existing error-fingerprint query-page and

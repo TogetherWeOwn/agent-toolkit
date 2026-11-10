@@ -12,8 +12,8 @@ const root = '/v1/organizations/sample-org/databases/sample-db/branches/staging/
 const cases = [
   { operation: 'get_branch_query_error', bind: bindGetBranchQueryErrorPreparation, read: errorRead,
     key: 'queryIds', extra: { errorFingerprint: 'error_1' }, path: `${root}/errors/error_1`,
-    identity: 'record-id-only-parent-not-verified', row: { id: 'query_1', multishard: false },
-    expected: { id: 'query_1', multishard: false, executionAuthority: 'not-established' } },
+    identity: 'record-id-only-parent-not-verified', row: { id: 'query_1', explainable: false, truncated: true },
+    expected: { id: 'query_1', explainable: false, truncated: true, executionAuthority: 'not-established' } },
   { operation: 'list_branch_query_tags', bind: bindListBranchQueryTagsPreparation, read: tagRead,
     key: 'tags', extra: {}, path: `${root}/tags`, identity: 'record-and-name-parent-not-verified',
     row: { id: 'tag_1', name: 'name_1', source: 'sql' },
@@ -68,7 +68,8 @@ for (const c of cases) {
     if (c.key === 'tags') {
       for (const name of ['other', 'name_2']) assert.throws(() => project(c, envelope([{ ...c.row, name }])), { code: 'scope' });
       for (const source of ['other', false, null]) assert.throws(() => project(c, envelope([{ ...c.row, source }])), { code: 'schema' });
-    } else for (const multishard of ['false', null, 0]) assert.throws(() => project(c, envelope([{ ...c.row, multishard }])), { code: 'upstream' });
+    } else for (const key of ['explainable', 'truncated']) for (const value of ['false', null, 0])
+      assert.throws(() => project(c, envelope([{ ...c.row, [key]: value }])), { code: 'upstream' });
   });
 
   test(`${c.operation}: pagination, duplicate IDs and wire bounds fail closed`, () => {
