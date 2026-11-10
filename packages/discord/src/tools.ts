@@ -74,7 +74,7 @@ export const readTools: Tool[] = [
   define("discord.message_get", "read", "Read one message in an allowlisted channel.", { channelId: snow, messageId: snow }, { channelId: snowflakeJson, messageId: snowflakeJson }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/messages/${enc(a.messageId as string)}` }), b => projectMessage(b), "read"),
   define("discord.messages_search", "read", "Search messages in an allowlisted guild channel. Bounded query, no raw member corpus retention.", { query: searchQuery(512), channelId: snow, limit: searchLimit }, { query: { type: "string", maxLength: 512 }, channelId: snowflakeJson, limit: searchLimitJson }, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/messages/search?content=${enc(a.query as string)}&channel_id=${enc(a.channelId as string)}&limit=${a.limit}` }), b => { const v = object(b); const msgs = v.total_results !== undefined && Array.isArray(v.messages) ? v.messages : v; return list(Array.isArray(msgs) ? msgs : [], 100).map(m => Array.isArray(m) ? (m[0] ? projectMessage(m[0]) : null) : projectMessage(m)); }, "read"),
   define("discord.pins_list", "read", "List pinned messages in an allowlisted channel.", { channelId: snow }, { channelId: snowflakeJson }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/pins` }), b => list(b, 50).map(projectMessage), "read"),
-  define("discord.reactions_list", "read", "List reactions on a message.", { channelId: snow, messageId: snow, emoji: emojiToken(64) }, { channelId: snowflakeJson, messageId: snowflakeJson, emoji: { type: "string", maxLength: 64 } }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/messages/${enc(a.messageId as string)}/reactions/${enc(a.emoji as string)}` }), b => list(b, 100).map(m => pick(m, ["id", "name", "count", "me"])), "read"),
+  define("discord.reactions_list", "read", "List reactions on a message.", { channelId: snow, messageId: snow, emoji: emojiToken(64) }, { channelId: snowflakeJson, messageId: snowflakeJson, emoji: { type: "string", maxLength: 64 } }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/messages/${enc(a.messageId as string)}/reactions/${enc(a.emoji as string)}` }), b => list(b, 100).map(m => pick(m, ["id", "count", "me"])), "read"),
   define("discord.threads_active_list", "read", "List active threads in the bound guild.", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/threads/active` }), b => { const t = object(b).threads; return list(t, 500).map(projectChannel); }, undefined, "thread"),
   define("discord.events_list", "read", "List scheduled events in allowlisted channels of the bound guild.", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/scheduled-events` }), b => list(b, 100).map(projectEvent), undefined, "event"),
   define("discord.event_get", "read", "Read one scheduled event.", { eventId: snow }, { eventId: snowflakeJson }, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/scheduled-events/${enc(a.eventId as string)}` }), b => projectEvent(b)),
@@ -93,7 +93,7 @@ export const readToolsMeta: Tool[] = [
   define("discord.message_get", "read", "Read one message's metadata in an allowlisted channel. Body is not returned.", { channelId: snow, messageId: snow }, { channelId: snowflakeJson, messageId: snowflakeJson }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/messages/${enc(a.messageId as string)}` }), b => projectMessageMeta(b), "read"),
   define("discord.messages_search", "read", "Search messages in an allowlisted guild channel. Returns total_results plus message metadata links only; no message bodies.", { query: searchQuery(512), channelId: snow, limit: searchLimit }, { query: { type: "string", maxLength: 512 }, channelId: snowflakeJson, limit: searchLimitJson }, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/messages/search?content=${enc(a.query as string)}&channel_id=${enc(a.channelId as string)}&limit=${a.limit}` }), b => projectSearchMeta(b), "read"),
   define("discord.pins_list", "read", "List pinned message metadata in an allowlisted channel. Bodies are not returned.", { channelId: snow }, { channelId: snowflakeJson }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/pins` }), b => list(b, 50).map(projectMessageMeta), "read"),
-  define("discord.reactions_list", "read", "List reactions on a message.", { channelId: snow, messageId: snow, emoji: emojiToken(64) }, { channelId: snowflakeJson, messageId: snowflakeJson, emoji: { type: "string", maxLength: 64 } }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/messages/${enc(a.messageId as string)}/reactions/${enc(a.emoji as string)}` }), b => list(b, 100).map(m => pick(m, ["id", "name", "count", "me"])), "read"),
+  define("discord.reactions_list", "read", "List reactions on a message.", { channelId: snow, messageId: snow, emoji: emojiToken(64) }, { channelId: snowflakeJson, messageId: snowflakeJson, emoji: { type: "string", maxLength: 64 } }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/messages/${enc(a.messageId as string)}/reactions/${enc(a.emoji as string)}` }), b => list(b, 100).map(m => pick(m, ["id", "count", "me"])), "read"),
   define("discord.threads_active_list", "read", "List active threads in the bound guild.", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/threads/active` }), b => { const t = object(b).threads; return list(t, 500).map(projectChannel); }, undefined, "thread"),
   define("discord.events_list", "read", "List scheduled events in allowlisted channels of the bound guild.", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/scheduled-events` }), b => list(b, 100).map(projectEvent), undefined, "event"),
   define("discord.event_get", "read", "Read one scheduled event.", { eventId: snow }, { eventId: snowflakeJson }, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/scheduled-events/${enc(a.eventId as string)}` }), b => projectEvent(b)),
@@ -151,14 +151,21 @@ export function toolsFor(kind: EnvKind): Tool[] {
   // an independent teardown scheduler and a favorable review.
   //
   // Further scope reduction (this head): the reduced envelopes were not
-  // accepted, so both plugins now expose only the minimal
-  // metadata-only research surface (counts/links/timestamps/authors, no
-  // message bodies) and drop guild-wide personal-data reads
-  // (member_get / members_search / roles_list) that have no channel tie
-  // and are not needed for bounded research. Event reads are
-  // channel-filtered. `readTools` (body-bearing) is retained
-  // unregistered but not reachable.
-  const reduced = readToolsMeta.filter(t => !["discord.member_get", "discord.members_search", "discord.roles_list"].includes(t.name));
+  // accepted, so both plugins now expose only the channel-bound minimal
+  // surface. Every retained tool carries a channelId argument that
+  // authorize() verifies against readChannelIds before any outbound call,
+  // and the broker re-verifies the fetched objects belong to that channel.
+  // Reads without a verifiable permitted channel tie are unregistered:
+  // guild_get, channels_list, threads_active_list (guild-wide, scoped only
+  // by post-projection filtering), events_list/event_get (channel tie
+  // visible only after fetch), plus member/role personal-data reads.
+  // Retained projections carry identifiers/counts/links/timestamps only.
+  // `readTools` (body-bearing) is retained unregistered but not reachable.
+  const RETAINED = new Set([
+    "discord.channel_get", "discord.messages_list", "discord.message_get",
+    "discord.messages_search", "discord.pins_list", "discord.reactions_list",
+  ]);
+  const reduced = readToolsMeta.filter(t => RETAINED.has(t.name));
   return kind === "dev" ? [...reduced] : [...reduced];
 }
 
@@ -592,6 +599,23 @@ export class Broker {
       if (tool.name === "discord.event_get" && value !== null && typeof value === "object") {
         const ch = (value as Record<string, unknown>).channel_id;
         if (typeof ch === "string" && !config.policy.readChannelIds.includes(ch)) throw new Denied("policy.channel");
+      }
+      // Fail closed when any fetched object belongs outside the bound
+      // channel. Channel-scoped endpoints are not guild/channel-enforced
+      // by Discord, so every retained object must carry (or be) the
+      // channel that authorize() verified before the call.
+      const boundChannel = typeof (args as Record<string, unknown> | null)?.channelId === "string" ? (args as Record<string, unknown>).channelId as string : null;
+      if (tool.requiresChannel === "read" && boundChannel !== null) {
+        const assertBound = (v: unknown): void => {
+          if (Array.isArray(v)) { v.forEach(assertBound); return; }
+          if (v !== null && typeof v === "object") {
+            const o = v as Record<string, unknown>;
+            if (o.channel_id !== undefined && o.channel_id !== boundChannel) throw new Denied("upstream.channel");
+            for (const [k, x] of Object.entries(o)) if (k !== "message_reference") assertBound(x);
+          }
+        };
+        assertBound(value);
+        if (tool.name === "discord.channel_get" && value !== null && typeof value === "object" && (value as Record<string, unknown>).id !== boundChannel) throw new Denied("upstream.channel");
       }
       const clean = (v: unknown) => scrub(v, [token]) as unknown;
       value = clean(value);

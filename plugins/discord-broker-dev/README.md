@@ -4,11 +4,11 @@ Version 0.1.0. Maintainer: agent-toolkit maintainers. **Not installed or securit
 
 Binds only its own secret ref (`DISCORD_BOT_TOKEN_STAGING`, bot Owen QA Test `1469137636663758888`) and its own guild allowlist (TWO Staging `1545644954272137297`). Agents never see the token. Prod (`plugins/discord-broker-prod`) is a separate plugin with separate secret ref, guild, and deployment; it cannot reach staging resources and vice versa. ADR: separate plugin bindings are not an OS sandbox or proof of Discord-side isolation; the tool split is the isolation mechanism.
 
-## Tools (11: read only)
+## Tools (6: read only, channel-bound)
 
 Each tool requires `issueId` + `workspaceId` selectors. The broker verifies the caller’s company/profile, the issue’s company/assignee/current run/active status, and (when bound to a project) the explicit workspace. Unknown fields and arguments fail closed; there is no generic HTTP proxy.
 
-Tier 1 — read (metadata-only, both plugins): `discord.guild_get`, `discord.channels_list`, `discord.channel_get`, `discord.messages_list`, `discord.message_get`, `discord.messages_search`, `discord.pins_list`, `discord.reactions_list`, `discord.threads_active_list`, `discord.events_list`, `discord.event_get`. Guild-wide personal-data reads (`discord.roles_list`, `discord.member_get`, `discord.members_search`) are **unregistered** — they have no channel tie and are not needed for bounded research. Event reads are filtered to allowlisted channels.
+Tier 1 — read (metadata-only, both plugins): `discord.channel_get`, `discord.messages_list`, `discord.message_get`, `discord.messages_search`, `discord.pins_list`, `discord.reactions_list`. Every retained tool carries a `channelId` argument that `authorize()` verifies against `readChannelIds` **before** any outbound call, and the broker re-verifies that fetched objects belong to that channel, refusing mismatches fail-closed (`upstream.channel`). Reads without a verifiable permitted channel tie are **unregistered**: `discord.guild_get`, `discord.channels_list`, `discord.threads_active_list` (guild-wide, previously scoped only by post-projection filtering), `discord.events_list`/`discord.event_get` (channel tie visible only after fetch), plus guild-wide personal-data reads `discord.roles_list`/`discord.member_get`/`discord.members_search`, which are not needed for bounded research. Retained projections carry identifiers/counts/links/timestamps only — channel names/topics, author usernames and message bodies are excluded from the output.
 
 ## Scope reduction (writes unregistered)
 

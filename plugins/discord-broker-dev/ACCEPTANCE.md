@@ -4,14 +4,14 @@ Status: **NOT ACCEPTED, NOT INSTALLED.** This record binds only the exact artifa
 
 ## Scope reduction (why this file no longer describes writes)
 
-Earlier revisions of this envelope registered dev writes (tier 2) plus exact-owned deletes. Security review (including the re-review of exact head 388b473) withheld acceptance of that envelope: the lifecycle finding was retained because this host offers no independent teardown scheduler (the opportunistic sweep is not one; STANDARD §5), and the review records a further authorization concern on the exact-ownership path. Per the review’s direction, dev writes are now **unregistered** and both plugins are **metadata-only** (no message bodies) with guild-wide personal-data reads (`roles_list` / `member_get` / `members_search`) unregistered and event reads channel-filtered — this file covers only the further-reduced 11-tool envelope. The write implementations remain in `packages/discord` (`writeTools`) but are not reachable dispatch targets (see Policy matrix: writes → `validation.unknown_tool`, zero secret resolution).
+Earlier revisions of this envelope registered dev writes (tier 2) plus exact-owned deletes. Security review (including the re-review of exact head 388b473) withheld acceptance of that envelope: the lifecycle finding was retained because this host offers no independent teardown scheduler (the opportunistic sweep is not one; STANDARD §5), and the review records a further authorization concern on the exact-ownership path. Per the review’s direction, dev writes are now **unregistered** and both plugins are **metadata-only** (no message bodies). After the further-reduced 11-tool envelope (head `e9bec9e`) was also withheld, reads whose permitted-channel tie could only be verified through post-projection filtering or after fetch (`guild_get`, `channels_list`, `threads_active_list`, `events_list`, `event_get`) are now **unregistered** as well, and retained projections carry identifiers/counts/links/timestamps only — this file covers only the 6-tool channel-bound envelope. The write implementations remain in `packages/discord` (`writeTools`) but are not reachable dispatch targets (see Policy matrix: writes → `validation.unknown_tool`, zero secret resolution).
 
 Do not expand this envelope back to writes without an independent teardown scheduler, favorable exact-artifact review, and the fixture evidence listed in THREAT-MODEL §9.
 
 ## Implementation under review
 
 - `packages/discord` 0.1.0 (secret-free REST v10 helpers, closed-schema building blocks, scrubbing) + `plugins/discord-broker-dev` 0.1.0 (`togetherweown.discord-broker-dev`, SDK `2026.1023.0`, Node `>=24.11 <25`).
-- Tool inventory: 11 read tools, pinned by `test/broker.test.mjs` against `toolsFor("dev")` and the manifest. Zero write tools registered.
+- Tool inventory: 6 channel-bound read tools, pinned by `test/broker.test.mjs` against `toolsFor("dev")` and the manifest. Zero write tools registered.
 - Configuration envelope: `environment:"dev"`, `guildId:"1545644954272137297"`, `botUserId:"1469137636663758888"`, `botTokenSecretRef:{type:"secret_ref",secretId:<staging ref>}`. Policy limits: agents ≤64, `readChannelIds`/`writeChannelIds` ≤200 each, `revision ≥1`.
 
 ## Exact commands and results (2026-11-10, worktree `work/11516e1f-c38d-4c64-92d9-d1d4826954fb`)
@@ -20,7 +20,7 @@ Do not expand this envelope back to writes without an independent teardown sched
 npx tsc -p plugins/discord-broker-dev/tsconfig.json
 npx tsc -p plugins/discord-broker-prod/tsconfig.json
 node --test --test-timeout=30000 plugins/discord-broker-dev/test/*.test.mjs plugins/discord-broker-prod/test/*.test.mjs
-# → 31 tests, 31 pass, 0 fail (18 dev + 13 prod)
+# → 30 tests, 30 pass, 0 fail (17 dev + 13 prod)
 ```
 
 Pre-push: bounded checks per two-operating-rules rule 16 (formatter/linter/typecheck/changed tests). CI of record is GitHub Actions; exact-head Actions run/job links to be appended on the PR before review.
@@ -29,13 +29,14 @@ Pre-push: bounded checks per two-operating-rules rule 16 (formatter/linter/typec
 
 | Policy | Test evidence |
 | --- | --- |
-| Read-only inventory; writes unregistered | inventory test: exactly 11 read tools, manifest matches `toolsFor("dev")`, all 10 write names absent; write-names test: every write name → `validation.unknown_tool`, 1 deny event, 0 secret/outbound |
+| Read-only inventory; writes unregistered | inventory test: exactly 6 channel-bound read tools, manifest matches `toolsFor("dev")`, all 10 write names + 8 unregistered read names absent; write-names test: every write name → `validation.unknown_tool`, 1 deny event, 0 secret/outbound |
 | Closed tool set; prototype dispatch refused | unknown/prototype test (9 names incl. `member_ban`, `webhook_create`, `guild_leave`) → `validation.unknown_tool`, 1 deny event, 0 secret/outbound |
 | Closed schemas; spoofed args refused | schema test: `limit` 0/101/1.5, `channelId:'123'`, `token`/`url`/`guildId`/`secretRef` extras, `null`/`[]`/`{}` → `validation.schema` |
 | Identity binding (company/run/profile) | `identity.issue_company`, `policy.profile` (`none` read attempt), `identity.issue_run` |
-| Channel allowlist | `policy.channel` (read list excludes channel); `channels_list`/`threads_active_list` post-projection filter (restricted channel/thread absent; private threads under allowlisted parents dropped; 150-channel and 120-role inventories succeed within provider caps) |
-| Bounded limits | `messages_search` limit 26 → `validation.schema` (dropped `members_search` is `validation.unknown_tool`); `messages_list` keeps 100; guild `features` array accepted; search uses documented `content` parameter (fixture path asserts it) |
-| Redaction | token/webhook/invite in guild payload → absent from result/audit; embedded foreign bot token in message content redacted while message links survive; `hygiene` scans result+events+logs+kv |
+| Channel allowlist (pre-fetch + post-fetch) | `policy.channel` (read list excludes channel); cross-channel upstream objects refused `upstream.channel` (message and channel); reads lacking a pre-fetch channel tie are `validation.unknown_tool` before secret |
+| Descriptive metadata excluded | channel names/topics, author usernames/discriminators and message bodies absent from retained output (identifiers/counts/links/timestamps only) |
+| Bounded limits | `messages_search` limit 26 → `validation.schema` (dropped `members_search` is `validation.unknown_tool`); `messages_list` keeps 100; search uses documented `content` parameter (fixture path asserts it) |
+| Redaction | token/webhook/invite in upstream payload → absent from result/audit; `hygiene` scans result+events+logs+kv; constructed `https://discord.com/channels/…` links intact |
 | 401 pause / 429 Retry-After | `upstream.unauthorized` (guild pause); `rate.discord` with `retryAfterSeconds:17` |
 | Audit failure blocks | `failAudit` fixture → `audit.unavailable`, `secretCalls=0` |
 | Fixed origin | fake `http.fetch` asserts `https://discord.com/api/v10/` + `Authorization: Bot <token>` on every call; live `fetch` disabled |
@@ -61,5 +62,5 @@ Pending. Security Engineer must review THREAT-MODEL (incl. credential-ceiling §
 
 1. Tighten the staging token below Administrator where Discord allows; scope to the canary channel(s) and record the change.
 2. Set `readChannelIds` to the canary channels; profiles `researcher-read` (`allowProjectless:true`) only as needed.
-3. Install the dev plugin; run one `guild_get` + one `messages_list` canary; verify audit intent/outcome rows and no token in logs.
+3. Install the dev plugin; run one `channel_get` + one `messages_list` canary; verify audit intent/outcome rows and no token in logs.
 4. Capture Actions run/job links for the exact head SHA in the PR; do not merge on local checks alone.

@@ -13,16 +13,23 @@ const UNREGISTERED_WRITES = [
   'discord.message_delete_own', 'discord.thread_delete_own', 'discord.event_delete_own',
 ];
 
-test('exact tool inventory: dev is read-only (11 read, 0 write)', () => {
+// Reads without a verifiable permitted channel tie are unregistered.
+const UNREGISTERED_READS = [
+  'discord.guild_get', 'discord.channels_list', 'discord.threads_active_list',
+  'discord.events_list', 'discord.event_get',
+  'discord.member_get', 'discord.members_search', 'discord.roles_list',
+];
+
+test('exact tool inventory: dev is read-only (6 channel-bound reads, 0 write)', () => {
   const tools = toolsFor('dev');
-  assert.equal(tools.length, 11);
+  assert.equal(tools.length, 6);
   assert.ok(tools.every(t => t.tier === 'read'), 'dev registers read tools only');
   assert.deepEqual(manifest.tools.map(t => t.name), tools.map(t => t.name));
   assert.equal(manifest.id, 'togetherweown.discord-broker-dev');
   for (const name of UNREGISTERED_WRITES) assert.ok(!tools.some(t => t.name === name), `${name} must be unregistered`);
   for (const name of UNREGISTERED_WRITES) assert.ok(!manifest.tools.some(t => t.name === name), `${name} must be absent from manifest`);
-  for (const name of ['discord.member_get', 'discord.members_search', 'discord.roles_list']) {
-    assert.ok(!tools.some(t => t.name === name), `${name} must be unregistered (guild-wide personal data)`);
+  for (const name of UNREGISTERED_READS) {
+    assert.ok(!tools.some(t => t.name === name), `${name} must be unregistered (no verifiable channel tie)`);
     assert.ok(!manifest.tools.some(t => t.name === name), `${name} must be absent from manifest`);
   }
 });
@@ -37,11 +44,10 @@ test('dev writes are unregistered: any write name is refused as unknown tool bef
   }
 });
 
-test('discord.guild_get: fixed origin, bounded read, audit, no token in output', async () => {
+test('discord.channel_get: fixed origin, bounded read, audit, no token in output', async () => {
   const f = fixture();
-  // Real guild payloads carry a `features` array; guild_get must succeed.
-  f.read(`/guilds/${guildId}`, { id: guildId, name: 'TWO Staging', description: 'synthetic', features: ['COMMUNITY', 'CHANNEL_PERMISSIONS'] });
-  const result = await f.call('discord.guild_get', { ...base });
+  f.read(`/channels/${channelId}`, { id: channelId, name: 'synthetic', type: 0, guild_id: guildId, topic: 'synthetic' });
+  const result = await f.call('discord.channel_get', { ...base, channelId });
   assert.equal(result.error, undefined); assert.equal(result.data.ok, true);
   assert.equal(f.secretCalls, 1); assert.equal(f.events.length, 2);
   assert.equal(f.events[0].phase, 'intent'); assert.equal(f.events[1].outcome, 'success');
@@ -95,30 +101,30 @@ test('closed schemas reject malformed shapes, spoofed args and over-limit values
 
 test('policy refusals: wrong company, profile none, channel allowlist, prereq binding', async () => {
   const a = fixture(); a.issue.companyId = 'another-company';
-  refused(a, await a.call('discord.guild_get', { ...base }), 'identity.issue_company');
+  refused(a, await a.call('discord.channel_get', { ...base, channelId }), 'identity.issue_company');
   const b = fixture(); b.config.policy.agents[0].profile = 'none';
-  refused(b, await b.call('discord.guild_get', { ...base }), 'policy.profile');
+  refused(b, await b.call('discord.channel_get', { ...base, channelId }), 'policy.profile');
   const c = fixture(); c.config.policy.readChannelIds = ['1999999999999999999'];
   refused(c, await c.call('discord.messages_list', { ...base, channelId, limit: 1 }), 'policy.channel');
   const e = fixture(); e.issue.checkoutRunId = 'another-run'; e.issue.executionRunId = 'another-run';
-  refused(e, await e.call('discord.guild_get', { ...base }), 'identity.issue_run');
+  refused(e, await e.call('discord.channel_get', { ...base, channelId }), 'identity.issue_run');
 });
 
 test('401 stops credential use (guild pause); 429 honors Retry-After', async () => {
   const f = fixture();
-  f.steps.push({ method: 'GET', path: `/api/v10/guilds/${guildId}`, status: 401, body: { message: '401' } });
-  const r1 = await f.call('discord.guild_get', { ...base });
+  f.steps.push({ method: 'GET', path: `/api/v10/channels/${channelId}`, status: 401, body: { message: '401' } });
+  const r1 = await f.call('discord.channel_get', { ...base, channelId });
   assert.equal(r1.data.rule, 'upstream.unauthorized');
   const g = fixture();
-  g.steps.push({ method: 'GET', path: `/api/v10/guilds/${guildId}`, status: 429, headers: { 'retry-after': '17' }, body: { message: '429' } });
-  const r2 = await g.call('discord.guild_get', { ...base });
+  g.steps.push({ method: 'GET', path: `/api/v10/channels/${channelId}`, status: 429, headers: { 'retry-after': '17' }, body: { message: '429' } });
+  const r2 = await g.call('discord.channel_get', { ...base, channelId });
   assert.equal(r2.data.rule, 'rate.discord'); assert.equal(r2.data.retryAfterSeconds, 17);
 });
 
 test('token canary never appears in success/refusal/audit (webhook+invite redaction)', async () => {
   const f = fixture();
-  f.read(`/guilds/${guildId}`, { id: guildId, name: token, description: `invite discord.gg/abc123 webhook https://discord.com/api/webhooks/1/${token}` });
-  const result = await f.call('discord.guild_get', { ...base });
+  f.read(`/channels/${channelId}`, { id: channelId, name: token, type: 0, guild_id: guildId, topic: `invite discord.gg/abc123 webhook https://discord.com/api/webhooks/1/${token}` });
+  const result = await f.call('discord.channel_get', { ...base, channelId });
   assert.equal(result.data.ok, true);
   const visible = JSON.stringify({ result, events: f.events });
   assert.ok(!visible.includes(token) && !visible.includes('abc123'), 'Token/invite escaped');
@@ -127,71 +133,64 @@ test('token canary never appears in success/refusal/audit (webhook+invite redact
 
 test('hydration: audit failure blocks side effects; policy change refuses', async () => {
   const f = fixture(); f.failAudit = true;
-  const r = await f.call('discord.guild_get', { ...base });
+  const r = await f.call('discord.channel_get', { ...base, channelId });
   assert.equal(r.data.rule, 'audit.unavailable'); assert.equal(f.secretCalls, 0);
 });
 
-test('channels_list: large guild inventories succeed and restrict to allowlisted channels', async () => {
-  const restrictedId = '1545644954272137300';
-  // 150-channel guild (over the old 100 cap): only the allowlisted channel returns.
-  const channels = [{ id: channelId, name: 'public', type: 0, topic: 'ok' }, { id: restrictedId, name: 'restricted-secret', type: 0, topic: 'hidden-topic' }];
-  for (let i = 0; i < 148; i++) channels.push({ id: `15456449542722${String(i).padStart(4, '0')}`, name: `ch-${i}`, type: 0 });
-  const f = fixture();
-  f.read(`/guilds/${guildId}/channels`, channels);
-  const result = await f.call('discord.channels_list', { ...base });
-  assert.equal(result.data.ok, true);
-  assert.equal(result.data.page.length, 1);
-  assert.equal(result.data.page[0].id, channelId);
-  assert.ok(!JSON.stringify(result.data).includes('restricted-secret') && !JSON.stringify(result.data).includes('hidden-topic'), 'Restricted channel leaked');
-  f.hygiene(result); f.done();
+test('reads without a verifiable channel tie are unknown tools (no secret, no HTTP)', async () => {
+  for (const name of UNREGISTERED_READS) {
+    const events = [];
+    const result = await new Broker().execute({ audit: async e => events.push(e), clock: Date.now }, 'dev', name, { ...base, channelId, eventId: messageId, userId: '1'.repeat(17), query: 'synthetic', limit: 5 }, run);
+    assert.equal(result.isError, true, name);
+    assert.equal(JSON.parse(result.content[0].text).rule, 'validation.unknown_tool', name);
+    assert.equal(events.length, 1, name);
+  }
 });
 
-test('threads_active_list: restricted-parent threads are filtered out', async () => {
+test('descriptive metadata is absent from retained output (identifiers/links/timestamps only)', async () => {
   const f = fixture();
-  f.read(`/guilds/${guildId}/threads/active`, { threads: [
-    { id: '1545644954272137301', name: 'public-thread', parent_id: channelId, type: 11 },
-    { id: '1545644954272137302', name: 'restricted-thread', parent_id: '1545644954272137300', type: 11 },
-    { id: '1545644954272137303', name: 'orphan-thread', type: 11 },
-    { id: '1545644954272137304', name: 'private-thread', parent_id: channelId, type: 12 },
-    { id: '1545644954272137305', name: 'announce-thread', parent_id: channelId, type: 10 },
-  ] });
-  const result = await f.call('discord.threads_active_list', { ...base });
-  assert.equal(result.data.ok, true);
-  assert.deepEqual(result.data.page.map(t => t.name), ['public-thread', 'announce-thread']);
-  assert.ok(!JSON.stringify(result.data).includes('private-thread'), 'Private thread leaked through parent grant');
-  f.hygiene(result); f.done();
+  f.read(`/channels/${channelId}`, { id: channelId, name: 'secret-name', type: 0, guild_id: guildId, topic: 'hidden-topic', parent_id: '1545644954272137300', last_message_id: messageId });
+  const ch = await f.call('discord.channel_get', { ...base, channelId });
+  assert.equal(ch.data.ok, true);
+  const chText = JSON.stringify(ch.data);
+  assert.ok(!chText.includes('secret-name') && !chText.includes('hidden-topic'), 'Channel descriptive metadata leaked');
+  assert.deepEqual(Object.keys(ch.data.page).sort(), ['guild_id', 'id', 'last_message_id', 'parent_id', 'type']);
+  const g = fixture();
+  g.read(`/channels/${channelId}/messages?limit=5`, [{ id: messageId, channel_id: channelId, guild_id: guildId, content: 'body here', timestamp: '2026-11-10T00:00:00.000Z', author: { id: '1'.repeat(17), username: 'secret-username', discriminator: '0001' }, pinned: false, type: 0 }]);
+  const ms = await g.call('discord.messages_list', { ...base, channelId, limit: 5 });
+  assert.equal(ms.data.ok, true);
+  const msText = JSON.stringify(ms.data);
+  assert.ok(!msText.includes('secret-username') && !msText.includes('body here') && !msText.includes('0001'), 'Author/personal data or body leaked');
+  assert.equal(ms.data.page[0].id, messageId);
+  assert.equal(ms.data.page[0].author_id, '1'.repeat(17));
+  assert.equal(ms.data.page[0].timestamp, '2026-11-10T00:00:00.000Z');
+  assert.equal(ms.data.page[0].url, `https://discord.com/channels/${guildId}/${channelId}/${messageId}`);
+  f.hygiene(ch); g.hygiene(ms); f.done(); g.done();
 });
 
-test('events_list: restricted-channel events are filtered out', async () => {
+test('cross-channel upstream objects are refused fail-closed (upstream.channel)', async () => {
   const f = fixture();
-  f.read(`/guilds/${guildId}/scheduled-events`, [
-    { id: '1545644954272137401', name: 'public-event', channel_id: channelId, guild_id: guildId, description: 'ok' },
-    { id: '1545644954272137402', name: 'restricted-event', channel_id: '1545644954272137300', guild_id: guildId, description: 'secret' },
-  ]);
-  const result = await f.call('discord.events_list', { ...base });
-  assert.equal(result.data.ok, true);
-  assert.deepEqual(result.data.page.map(e => e.name), ['public-event']);
-  assert.ok(!JSON.stringify(result.data).includes('restricted-event') && !JSON.stringify(result.data).includes('secret'), 'Restricted event leaked');
-  f.hygiene(result); f.done();
-});
-
-test('event_get outside allowlisted channels is refused', async () => {
-  const f = fixture();
-  f.read(`/guilds/${guildId}/scheduled-events/1545644954272137402`, { id: '1545644954272137402', name: 'restricted', channel_id: '1545644954272137300', guild_id: guildId });
-  const result = await f.call('discord.event_get', { ...base, eventId: '1545644954272137402' });
-  assert.equal(result.data.ok, false);
-  assert.equal(result.data.rule, 'policy.channel');
-  f.hygiene(result);
+  f.read(`/channels/${channelId}/messages?limit=5`, [{ id: messageId, channel_id: '1999999999999999999', guild_id: guildId, timestamp: '2026-11-10T00:00:00.000Z' }]);
+  const r = await f.call('discord.messages_list', { ...base, channelId, limit: 5 });
+  assert.equal(r.data.ok, false);
+  assert.equal(r.data.rule, 'upstream.channel');
+  f.hygiene(r);
+  const g = fixture();
+  g.read(`/channels/${channelId}`, { id: '1545644954272137300', name: 'other', type: 0, guild_id: guildId });
+  const r2 = await g.call('discord.channel_get', { ...base, channelId });
+  assert.equal(r2.data.ok, false);
+  assert.equal(r2.data.rule, 'upstream.channel');
+  g.hygiene(r2);
 });
 
 test('embedded foreign bot token and invite redacted; message links preserved', async () => {
   const otherToken = `${'A'.repeat(24)}.ABCDEF.${'B'.repeat(27)}`;
-  // Dev is metadata-only: scrub is verified via channel topic (free text in
-  // the retained surface). Message links (discord.com/channels/...) must
-  // survive invite redaction.
+  // Retained projections carry no free-text fields, so embedded secrets in
+  // upstream descriptive fields never survive projection; constructed
+  // message links must still be intact.
   const f = fixture();
-  f.read(`/channels/${channelId}`, { id: channelId, name: 'public', type: 0, guild_id: guildId, topic: `leaked ${otherToken} join DISCORD.GG/xyz789 see https://discord.com/channels/${guildId}/${channelId}/${messageId}` });
-  const result = await f.call('discord.channel_get', { ...base, channelId });
+  f.read(`/channels/${channelId}/messages?limit=5`, [{ id: messageId, channel_id: channelId, guild_id: guildId, content: `leaked ${otherToken} join DISCORD.GG/xyz789`, timestamp: '2026-11-10T00:00:00.000Z' }]);
+  const result = await f.call('discord.messages_list', { ...base, channelId, limit: 5 });
   assert.equal(result.data.ok, true);
   const text = JSON.stringify(result.data);
   assert.ok(!text.includes(otherToken) && !text.includes('xyz789'), 'Embedded token/invite escaped');
@@ -223,8 +222,8 @@ test('read path performs zero outbound mutations; legacy sweep is dormant', asyn
   const life = `discord:life:message:${channelId}:${messageId}`;
   f.kv.set(life, { kind: 'message', channelId, resourceId: messageId, guildId, agentId: run.agentId, runId: run.runId, authorId: '1469137636663758888', createdAt: Date.now() - 8 * 86400000, expiresAt: Date.now() - 1000, state: 'owned' });
   f.kv.set('discord:life-index', [`life:message:${channelId}:${messageId}`]);
-  f.read(`/guilds/${guildId}`, { id: guildId, name: 'TWO Staging' });
-  const result = await f.call('discord.guild_get', { ...base });
+  f.read(`/channels/${channelId}`, { id: channelId, type: 0, guild_id: guildId });
+  const result = await f.call('discord.channel_get', { ...base, channelId });
   assert.equal(result.data.ok, true);
   assert.ok(f.kv.has(life), 'Read call must not delete ledger rows');
   assert.ok(!f.events.some(e => e.rule === 'sweep.deleted'), 'No sweep on read path');

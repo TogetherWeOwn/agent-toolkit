@@ -5,7 +5,7 @@ Per STANDARD §2. Draft modeling aid for Security Engineer review, not acceptanc
 ## 1. Credential ceiling vs exposed subset
 
 - **Ceiling (prod):** guild `326474832151838730` Administrator for bot `1539711683898118154` — **shared with the live Owen bot** (Cloudflare Worker `two-bot-next-production`). The broker never owns this token alone.
-- **Exposed subset (prod):** 11 metadata-only reads only (guild-wide personal-data reads unregistered; event reads channel-filtered). Table §3. No publish/edit/react/thread/event tool is registered; tier 3 (post/reply/edit-own) is off at first and tier 4 (moderation/admin) does not exist here.
+- **Exposed subset (prod):** 6 metadata-only channel-bound reads only (reads without a verifiable permitted channel tie — `guild_get`, `channels_list`, `threads_active_list`, `events_list`, `event_get` — plus guild-wide personal-data reads unregistered). Table §3. No publish/edit/react/thread/event tool is registered; tier 3 (post/reply/edit-own) is off at first and tier 4 (moderation/admin) does not exist here.
 - **Enforcement:** publish/moderation names (`discord.message_post`, `discord.member_ban`, …) hit `validation.unknown_tool` before secret resolution, with one deny audit event (tested). Cross-environment config (`environment: "dev"` on the prod plugin) refuses with `policy.environment`.
 - **Residual:** ceiling remains Administrator and shared; a broker escape equals the ceiling plus contention with the live bot. Least-privilege tightening (drop Administrator; scope to public community channels) is an Operator pre-install action. Until then, prod reads must stay low-load.
 
@@ -19,11 +19,11 @@ Common: guild = config; channel args checked against `policy.readChannelIds`; sn
 
 | Tool | Effect / risk | Key control |
 | --- | --- | --- |
-| `discord.guild_get`, `channels_list`, `channel_get` | guild/channel metadata | bounded projection; audit; no token in output |
-| `discord.messages_list`, `message_get` | message **metadata** reads (public channels only) | channel allowlist; bodies never returned (metadata-only projection); counts/links for research |
-| `discord.messages_search` (research workhorse) | bounded search returning `total_results` + message metadata links | query ≤512, limit ≤25 (Discord search maximum); webhook/invite scrub; no bodies; report “no matches in coverage”, never “nobody asked” |
-| `discord.pins_list`, `reactions_list` | pins metadata / reactions | channel allowlist; pins return metadata only |
-| `discord.threads_active_list`, `events_list`, `event_get` | threads/events | `threads_active_list` public/announcement threads (types 10/11) under allowlisted parents only; private (12) dropped; events channel-filtered |
+| `discord.channel_get` | channel identifiers for one allowlisted channel | channel allowlist verified pre-fetch; identifiers-only projection; `id` re-verified |
+| `discord.messages_list`, `message_get` | message **metadata** reads (public channels only) | channel allowlist pre-fetch + post-fetch (`upstream.channel` fail-closed); bodies/usernames never returned; counts/links for research |
+| `discord.messages_search` (research workhorse) | bounded search returning `total_results` + message metadata links | query ≤512, limit ≤25 (Discord search maximum); channel-scoped + verified; webhook/invite scrub; no bodies; report “no matches in coverage”, never “nobody asked” |
+| `discord.pins_list`, `reactions_list` | pins metadata / reaction counts | channel allowlist; pins return metadata only |
+| `discord.guild_get`, `channels_list`, `threads_active_list`, `events_list`, `event_get` | **unregistered** (no verifiable permitted channel tie) | `validation.unknown_tool` before secret |
 | `discord.roles_list`, `discord.member_get`, `discord.members_search` | **unregistered** (guild-wide personal data, no channel tie; not needed for research) | `validation.unknown_tool` before secret |
 | `discord.message_post` / `message_reply` / `message_edit_own` / `reaction_*` / `thread_create` / `event_create` | **NOT REGISTERED (tier 3 off)** — absent, not permission-gated | tool set contains zero writes; `validation.unknown_tool` + single deny event (tested) |
 
@@ -50,7 +50,7 @@ Preflight (zero secret/outbound, one deny event): unknown/prototype tool, schema
 
 ## 9. Lifecycle / TTL / spend caps
 
-Read-only (11 tools, metadata-only, events channel-filtered, guild-wide personal-data reads unregistered): no persistent creations, no teardown obligation. Zero outbound mutations. Caps: 1 MiB response, 262 KiB output, 30s deadline, rate/401 controls above. Discord spend is not metered; load coordination (above) is the cap.
+Read-only (6 channel-bound tools, metadata-only, reads without a verifiable channel tie unregistered): no persistent creations, no teardown obligation. Zero outbound mutations. Caps: 1 MiB response, 262 KiB output, 30s deadline, rate/401 controls above. Discord spend is not metered; load coordination (above) is the cap.
 
 ## 10. Open control gaps
 

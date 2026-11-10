@@ -117,35 +117,47 @@ export function pick(value: unknown, fields: string[]): Record<string, string | 
 }
 export function projectGuild(value: unknown): unknown {
   const g = object(value);
+  // Identifiers and counts only; arbitrary descriptive metadata (name,
+  // description) and sensitive values are excluded from retained output.
   // `features` is an array; pick() accepts scalars only, so it is omitted
   // (fail-closed) rather than failing every guild response.
-  return { ...pick(g, ["id", "name", "description", "icon", "owner_id", "member_count", "preferred_locale", "nsfw_level", "verification_level"]), members: typeof g.approximate_member_count === "number" ? g.approximate_member_count : undefined };
+  const base = pick(g, ["id", "member_count"]) as Record<string, unknown>;
+  if (base.member_count === undefined && typeof g.approximate_member_count === "number") base.member_count = g.approximate_member_count;
+  return base;
 }
 export function projectChannel(value: unknown): unknown {
   const c = object(value);
-  const base = pick(c, ["id", "name", "type", "guild_id", "position", "topic", "rate_limit_per_user", "nsfw"]);
-  if (typeof c.parent_id === "string") (base as Record<string, unknown>).parent_id = c.parent_id;
-  if (typeof c.last_message_id === "string") (base as Record<string, unknown>).last_message_id = c.last_message_id;
+  // Identifiers only: name/topic/position/limits are arbitrary descriptive
+  // metadata and are excluded from retained output.
+  const base = pick(c, ["id", "type", "guild_id"]) as Record<string, unknown>;
+  if (typeof c.parent_id === "string") base.parent_id = c.parent_id;
+  if (typeof c.last_message_id === "string") base.last_message_id = c.last_message_id;
   return base;
 }
 export function projectMessage(value: unknown): unknown {
   const m = object(value);
-  const author = m.author && typeof m.author === "object" && !Array.isArray(m.author) ? pick(m.author, ["id", "username", "discriminator", "bot"]) : undefined;
+  const author = m.author && typeof m.author === "object" && !Array.isArray(m.author) ? pick(m.author, ["id", "bot"]) : undefined;
   const out: Record<string, unknown> = { ...pick(m, ["id", "channel_id", "guild_id", "content", "timestamp", "pinned", "type", "mention_everyone", "tts"]) };
-  if (author) out.author = author;
+  if (author) out.author_id = author.id;
+  if (author?.bot !== undefined) out.author_bot = author.bot;
   if (typeof m.message_reference === "object" && m.message_reference !== null) out.message_reference = pick(m.message_reference, ["message_id", "channel_id", "guild_id", "type"]);
   return out;
 }
 
-// Metadata-only projection for the prod research surface: bounded counts,
-// links and author metadata leave the broker; raw member message bodies do
-// not. Used by the prod plugin so host call-event retention can never persist
-// member message text (Security A2).
+// Metadata-only projection for the retained read surface: identifiers,
+// counts, links and timestamps leave the broker; raw member message bodies
+// and arbitrary descriptive/personal metadata do not. Username/discriminator
+// are excluded in favor of the author identifier.
 export function projectMessageMeta(value: unknown): unknown {
   const m = object(value);
-  const author = m.author && typeof m.author === "object" && !Array.isArray(m.author) ? pick(m.author, ["id", "username", "discriminator", "bot"]) : undefined;
+  const author = m.author && typeof m.author === "object" && !Array.isArray(m.author) ? pick(m.author, ["id", "bot"]) : undefined;
   const out: Record<string, unknown> = { ...pick(m, ["id", "channel_id", "guild_id", "timestamp", "pinned", "type"]) };
-  if (author) out.author = author;
+  if (author) out.author_id = author.id;
+  if (author?.bot !== undefined) out.author_bot = author.bot;
+  // Canonical link constructed from identifiers only (never upstream text).
+  if (typeof m.guild_id === "string" && typeof m.channel_id === "string" && typeof m.id === "string") {
+    out.url = `https://discord.com/channels/${m.guild_id}/${m.channel_id}/${m.id}`;
+  }
   if (typeof m.message_reference === "object" && m.message_reference !== null) out.message_reference = pick(m.message_reference, ["message_id", "channel_id", "guild_id", "type"]);
   return out;
 }
@@ -161,15 +173,16 @@ export function projectSearchMeta(value: unknown): unknown {
 }
 export function projectMember(value: unknown): unknown {
   const v = object(value);
-  const out: Record<string, unknown> = { ...pick(v, ["id", "nick", "joined_at", "deaf", "mute", "flags", "pending", "communication_disabled_until"]) };
-  if (v.user && typeof v.user === "object") out.user = pick(v.user, ["id", "username", "discriminator", "bot", "avatar"]);
+  // Identifiers only (unregistered surface; retained code hardened anyway).
+  const out: Record<string, unknown> = { ...pick(v, ["id", "joined_at"]) };
+  if (v.user && typeof v.user === "object" && !Array.isArray(v.user)) out.user_id = pick(v.user, ["id"]).id;
   return out;
 }
 export function projectRole(value: unknown): unknown {
-  return pick(value, ["id", "name", "color", "hoist", "mentionable", "position", "managed"]);
+  return pick(value, ["id", "position"]);
 }
 export function projectEvent(value: unknown): unknown {
-  return pick(value, ["id", "name", "description", "scheduled_start_time", "scheduled_end_time", "privacy_level", "status", "channel_id", "entity_type", "guild_id"]);
+  return pick(value, ["id", "scheduled_start_time", "scheduled_end_time", "status", "channel_id", "guild_id"]);
 }
 
 const BOT_TOKEN = /(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{24,}\.[A-Za-z0-9_-]{6}\.[A-Za-z0-9_-]{27,}(?![A-Za-z0-9_-])/gi;
