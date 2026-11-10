@@ -151,6 +151,10 @@ async function sandboxFilesystem(root) {
   await writeFile(join(fsRoot, 'etc/passwd'), `fixture:x:${process.getuid()}:${process.getgid()}:Fixture:${root}/home:/bin/sh\n`);
   await writeFile(join(fsRoot, 'etc/group'), `fixture:x:${process.getgid()}:\n`);
   await writeFile(join(fsRoot, 'etc/nsswitch.conf'), 'passwd: files\ngroup: files\nhosts: files\n');
+  // The embedded postmaster resolves its listen host "localhost" via NSS
+  // `hosts: files`, so the chroot needs a loopback hosts entry; without it
+  // getaddrinfo fails before any TCP socket can be created.
+  await writeFile(join(fsRoot, 'etc/hosts'), '127.0.0.1 localhost\n');
   return fsRoot;
 }
 
