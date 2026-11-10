@@ -10,7 +10,7 @@ export const errorSummaryBindings: Schema<readonly ReturnType<typeof errorBindin
   requireThat(new Set(parsed.map(item => item.fingerprint)).size === parsed.length, "schema");
   return Object.freeze(parsed);
 } };
-const ids: Schema<readonly string[]> = { parse(value) {
+export const errorQueryIds: Schema<readonly string[]> = { parse(value) {
   requireThat(Array.isArray(value) && value.length > 0 && value.length <= 32, "schema");
   const parsed = value.map(item => identifier.parse(item));
   requireThat(new Set(parsed).size === parsed.length, "schema");
@@ -18,7 +18,7 @@ const ids: Schema<readonly string[]> = { parse(value) {
 } };
 
 export const errorSummaryScope = closed({ organization: slug, database: slug, branch: slug, errors: errorSummaryBindings });
-export const errorQueryScope = closed({ organization: slug, database: slug, branch: slug, errorFingerprint: identifier, queryIds: ids });
+export const errorQueryScope = closed({ organization: slug, database: slug, branch: slug, errorFingerprint: identifier, queryIds: errorQueryIds });
 export interface ErrorSummaryMetadata {
   readonly id: string;
   readonly executionAuthority: "not-established";

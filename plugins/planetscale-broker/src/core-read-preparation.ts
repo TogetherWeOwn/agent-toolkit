@@ -105,7 +105,10 @@ import { queryStatisticsIds } from "./query-statistics.js";
 import { prepare as prepareQueryStatistics } from "./tools/get-query-statistics.js";
 import { prepare as prepareQuerySummary } from "./tools/get-query-summary.js";
 import { querySummaryIds } from "./query-records.js";
-import { errorSummaryBindings } from "./query-errors.js";
+import { errorSummaryBindings, errorQueryIds } from "./query-errors.js";
+import { queryTagBindings } from "./query-tags.js";
+import { prepare as prepareBranchQueryError } from "./tools/get-branch-query-error.js";
+import { prepare as prepareBranchQueryTagList } from "./tools/list-branch-query-tags.js";
 import { prepare as prepareBranchQueryList } from "./tools/list-branch-queries.js";
 import { prepare as prepareBranchQueryErrorList } from "./tools/list-branch-query-errors.js";
 import { prepare as prepareBranchQuery } from "./tools/get-branch-query.js";
@@ -179,6 +182,8 @@ const queryStatisticsTarget = closed({ ...queryFingerprintFields, queryIds: quer
 const queryFingerprintSummaryTarget = closed({ ...queryFingerprintFields, summaryId: identifier });
 const querySummaryListTarget = closed({ ...branchFields, summaryIds: querySummaryIds });
 const errorSummaryListTarget = closed({ ...branchFields, errors: errorSummaryBindings });
+const branchQueryErrorTarget = closed({ ...branchFields, errorFingerprint: identifier, queryIds: errorQueryIds });
+const branchQueryTagListTarget = closed({ ...branchFields, tags: queryTagBindings });
 const branchQueryTarget = closed({ ...branchFields, queryId: identifier });
 const branchQueryTagTarget = closed({ ...branchFields, tag: closed({ id: identifier, name: identifier }) });
 const databaseCidrTarget = closed({ ...databaseFields, cidrId: identifier });
@@ -303,8 +308,9 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof deployChildListTarget.parse> | ReturnType<typeof schemaRecommendationListTarget.parse> |
   ReturnType<typeof unifiedChangeListTarget.parse> | ReturnType<typeof replicaChangeListTarget.parse> |
   ReturnType<typeof querySummaryListTarget.parse> | ReturnType<typeof errorSummaryListTarget.parse> |
-  ReturnType<typeof queryStatisticsTarget.parse> | ReturnType<typeof queryFingerprintSummaryTarget.parse>;
-type ReadOperation = "get_query_statistics" | "get_query_summary" | "list_branch_queries" | "list_branch_query_errors" |
+  ReturnType<typeof queryStatisticsTarget.parse> | ReturnType<typeof queryFingerprintSummaryTarget.parse> |
+  ReturnType<typeof branchQueryErrorTarget.parse> | ReturnType<typeof branchQueryTagListTarget.parse>;
+type ReadOperation = "get_branch_query_error" | "list_branch_query_tags" | "get_query_statistics" | "get_query_summary" | "list_branch_queries" | "list_branch_query_errors" |
   "list_change_requests" | "list_dedicated_read_replica_change_requests" |
   "get_deploy_queue" | "list_deploy_operations" | "list_deploy_request_reviews" |
   "list_schema_recommendations" | "list_audit_logs" | "list_databases" | "list_branches" | "list_database_regions" |
@@ -401,6 +407,22 @@ export function bindListSchemaRecommendationsPreparation(rawTarget: unknown): (r
     recommendations: target.recommendations }, target.pagination);
   return bindRead(`planetscale/database/${target.databaseId}`, target,
     "list_schema_recommendations", read.request, "record-and-number-parent-not-verified");
+}
+
+export function bindGetBranchQueryErrorPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = branchQueryErrorTarget.parse(rawTarget);
+  const read = prepareBranchQueryError({ organization: target.organization, database: target.database,
+    branch: target.branch, errorFingerprint: target.errorFingerprint, queryIds: target.queryIds }, {});
+  return bindRead(`planetscale/branch/${target.branchId}`, target,
+    "get_branch_query_error", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindListBranchQueryTagsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = branchQueryTagListTarget.parse(rawTarget);
+  const read = prepareBranchQueryTagList({ organization: target.organization, database: target.database,
+    branch: target.branch, tags: target.tags }, {});
+  return bindRead(`planetscale/branch/${target.branchId}`, target,
+    "list_branch_query_tags", read.request, "record-and-name-parent-not-verified");
 }
 
 export function bindGetQueryStatisticsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {

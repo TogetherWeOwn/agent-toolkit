@@ -6,6 +6,29 @@ manifest, network executor, credential resolver, or tool registration is supplie
 The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
+## Query-error and tag-list preparation increment
+
+Two pure `Prepared` bindings cover the existing error-fingerprint query page and
+query-tag list GETs. Closed immutable host parents/revision, error fingerprint
+plus unique query IDs or unique tag ID/name pairs bind fixed first-page requests
+and empty caller arguments. Existing bounded parsers are exported/reused without
+behavior changes. Every field enters plan/full hashes, including response-only
+bindings absent from paths. No executor, credentials or authority consumption.
+
+`test/core-query-error-tag-read-preparation.test.mjs` supplies 21 synthetic
+contracts for fixed requests, every-field hashes, immutable captures, closed/
+bounded inputs, accessor/injection/whole-page refusal and redacted output.
+Error-query receipts match query IDs, not error provenance; query fingerprints
+are not error fingerprints. Tag receipts match ID/name pairs, not parent ownership.
+SQL/password objects, tag names/values, fingerprints, metrics, actors and raw times
+are omitted. Flags/source do not grant execution authority. Both retain fixed
+first-page-only coverage; later pages/filters and grouped tag summaries remain
+unsupported. Collection permission, current bindings/revision, trusted transport/
+raw-body custody and independent non-waking proof remain prerequisites. Coverage
+stays **134/291 offline adapters; 157 missing**, twelve previews and **120 pure
+preparations**, zero runtime-integrated/reviewed/enabled/adopted. New contracts
+require exact-head Actions; older counts below are historical.
+
 ## Query-fingerprint preparation increment
 
 Two pure `Prepared` bindings cover existing query-statistics first-page and

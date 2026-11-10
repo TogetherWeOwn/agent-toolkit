@@ -3,7 +3,7 @@ import { slug } from "./metadata.js";
 
 const binding = closed({ id: identifier, name: identifier });
 type Binding = ReturnType<typeof binding.parse>;
-const bindings: Schema<readonly Binding[]> = { parse(value) {
+export const queryTagBindings: Schema<readonly Binding[]> = { parse(value) {
   requireThat(Array.isArray(value) && value.length > 0 && value.length <= 32, "schema");
   const parsed = value.map(item => binding.parse(item));
   requireThat(new Set(parsed.map(item => item.id)).size === parsed.length, "schema");
@@ -13,7 +13,7 @@ const bindings: Schema<readonly Binding[]> = { parse(value) {
 const branchFields = { organization: slug, database: slug, branch: slug };
 // The detail route uses the name, not the ID. Current trusted ownership is separate.
 export const queryTagScope = closed({ ...branchFields, tag: binding });
-export const queryTagListScope = closed({ ...branchFields, tags: bindings });
+export const queryTagListScope = closed({ ...branchFields, tags: queryTagBindings });
 const source = oneOf(["sql", "system"] as const);
 export interface QueryTagMetadata {
   readonly id: string;

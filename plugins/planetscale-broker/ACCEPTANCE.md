@@ -4,6 +4,37 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Query-error and tag-list preparation source increment
+
+Two pure Prepared bindings cover existing error-fingerprint query-page and
+query-tag list GETs. Closed immutable host parents/revision, error fingerprint
+plus unique query IDs or unique tag ID/name pairs bind fixed first-page requests
+and empty arguments. Every field enters plan/full hashes, including response-only
+bindings absent from requests. Existing bounded parsers exported/reused without
+behavior changes. No executor, registration, credentials or authority consumption.
+
+`test/core-query-error-tag-read-preparation.test.mjs` supplies **21 synthetic
+contracts** for fixed requests, every-field hashes, immutable captures, closed/
+bounded inputs, accessor/injection/envelope/whole-page refusal and redacted output.
+Error-query receipts match query IDs, not error provenance or parent ownership;
+query fingerprints are not error fingerprints. Tag receipts match ID/name pairs,
+not parent ownership. SQL/password objects, tag names/values, fingerprints,
+metrics, actors and raw times are omitted. Flags/source never grant execution
+authority. Both retain first-page-only coverage, not later pages/filters or grouped
+tag summaries. Collection permission, current bindings/revision, trusted transport/
+raw-body custody and independent non-waking proof remain prerequisites. Coverage
+stays **134/291 offline adapters; 157 missing**, twelve previews and **120 pure
+preparations**, zero runtime-integrated/reviewed/enabled/adopted. New contracts
+require exact-head Actions.
+
+Prior exact `4de88516233114c47e52b30b3e1a1cf0e9ac3afa`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42824702659)
+and [test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42824702659/job/129858916863)
+passed, as did [Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42824701908)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42824694321).
+No numeric totals extracted. Earlier unchanged SDK recovery uncertainty remains
+unresolved. All specialist/scanner-scope delta/exact-head/live-use gates remain.
+
 ## Query-fingerprint preparation source increment
 
 Two pure Prepared bindings cover existing query-statistics first-page and
