@@ -6,6 +6,30 @@ manifest, network executor, credential resolver, or tool registration is supplie
 The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
+## Organization collection preparation increment
+
+Three pure `Prepared` bindings in `src/core-read-preparation.ts` cover existing
+organization member, team and team-member list reads. Reuse the organization
+parsers for 1–32 unique membership/user ID pairs or team ID/slug pairs. Closed
+immutable host organization/revision, optional team ID/slug and pagination
+(page 1–100, perPage 1–10) bind fixed GETs and empty caller arguments. Every field
+enters plan/full hashes; child rebinding and team ID changes can leave the
+upstream request unchanged while still changing the prepared authority binding.
+
+`test/core-organization-collection-read-preparation.test.mjs` supplies 30 synthetic
+contracts for fixed requests, every-field hashes, deep snapshots, bounded/unique
+bindings, caller/host/accessor refusals, whole-page refusal and canary omission.
+Receipts match child ID/user ID or ID/slug, not organization/team ownership. Roles
+and managed flags never establish effective rights, native approval or collection
+permission. Contact details, credentials, nested password grants, actors and raw
+times are omitted. Current parent ownership/bindings/revision, upstream collection
+permission, trusted transport/raw-body custody and independent non-waking proof
+remain prerequisites. No executor, registration, credential resolution or authority
+consumption. Coverage stays **134/291 offline adapters; 157 missing**, twelve
+separate previews and **83 pure preparations**, zero runtime-integrated/reviewed/
+enabled/adopted. New execution requires exact-head Actions; older counts below
+are historical.
+
 ## Topology collection preparation increment
 
 Three pure `Prepared` bindings in `src/core-read-preparation.ts` cover existing

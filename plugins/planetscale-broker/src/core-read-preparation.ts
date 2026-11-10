@@ -26,6 +26,10 @@ import { prepare as prepareMaintenanceEventList } from "./tools/list-maintenance
 import { prepare as prepareKeyspace } from "./tools/get-keyspace.js";
 import { prepare as prepareShard } from "./tools/get-shard.js";
 import { prepare as prepareMaintenanceEvent } from "./tools/get-maintenance-event.js";
+import { membershipBindings, teamBindings } from "./organization-records.js";
+import { prepare as prepareOrganizationMemberList } from "./tools/list-organization-members.js";
+import { prepare as prepareOrganizationTeamList } from "./tools/list-organization-teams.js";
+import { prepare as prepareOrganizationTeamMemberList } from "./tools/list-organization-team-members.js";
 import { prepare as prepareOrganizationMembership } from "./tools/get-organization-membership.js";
 import { prepare as prepareOrganizationTeam } from "./tools/get-organization-team.js";
 import { prepare as prepareOrganizationTeamMember } from "./tools/get-organization-team-member.js";
@@ -127,6 +131,10 @@ const maintenanceEventTarget = closed({ ...databaseFields,
   event: closed({ id: identifier, branchId: identifier, branch: slug }) });
 const membershipFields = { membership: closed({ id: identifier, userId: identifier }) };
 const teamFields = { team: closed({ id: identifier, slug }) };
+const organizationMemberListTarget = closed({ ...organizationFields, memberships: membershipBindings, pagination: pageArguments });
+const organizationTeamListTarget = closed({ ...organizationFields, teams: teamBindings, pagination: pageArguments });
+const organizationTeamMemberListTarget = closed({ ...organizationFields, ...teamFields,
+  memberships: membershipBindings, pagination: pageArguments });
 const organizationMembershipTarget = closed({ ...organizationFields, ...membershipFields });
 const organizationTeamTarget = closed({ ...organizationFields, ...teamFields });
 const organizationTeamMemberTarget = closed({ ...organizationFields, ...teamFields, ...membershipFields });
@@ -188,13 +196,15 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof publicRegionListTarget.parse> | ReturnType<typeof backupListTarget.parse> |
   ReturnType<typeof backupPolicyListTarget.parse> | ReturnType<typeof deployRequestListTarget.parse> |
   ReturnType<typeof keyspaceListTarget.parse> | ReturnType<typeof shardListTarget.parse> |
-  ReturnType<typeof maintenanceEventListTarget.parse>;
+  ReturnType<typeof maintenanceEventListTarget.parse> | ReturnType<typeof organizationMemberListTarget.parse> |
+  ReturnType<typeof organizationTeamListTarget.parse> | ReturnType<typeof organizationTeamMemberListTarget.parse>;
 type ReadOperation = "list_databases" | "list_branches" | "list_database_regions" |
   "list_regions_for_organization" | "list_public_regions" | "get_organization" | "get_database" | "get_branch" |
   "list_backups" | "list_backup_policies" | "list_deploy_requests" |
   "get_backup" | "get_backup_policy" | "get_deploy_request" |
   "list_keyspaces" | "list_shards" | "list_maintenance_events" |
   "get_keyspace" | "get_shard" | "get_maintenance_event" |
+  "list_organization_members" | "list_organization_teams" | "list_organization_team_members" |
   "get_organization_membership" | "get_organization_team" | "get_organization_team_member" |
   "get_service_token" | "get_oauth_token" | "get_webhook" | "get_deployment" | "get_schema_recommendation" |
   "get_branch_change_request" | "get_branch_config_change_request" | "get_keyspace_config_change_request" |
@@ -241,6 +251,29 @@ function bindRead(
     jsonData(prepared);
     return prepared;
   };
+}
+
+export function bindListOrganizationMembersPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = organizationMemberListTarget.parse(rawTarget);
+  const read = prepareOrganizationMemberList({ organization: target.organization,
+    memberships: target.memberships }, target.pagination);
+  return bindRead(`planetscale/organization/${target.organizationId}`, target, "list_organization_members", read.request,
+    "record-and-user-ids-parent-not-verified");
+}
+
+export function bindListOrganizationTeamsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = organizationTeamListTarget.parse(rawTarget);
+  const read = prepareOrganizationTeamList({ organization: target.organization, teams: target.teams }, target.pagination);
+  return bindRead(`planetscale/organization/${target.organizationId}`, target, "list_organization_teams", read.request,
+    "record-and-name-parent-not-verified");
+}
+
+export function bindListOrganizationTeamMembersPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = organizationTeamMemberListTarget.parse(rawTarget);
+  const read = prepareOrganizationTeamMemberList({ organization: target.organization, team: target.team,
+    memberships: target.memberships }, target.pagination);
+  return bindRead(`planetscale/organization-team/${target.team.id}`, target, "list_organization_team_members", read.request,
+    "record-and-user-ids-parent-not-verified");
 }
 
 export function bindListKeyspacesPreparation(rawTarget: unknown): (raw: unknown) => Prepared {

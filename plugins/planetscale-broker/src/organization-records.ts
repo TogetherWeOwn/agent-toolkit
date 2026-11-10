@@ -12,13 +12,15 @@ function bindings<T extends { readonly id: string }>(schema: Schema<T>, secondKe
     return Object.freeze(parsed);
   } };
 }
+export const membershipBindings = bindings(membershipBinding, item => item.userId);
+export const teamBindings = bindings(teamBinding, item => item.slug);
 // Broker-owned output confinement, never parent collection or effective authority.
 export const organizationMembershipScope = closed({ organization: slug, membership: membershipBinding });
-export const organizationMembershipListScope = closed({ organization: slug, memberships: bindings(membershipBinding, item => item.userId) });
+export const organizationMembershipListScope = closed({ organization: slug, memberships: membershipBindings });
 export const organizationTeamScope = closed({ organization: slug, team: teamBinding });
-export const organizationTeamListScope = closed({ organization: slug, teams: bindings(teamBinding, item => item.slug) });
+export const organizationTeamListScope = closed({ organization: slug, teams: teamBindings });
 export const organizationTeamMemberScope = closed({ organization: slug, team: teamBinding, membership: membershipBinding });
-export const organizationTeamMemberListScope = closed({ organization: slug, team: teamBinding, memberships: bindings(membershipBinding, item => item.userId) });
+export const organizationTeamMemberListScope = closed({ organization: slug, team: teamBinding, memberships: membershipBindings });
 
 function matched<T extends { readonly id: string }>(body: Record<string, unknown>, allowed: readonly T[]): T {
   const id = identifier.parse(body.id);

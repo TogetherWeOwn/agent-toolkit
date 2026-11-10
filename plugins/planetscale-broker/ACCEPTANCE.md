@@ -4,6 +4,38 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Organization collection preparation source increment
+
+Three pure Prepared bindings cover existing organization member/team/team-member
+list GETs. Closed immutable host organization ID/slug/revision, team ID/slug where
+applicable, bounded unique child bindings and host pagination bind fixed requests
+and empty caller arguments. Reuse existing membership/user ID and team ID/slug
+parsers without changing offline behavior. All fields enter plan/full hashes.
+Child confinement does not authorize upstream organization/team-wide collection
+or authenticate parent ownership. Team ID remains bound even though the path uses
+its slug. Roles/managed flags never grant effective rights or native authority.
+No executor, registration, credential resolution or authority consumption.
+
+`test/core-organization-collection-read-preparation.test.mjs` supplies **30 synthetic
+contracts** for exact requests, every-field hashes, deep snapshots, bounded unique
+bindings, host/caller/accessor refusals, whole-page refusal, tuple matching and
+canary omission. Current ownership/revision, collection permission, trusted
+transport/raw-body custody and independent non-waking proof remain prerequisites.
+Coverage stays **134/291 offline adapters; 157 missing**, twelve previews and
+**83 pure preparations**, zero runtime-integrated/reviewed/enabled/adopted. New
+execution requires exact-head Actions; this source declaration is not a pass.
+Older counts below are historical.
+
+Prior exact `798016f02dbba37e1a51ff5a21d9557176ed69b4`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42785786105)
+and [test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42785786105/job/129726570388)
+passed, including lint/typecheck/native-policy/ci-ok and Neon candidate contract.
+[Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42785785817)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42785778953)
+passed. No inline findings/submitted reviews returned. Earlier unchanged SDK
+recovery uncertainty remains unresolved. Prior-head evidence does not cover the
+new organization collection contracts.
+
 ## Topology collection preparation source increment
 
 Three pure Prepared bindings cover existing keyspace/shard/maintenance-event list
