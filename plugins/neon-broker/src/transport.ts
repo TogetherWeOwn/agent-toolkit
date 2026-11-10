@@ -28,6 +28,7 @@ export interface MetadataRequestOptions {
 export interface NeonMetadataTransport {
   createProjectBranchTrigger(project: string, branch: string, slug: string, name: string, hour: number, minute: number, options: MetadataRequestOptions): Promise<unknown>;
   setOrganizationSpendingLimit(organization: string, cents: number, options: MetadataRequestOptions): Promise<unknown>;
+  deleteOrganizationSpendingLimit(organization: string, options: MetadataRequestOptions): Promise<unknown>;
   setSnapshotSchedule(project: string, branch: string, hour: number, retentionSeconds: number, options: MetadataRequestOptions): Promise<unknown>;
   createSnapshot(project: string, branch: string, name: string, timestamp: string, expiresAt: string, options: MetadataRequestOptions): Promise<unknown>;
   createProjectBranchDatabase(project: string, branch: string, database: string, owner: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -298,6 +299,8 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/triggers`, new URLSearchParams(), options,
         JSON.stringify({ type: "schedule", function_slug: triggerCreateSlug.parse(slug), name: triggerCreateName.parse(name), function_path: "/",
           schedule: { cron: `${triggerCreateMinute.parse(minute)} ${triggerCreateHour.parse(hour)} * * *` }, enabled: false }), false, false, false, false, false, 201),
+    deleteOrganizationSpendingLimit: (organization: string, options: MetadataRequestOptions) =>
+      request(`/organizations/${authPathId(organization)}/billing/spending_limit`, new URLSearchParams(), options, undefined, false, 200),
     setOrganizationSpendingLimit: (organization: string, cents: number, options: MetadataRequestOptions) =>
       request(`/organizations/${id(organization)}/billing/spending_limit`, new URLSearchParams(), options,
         JSON.stringify({ spending_limit_cents: spendingLimitCents.parse(cents) }), false, false, false, false, false, 200, true),

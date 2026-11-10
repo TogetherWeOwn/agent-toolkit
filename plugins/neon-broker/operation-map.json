@@ -3114,7 +3114,7 @@
       "id": "deleteOrganizationSpendingLimit",
       "apiArea": "organizations",
       "tool": "neon.deleteOrganizationSpendingLimit",
-      "scope": "org_id",
+      "scope": "exact-org-spending-threshold-delete",
       "sideEffects": [
         "provider-effects-unverified",
         "compute-wake-not-proven"
@@ -3122,12 +3122,15 @@
       "tier": "reserved",
       "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/spending-limit-delete.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Existing positive alert-threshold removal source/mocks only; dedicated delete grant and reserved native exact-plan authority. Exact value preflight then one bodyless DELETE; empty200 JSON acknowledgement only, no independent notification state, spend enforcement or persistence proof. Preflight not atomic CAS; ambiguity stays uncertain after one observation, no retry, permanent common replay journal. Admin/plan entitlement, effects, custody/host and independent native review/integration remain unresolved; no live billing or spend authority."
     },
     {
       "id": "getOrganizationMembers",

@@ -2163,13 +2163,30 @@ the permanent common journal blocks same-request replay, not external writers.
 Native owner authority, host/policy/custody/durable recovery, effects/entitlement
 and independent reviews remain unresolved. Source/mocks only.
 
+## Alert-only spending threshold removal source
+
+`createNeonSpendingLimitDeleteOperations` supplies reserved
+`deleteOrganizationSpendingLimit` source for one copied exact organization/expected
+positive safe-integer threshold/revision. A dedicated spending_limit/delete grant
+and native exact-plan authority precede credentials. Mandatory exact-positive-value
+preflight precedes one bodyless DELETE. Unset/null, zero and drifted thresholds
+refuse despite provider idempotence; no caller threshold/body or retry override.
+Only documented HTTP200 empty JSON acknowledges, yielding `{ acknowledged: true }`.
+The threshold is alert-only, not a compute spend cap; removal is not spend authority
+or independent notification-state, persistence, session or fencing evidence.
+Preflight is not atomic CAS; external reconfiguration races remain unresolved.
+Ambiguity stays uncertain after one bounded observation even on null/absence; no
+retry, permanent common journal prevents same-request replay, not external writers.
+Admin/plan entitlement, effects, custody/host/durable recovery and independent native
+reviews remain unresolved. Source/mocks only, no live billing or spend change.
+
 ## Coverage and verification
 
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 129 implemented
-source adapters, 65 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 130 implemented
+source adapters, 64 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

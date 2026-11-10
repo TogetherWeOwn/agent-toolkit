@@ -1837,6 +1837,25 @@ desired value or absence. No retry; permanent common journal blocks same-request
 replay, not external writers. Admin/plan entitlement, effects, custody/host and native
 review/integration remain unverified. Source/mocks only, not live billing/spend authority.
 
+## Alert-only spending threshold removal delta
+
+`deleteOrganizationSpendingLimit` binds one copied exact organization/expected
+positive safe-integer threshold/revision to a separate spending_limit/delete grant
+and reserved native exact-plan authority. Exact-value preflight precedes one
+bodyless DELETE; null/unset, zero and drift refuse despite provider idempotence.
+Only HTTP200 empty JSON acknowledges; no identity echo or independently observed
+notification-state, persistence, spend-control, compute/session-stopping or fencing
+proof is supplied. The threshold is alert-only, not a compute spend cap. Removing
+it changes alert configuration and is not live billing/spend authority.
+
+Preflight is not atomic CAS; reconfiguration races remain unresolved. Ambiguity
+gets one bounded threshold observation and stays uncertain even on null/absence.
+No retry or set/decrease fallback; the permanent common journal blocks same-request
+replay, not external writers. Wrong-target/expired evidence and consume failure are
+isolated controls; no missing-authority or cross-agent/grant request reaches the
+credential seam. Admin/plan entitlement, effects, host/custody/durable recovery and
+independent native reviews remain gates. Source/mocks only.
+
 No live Neon calls or secrets are needed for these tests. Public source inventory
 is not entitlement evidence. Failed/aborted transport calls never retry or turn into
 start/restart/resume/suspend, SQL, connection lookup or secret-fetch requests.
