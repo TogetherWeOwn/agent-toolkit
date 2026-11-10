@@ -75,6 +75,9 @@ import { prepare as prepareOrganizationInvitationList } from "./tools/list-organ
 import { prepare as prepareOauthApplication } from "./tools/get-oauth-application.js";
 import { prepare as prepareOrganizationSso } from "./tools/get-organization-sso.js";
 import { prepare as prepareOrganizationSsoDomain } from "./tools/get-organization-sso-domain.js";
+import { billingRecordIds } from "./billing-records.js";
+import { prepare as prepareInvoiceList } from "./tools/list-invoices.js";
+import { prepare as prepareInvoiceLineItemList } from "./tools/get-invoice-line-items.js";
 import { prepare as prepareInvoice } from "./tools/get-invoice.js";
 import { prepare as preparePaymentMethod } from "./tools/get-organization-billing-payment-method.js";
 import { prepare as preparePaymentSetup } from "./tools/get-payment-method-setup.js";
@@ -174,6 +177,9 @@ const organizationSsoDomainListTarget = closed({ ...organizationFields, domainId
 const organizationInvitationListTarget = closed({ ...organizationFields, invitationIds: organizationSecurityIds, pagination: pageArguments });
 const oauthApplicationTarget = closed({ ...organizationFields, applicationId: identifier });
 const organizationSsoDomainTarget = closed({ ...organizationFields, domainId: identifier });
+const invoiceListTarget = closed({ ...organizationFields, invoiceIds: billingRecordIds, pagination: pageArguments });
+const invoiceLineItemListTarget = closed({ ...organizationFields, invoiceId: identifier,
+  lineItemIds: billingRecordIds, pagination: pageArguments });
 const invoiceTarget = closed({ ...organizationFields, invoiceId: identifier });
 const paymentMethodTarget = closed({ ...organizationFields, paymentMethodId: identifier });
 const paymentSetupTarget = closed({ ...organizationFields, setupId: identifier });
@@ -254,7 +260,8 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof branchResizeListTarget.parse> | ReturnType<typeof keyspaceResizeListTarget.parse> |
   ReturnType<typeof configurationProfileListTarget.parse> | ReturnType<typeof configurationProfileShardListTarget.parse> |
   ReturnType<typeof oauthApplicationListTarget.parse> | ReturnType<typeof organizationSsoDomainListTarget.parse> |
-  ReturnType<typeof organizationInvitationListTarget.parse>;
+  ReturnType<typeof organizationInvitationListTarget.parse> | ReturnType<typeof invoiceListTarget.parse> |
+  ReturnType<typeof invoiceLineItemListTarget.parse>;
 type ReadOperation = "list_databases" | "list_branches" | "list_database_regions" |
   "list_regions_for_organization" | "list_public_regions" | "get_organization" | "get_database" | "get_branch" |
   "list_backups" | "list_backup_policies" | "list_deploy_requests" |
@@ -276,6 +283,7 @@ type ReadOperation = "list_databases" | "list_branches" | "list_database_regions
   "get_shard_configuration_profile" | "get_shard_configuration_profile_shard" |
   "list_oauth_applications" | "list_organization_sso_domains" | "list_organization_invitations" |
   "get_oauth_application" | "get_organization_sso" | "get_organization_sso_domain" |
+  "list_invoices" | "get_invoice_line_items" |
   "get_invoice" | "get_organization_billing_payment_method" | "get_payment_method_setup" |
   "get_branch_anomaly" | "get_traffic_budget" | "get_query_patterns_report_status" |
   "get_database_postgres_cidr" | "get_database_throttler" | "get_deploy_request_throttler" |
@@ -315,6 +323,21 @@ function bindRead(
     jsonData(prepared);
     return prepared;
   };
+}
+
+export function bindListInvoicesPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = invoiceListTarget.parse(rawTarget);
+  const read = prepareInvoiceList({ organization: target.organization, invoiceIds: target.invoiceIds }, target.pagination);
+  return bindRead(`planetscale/organization/${target.organizationId}`, target,
+    "list_invoices", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindGetInvoiceLineItemsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = invoiceLineItemListTarget.parse(rawTarget);
+  const read = prepareInvoiceLineItemList({ organization: target.organization,
+    invoiceId: target.invoiceId, lineItemIds: target.lineItemIds }, target.pagination);
+  return bindRead(`planetscale/invoice/${target.invoiceId}`, target,
+    "get_invoice_line_items", read.request, "record-id-only-parent-not-verified");
 }
 
 export function bindListOauthApplicationsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {

@@ -1,7 +1,7 @@
 import { closed, identifier, oneOf, requireThat, type Schema } from "../../../packages/core/src/schema.js";
 import { flag, slug } from "./metadata.js";
 
-const ids: Schema<readonly string[]> = { parse(value) {
+export const billingRecordIds: Schema<readonly string[]> = { parse(value) {
   requireThat(Array.isArray(value) && value.length > 0 && value.length <= 32, "schema");
   const parsed = value.map(item => identifier.parse(item));
   requireThat(new Set(parsed).size === parsed.length, "schema");
@@ -9,8 +9,8 @@ const ids: Schema<readonly string[]> = { parse(value) {
 } };
 // Response ID confinement is not parent ownership or collection authorization.
 export const invoiceScope = closed({ organization: slug, invoiceId: identifier });
-export const invoiceListScope = closed({ organization: slug, invoiceIds: ids });
-export const lineItemListScope = closed({ organization: slug, invoiceId: identifier, lineItemIds: ids });
+export const invoiceListScope = closed({ organization: slug, invoiceIds: billingRecordIds });
+export const lineItemListScope = closed({ organization: slug, invoiceId: identifier, lineItemIds: billingRecordIds });
 export const paymentMethodScope = closed({ organization: slug, paymentMethodId: identifier });
 export const paymentSetupScope = closed({ organization: slug, setupId: identifier });
 

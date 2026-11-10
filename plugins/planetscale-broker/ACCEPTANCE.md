@@ -4,6 +4,35 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Billing collection preparation source increment
+
+Two pure Prepared bindings cover existing invoice and invoice-line-item collection
+GETs. Closed immutable host organization/revision, applicable invoice ID, unique
+bounded child IDs and host pagination bind fixed requests and empty caller
+arguments. The existing billing ID parser is exported/reused without behavior
+changes. Every field enters plan/full hashes, including IDs absent from paths.
+No executor, registration, credential resolution or authority consumption.
+
+`test/core-billing-collection-read-preparation.test.mjs` supplies **19 synthetic
+contracts** for exact requests, every-field hashes, deep snapshots, closed/bounded
+input and accessor refusals, whole-page refusal, operation separation and canary
+omission. Receipts match child IDs, not organization ownership or line-item invoice
+association. Child confinement does not authorize upstream collections. Paid,
+overdue and billed flags never establish spending or native authority. Amounts,
+payment/contact/checkout material, descriptions, actors and raw times are omitted.
+Current ownership/revision, collection permission, trusted transport/raw-body
+custody and independent non-waking proof remain prerequisites. Coverage stays
+**134/291 offline adapters; 157 missing**, twelve previews and **104 pure
+preparations**; zero runtime-integrated/reviewed/enabled/adopted. New contracts
+require exact-head Actions, not this declaration.
+
+Prior exact `e2e4b011e1d582e588110cda225de46108534663`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42805070249)
+and [test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42805070249/job/129792051293)
+passed, as did Gitleaks and all three CodeQL analyses. No numeric totals extracted.
+Earlier recurring unchanged SDK recovery failure remains unresolved; no repair
+claim. No inline findings/submitted reviews returned. Older counts below are historical.
+
 ## Organization-security collection preparation source increment
 
 Three pure Prepared bindings cover existing OAuth-application, SSO-domain and

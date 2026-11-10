@@ -6,6 +6,28 @@ manifest, network executor, credential resolver, or tool registration is supplie
 The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
+## Billing collection preparation increment
+
+Two pure `Prepared` bindings cover existing invoice and invoice-line-item collection
+GETs. Closed immutable host organization/revision, invoice ID where applicable,
+unique bounded child IDs and host pagination bind fixed requests and empty caller
+arguments. The existing billing ID parser is exported/reused without behavior
+changes. Every field enters plan/full hashes, including IDs absent from paths.
+No executor, credential resolution, registration or authority consumption.
+
+`test/core-billing-collection-read-preparation.test.mjs` supplies 19 synthetic
+contracts for requests, every-field hashes, deep snapshots, closed/bounded input,
+accessor and whole-page refusals, operation separation and canary omission.
+Receipts match child IDs, not organization ownership or line-item invoice
+association. Child confinement is not upstream collection permission; paid,
+overdue and billed flags never establish spending or native authority. Amounts,
+payment/contact/checkout material, descriptions, actors and raw times are omitted.
+Current ownership/revision, collection permission, trusted transport/raw-body
+custody and independent non-waking proof remain prerequisites. Coverage stays
+**134/291 offline adapters; 157 missing**, twelve previews and **104 pure
+preparations**, zero runtime-integrated/reviewed/enabled/adopted. New contracts
+require exact-head Actions; older counts below are historical.
+
 ## Organization-security collection preparation increment
 
 Three pure `Prepared` bindings cover existing OAuth-application, SSO-domain and
