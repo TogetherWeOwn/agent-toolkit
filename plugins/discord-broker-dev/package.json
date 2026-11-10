@@ -1,0 +1,19 @@
+{
+  "name": "@togetherweown/paperclip-plugin-discord-broker-dev",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Scoped Discord broker (TWO Staging) — tier 1 read + tier 2 dev writes",
+  "type": "module",
+  "engines": { "node": ">=24.11.0 <25" },
+  "files": ["dist", "README.md", "THREAT-MODEL.md", "ACCEPTANCE.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test --test-timeout=30000 test/*.test.mjs"
+  },
+  "dependencies": { "@paperclipai/plugin-sdk": "2026.1023.0" },
+  "paperclipPlugin": {
+    "manifest": "./dist/plugins/discord-broker-dev/src/manifest.js",
+    "worker": "./dist/plugins/discord-broker-dev/src/worker.js"
+  }
+}
