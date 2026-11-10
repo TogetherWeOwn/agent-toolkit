@@ -1785,3 +1785,21 @@ actions, zero broadened grants, zero replay/cross-agent/resource successes, no
 recurring always-on staging cost and no skipped qualification. A source-map count
 or mocked test result is not an adoption/productivity outcome. Missing baseline,
 threshold or live-authority evidence holds enablement, not independent source work.
+
+## Lifecycle collection refusal assertion repair
+
+Source `017398068deda4211bd7c074b611b69b4067723a`
+[Actions test](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42780948813/job/129710641441)
+passed 1708/1709 PlanetScale contracts. One deploy-list malformed-state assertion
+expected `upstream`; the existing `oneOf` enum parser correctly returned `schema`.
+The test now expects that exact code for the deploy case while retaining
+`upstream` for malformed backup/policy flags and pagination, and `scope` for
+unknown children. No runtime behavior, parser, tier or authority changed; no new
+test-count credit. Repair-head Actions verification is pending.
+
+Source-head root 317/317, helpers 122/122, GitHub broker 219/219 and Neon 37/37
+passed; lint/typecheck/native-policy, Gitleaks and all three CodeQL analyses passed.
+Aggregate correctly failed. Earlier recurring GitHub SDK recovery uncertainty is
+not resolved by this passing source-head GitHub run. Coverage remains 134/291
+offline adapters, 157 missing, twelve separate previews and 77 pure preparations;
+zero runtime-integrated/reviewed/enabled/adopted operations.

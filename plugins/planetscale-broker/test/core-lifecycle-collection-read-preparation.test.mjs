@@ -81,7 +81,7 @@ for (const c of cases) {
   test(`${c.operation}: unknown children, malformed metadata and page mismatch refuse whole page`, () => {
     assert.throws(() => project(c, envelope([c.row, { ...c.row, id: 'other' }])), { code: 'scope' });
     const patch = c.field === 'requests' ? { state: 'unknown' } : { required: 'true' };
-    assert.throws(() => project(c, envelope([{ ...c.row, ...patch }])), { code: 'upstream' });
+    assert.throws(() => project(c, envelope([{ ...c.row, ...patch }])), { code: c.field === 'requests' ? 'schema' : 'upstream' });
     for (const change of [{ current_page: 1 }, { per_page: 10 }, { next_page: 4 }, { data: [c.row, c.row, c.row, c.row] }]) {
       assert.throws(() => project(c, { ...envelope([c.row]), ...change }), { code: 'upstream' });
     }
