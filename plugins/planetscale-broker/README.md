@@ -6,6 +6,28 @@ manifest, network executor, credential resolver, or tool registration is supplie
 The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
+## Organization-security collection preparation increment
+
+Three pure `Prepared` bindings cover existing OAuth-application, SSO-domain and
+invitation collection GETs. Closed immutable host organization/revision captures,
+reused unique bounded record-ID arrays and host pagination bind fixed requests
+and empty caller arguments. Domain lists retain plain arrays without invented
+pagination. Every host field enters plan/full hashes, including IDs absent from
+requests. No executor, credential resolution, registration or authority consumption.
+
+`test/core-organization-security-collection-read-preparation.test.mjs` supplies
+27 synthetic contracts for exact requests, every-field hashes, frozen snapshots,
+host/caller/accessor refusals, whole-response refusal and canary omission. Receipts
+match child IDs, not organization ownership. Child confinement does not authorize
+upstream collections; flags, verification presence and invitation roles never
+prove effective enforcement, membership or native authority. Contact/domain/client/
+scope/verification material, actors and raw times are omitted. Current ownership,
+revision, collection permission, trusted transport/raw-body custody and independent
+non-waking proof remain prerequisites. Coverage stays **134/291 offline adapters;
+157 missing**, twelve previews and **102 pure preparations**, zero runtime-
+integrated/reviewed/enabled/adopted. New contracts require exact-head Actions;
+older counts below are historical.
+
 ## Profile collection preparation increment
 
 Two pure `Prepared` bindings cover existing configuration-profile and profile-shard

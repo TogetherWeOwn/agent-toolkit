@@ -68,6 +68,10 @@ import { prepare as prepareConfigurationProfileList } from "./tools/list-shard-c
 import { prepare as prepareConfigurationProfileShardList } from "./tools/list-shard-configuration-profile-shards.js";
 import { prepare as prepareConfigurationProfile } from "./tools/get-shard-configuration-profile.js";
 import { prepare as prepareConfigurationProfileShard } from "./tools/get-shard-configuration-profile-shard.js";
+import { organizationSecurityIds } from "./organization-security.js";
+import { prepare as prepareOauthApplicationList } from "./tools/list-oauth-applications.js";
+import { prepare as prepareOrganizationSsoDomainList } from "./tools/list-organization-sso-domains.js";
+import { prepare as prepareOrganizationInvitationList } from "./tools/list-organization-invitations.js";
 import { prepare as prepareOauthApplication } from "./tools/get-oauth-application.js";
 import { prepare as prepareOrganizationSso } from "./tools/get-organization-sso.js";
 import { prepare as prepareOrganizationSsoDomain } from "./tools/get-organization-sso-domain.js";
@@ -165,6 +169,9 @@ const webhookListTarget = closed({ ...databaseFields, webhookIds: securityRecord
 const serviceTokenTarget = closed({ ...organizationFields, tokenId: identifier });
 const oauthTokenTarget = closed({ ...organizationFields, applicationId: identifier, tokenId: identifier });
 const webhookTarget = closed({ ...databaseFields, webhookId: identifier });
+const oauthApplicationListTarget = closed({ ...organizationFields, applicationIds: organizationSecurityIds, pagination: pageArguments });
+const organizationSsoDomainListTarget = closed({ ...organizationFields, domainIds: organizationSecurityIds });
+const organizationInvitationListTarget = closed({ ...organizationFields, invitationIds: organizationSecurityIds, pagination: pageArguments });
 const oauthApplicationTarget = closed({ ...organizationFields, applicationId: identifier });
 const organizationSsoDomainTarget = closed({ ...organizationFields, domainId: identifier });
 const invoiceTarget = closed({ ...organizationFields, invoiceId: identifier });
@@ -245,7 +252,9 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof keyspaceConfigChangeListTarget.parse> | ReturnType<typeof bouncerListTarget.parse> |
   ReturnType<typeof branchBouncerResizeListTarget.parse> | ReturnType<typeof bouncerResizeListTarget.parse> |
   ReturnType<typeof branchResizeListTarget.parse> | ReturnType<typeof keyspaceResizeListTarget.parse> |
-  ReturnType<typeof configurationProfileListTarget.parse> | ReturnType<typeof configurationProfileShardListTarget.parse>;
+  ReturnType<typeof configurationProfileListTarget.parse> | ReturnType<typeof configurationProfileShardListTarget.parse> |
+  ReturnType<typeof oauthApplicationListTarget.parse> | ReturnType<typeof organizationSsoDomainListTarget.parse> |
+  ReturnType<typeof organizationInvitationListTarget.parse>;
 type ReadOperation = "list_databases" | "list_branches" | "list_database_regions" |
   "list_regions_for_organization" | "list_public_regions" | "get_organization" | "get_database" | "get_branch" |
   "list_backups" | "list_backup_policies" | "list_deploy_requests" |
@@ -265,6 +274,7 @@ type ReadOperation = "list_databases" | "list_branches" | "list_database_regions
   "get_router" | "get_dedicated_read_replica" | "get_switchover" |
   "list_shard_configuration_profiles" | "list_shard_configuration_profile_shards" |
   "get_shard_configuration_profile" | "get_shard_configuration_profile_shard" |
+  "list_oauth_applications" | "list_organization_sso_domains" | "list_organization_invitations" |
   "get_oauth_application" | "get_organization_sso" | "get_organization_sso_domain" |
   "get_invoice" | "get_organization_billing_payment_method" | "get_payment_method_setup" |
   "get_branch_anomaly" | "get_traffic_budget" | "get_query_patterns_report_status" |
@@ -305,6 +315,29 @@ function bindRead(
     jsonData(prepared);
     return prepared;
   };
+}
+
+export function bindListOauthApplicationsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = oauthApplicationListTarget.parse(rawTarget);
+  const read = prepareOauthApplicationList({ organization: target.organization,
+    applicationIds: target.applicationIds }, target.pagination);
+  return bindRead(`planetscale/organization/${target.organizationId}`, target,
+    "list_oauth_applications", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindListOrganizationSsoDomainsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = organizationSsoDomainListTarget.parse(rawTarget);
+  const read = prepareOrganizationSsoDomainList({ organization: target.organization, domainIds: target.domainIds }, {});
+  return bindRead(`planetscale/organization/${target.organizationId}`, target,
+    "list_organization_sso_domains", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindListOrganizationInvitationsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = organizationInvitationListTarget.parse(rawTarget);
+  const read = prepareOrganizationInvitationList({ organization: target.organization,
+    invitationIds: target.invitationIds }, target.pagination);
+  return bindRead(`planetscale/organization/${target.organizationId}`, target,
+    "list_organization_invitations", read.request, "record-id-only-parent-not-verified");
 }
 
 export function bindListShardConfigurationProfilesPreparation(rawTarget: unknown): (raw: unknown) => Prepared {

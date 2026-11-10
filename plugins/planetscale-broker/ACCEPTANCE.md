@@ -4,6 +4,35 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Organization-security collection preparation source increment
+
+Three pure Prepared bindings cover existing OAuth-application, SSO-domain and
+invitation collection GETs. Closed immutable host organization/revision, reused
+unique bounded child IDs and host pagination bind fixed requests and empty caller
+arguments. SSO domains remain plain arrays, not invented paginated collections.
+Every field enters plan/full hashes, including IDs absent from paths. No executor,
+registration, credential resolution or authority consumption.
+
+`test/core-organization-security-collection-read-preparation.test.mjs` supplies
+**27 synthetic contracts** for exact requests, every-field hashes, deep snapshots,
+closed bounded input/accessor refusal, whole-response refusal and canary omission.
+Receipts match child IDs, not organization ownership. Child confinement is not
+upstream collection permission. Flags/verification presence/roles never grant
+SSO configuration, invitation acceptance, effective enforcement or native authority.
+Contact/domain/client/scope/verification material, actors and raw times are omitted.
+Current ownership/revision, collection permission, trusted transport/raw-body
+custody and independent non-waking proof remain prerequisites. Coverage stays
+**134/291 offline adapters; 157 missing**, twelve previews and **102 pure
+preparations**; zero runtime-integrated/reviewed/enabled/adopted. New contracts
+require exact-head Actions, not this declaration.
+
+Prior exact `53c1828813c377e4a833d58beed09adecee85bae`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42802437488)
+and [test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42802437488/job/129783164675)
+passed, as did Gitleaks and all three CodeQL analyses. No numeric totals extracted.
+Earlier recurring unchanged SDK recovery failure remains unresolved; no repair
+claim. No inline findings/submitted reviews returned. Older counts below are historical.
+
 ## Profile collection preparation source increment
 
 Two pure Prepared bindings cover existing configuration-profile and profile-shard

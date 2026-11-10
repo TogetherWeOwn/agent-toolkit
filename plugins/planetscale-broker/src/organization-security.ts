@@ -2,7 +2,7 @@ import { closed, identifier, oneOf, requireThat, type Schema } from "../../../pa
 import { flag, slug } from "./metadata.js";
 import { timestampPresent } from "./security-records.js";
 
-const ids: Schema<readonly string[]> = { parse(value) {
+export const organizationSecurityIds: Schema<readonly string[]> = { parse(value) {
   requireThat(Array.isArray(value) && value.length > 0 && value.length <= 32, "schema");
   const parsed = value.map(item => identifier.parse(item));
   requireThat(new Set(parsed).size === parsed.length, "schema");
@@ -10,11 +10,11 @@ const ids: Schema<readonly string[]> = { parse(value) {
 } };
 // Child ID confinement does not prove parent ownership or collection authority.
 export const applicationScope = closed({ organization: slug, applicationId: identifier });
-export const applicationListScope = closed({ organization: slug, applicationIds: ids });
+export const applicationListScope = closed({ organization: slug, applicationIds: organizationSecurityIds });
 export const ssoScope = closed({ organization: slug, organizationId: identifier });
 export const domainScope = closed({ organization: slug, domainId: identifier });
-export const domainListScope = closed({ organization: slug, domainIds: ids });
-export const invitationListScope = closed({ organization: slug, invitationIds: ids });
+export const domainListScope = closed({ organization: slug, domainIds: organizationSecurityIds });
+export const invitationListScope = closed({ organization: slug, invitationIds: organizationSecurityIds });
 
 function matchedId(body: Record<string, unknown>, allowed: readonly string[]): string {
   const id = identifier.parse(body.id);
