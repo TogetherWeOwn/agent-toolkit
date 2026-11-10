@@ -788,20 +788,24 @@
       "id": "updateProjectBranchDataAPI",
       "apiArea": "dataapi",
       "tool": "neon.updateProjectBranchDataAPI",
-      "scope": "project_id/branch_id",
+      "scope": "project_id/branch_id/database_name",
       "sideEffects": [
+        "schema-cache-refresh-request",
         "provider-effects-unverified",
         "compute-wake-not-proven"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/data-api-refresh.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Refresh-only source/mocks; exact database/status preflight then one empty-object PATCH. Empty201 acknowledgement is not independent cache freshness/configuration preservation/persistence. Cached status not immutable identity; preflight not atomic CAS. Ambiguity stays uncertain after one observation, no retry. Native authority/host/custody, durable journal recovery, effects/entitlement and independent review unresolved."
     },
     {
       "id": "deleteProjectBranchDataAPI",

@@ -7,6 +7,21 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonDataAPIRefreshOperations` supplies reserved `updateProjectBranchDataAPI`
+source limited to refreshing the selected database's schema cache. Copied exact
+project/branch/database/expected status/revision requires a dedicated database/
+Data API/refresh grant and native exact-plan authority. Mandatory status/ancestry
+preflight precedes one PATCH with only `{}`; settings/auth/schema-list overrides
+are unsupported. Provider always refreshes the schema cache and may access the
+DB/wake compute. Empty201 acknowledges only, not independent cache freshness,
+configuration preservation, persistence or session behavior. Cached status is not
+immutable identity; preflight is not atomic CAS and replacement races remain.
+Ambiguity gets one bounded status observation then stays uncertain, no retry.
+Permanent common journal blocks same-request replay, not external writers. Three
+requests maximum/3.5s ceiling retain fixed origin, redirect refusal, per-request
+deadline/cancellation/byte bounds. URLs/settings/schema/auth metadata are never
+evaluated/emitted. Source/mocks only, no live refresh or runtime registration.
+
 `createNeonJWKSAddOperations` supplies reserved `addProjectJWKS` source for one
 explicit branch, existing role, provider label, audience and canonical HTTPS DNS
 host at `/.well-known/jwks.json`. Copied configuration/revision requires a dedicated
@@ -2283,8 +2298,8 @@ entitlement, native host/custody/durable recovery and independent review remain 
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 135 implemented
-source adapters, 59 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 136 implemented
+source adapters, 58 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

@@ -1,5 +1,23 @@
 # Source-slice threat model
 
+## Refresh-only database Data API update delta
+
+Copied exact project/branch/database/expected status/revision requires a dedicated
+schema-cache/refresh grant and reserved native exact-plan authority. Mandatory
+status/ancestry preflight then one PATCH with only `{}`; no settings/auth/schema
+selection or arbitrary body overrides. Provider always refreshes schema cache,
+which may query the database/wake compute. Empty201 is acknowledgement only, not
+independent freshness, database correctness, configuration preservation, persistence
+or session evidence. Cached status is not immutable deployment identity; preflight
+is not atomic CAS and external replacement races remain unresolved. Ambiguity gets
+one status observation then stays uncertain even on unchanged status/absence;
+no retry. Permanent common journal blocks same-request replay, not external writers.
+Unused configuration/URLs/schema names/authentication metadata never evaluated or
+emitted. Three-request worst case/3.5s ceiling retains fixed Neon origin, redirect
+refusal, per-request deadlines, cancellation and byte bounds. Native authority,
+custody/durable recovery/effects/entitlement and independent reviews remain gates.
+Source/mocks only; no live schema-cache refresh, DB query or runtime registration.
+
 ## Explicit branch JWT-trust registration delta
 
 Copied exact project/branch/existing-role/provider/audience/well-known HTTPS URL and

@@ -54,6 +54,7 @@ export interface NeonMetadataTransport {
   deleteProjectVPCEndpoint(project: string, endpoint: string, options: MetadataRequestOptions): Promise<unknown>;
   disableProjectBranchRealtime(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteProjectBranchDataAPI(project: string, branch: string, database: string, options: MetadataRequestOptions): Promise<unknown>;
+  updateProjectBranchDataAPI(project: string, branch: string, database: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteNeonAuthOauthProvider(project: string, provider: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteBranchNeonAuthOauthProvider(project: string, branch: string, provider: string, options: MetadataRequestOptions): Promise<unknown>;
   deleteNeonAuthDomainFromRedirectURIWhitelist(project: string, provider: string, domain: string, options: MetadataRequestOptions): Promise<unknown>;
@@ -381,6 +382,9 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     disableProjectBranchRealtime: (project: string, branch: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/realtime`, new URLSearchParams(), options,
         undefined, false, 202, false, false, true),
+    updateProjectBranchDataAPI: (project: string, branch: string, database: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/data-api/${catalogName(database)}`,
+        new URLSearchParams(), options, JSON.stringify({}), false, false, true, false, false, 201),
     deleteProjectBranchDataAPI: (project: string, branch: string, database: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/branches/${authPathId(branch)}/data-api/${catalogName(database)}`,
         new URLSearchParams(), options, undefined, false, 200),
