@@ -7,6 +7,25 @@ non-waking behavior. NO MINT / NO BIND / NO ENABLEMENT remains the boundary.
 
 ## Typed adapters
 
+`createNeonBranchCreateOperations` supplies reserved `createProjectBranch` source
+for one copied exact project/parent/name/revision. Dedicated create grant/native
+exact-plan authority precede parent identity and complete bounded branch-name
+absence preflights (10 rows per page, three-page ceiling, fixed name/asc ordering).
+One POST requests `init_source: parent-schema`, explicit parent/name and
+`protected: false`, with no requested endpoints. Full-data/import/root/default-parent,
+point-in-time, endpoint and arbitrary configuration overrides are unsupported.
+Provider inheritance, including Realtime, remains provider-controlled; this does
+not prove independent data isolation, no-spend, non-waking or runtime readiness.
+Exact201 new-ID/parent/name echo and empty endpoint list acknowledge only, not
+operation completion, persistence or access enforcement. Password-bearing roles,
+connection URIs, databases and arbitrary diagnostics are never evaluated/emitted.
+Preflight is not atomic CAS; name/parent races remain unresolved. Ambiguity gets
+one bounded branch-list observation then stays uncertain, no retry; permanent
+common journal blocks same-request replay, not external writers. Eight requests
+maximum/8.5s ceiling retains fixed origin, redirect refusal and per-request
+byte/deadline/cancellation bounds. Source/mocks only, no live creation/spend or
+runtime registration; native custody/authority/entitlement qualification remains.
+
 `createNeonEndpointCreateOperations` supplies reserved `createProjectEndpoint`
 source for one copied project/branch/name/revision: read-only, disabled,
 fixed 0.25CU, k8s-neonvm and explicit 300-second suspend timeout only. Dedicated
@@ -2314,8 +2333,8 @@ entitlement, native host/custody/durable recovery and independent review remain 
 `api-snapshot.json` preserves all 194 documentary operation rows, checked against
 the official [v2 schema](https://neon.com/api_spec/release/v2.json), SHA-256
 `bcc73bd5e55a57a5349791a6367e62b39763cc512e49346b27a4436bb79ebafa`.
-`operation-map.json` uses the common v1 machine-readable format: 137 implemented
-source adapters, 57 incomplete rows, unknown credential entitlement everywhere,
+`operation-map.json` uses the common v1 machine-readable format: 138 implemented
+source adapters, 56 incomplete rows, unknown credential entitlement everywhere,
 and `reviewed: false`, `enabled: false` throughout. These conservative qualification
 flags do not undo the earlier metadata source merge in [PR #20](https://github.com/TogetherWeOwn/agent-toolkit/pull/20).
 V1's closed manifest has no merged/provenance fields; recording machine-readable

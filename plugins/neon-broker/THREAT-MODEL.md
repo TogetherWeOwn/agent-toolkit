@@ -1,5 +1,26 @@
 # Source-slice threat model
 
+## Explicit-parent schema-only branch creation delta
+
+Copied exact project/parent/name/revision needs a dedicated creation grant and
+reserved native exact-plan authority. Mandatory parent identity and terminal bounded
+sorted branch-name absence preflights precede one fixed parent-schema POST, no
+requested endpoints. Full-data/import/root/default-parent, point-in-time and arbitrary
+configuration overrides refuse. This does not independently establish data isolation,
+non-waking behavior or no-spend: inherited features, including Realtime, remain
+provider-controlled. Exact201 new identity/parent/name/default/protection echo and
+empty endpoint list yield closed acknowledgement/operation observations only, not
+completion, persistence or access enforcement. Password-bearing roles, connection
+URIs, databases and diagnostics are never evaluated or emitted. Native secret custody
+and complete credential coverage remain unresolved; no live response is requested.
+Preflight is not atomic CAS; parent/name races remain unresolved. Ambiguity gets one
+bounded collection observation then remains uncertain even on desired presence or
+absence; no retry. Permanent common journal blocks same-request replay, not external
+writers. Eight-request worst case/8.5s ceiling retains fixed origin, redirect refusal,
+per-request byte/deadline/cancellation bounds. Native authority, custody/durable
+recovery/effects/entitlement and independent reviews remain gates. Source/mocks only;
+no live branch creation, spend or runtime registration.
+
 ## Disabled fixed-size read-only endpoint creation delta
 
 Copied exact project/branch/name/revision needs a dedicated create grant and

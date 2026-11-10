@@ -1989,20 +1989,24 @@
       "id": "createProjectBranch",
       "apiArea": "branch",
       "tool": "neon.createProjectBranch",
-      "scope": "project_id",
+      "scope": "project_id/parent_id/branches/create/name",
       "sideEffects": [
         "provider-effects-unverified",
-        "compute-wake-not-proven"
+        "compute-wake-not-proven",
+        "schema-only-branch-creation"
       ],
-      "tier": "write",
-      "authorization": "policy",
+      "tier": "reserved",
+      "authorization": "native",
       "entitlement": "unknown",
-      "status": "incomplete",
-      "tests": [],
-      "implemented": false,
+      "status": "implemented",
+      "tests": [
+        "plugins/neon-broker/test/branch-create.test.mjs",
+        "plugins/neon-broker/test/core.compat.mjs"
+      ],
+      "implemented": true,
       "reviewed": false,
       "enabled": false,
-      "prerequisite": "Typed source adapter and per-operation tests absent; entitlement, provider effects and applicable native authority/integration/review gates unresolved."
+      "prerequisite": "Source/mocks only: explicit parent-schema initialization without requested endpoints; dedicated create grant and reserved native exact-plan authority, parent identity and terminal bounded name-absence preflights then one fixed POST. Inherited features are provider-controlled. Exact201 acknowledges only, not independent isolation, no-spend, readiness or persistence. Password-bearing roles/connection URIs never evaluated/emitted. Preflight not atomic CAS; ambiguity stays uncertain after one bounded collection observation, no retry, permanent common replay journal. Native host/custody/durable recovery/effects/entitlement and independent reviews remain unresolved."
     },
     {
       "id": "listProjectBranches",

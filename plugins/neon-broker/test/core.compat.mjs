@@ -2881,6 +2881,132 @@ test('Realtime disable: maximum identity selection fits actual common prepared b
   safeEnvelope(f, result);
 });
 
+import { branchCreateFixture, branchCreateArgs, branchCreateScope, branchCreateReceipt } from './helpers.mjs';
+function branchCreateBroker(value = null, overrides = {}, config = branchCreateScope) {
+  const provider = branchCreateFixture(value, config);
+  const args = { project_id: config.projectId, parent_id: config.parentId, name: config.name };
+  const common = providerFixture({ authority: true, ...overrides });
+  common.vector.policy.resources = [provider.operation('createProjectBranch').prepare(args).resource.id];
+  common.dependencies.provider = 'neon';
+  common.dependencies.operations = provider.operations;
+  const broker = common.broker();
+  return { provider, common, call(context = 'verified-runtime', key = 'request-a') {
+    return broker.call('neon.createProjectBranch', args, context, key);
+  } };
+}
+const branchCreatePreflight = url => response(new URL(url).pathname.endsWith('/branches') ? { branches: [] } : { branch: { id: 'br-a', project_id: 'project-a' } });
+
+test('Branch create: reserved exact-plan authority and exact creation AND agent grant precede credentials', async () => {
+  for (const authority of [null, { async verify() { return null; }, async consume() { throw Error('not reached'); } }]) {
+    const f = branchCreateBroker(null, { authority });
+    assert.match((await f.call()).code, /^AUTHORIZATION_/);
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const target = 'neon/projects/project-a/branches/br-a/create/schema_child';
+  for (const resource of [target.replace('/create/', '/'), target.replace('/create/', '/delete/'), target.replace('br-a', 'other'),
+    target.replace('project-a', 'other'), target.replace('schema_child', 'other'), 'neon/projects/project-a/branches']) {
+    const f = branchCreateBroker();
+    f.common.vector.policy.resources = [resource];
+    assert.equal((await f.call()).code, 'POLICY_DENIED');
+    assert.equal(f.common.calls.secret, 0);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const denied = branchCreateBroker();
+  denied.common.vector.policy.agents = ['other-agent'];
+  assert.equal((await denied.call()).ok, false);
+  assert.equal(denied.common.calls.secret, 0);
+  assert.equal(denied.provider.requests.length, 0);
+  const f = branchCreateBroker();
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value, { id: 'br-new', parent_id: 'br-a', acknowledged: true, operations: [] });
+  assert.equal(f.common.calls.consumed, 1);
+  safeEnvelope(f, result);
+});
+
+test('Branch create: stale, wrong-target and unconsumable evidence are isolated native controls', async () => {
+  for (const change of ['target', 'expiry', 'consume']) {
+    const f = branchCreateBroker();
+    const base = f.common.authority;
+    let consumeCalls = 0;
+    f.common.dependencies.authority = { async verify(target) {
+      const evidence = await base.verify(target);
+      return change === 'target' ? { ...evidence, targetHash: '0'.repeat(64) } :
+        change === 'expiry' ? { ...evidence, expiresAt: 1000 } : evidence;
+    }, async consume() { consumeCalls++; return change !== 'consume'; } };
+    const result = await f.common.broker().call('neon.createProjectBranch', branchCreateArgs, 'verified-runtime', 'request-a');
+    assert.equal(result.code, 'AUTHORIZATION_DENIED');
+    assert.equal(f.common.calls.secret, change === 'consume' ? 1 : 0);
+    assert.equal(consumeCalls, change === 'consume' ? 1 : 0);
+    assert.equal(f.provider.requests.length, 0);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Branch create: host identity/resource TOCTOU and initialization overrides refuse before mutation', async () => {
+  for (const overrides of [{ host: { async revalidate() { return false; } } }, { host: { async authenticate() { return null; } } }]) {
+    const f = branchCreateBroker(null, overrides);
+    assert.equal((await f.call()).ok, false);
+    assert.equal(f.provider.requests.length, 0);
+  }
+  const f = branchCreateBroker();
+  let reads = 0;
+  f.common.dependencies.host.revalidate = async () => ++reads < 3;
+  assert.equal((await f.call()).code, 'RESOURCE_CHANGED');
+  assert.equal(f.provider.requests.length, 0);
+  for (const extra of [{ approved: true }, { project_id: 'other' }, { parent_id: 'other' }, { name: 'other' },
+    { init_source: 'parent-data' }, { retry: true }, { endpoints: [] }, { parent_timestamp: '2026-11-10T00:00:00Z' }, { protected: true }, { body: {} }]) {
+    const g = branchCreateBroker();
+    assert.equal((await g.common.broker().call('neon.createProjectBranch', { ...branchCreateArgs, ...extra }, 'verified-runtime', 'request-a')).code, 'INVALID_ARGUMENTS');
+    assert.equal(g.common.calls.secret, 0);
+  }
+});
+
+test('Branch create: complete/uncertain journal permanently blocks restart replay without readiness proof', async () => {
+  for (const ambiguous of [false, true]) {
+    const f = branchCreateBroker((url, init, n) => {
+      if (init.method === 'POST') { if (ambiguous) throw Error(credentialCanary); return response(branchCreateReceipt, { status: 201 }); }
+      if (n > 3) return response({ branches: [branchCreateReceipt.branch] });
+      return branchCreatePreflight(url);
+    });
+    const result = await f.call();
+    assert.equal(result.ok, !ambiguous);
+    if (ambiguous) assert.equal(result.code, 'OUTCOME_UNCERTAIN');
+    assert.equal([...f.common.journal.values()][0].outcome, ambiguous ? 'uncertain' : 'complete');
+    const requests = f.provider.requests.length;
+    f.common.vector.principal.run = 'restarted-run';
+    assert.equal((await f.call()).code, 'REPLAY_CONFLICT');
+    assert.equal(f.provider.requests.length, requests);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'POST').length, 1);
+    safeEnvelope(f, result);
+  }
+});
+
+test('Branch create: foreign/name-collision/truncated bindings and reflected credentials cannot enter safe envelopes', async () => {
+  for (const raw of [{ branches: [{ ...branchCreateReceipt.branch, project_id: 'other' }] },
+    { branches: [branchCreateReceipt.branch] }, { branches: [], pagination: { cursor: 'wrong-field' } }]) {
+    const f = branchCreateBroker(url => new URL(url).pathname.endsWith('/branches') ? response(raw) : branchCreatePreflight(url));
+    const result = await f.call();
+    assert.equal(result.ok, false);
+    assert.equal(f.provider.requests.filter(({ init }) => init.method === 'POST').length, 0);
+    safeEnvelope(f, result);
+  }
+  const f = branchCreateBroker((url, init) => init.method === 'POST' ? response({ ...branchCreateReceipt,
+    branch: { ...branchCreateReceipt.branch, id: credentialCanary }, roles: [{ password: credentialCanary }], connection_uris: [{ connection_uri: credentialCanary }] }, { status: 201 }) : branchCreatePreflight(url));
+  const result = await f.call();
+  assert.equal(result.ok, false);
+  safeEnvelope(f, result);
+});
+
+test('Branch create: maximum identity and name selection fit actual common prepared budgets', async () => {
+  const config = { ...branchCreateScope, projectId: 'p'.repeat(60), parentId: 'br-' + 'b'.repeat(57), name: 'n'.repeat(80), revision: 'r'.repeat(80) };
+  const f = branchCreateBroker(null, {}, config);
+  const result = await f.call();
+  assert.equal(result.ok, true);
+  safeEnvelope(f, result);
+});
+
 import { endpointCreateFixture, endpointCreateArgs, endpointCreateScope, endpointCreateReceipt } from './helpers.mjs';
 function endpointCreateBroker(value = null, overrides = {}, config = endpointCreateScope) {
   const provider = endpointCreateFixture(value, config);

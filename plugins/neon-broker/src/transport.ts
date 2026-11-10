@@ -28,6 +28,7 @@ export interface MetadataRequestOptions {
   readonly signal: AbortSignal;
 }
 export interface NeonMetadataTransport {
+  createProjectBranch(project: string, parent: string, name: string, options: MetadataRequestOptions): Promise<unknown>;
   createProjectEndpoint(project: string, branch: string, name: string, options: MetadataRequestOptions): Promise<unknown>;
   createProjectBranchTrigger(project: string, branch: string, slug: string, name: string, hour: number, minute: number, options: MetadataRequestOptions): Promise<unknown>;
   setOrganizationSpendingLimit(organization: string, cents: number, options: MetadataRequestOptions): Promise<unknown>;
@@ -304,6 +305,10 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
     }
   }
   return Object.freeze({
+    createProjectBranch: (project: string, parent: string, name: string, options: MetadataRequestOptions) =>
+      request(`/projects/${authPathId(project)}/branches`, new URLSearchParams(), options,
+        JSON.stringify({ branch: { parent_id: authPathId(parent), name: branchLabel.parse(name), init_source: "parent-schema", protected: false } }),
+        false, false, false, false, false, 201),
     createProjectEndpoint: (project: string, branch: string, name: string, options: MetadataRequestOptions) =>
       request(`/projects/${authPathId(project)}/endpoints`, new URLSearchParams(), options,
         JSON.stringify({ endpoint: { branch_id: authPathId(branch), name: endpointLabel.parse(name), type: "read_only", disabled: true,
