@@ -18,6 +18,7 @@ const shardBindings: Schema<readonly ReturnType<typeof shardBinding.parse>[]> = 
   requireThat(new Set(parsed.map(item => item.id)).size === parsed.length, "schema");
   return Object.freeze(parsed);
 } };
+export { bindings as profileBindings, shardBindings as profileShardBindings };
 const branchFields = { organization: slug, database: slug, branch: slug };
 // Profile names route requests; trusted current ID/name ownership is still required.
 export const profileScope = closed({ ...branchFields, profile: binding });

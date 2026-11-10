@@ -4,6 +4,38 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Profile collection preparation source increment
+
+Two pure Prepared bindings cover existing configuration-profile and profile-shard
+list GETs. Closed immutable host parents/revision, unique bounded child bindings,
+optional profile ID/name and host pagination bind fixed GETs and empty arguments.
+Existing profile parsers exported/reused without behavior changes. Profile lists
+are plain arrays, not invented paginated collections. Every field enters plan/full
+hashes, including IDs absent from paths. No executor, registration, credential
+resolution or authority consumption.
+
+`test/core-profile-collection-read-preparation.test.mjs` supplies **18 synthetic
+contracts** for exact requests, every-field hashes, deep snapshots, bounded unique
+bindings, host/caller/accessor refusals, whole-response refusal and canary omission.
+Profile receipts match ID/name; shards match ID and profile name, not immutable
+profile/parent ownership. Child confinement is not upstream collection permission.
+State/default/metal/ready/authoritative flags never grant configuration, assignment,
+spend, wake or native authority. Configuration/SKU/cost/versions/actors/raw times
+are omitted. Current ownership/revision/bindings, collection permission, trusted
+transport/raw-body custody and independent non-waking proof remain prerequisites.
+Coverage stays **134/291 offline adapters; 157 missing**, twelve previews and **99
+pure preparations**; zero runtime-integrated/reviewed/enabled/adopted. New contracts
+require exact-head Actions, not this declaration.
+
+Prior exact `fa11e18c3c0e67a993edb6f304cc614fa4862b63`
+[Actions test](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42799728687/job/129773919378)
+passed **1899/1899 PlanetScale**, root 317/317, helpers 122/122 and Neon 37/37;
+GitHub broker passed 218/219. Aggregate failed on the recurring unchanged SDK
+recovery assertion at `plugins/github-broker/test/sdk-http.test.mjs:159`, receiving
+`mint.revoke_failed` instead of success. Lint/typecheck/native-policy, Gitleaks and
+all three CodeQL analyses passed. No repair, retry or causal attribution claimed.
+No inline findings/submitted reviews returned. Older counts below are historical.
+
 ## Compute collection preparation source increment
 
 Five pure Prepared bindings cover existing bouncer, branch-wide/bouncer-specific

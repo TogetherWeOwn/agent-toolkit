@@ -63,6 +63,9 @@ import { prepare as prepareKeyspaceResizeList } from "./tools/list-keyspace-resi
 import { prepare as prepareBouncer } from "./tools/get-bouncer.js";
 import { prepare as prepareBranchResize } from "./tools/get-branch-resize-request.js";
 import { prepare as prepareKeyspaceResize } from "./tools/get-keyspace-resize-request.js";
+import { profileBindings, profileShardBindings } from "./configuration-profiles.js";
+import { prepare as prepareConfigurationProfileList } from "./tools/list-shard-configuration-profiles.js";
+import { prepare as prepareConfigurationProfileShardList } from "./tools/list-shard-configuration-profile-shards.js";
 import { prepare as prepareConfigurationProfile } from "./tools/get-shard-configuration-profile.js";
 import { prepare as prepareConfigurationProfileShard } from "./tools/get-shard-configuration-profile-shard.js";
 import { prepare as prepareOauthApplication } from "./tools/get-oauth-application.js";
@@ -178,6 +181,8 @@ const routerTarget = closed({ ...branchFields, router: closed({ id: identifier, 
 const replicaTarget = closed({ ...branchFields, replica: closed({ id: identifier, name: slug }) });
 const switchoverTarget = closed({ ...branchFields, switchoverId: identifier });
 const profileFields = { ...branchFields, profile: closed({ id: identifier, name: slug }) };
+const configurationProfileListTarget = closed({ ...branchFields, profiles: profileBindings });
+const configurationProfileShardListTarget = closed({ ...profileFields, shards: profileShardBindings, pagination: pageArguments });
 const configurationProfileTarget = closed(profileFields);
 const configurationProfileShardTarget = closed({ ...profileFields, shard: closed({ id: identifier }) });
 const bouncerListTarget = closed({ ...branchFields, bouncers: bouncerBindings, pagination: pageArguments });
@@ -239,7 +244,8 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof branchChangeListTarget.parse> | ReturnType<typeof branchConfigChangeListTarget.parse> |
   ReturnType<typeof keyspaceConfigChangeListTarget.parse> | ReturnType<typeof bouncerListTarget.parse> |
   ReturnType<typeof branchBouncerResizeListTarget.parse> | ReturnType<typeof bouncerResizeListTarget.parse> |
-  ReturnType<typeof branchResizeListTarget.parse> | ReturnType<typeof keyspaceResizeListTarget.parse>;
+  ReturnType<typeof branchResizeListTarget.parse> | ReturnType<typeof keyspaceResizeListTarget.parse> |
+  ReturnType<typeof configurationProfileListTarget.parse> | ReturnType<typeof configurationProfileShardListTarget.parse>;
 type ReadOperation = "list_databases" | "list_branches" | "list_database_regions" |
   "list_regions_for_organization" | "list_public_regions" | "get_organization" | "get_database" | "get_branch" |
   "list_backups" | "list_backup_policies" | "list_deploy_requests" |
@@ -257,6 +263,7 @@ type ReadOperation = "list_databases" | "list_branches" | "list_database_regions
   "get_bouncer" | "get_branch_resize_request" | "get_keyspace_resize_request" |
   "list_routers" | "list_dedicated_read_replicas" | "list_switchovers" |
   "get_router" | "get_dedicated_read_replica" | "get_switchover" |
+  "list_shard_configuration_profiles" | "list_shard_configuration_profile_shards" |
   "get_shard_configuration_profile" | "get_shard_configuration_profile_shard" |
   "get_oauth_application" | "get_organization_sso" | "get_organization_sso_domain" |
   "get_invoice" | "get_organization_billing_payment_method" | "get_payment_method_setup" |
@@ -298,6 +305,22 @@ function bindRead(
     jsonData(prepared);
     return prepared;
   };
+}
+
+export function bindListShardConfigurationProfilesPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = configurationProfileListTarget.parse(rawTarget);
+  const read = prepareConfigurationProfileList({ organization: target.organization, database: target.database,
+    branch: target.branch, profiles: target.profiles }, {});
+  return bindRead(`planetscale/branch/${target.branchId}`, target, "list_shard_configuration_profiles", read.request,
+    "record-and-name-parent-not-verified");
+}
+
+export function bindListShardConfigurationProfileShardsPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = configurationProfileShardListTarget.parse(rawTarget);
+  const read = prepareConfigurationProfileShardList({ organization: target.organization, database: target.database,
+    branch: target.branch, profile: target.profile, shards: target.shards }, target.pagination);
+  return bindRead(`planetscale/configuration-profile/${target.profile.id}`, target,
+    "list_shard_configuration_profile_shards", read.request, "record-id-only-parent-not-verified");
 }
 
 export function bindListBouncersPreparation(rawTarget: unknown): (raw: unknown) => Prepared {

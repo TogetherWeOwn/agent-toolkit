@@ -6,6 +6,29 @@ manifest, network executor, credential resolver, or tool registration is supplie
 The 134 adapters are pure request builders and bounded output projections,
 not an alternative policy or approval system. They cannot perform a live call.
 
+## Profile collection preparation increment
+
+Two pure `Prepared` bindings cover existing configuration-profile and profile-shard
+list GETs. Closed immutable host parents/revision and 1–32 unique child bindings
+reuse the profile parsers. Profile lists retain their plain-array shape without
+invented pagination; profile-shard lists capture profile ID/name and a bounded
+host page. Empty caller arguments and fixed GETs bind every field into plan/full
+hashes, including independent IDs absent from the upstream path.
+
+`test/core-profile-collection-read-preparation.test.mjs` supplies 18 synthetic
+contracts for requests, hashes, deep snapshots, host/caller/accessor refusals,
+whole-response refusal and canary omission. Profiles match child ID/name; shards
+match child ID and profile name, not immutable profile/parent ownership. Child
+confinement is not upstream collection permission. State/default/metal/ready/
+authoritative metadata never grants configuration, assignment, spend, wake or
+native authority. Configuration/SKU/cost/versions/actors/raw times are omitted.
+Current ownership/revision/bindings, collection permission, trusted transport/raw
+body custody and independent non-waking proof remain prerequisites. No executor,
+registration, credential resolution or authority consumption. Coverage stays
+**134/291 offline adapters; 157 missing**, twelve previews and **99 pure
+preparations**, zero runtime-integrated/reviewed/enabled/adopted. New execution
+requires exact-head Actions; older counts below are historical.
+
 ## Compute collection preparation increment
 
 Five pure `Prepared` bindings cover existing bouncer, branch-wide/bouncer-specific
