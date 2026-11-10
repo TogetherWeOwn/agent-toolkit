@@ -4,6 +4,38 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Diagnostic preparation source increment
+
+Two pure Prepared bindings capture existing branch schema-lint and deploy-request
+storage-check GETs. Closed immutable host parents/revision bind branch ID/name
+and unique bounded keyspace names for lint, or independent request ID/number for
+storage. Empty caller arguments and every-field plan/full hashes retain fixed
+requests; lint fixes page=1/per_page=10. Name confinement does not authenticate
+immutable response parents, and storage has no response identity. Explicit plan
+identity markers retain both limitations. No executor, registration, credential
+resolution or authority consumption is added.
+
+`test/core-diagnostic-read-preparation.test.mjs` supplies 20 synthetic contracts
+for requests, snapshots, hashes, host/caller/array refusals, non-invoked accessors,
+canary omission, first-page semantics and independent request ID/number binding.
+Receipts retain keyspace/subject enums or strict storage flags, not DDL/error/
+table/column/storage/actor/time details. Flags and pagination never prove safe
+deployment, upgrade permission, ownership, collection completeness or authority.
+Current bindings/revision, transport/custody, collection permission and non-waking
+proof remain prerequisites. Coverage stays **134/291 offline adapters; 157
+missing**, twelve previews and **60 pure preparations**, zero runtime-integrated/
+reviewed/enabled/adopted. Exact-head Actions must execute the new contracts;
+no new-head success is implied. Older counts below are historical.
+
+Prior exact `72b0d70116c5788c4d880227730941be1b85f0b0`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42765799810)
+and [test job](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42765799810/job/129661922759)
+passed, including lint/typecheck/native-policy/ci-ok and Neon candidate contract.
+[Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42765799218)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42765795300)
+passed. Earlier unchanged SDK recovery uncertainty remains unresolved. This
+prior-head evidence does not cover the new diagnostic preparation contracts.
+
 ## Availability preparation source increment
 
 Two pure Prepared bindings capture existing keyspace VSchema and branch data-

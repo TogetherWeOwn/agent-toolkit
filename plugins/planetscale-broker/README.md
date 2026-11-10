@@ -1227,6 +1227,36 @@ ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.
 
+## Diagnostic core preparation
+
+`bindLintBranchSchemaPreparation` and `bindCheckDeployRequestStoragePreparation`
+add pure Prepared bindings for existing diagnostic GETs. Closed host snapshots
+retain immutable organization/database IDs, names and revision. Lint additionally
+captures branch ID/name and unique 1–32 keyspace names using the existing scope
+parser; its request is fixed to page=1/per_page=10. Storage independently captures
+request ID and positive bounded sequence number despite the number-addressed path.
+Resources use `planetscale/branch/<id>` and `planetscale/deploy-request/<id>`;
+every variable host field enters plan/full hashes. Caller arguments are empty.
+
+Lint confines reported keyspace names, not immutable response-parent identity;
+its plan records `keyspace-name-only-parent-not-verified`. Storage has no response
+identity and records `absent-request-bound-only`. Existing projections retain
+keyspace/subject enum or strict storage flags, never DDL/errors/table/column names,
+storage details, actors or times. Lint's nextPage/complete describe that bounded
+provider envelope only; later pages cannot be selected through this binding and
+no collection completeness or ownership is proved. Flags never grant safe-deploy,
+upgrade, spend or execution authority. Current request ID/number/parent binding,
+ownership/revision, trusted transport/raw-body custody, collection permission and
+independent non-waking evidence remain prerequisites.
+
+`test/core-diagnostic-read-preparation.test.mjs` supplies 20 synthetic contracts
+for fixed requests, immutable capture, every-field hashes, host/caller/array
+refusals, non-invoked accessors, response redaction and projection semantics.
+No executor, registration, credential resolution or authority consumption is
+added. Coverage stays 134/291 offline adapters, 157 missing; twelve previews and
+60 pure preparations are separate counts. All operations remain runtime-
+unintegrated, unreviewed, disabled and unadopted. Earlier counts below are historical.
+
 ## Availability core preparation
 
 `bindGetKeyspaceVschemaPreparation` and `bindGetDataTopologyPreparation` capture

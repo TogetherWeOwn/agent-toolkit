@@ -51,6 +51,9 @@ import { prepare as prepareChangeRequest } from "./tools/get-change-request.js";
 import { prepare as prepareVtctldOperation } from "./tools/get-vtctld-operation.js";
 import { prepare as prepareKeyspaceVschema } from "./tools/get-keyspace-vschema.js";
 import { prepare as prepareDataTopology } from "./tools/get-data-topology.js";
+import { lintKeyspaceNames } from "./schema-diagnostics.js";
+import { prepare as prepareLintBranchSchema } from "./tools/lint-branch-schema.js";
+import { prepare as prepareDeployStorageCheck } from "./tools/check-deploy-request-storage.js";
 
 const organizationFields = { organization: slug, organizationId: identifier, revision: digest };
 const databaseFields = { ...organizationFields, database: slug, databaseId: identifier };
@@ -58,6 +61,8 @@ const organizationTarget = closed(organizationFields);
 const databaseTarget = closed(databaseFields);
 const branchFields = { ...databaseFields, branch: slug, branchId: identifier };
 const branchTarget = closed(branchFields);
+const lintBranchTarget = closed({ ...branchFields, keyspaceNames: lintKeyspaceNames });
+const deployStorageCheckTarget = closed({ ...databaseFields, requestId: identifier, number: deployNumber });
 const anomalyTarget = closed({ ...branchFields, anomalyId: identifier });
 const trafficBudgetTarget = closed({ ...branchFields, budgetId: identifier });
 const queryReportTarget = closed({ ...branchFields, reportId: identifier });
@@ -129,7 +134,8 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof databaseCidrTarget.parse> | ReturnType<typeof databaseThrottlerTarget.parse> |
   ReturnType<typeof deployThrottlerTarget.parse> | ReturnType<typeof branchQueryTarget.parse> |
   ReturnType<typeof branchQueryTagTarget.parse> | ReturnType<typeof unifiedChangeTarget.parse> |
-  ReturnType<typeof vtctldOperationTarget.parse>;
+  ReturnType<typeof vtctldOperationTarget.parse> | ReturnType<typeof lintBranchTarget.parse> |
+  ReturnType<typeof deployStorageCheckTarget.parse>;
 type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_backup" | "get_backup_policy" | "get_deploy_request" |
   "get_keyspace" | "get_shard" | "get_maintenance_event" |
@@ -144,13 +150,13 @@ type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_branch_anomaly" | "get_traffic_budget" | "get_query_patterns_report_status" |
   "get_database_postgres_cidr" | "get_database_throttler" | "get_deploy_request_throttler" |
   "get_branch_query" | "get_branch_query_tag" | "get_change_request" | "get_vtctld_operation" |
-  "get_keyspace_vschema" | "get_data_topology";
+  "get_keyspace_vschema" | "get_data_topology" | "lint_branch_schema" | "check_deploy_request_storage";
 type ResponseIdentity = "name-only-not-immutable" | "record-id-only-parent-not-verified" |
   "record-and-source-ids-destination-not-verified" | "record-and-branch-ids-parent-not-verified" |
   "record-and-user-ids-parent-not-verified" | "record-and-number-parent-and-destination-not-verified" |
   "record-and-number-parent-not-verified" | "organization-id-matched" |
   "record-and-name-parent-not-verified" | "record-and-target-binding-parent-not-verified" |
-  "absent-request-bound-only";
+  "absent-request-bound-only" | "keyspace-name-only-parent-not-verified";
 
 // Pure preparation only. Host IDs/revisions bind a snapshot, not permission;
 // response projections still cannot authenticate every parent/destination ID.
@@ -175,6 +181,22 @@ function bindRead(
     jsonData(prepared);
     return prepared;
   };
+}
+
+export function bindLintBranchSchemaPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = lintBranchTarget.parse(rawTarget);
+  const read = prepareLintBranchSchema({ organization: target.organization, database: target.database,
+    branch: target.branch, keyspaceNames: target.keyspaceNames }, { page: 1, perPage: 10 });
+  return bindRead(`planetscale/branch/${target.branchId}`, target, "lint_branch_schema", read.request,
+    "keyspace-name-only-parent-not-verified");
+}
+
+export function bindCheckDeployRequestStoragePreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = deployStorageCheckTarget.parse(rawTarget);
+  const read = prepareDeployStorageCheck({ organization: target.organization, database: target.database,
+    number: target.number }, {});
+  return bindRead(`planetscale/deploy-request/${target.requestId}`, target, "check_deploy_request_storage", read.request,
+    "absent-request-bound-only");
 }
 
 export function bindGetKeyspaceVschemaPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
