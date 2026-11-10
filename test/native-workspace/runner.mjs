@@ -26,20 +26,26 @@ function groupAbsent(pid) {
 // Sanitized supervisor diagnostics: step names and error codes only, never
 // paths, URLs, environment values or raw tool output.
 const steps = [];
+let stepPersist = async () => {};
 async function persistSteps(reportDir) {
   try { await writeFile(join(reportDir, 'supervise.json'), JSON.stringify(steps, null, 2) + '\n'); } catch { /* Diagnostics must not fail setup. */ }
 }
-// In-process socket refusal walk: a serial `find <dir> -type s` can exceed
-// any fixed timeout on a cold hosted-runner overlay (observed ETIMEDOUT at
-// 10s and again at 30s), so walk with bounded parallelism instead. Unreadable
-// directories are skipped, matching `find` output semantics; symlinks are
-// never followed.
+// In-process socket refusal walk for small exposed trees: a serial
+// `find <dir> -type s` can exceed any fixed timeout on a cold hosted-runner
+// overlay (observed ETIMEDOUT at 10s and again at 30s), so walk with bounded
+// parallelism instead. Unreadable directories are skipped, matching `find`
+// output semantics; symlinks are never followed. The walk has a wall-time
+// budget and fails closed (a tree that cannot be proven clean is refused),
+// so a slow filesystem produces a named step error instead of an anonymous
+// outer kill.
 async function assertNoSockets(source) {
+  const started = Date.now();
   const queue = [source];
+  let head = 0;
   let found = false;
   async function worker() {
-    while (queue.length && !found) {
-      const dir = queue.shift();
+    while (head < queue.length && !found) {
+      const dir = queue[head++];
       let entries;
       try {
         entries = await readdir(dir, { withFileTypes: true });
@@ -47,6 +53,11 @@ async function assertNoSockets(source) {
         continue;
       }
       for (const entry of entries) {
+        if (Date.now() - started > 60_000) {
+          const error = new Error('socket-check wall-time budget exceeded');
+          error.code = 'ETIMEDOUT';
+          throw error;
+        }
         if (entry.isSocket()) { found = true; return; }
         if (entry.isDirectory()) queue.push(join(dir, entry.name));
         else if (!entry.isFile() && !entry.isSymbolicLink()) {
@@ -60,14 +71,48 @@ async function assertNoSockets(source) {
   await Promise.all(Array.from({ length: 32 }, worker));
   assert.equal(found, false, 'socket in exposed tree refused');
 }
+
+// Kernel-authoritative bound-socket refusal: a read-only bind still lets the
+// fixture connect to any socket that has a live listener in an exposed tree,
+// so refuse when a bound unix socket path is at or under any exposed root.
+// /proc/net/unix enumerates bound sockets; sweeping /proc/<pid>/net/unix
+// covers every host network namespace (unix connect follows the path, not the
+// listener's namespace). Abstract sockets carry no filesystem path and confer
+// no bind-mounted authority. Used for /usr: walking that tree has repeatedly
+// exceeded the outer kill window on the cold runner overlay (serial find
+// >30s, parallel in-process walk >150s), while this check is O(sockets).
+async function assertNoBoundSockets(root) {
+  const bound = new Set();
+  const readTable = async path => {
+    const text = await readFile(path, 'utf8');
+    for (const line of text.split('\n')) {
+      const parts = line.trim().split(/\s+/);
+      const socketPath = parts[7];
+      if (socketPath && !socketPath.startsWith('@')) bound.add(socketPath);
+    }
+  };
+  await readTable('/proc/net/unix');
+  let pids = [];
+  try { pids = await readdir('/proc'); } catch { /* Sweep is best-effort. */ }
+  for (const pid of pids) {
+    if (!/^\d+$/.test(pid)) continue;
+    try { await readTable(`/proc/${pid}/net/unix`); } catch { /* Unreadable tables stay uncovered. */ }
+  }
+  for (const socketPath of bound) {
+    assert(socketPath !== root && !socketPath.startsWith(`${root}/`),
+      'bound socket in exposed tree refused');
+  }
+}
 async function step(name, fn) {
   const started = Date.now();
   try {
     const value = await fn();
     steps.push({ name, ok: true, durationMs: Date.now() - started });
+    await stepPersist();
     return value;
   } catch (error) {
     steps.push({ name, ok: false, code: error?.code ?? 'unknown', durationMs: Date.now() - started });
+    await stepPersist();
     throw error;
   }
 }
@@ -78,7 +123,11 @@ async function sandboxFilesystem(root) {
   async function bind(source, target, readonly = true) {
     await mkdir(join(fsRoot, target), { recursive: true });
     // Read-only sockets still confer authority. Refuse them in every exposed tree.
-    await step(`socket-check-${target}`, () => assertNoSockets(source));
+    // /usr is proven via bound-socket enumeration (see assertNoBoundSockets);
+    // the smaller trees get the strict socket-file walk.
+    await step(`socket-check-${target}`, () => source === '/usr'
+      ? assertNoBoundSockets(source)
+      : assertNoSockets(source));
     await step(`bind-${target}`, () => run('mount', ['--bind', source, join(fsRoot, target)]));
     if (readonly) await step(`bind-ro-${target}`, () => run('mount', ['-o', 'remount,bind,ro,nosuid,nodev', join(fsRoot, target)]));
   }
@@ -113,6 +162,7 @@ if (process.argv[2] === '--supervise') {
   try {
     steps.push({ name: 'supervise-start', ok: true });
     await persistSteps(join(root, 'shared'));
+    stepPersist = () => persistSteps(join(root, 'shared'));
     await step('uid-check', () => {
       assert.equal(process.getuid(), Number(process.argv[4]));
       assert.notEqual(process.getuid(), 0, 'native fixture must not run as root');
