@@ -37,6 +37,9 @@ import { prepare as prepareOrganizationSsoDomain } from "./tools/get-organizatio
 import { prepare as prepareInvoice } from "./tools/get-invoice.js";
 import { prepare as preparePaymentMethod } from "./tools/get-organization-billing-payment-method.js";
 import { prepare as preparePaymentSetup } from "./tools/get-payment-method-setup.js";
+import { prepare as prepareBranchAnomaly } from "./tools/get-branch-anomaly.js";
+import { prepare as prepareTrafficBudget } from "./tools/get-traffic-budget.js";
+import { prepare as prepareQueryReportStatus } from "./tools/get-query-patterns-report-status.js";
 
 const organizationFields = { organization: slug, organizationId: identifier, revision: digest };
 const databaseFields = { ...organizationFields, database: slug, databaseId: identifier };
@@ -44,6 +47,9 @@ const organizationTarget = closed(organizationFields);
 const databaseTarget = closed(databaseFields);
 const branchFields = { ...databaseFields, branch: slug, branchId: identifier };
 const branchTarget = closed(branchFields);
+const anomalyTarget = closed({ ...branchFields, anomalyId: identifier });
+const trafficBudgetTarget = closed({ ...branchFields, budgetId: identifier });
+const queryReportTarget = closed({ ...branchFields, reportId: identifier });
 const backupTarget = closed({ ...branchFields, backupId: identifier });
 const backupPolicyTarget = closed({ ...databaseFields, policyId: identifier });
 const deployRequestTarget = closed({ ...databaseFields, request: deployBinding, intoBranchId: identifier });
@@ -99,7 +105,8 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof configurationProfileTarget.parse> | ReturnType<typeof configurationProfileShardTarget.parse> |
   ReturnType<typeof oauthApplicationTarget.parse> | ReturnType<typeof organizationSsoDomainTarget.parse> |
   ReturnType<typeof invoiceTarget.parse> | ReturnType<typeof paymentMethodTarget.parse> |
-  ReturnType<typeof paymentSetupTarget.parse>;
+  ReturnType<typeof paymentSetupTarget.parse> | ReturnType<typeof anomalyTarget.parse> |
+  ReturnType<typeof trafficBudgetTarget.parse> | ReturnType<typeof queryReportTarget.parse>;
 type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_backup" | "get_backup_policy" | "get_deploy_request" |
   "get_keyspace" | "get_shard" | "get_maintenance_event" |
@@ -110,7 +117,8 @@ type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_router" | "get_dedicated_read_replica" | "get_switchover" |
   "get_shard_configuration_profile" | "get_shard_configuration_profile_shard" |
   "get_oauth_application" | "get_organization_sso" | "get_organization_sso_domain" |
-  "get_invoice" | "get_organization_billing_payment_method" | "get_payment_method_setup";
+  "get_invoice" | "get_organization_billing_payment_method" | "get_payment_method_setup" |
+  "get_branch_anomaly" | "get_traffic_budget" | "get_query_patterns_report_status";
 type ResponseIdentity = "name-only-not-immutable" | "record-id-only-parent-not-verified" |
   "record-and-source-ids-destination-not-verified" | "record-and-branch-ids-parent-not-verified" |
   "record-and-user-ids-parent-not-verified" | "record-and-number-parent-and-destination-not-verified" |
@@ -388,6 +396,30 @@ export function bindGetPaymentMethodSetupPreparation(rawTarget: unknown): (raw: 
   const read = preparePaymentSetup({ organization: target.organization, setupId: target.setupId }, {});
   return bindRead(`planetscale/payment-method-setup/${target.setupId}`, target,
     "get_payment_method_setup", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindGetBranchAnomalyPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = anomalyTarget.parse(rawTarget);
+  const read = prepareBranchAnomaly({ organization: target.organization, database: target.database,
+    branch: target.branch, anomalyId: target.anomalyId }, {});
+  return bindRead(`planetscale/branch-anomaly/${target.anomalyId}`, target,
+    "get_branch_anomaly", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindGetTrafficBudgetPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = trafficBudgetTarget.parse(rawTarget);
+  const read = prepareTrafficBudget({ organization: target.organization, database: target.database,
+    branch: target.branch, budgetId: target.budgetId }, {});
+  return bindRead(`planetscale/traffic-budget/${target.budgetId}`, target,
+    "get_traffic_budget", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindGetQueryPatternsReportStatusPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = queryReportTarget.parse(rawTarget);
+  const read = prepareQueryReportStatus({ organization: target.organization, database: target.database,
+    branch: target.branch, reportId: target.reportId }, {});
+  return bindRead(`planetscale/query-patterns-report/${target.reportId}`, target,
+    "get_query_patterns_report_status", read.request, "record-id-only-parent-not-verified");
 }
 
 export function bindGetWebhookPreparation(rawTarget: unknown): (raw: unknown) => Prepared {

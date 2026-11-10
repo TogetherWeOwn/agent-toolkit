@@ -1227,6 +1227,26 @@ ordinary writes. `localPlan` and `policyCandidate` are progress fields, never
 implementation/review/enablement evidence. Full optional capability remains missing
 in these bounded subsets, including recursive deletion and extended backup options.
 
+## Insight-detail core preparation
+
+`bindGetBranchAnomalyPreparation`, `bindGetTrafficBudgetPreparation` and
+`bindGetQueryPatternsReportStatusPreparation` capture closed immutable organization,
+database, branch and record identities plus revision for the existing fixed GETs.
+Caller arguments must be empty; every host field enters the plan/full hash. The
+existing projections match record ID, not immutable parent ownership. SQL,
+correlations, fingerprints, rules/tags/thresholds, report contents/URLs, actors and
+times never enter receipts. Active flags, budget mode and report state never grant
+remediation, effective enforcement, download, retry or native closure authority.
+
+`test/core-insight-read-preparation.test.mjs` supplies 25 synthetic contracts for
+fixed requests, immutable captures, every-field hashes, caller/host refusal,
+projection canaries, rebound identity and separate resource namespaces. Current
+ownership/revision, trusted transport/raw-body custody and independent non-waking
+proof remain required. No executor, runtime registration, credential resolution
+or authority consumption is added. Coverage stays 134/291 offline adapters, 157
+missing; twelve previews and 49 pure preparations remain separate counts. All
+operations remain runtime-unintegrated, unreviewed, disabled and unadopted.
+
 ## Billing-detail core preparation
 
 `bindGetInvoicePreparation`, `bindGetOrganizationBillingPaymentMethodPreparation`

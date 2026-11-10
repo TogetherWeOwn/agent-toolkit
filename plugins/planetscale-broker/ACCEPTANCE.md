@@ -4,6 +4,37 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Insight-detail preparation source increment
+
+Three pure Prepared bindings capture existing branch-anomaly, traffic-budget and
+query-pattern report-status detail GETs. Closed host snapshots retain organization,
+database, branch and record identities plus revision. Empty caller arguments,
+fixed GETs and every-field plan/full hashes prevent target/request/authority
+injection. Separate resource namespaces distinguish equal record IDs. Existing
+projections match record ID without authenticating immutable parent ownership.
+
+`test/core-insight-read-preparation.test.mjs` supplies 25 synthetic contracts for
+fixed requests, immutable captures, every-field hashes, missing/extra/unsafe/
+accessor refusal, projection canaries, rebound identity and malformed selected
+fields. SQL/correlations/fingerprints, rules/tags/thresholds, report contents/URLs,
+actors and times are omitted. Active flags/mode/state never establish remediation,
+effective enforcement, download/retry authority or closure. Current ownership/
+revision, trusted transport/raw-body custody and independent non-waking proof
+remain required. No executor, registration, credential resolution or authority
+consumption is added. Exact-head Actions must execute these new contracts; no
+passing result is implied here. Coverage stays **134/291 offline adapters; 157
+missing**, twelve previews and **49 pure preparations**, zero runtime-integrated/
+reviewed/enabled/adopted. Older increments below are historical.
+
+Prior exact `cd187b96111b0fa752d0d05bbd5ebd5ec17d7d4c`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42753343722)
+passed [test](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42753343722/job/129621923800),
+lint/typecheck/native-policy/ci-ok and Neon candidate contract.
+[Gitleaks](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42753343252)
+and all three [CodeQL analyses](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42753337303)
+passed. No numeric totals extracted this run; this is prior-head evidence, not
+execution of the 25 new contracts or independent review/runtime acceptance.
+
 ## Organization-security detail preparation source increment
 
 Three pure Prepared bindings capture existing OAuth-application, organization SSO
