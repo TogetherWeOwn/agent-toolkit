@@ -330,6 +330,24 @@ from runtime integration; coverage stays 134/291 with 157 missing adapters.
 The redirect-only default-profile operation remains missing, not implemented by
 these detail preparations.
 
+Three organization-security detail seams additionally bind existing OAuth-application,
+organization SSO and SSO-domain GETs. Closed host snapshots capture organization
+name/immutable ID, revision and application/domain ID where applicable. Empty
+arguments cannot supply a target, request, credential or authority. Resource
+namespaces `planetscale/oauth-application/<id>`,
+`planetscale/organization-sso/<organization-id>` and
+`planetscale/organization-sso-domain/<id>` distinguish equal IDs. Every variable
+host field enters plan/full hashes. SSO responses match the captured organization
+ID; application/domain responses match only their record ID, not parent ownership.
+Current ownership/revision revalidation, trusted transport/raw-body custody and
+non-waking evidence remain prerequisites. Client/contact/domain/verification data
+are omitted; enabled/configured/directory/domain state and verification presence
+never establish effective enforcement, membership, native authority or closure.
+No executor, registration, credential resolution or authority consumption is added.
+`test/core-organization-security-read-preparation.test.mjs` supplies 26 synthetic
+snapshot/hash/refusal/canary contracts. Forty-three pure preparations remain
+separate from runtime integration; coverage stays 134/291, 157 adapters missing.
+
 All 291 entries remain `incomplete`, `implemented=false`, `reviewed=false`,
 `enabled=false`, and entitlement `unknown`. Existing offline read/preview test
 paths are linked as source evidence, never as full `ProviderOperation` tests.

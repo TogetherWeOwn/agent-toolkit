@@ -31,6 +31,9 @@ import { prepare as prepareBranchResize } from "./tools/get-branch-resize-reques
 import { prepare as prepareKeyspaceResize } from "./tools/get-keyspace-resize-request.js";
 import { prepare as prepareConfigurationProfile } from "./tools/get-shard-configuration-profile.js";
 import { prepare as prepareConfigurationProfileShard } from "./tools/get-shard-configuration-profile-shard.js";
+import { prepare as prepareOauthApplication } from "./tools/get-oauth-application.js";
+import { prepare as prepareOrganizationSso } from "./tools/get-organization-sso.js";
+import { prepare as prepareOrganizationSsoDomain } from "./tools/get-organization-sso-domain.js";
 
 const organizationFields = { organization: slug, organizationId: identifier, revision: digest };
 const databaseFields = { ...organizationFields, database: slug, databaseId: identifier };
@@ -53,6 +56,8 @@ const organizationTeamMemberTarget = closed({ ...organizationFields, ...teamFiel
 const serviceTokenTarget = closed({ ...organizationFields, tokenId: identifier });
 const oauthTokenTarget = closed({ ...organizationFields, applicationId: identifier, tokenId: identifier });
 const webhookTarget = closed({ ...databaseFields, webhookId: identifier });
+const oauthApplicationTarget = closed({ ...organizationFields, applicationId: identifier });
+const organizationSsoDomainTarget = closed({ ...organizationFields, domainId: identifier });
 const deploymentTarget = closed({ ...databaseFields,
   deployment: closed({ id: identifier, number: deployNumber, intoBranch: slug }), intoBranchId: identifier });
 const schemaRecommendationTarget = closed({ ...databaseFields,
@@ -85,7 +90,8 @@ type ReadTarget = ReturnType<typeof organizationTarget.parse> | ReturnType<typeo
   ReturnType<typeof bouncerTarget.parse> | ReturnType<typeof branchResizeTarget.parse> |
   ReturnType<typeof keyspaceResizeTarget.parse> | ReturnType<typeof routerTarget.parse> |
   ReturnType<typeof replicaTarget.parse> | ReturnType<typeof switchoverTarget.parse> |
-  ReturnType<typeof configurationProfileTarget.parse> | ReturnType<typeof configurationProfileShardTarget.parse>;
+  ReturnType<typeof configurationProfileTarget.parse> | ReturnType<typeof configurationProfileShardTarget.parse> |
+  ReturnType<typeof oauthApplicationTarget.parse> | ReturnType<typeof organizationSsoDomainTarget.parse>;
 type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_backup" | "get_backup_policy" | "get_deploy_request" |
   "get_keyspace" | "get_shard" | "get_maintenance_event" |
@@ -94,11 +100,12 @@ type ReadOperation = "get_organization" | "get_database" | "get_branch" |
   "get_branch_change_request" | "get_branch_config_change_request" | "get_keyspace_config_change_request" |
   "get_bouncer" | "get_branch_resize_request" | "get_keyspace_resize_request" |
   "get_router" | "get_dedicated_read_replica" | "get_switchover" |
-  "get_shard_configuration_profile" | "get_shard_configuration_profile_shard";
+  "get_shard_configuration_profile" | "get_shard_configuration_profile_shard" |
+  "get_oauth_application" | "get_organization_sso" | "get_organization_sso_domain";
 type ResponseIdentity = "name-only-not-immutable" | "record-id-only-parent-not-verified" |
   "record-and-source-ids-destination-not-verified" | "record-and-branch-ids-parent-not-verified" |
   "record-and-user-ids-parent-not-verified" | "record-and-number-parent-and-destination-not-verified" |
-  "record-and-number-parent-not-verified";
+  "record-and-number-parent-not-verified" | "organization-id-matched";
 
 // Pure preparation only. Host IDs/revisions bind a snapshot, not permission;
 // response projections still cannot authenticate every parent/destination ID.
@@ -330,6 +337,27 @@ export function bindGetShardConfigurationProfileShardPreparation(rawTarget: unkn
     branch: target.branch, profile: target.profile, shard: target.shard }, {});
   return bindRead(`planetscale/configuration-profile-shard/${target.profile.id}/${target.shard.id}`, target,
     "get_shard_configuration_profile_shard", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindGetOauthApplicationPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = oauthApplicationTarget.parse(rawTarget);
+  const read = prepareOauthApplication({ organization: target.organization, applicationId: target.applicationId }, {});
+  return bindRead(`planetscale/oauth-application/${target.applicationId}`, target,
+    "get_oauth_application", read.request, "record-id-only-parent-not-verified");
+}
+
+export function bindGetOrganizationSsoPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = organizationTarget.parse(rawTarget);
+  const read = prepareOrganizationSso({ organization: target.organization, organizationId: target.organizationId }, {});
+  return bindRead(`planetscale/organization-sso/${target.organizationId}`, target,
+    "get_organization_sso", read.request, "organization-id-matched");
+}
+
+export function bindGetOrganizationSsoDomainPreparation(rawTarget: unknown): (raw: unknown) => Prepared {
+  const target = organizationSsoDomainTarget.parse(rawTarget);
+  const read = prepareOrganizationSsoDomain({ organization: target.organization, domainId: target.domainId }, {});
+  return bindRead(`planetscale/organization-sso-domain/${target.domainId}`, target,
+    "get_organization_sso_domain", read.request, "record-id-only-parent-not-verified");
 }
 
 export function bindGetWebhookPreparation(rawTarget: unknown): (raw: unknown) => Prepared {

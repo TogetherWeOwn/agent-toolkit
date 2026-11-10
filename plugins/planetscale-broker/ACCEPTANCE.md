@@ -4,6 +4,38 @@ Status: **incomplete; no Security/Crypto/QA acceptance, install or enablement**.
 This staged source PR does not deliver the complete package. The operation map's
 missing rows are actual missing implementation, not a promise of dormant access.
 
+## Organization-security detail preparation source increment
+
+Three pure Prepared bindings capture existing OAuth-application, organization SSO
+and SSO-domain detail GETs. Closed host snapshots retain organization name/immutable
+ID, revision and application/domain ID where applicable. Empty caller arguments,
+fixed GETs and every-field plan/full hashes prevent target/request/authority
+injection. Separate resource namespaces distinguish equal organization/record IDs.
+SSO projections match the expected organization ID; application/domain projections
+match record IDs without authenticating immutable parent ownership.
+
+`test/core-organization-security-read-preparation.test.mjs` supplies 26 synthetic
+fixed-request, capture/freeze, every-field hash, missing/extra/unsafe/accessor,
+projection-canary, rebound-ID and malformed-selected-field contracts. It separately
+checks SSO organization-ID binding when the name-addressed request is unchanged.
+Client/contact/domain/verification data are omitted. Provider flags/state and
+verification presence never prove effective enforcement, membership, native
+authority or closure. Current ownership/revision revalidation, broker transport/
+raw-body custody and independent non-waking proof remain prerequisites. No executor,
+registration, credential resolution, authority consumption or live use is added.
+Exact-head Actions must execute these contracts; no passing result is implied here.
+Coverage stays **134/291 offline adapters; 157 missing**, twelve previews and
+**43 pure preparations**, zero runtime-integrated/reviewed/enabled/adopted. Older
+increments below are historical.
+
+Prior exact `600a5afd4d06b83027fdf77154891491dfbd4ee6`
+[Actions CI](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42749358102)
+passed [1362/1362 PlanetScale tests](https://github.com/TogetherWeOwn/agent-toolkit/actions/runs/42749358102/job/129609072902),
+root 317/317, helpers 122/122, GitHub 219/219 and Neon 37/37 with zero failures,
+skips or cancellations. Lint/typecheck/native-policy/ci-ok, Gitleaks and all three
+CodeQL analyses passed. This is prior-head evidence, not execution of these new
+contracts, independent review or runtime acceptance.
+
 ## Configuration-profile detail preparation source increment
 
 Two pure Prepared bindings capture existing profile and profile-shard detail GETs.
