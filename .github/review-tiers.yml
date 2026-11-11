@@ -1,0 +1,92 @@
+# Risk-tiered review map for this repository.
+#
+# Classification: a PR's tier is the highest tier of any changed file.
+# Overlapping globs resolve to the highest tier (sensitive wins on overlap).
+# Anything not matched below is sensitive by default (`default_tier`), so a
+# new top-level path is sensitive until it is deliberately classified here.
+# Content triggers escalate a PR to sensitive regardless of path: a new or
+# changed public endpoint or input parsing; auth/authz/session logic;
+# crypto/keys; secrets/credentials; permission checks; tenant isolation or
+# personal data; SQL/schema/migrations; dependency or lockfile changes;
+# CI/workflow changes; weakened test assertions, deleted tests/snapshots, or
+# lowered gates in test files.
+#
+# Review per tier: low -> QA; ordinary -> QA; sensitive/unclassified ->
+# Security -> QA. QA verifies the author's `risk_tier` attestation and may
+# escalate any PR. This file itself is always sensitive.
+#
+# Sensitive floor (never downgrade): CI/workflows and this file; CODEOWNERS;
+# dependency manifests and lockfiles (incl. dev deps) and install/build
+# configuration; auth/session/crypto/secrets, public endpoints/input parsing,
+# tenant isolation, personal data, DB schema/migrations; runtime/network/IAM
+# config, infra and deploy/release paths; AGENTS.md, .claude/** and
+# skills/tool-permission files; every new top-level path until classified.
+#
+# Why each non-sensitive entry is safe (see the PR body for the audit):
+# - low: README/LICENSE/CATALOG are descriptive copy with no runtime, policy
+#   or credential effect; static test fixtures and *.test.mjs files are
+#   additive unit tests whose weakening or deletion escalates to sensitive
+#   via the content triggers above. Security-bearing docs (STANDARD,
+#   ADAPTER-CONTRACTS, threat models, CONTRIBUTING) are deliberately NOT
+#   low: they stay unlisted, hence sensitive.
+# - ordinary: packages/work-supply is the only audited module. It is an
+#   inert, offline JSON work-inventory classifier: no network, API,
+#   credential, secret, persistence, permission, or trust-boundary effect;
+#   its CLI reads only a local snapshot file or stdin and prints JSON.
+#   Changes to its input-parsing logic still escalate to sensitive via the
+#   content triggers. Everything else (core policy, GitHub JWT/client,
+#   credential brokers, test harness scripts, supply-chain policies,
+#   skills) stays sensitive: this toolkit holds credential-broker trust
+#   boundaries by design, so there is no other safe ordinary module.
+version: 1
+default_tier: sensitive # anything not matched below
+
+tiers:
+  low:
+    - README.md
+    - LICENSE
+    - CATALOG.md
+    - test/fixtures/**
+    - test/*.test.mjs
+    - test/**/*.test.mjs
+    - plugins/*/test/*.test.mjs
+    - plugins/*/test/**/*.test.mjs
+
+  ordinary:
+    - packages/work-supply/**
+
+  sensitive:
+    # This map itself and all CI/governance config.
+    - .github/review-tiers.yml
+    - .github/workflows/**
+    - .github/scripts/**
+    - .github/dependabot.yml
+    - CODEOWNERS
+    - .gitleaksignore
+    # Dependency manifests, lockfiles and install/build configuration.
+    - package.json
+    - package-lock.json
+    - .npmrc
+    - "**/package.json"
+    - "**/package-lock.json"
+    - tsconfig.json
+    - "**/tsconfig*.json"
+    # Agent and tool-permission files.
+    - AGENTS.md
+    - .claude/**
+    - skills/**
+    # Supply-chain install policy templates.
+    - policies/**
+    # Core policy: closed schemas, binding/lease/cap checks, dispatch,
+    # audit boundary, provider contracts, fake secrets/transport/SQLite.
+    - packages/core/**
+    # GitHub App JWT signing and fixed-origin REST client (network/auth).
+    - packages/github/**
+    # Credential-broker plugins: worker, policy, client, tools, DB metadata.
+    - plugins/github-broker/**
+    - plugins/neon-broker/**
+    - plugins/_template/**
+    # Test-harness tooling: module resolver hook, covering-test runner,
+    # secret-scan metadata, and the native-workspace installer probe.
+    - scripts/**
+    - test/native-workspace/**
