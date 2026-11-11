@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { spawn, execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { createServer } from 'node:net';
 import { mkdtemp, mkdir, lstat, realpath, readFile, writeFile, copyFile, access, rm, symlink, readdir } from 'node:fs/promises';
 import { dirname, basename, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -94,6 +95,15 @@ async function assertNoSockets(source) {
 // no bind-mounted authority. Used for /usr: walking that tree has repeatedly
 // exceeded the outer kill window on the cold runner overlay (serial find
 // >30s, parallel in-process walk >150s), while this check is O(sockets).
+// MUST run in the outer launcher, in the host PID/network namespaces, before
+// unshare. Running it inside the supervisor would be vacuous: the supervisor
+// is PID 1 of a new PID namespace under --mount-proc and a new network
+// namespace, so /proc lists only namespace members and /proc/net/unix shows
+// only the new (empty) net-ns table — the enumerated set is always empty
+// while a host-bound socket under /usr remains connectable by path from
+// inside. Focused reproduction with the runner's exact unshare flags showed
+// a host-bound socket visible in host /proc/net/unix, invisible inside, yet
+// connectable from inside.
 async function assertNoBoundSockets(root) {
   const bound = new Set();
   const readTable = async path => {
@@ -142,11 +152,14 @@ async function sandboxFilesystem(root) {
   async function bind(source, target, readonly = true) {
     await mkdir(join(fsRoot, target), { recursive: true });
     // Read-only sockets still confer authority. Refuse them in every exposed tree.
-    // /usr is proven via bound-socket enumeration (see assertNoBoundSockets);
-    // the smaller trees get the strict socket-file walk.
-    await step(`socket-check-${target}`, () => source === '/usr'
-      ? assertNoBoundSockets(source)
-      : assertNoSockets(source));
+    // /usr is proven by the outer launcher's pre-spawn bound-socket enumeration
+    // in the host PID/network namespaces (see assertNoBoundSockets); enumerating
+    // here, inside the new PID/network namespaces, would always find an empty
+    // table and prove nothing. The smaller trees get the strict socket-file walk,
+    // which reads the filesystem and is not namespace-vacuous.
+    if (source !== '/usr') {
+      await step(`socket-check-${target}`, () => assertNoSockets(source));
+    }
     await step(`bind-${target}`, () => run('mount', ['--bind', source, join(fsRoot, target)]));
     if (readonly) await step(`bind-ro-${target}`, () => run('mount', ['-o', 'remount,bind,ro,nosuid,nodev', join(fsRoot, target)]));
   }
@@ -261,6 +274,44 @@ if (process.argv[2] === '--supervise') {
     process.exitCode = 1;
   }
   if (process.connected) process.disconnect();
+} else if (process.argv[2] === '--bound-socket-probe') {
+  // Regression probe for the bound-socket refusal, run in the host namespaces
+  // (this process is never inside unshare). Plants a live listening unix
+  // socket under a temp exposed tree and requires assertNoBoundSockets —
+  // the exact check the outer launcher runs pre-spawn for /usr — to refuse
+  // it, then requires a clean tree and /usr itself to pass once the listener
+  // is closed. Exits 1 if the planted socket is not refused, so a vacuous
+  // or regressed enumeration fails CI instead of recording green evidence.
+  const probeRoot = await mkdtemp('/tmp/native-bound-socket-probe-');
+  const server = createServer(() => {});
+  try {
+    const cleanRoot = join(probeRoot, 'clean');
+    const dirtyRoot = join(probeRoot, 'dirty');
+    await mkdir(cleanRoot);
+    await mkdir(dirtyRoot);
+    const sockPath = join(dirtyRoot, 'probe.sock');
+    await new Promise((resolveListen, rejectListen) => {
+      server.once('error', rejectListen);
+      server.listen(sockPath, resolveListen);
+    });
+    let refusalObserved = false;
+    let refusalCode = null;
+    try {
+      await assertNoBoundSockets(dirtyRoot);
+    } catch (error) {
+      refusalObserved = true;
+      refusalCode = error?.code ?? 'unknown';
+    }
+    await new Promise(resolveClose => server.close(resolveClose));
+    await assertNoBoundSockets(cleanRoot);
+    await assertNoBoundSockets('/usr');
+    console.log(JSON.stringify({ probe: 'bound-socket', refusalObserved, refusalCode,
+      cleanPass: true, usrPass: true, namespace: 'host (pre-unshare)' }));
+    if (!refusalObserved) process.exitCode = 1;
+  } finally {
+    if (server.listening) await new Promise(resolveClose => server.close(resolveClose));
+    await rm(probeRoot, { recursive: true, force: true });
+  }
 } else {
   assert.equal(process.env.GITHUB_ACTIONS, 'true', 'GitHub Actions only; no local fallback');
   assert.equal(process.version, 'v24.21.0');
@@ -288,6 +339,16 @@ if (process.argv[2] === '--supervise') {
       join('/usr/bin', name), join('/bin', name)].find(candidate => existsSync(candidate));
     evidence.chrootPath = resolveTool('chroot') ?? null;
     evidence.setprivPath = resolveTool('setpriv') ?? null;
+    // Authoritative /usr bound-socket refusal, in the host PID/network
+    // namespaces, immediately before unshare. A bound socket under /usr
+    // planted after this check would not be seen by the in-namespace
+    // supervisor (empty table); no in-namespace re-check can close that
+    // residual window, so this runs as late as possible with only the
+    // spawn between it and the bind. Failure throws here, pre-spawn.
+    evidence.stage = 'host bound-socket refusal (/usr)';
+    await assertNoBoundSockets('/usr');
+    evidence.boundSocketCheck = { root: '/usr', ok: true, namespace: 'host (pre-unshare)' };
+    evidence.stage = 'rootless filesystem/network/PID namespace setup';
     child = spawn('unshare', ['--user', '--map-current-user', '--keep-caps', '--net', '--mount',
       '--pid', '--fork', '--kill-child=KILL', '--mount-proc', node, script, '--supervise', root,
       String(process.getuid()), evidence.chrootPath ?? '', evidence.setprivPath ?? ''], {

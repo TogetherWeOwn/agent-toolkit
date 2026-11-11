@@ -57,6 +57,14 @@ jobs:
           sysctl kernel.apparmor_restrict_unprivileged_userns || true
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
           sysctl kernel.apparmor_restrict_unprivileged_userns || true
+      - name: Bound-socket refusal probe (host namespace)
+        # Regression probe: plants a live listening socket under a temp
+        # exposed tree and requires the runner's bound-socket check in the
+        # host namespaces to refuse it (clean tree and /usr must pass).
+        run: |
+          set -euo pipefail
+          env -i PATH="$PATH" GITHUB_ACTIONS=true \
+            node test/native-workspace/runner.mjs --bound-socket-probe
       - name: Actual native service in rootless network isolation
         run: |
           set -euo pipefail
