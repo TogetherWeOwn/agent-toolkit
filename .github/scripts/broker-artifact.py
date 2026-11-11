@@ -12,15 +12,38 @@ import tarfile
 MAX_BYTES = 64 * 1024 * 1024
 MAX_FILES = 2048
 
+# Narrow allowlist: only reviewed broker targets may be packaged.
+# Each target maps to its plugin directory, packaging workflow and the
+# compiled entry points that prove the tested build is the packaged one.
+TARGETS = {
+    "github-broker": {
+        "plugin_dir": "plugins/github-broker",
+        "workflow": "package-github-broker.yml",
+        "required": ("client", "worker", "manifest"),
+        "segment": "github-broker",
+    },
+    "discord-broker-dev": {
+        "plugin_dir": "plugins/discord-broker-dev",
+        "workflow": "package-discord-broker-dev.yml",
+        "required": ("broker", "worker", "manifest"),
+        "segment": "discord-broker-dev",
+    },
+}
+
+DEFAULT_TARGET = "github-broker"
+
 
 def digest(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def package_files(package):
+def package_files(package, target=DEFAULT_TARGET):
+    if target not in TARGETS:
+        raise ValueError("unknown broker target")
+    spec = TARGETS[target]
     dist = package / "dist"
-    required = [dist / "plugins/github-broker/src" / f"{name}.js"
-                for name in ("client", "worker", "manifest")]
+    required = [dist / "plugins" / spec["segment"] / "src" / f"{name}.js"
+                for name in spec["required"]]
     if not all(path.is_file() for path in required) or dist.is_symlink():
         raise ValueError("missing compiled broker entry points")
     paths = list(dist.rglob("*"))
@@ -71,7 +94,11 @@ def main():
     archives = list(output.glob("*.tgz"))
     if len(archives) != 1 or not re.fullmatch(r"[a-z0-9.-]+\.tgz", archives[0].name):
         raise ValueError("exactly one safely named archive required")
-    files = package_files(source / "plugins/github-broker")
+    target = os.environ.get("BROKER_TARGET", DEFAULT_TARGET)
+    if target not in TARGETS:
+        raise ValueError("unknown broker target")
+    spec = TARGETS[target]
+    files = package_files(source / spec["plugin_dir"], target)
     verify_archive(archives[0], files)
     lock = source / "package-lock.json"
     sdk = json.loads(lock.read_bytes())["packages"]["node_modules/@paperclipai/plugin-sdk"]
@@ -84,8 +111,9 @@ def main():
     shutil.copyfile(lock, output / "package-lock.json")
     metadata = {
         "sourceSha": source_sha, "sourceTree": git(source, "rev-parse", "HEAD^{tree}"),
+        "brokerTarget": target,
         "recipeSha": recipe_sha, "recipeScriptSha256": digest(Path(__file__).read_bytes()),
-        "workflowSha256": digest((recipe / ".github/workflows/package-github-broker.yml").read_bytes()),
+        "workflowSha256": digest((recipe / ".github/workflows" / spec["workflow"]).read_bytes()),
         "package": archives[0].name, "packageSha256": digest(archives[0].read_bytes()),
         "lockfileSha256": digest(lock.read_bytes()), "sdk": sdk,
         "node": subprocess.check_output(["node", "--version"], text=True).strip(),
