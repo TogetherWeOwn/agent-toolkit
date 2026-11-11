@@ -23,21 +23,19 @@
 # skills/tool-permission files; every new top-level path until classified.
 #
 # Why each non-sensitive entry is safe (see the PR body for the audit):
-# - low: README/LICENSE/CATALOG are descriptive copy with no runtime, policy
-#   or credential effect; static test fixtures and *.test.mjs files are
-#   additive unit tests whose weakening or deletion escalates to sensitive
-#   via the content triggers above. Security-bearing docs (STANDARD,
-#   ADAPTER-CONTRACTS, threat models, CONTRIBUTING) are deliberately NOT
-#   low: they stay unlisted, hence sensitive.
-# - ordinary: packages/work-supply is the only audited module. It is an
-#   inert, offline JSON work-inventory classifier: no network, API,
-#   credential, secret, persistence, permission, or trust-boundary effect;
-#   its CLI reads only a local snapshot file or stdin and prints JSON.
-#   Changes to its input-parsing logic still escalate to sensitive via the
-#   content triggers. Everything else (core policy, GitHub JWT/client,
-#   credential brokers, test harness scripts, supply-chain policies,
-#   skills) stays sensitive: this toolkit holds credential-broker trust
-#   boundaries by design, so there is no other safe ordinary module.
+# - low: README/LICENSE are descriptive copy with no runtime, policy or
+#   credential effect. Security-bearing docs (STANDARD, ADAPTER-CONTRACTS,
+#   CATALOG, threat models, CONTRIBUTING) are deliberately NOT low: they
+#   stay unlisted, hence sensitive. All test files and fixtures are also
+#   sensitive: this repo's test suites are credential-broker and
+#   secret-handling acceptance tests, so judging a weakened assertion is
+#   itself a Security judgment and must not be downgraded.
+# - ordinary: empty. No path in this repository meets the ordinary
+#   criteria (no untrusted input, no sensitive output, no trust-boundary
+#   effect). In particular packages/work-supply parses an untrusted
+#   snapshot and projects a redacted report (see its THREAT-MODEL.md), so
+#   it stays unlisted and sensitive. Only files with an explicit per-file
+#   Security justification may ever be added here.
 version: 1
 default_tier: sensitive # anything not matched below
 
@@ -45,15 +43,8 @@ tiers:
   low:
     - README.md
     - LICENSE
-    - CATALOG.md
-    - test/fixtures/**
-    - test/*.test.mjs
-    - test/**/*.test.mjs
-    - plugins/*/test/*.test.mjs
-    - plugins/*/test/**/*.test.mjs
 
-  ordinary:
-    - packages/work-supply/**
+  ordinary: [] # paths with an explicit per-file Security justification only
 
   sensitive:
     # This map itself and all CI/governance config.
@@ -90,3 +81,6 @@ tiers:
     # secret-scan metadata, and the native-workspace installer probe.
     - scripts/**
     - test/native-workspace/**
+    # Test fixtures and suites: executable probes and credential-broker /
+    # secret-handling acceptance tests; never low.
+    - test/fixtures/**
