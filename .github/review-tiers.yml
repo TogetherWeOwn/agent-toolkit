@@ -1,0 +1,86 @@
+# Risk-tiered review map for this repository.
+#
+# Classification: a PR's tier is the highest tier of any changed file.
+# Overlapping globs resolve to the highest tier (sensitive wins on overlap).
+# Anything not matched below is sensitive by default (`default_tier`), so a
+# new top-level path is sensitive until it is deliberately classified here.
+# Content triggers escalate a PR to sensitive regardless of path: a new or
+# changed public endpoint or input parsing; auth/authz/session logic;
+# crypto/keys; secrets/credentials; permission checks; tenant isolation or
+# personal data; SQL/schema/migrations; dependency or lockfile changes;
+# CI/workflow changes; weakened test assertions, deleted tests/snapshots, or
+# lowered gates in test files.
+#
+# Review per tier: low -> QA; ordinary -> QA; sensitive/unclassified ->
+# Security -> QA. QA verifies the author's `risk_tier` attestation and may
+# escalate any PR. This file itself is always sensitive.
+#
+# Sensitive floor (never downgrade): CI/workflows and this file; CODEOWNERS;
+# dependency manifests and lockfiles (incl. dev deps) and install/build
+# configuration; auth/session/crypto/secrets, public endpoints/input parsing,
+# tenant isolation, personal data, DB schema/migrations; runtime/network/IAM
+# config, infra and deploy/release paths; AGENTS.md, .claude/** and
+# skills/tool-permission files; every new top-level path until classified.
+#
+# Why each non-sensitive entry is safe (see the PR body for the audit):
+# - low: README/LICENSE are descriptive copy with no runtime, policy or
+#   credential effect. Security-bearing docs (STANDARD, ADAPTER-CONTRACTS,
+#   CATALOG, threat models, CONTRIBUTING) are deliberately NOT low: they
+#   stay unlisted, hence sensitive. All test files and fixtures are also
+#   sensitive: this repo's test suites are credential-broker and
+#   secret-handling acceptance tests, so judging a weakened assertion is
+#   itself a Security judgment and must not be downgraded.
+# - ordinary: empty. No path in this repository meets the ordinary
+#   criteria (no untrusted input, no sensitive output, no trust-boundary
+#   effect). In particular packages/work-supply parses an untrusted
+#   snapshot and projects a redacted report (see its THREAT-MODEL.md), so
+#   it stays unlisted and sensitive. Only files with an explicit per-file
+#   Security justification may ever be added here.
+version: 1
+default_tier: sensitive # anything not matched below
+
+tiers:
+  low:
+    - README.md
+    - LICENSE
+
+  ordinary: [] # paths with an explicit per-file Security justification only
+
+  sensitive:
+    # This map itself and all CI/governance config.
+    - .github/review-tiers.yml
+    - .github/workflows/**
+    - .github/scripts/**
+    - .github/dependabot.yml
+    - CODEOWNERS
+    - .gitleaksignore
+    # Dependency manifests, lockfiles and install/build configuration.
+    - package.json
+    - package-lock.json
+    - .npmrc
+    - "**/package.json"
+    - "**/package-lock.json"
+    - tsconfig.json
+    - "**/tsconfig*.json"
+    # Agent and tool-permission files.
+    - AGENTS.md
+    - .claude/**
+    - skills/**
+    # Supply-chain install policy templates.
+    - policies/**
+    # Core policy: closed schemas, binding/lease/cap checks, dispatch,
+    # audit boundary, provider contracts, fake secrets/transport/SQLite.
+    - packages/core/**
+    # GitHub App JWT signing and fixed-origin REST client (network/auth).
+    - packages/github/**
+    # Credential-broker plugins: worker, policy, client, tools, DB metadata.
+    - plugins/github-broker/**
+    - plugins/neon-broker/**
+    - plugins/_template/**
+    # Test-harness tooling: module resolver hook, covering-test runner,
+    # secret-scan metadata, and the native-workspace installer probe.
+    - scripts/**
+    - test/native-workspace/**
+    # Test fixtures and suites: executable probes and credential-broker /
+    # secret-handling acceptance tests; never low.
+    - test/fixtures/**
