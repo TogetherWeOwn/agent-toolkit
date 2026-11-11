@@ -57,10 +57,11 @@ export class Broker {
     let phase: Audit["phase"] = "refused", reserved = false, installationKey: string | null = null;
     const requestIds: string[] = [];
     let providerFailure: Audit["providerFailure"], revocation: Audit["revocation"];
+    let dispatchCoords: NonNullable<Audit["dispatch"]> | null = null;
     const emit = async (decision: Audit["decision"], rule: string, outcome: Audit["outcome"]) => {
       try {
         await host.audit({ event, time: host.clock(), agentId: caller?.agentId ?? null, runId: caller?.runId ?? null, companyId: caller?.companyId ?? null,
-          policyHash: policyDigest, policyRevision: revision, repoId: args?.repoId ?? null, operation, phase, decision, rule, requestIds: [...requestIds], outcome, ...(providerFailure ? { providerFailure } : {}), ...(revocation ? { revocation } : {}) });
+          policyHash: policyDigest, policyRevision: revision, repoId: args?.repoId ?? null, operation, phase, decision, rule, requestIds: [...requestIds], outcome, ...(dispatchCoords ? { dispatch: { workflow: dispatchCoords.workflow, ref: dispatchCoords.ref, inputs: { ...dispatchCoords.inputs } } } : {}), ...(providerFailure ? { providerFailure } : {}), ...(revocation ? { revocation } : {}) });
       } catch { throw new Denied("audit.unavailable"); }
     };
     try {
@@ -68,6 +69,10 @@ export class Broker {
       if (typeof name === "string" && operations.includes(name as Operation)) operation = name as Operation;
       args = dispatch(schemas, name, input).args;
       const tool = registry.get(operation as Operation)!;
+      // Sole-write dispatch coordinates (validated, non-secret inputs by construction) so the audit identifies the write.
+      if (operation === "github.workflow_dispatch_allowlisted" && typeof args.workflow === "string" && typeof args.ref === "string" && args.inputs !== null && typeof args.inputs === "object" && !Array.isArray(args.inputs)) {
+        dispatchCoords = { workflow: args.workflow, ref: args.ref, inputs: { ...(args.inputs as Record<string, string>) } };
+      }
       const config = parseConfig(await host.config());
       policyDigest = policyHash(config); revision = config.policy.revision;
       const repo = await authorize(host, config.policy, caller, tool, args);

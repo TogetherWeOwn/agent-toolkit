@@ -73,6 +73,7 @@ export async function authorize(host: Host, policy: Policy, caller: Caller, tool
   const repo = policy.repositories.find(r => r.id === args.repoId);
   guard(repo && repo.projectId === caller.projectId && repo.workspaceId === args.workspaceId, "policy.workspace");
   guard(!tool.repoAllowlist || tool.repoAllowlist.has(`${repo.owner}/${repo.name}`), "policy.repository_allowlist");
+  guard(!tool.repoWorkflows || (tool.repoWorkflows.get(`${repo.owner}/${repo.name}`)?.has(String(args.workflow)) ?? false), "policy.repository_workflow_allowlist");
   const issue = await host.issue(args.issueId);
   guard(issue && issue.companyId === caller.companyId && issue.projectId === caller.projectId, "identity.issue_project");
   guard(issue.assigneeAgentId === caller.agentId, "identity.issue_assignee");

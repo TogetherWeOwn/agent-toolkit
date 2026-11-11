@@ -28,6 +28,8 @@ export interface Tool {
   identityLane: IdentityLane;
   /** Exact `owner/name` repositories this tool may act on, in addition to board policy scope. */
   repoAllowlist?: ReadonlySet<string>;
+  /** Optional per-repository workflow allowlist (`owner/name` -> workflow filenames), enforced for the dispatch write. */
+  repoWorkflows?: ReadonlyMap<string, ReadonlySet<string>>;
   /** True for the single non-idempotent write. Write tools are never cached. */
   write?: boolean;
   description: string;
@@ -43,6 +45,8 @@ export interface Audit {
   policyHash: string; policyRevision: number | null; repoId: number | null; operation: Operation | "unknown";
   phase: "intent" | "outcome" | "refused"; decision: "allow" | "deny"; rule: string;
   requestIds: string[]; outcome: "pending" | "success" | "error";
+  /** Non-secret validated dispatch coordinates for the sole write (workflow, ref, validated inputs). Omitted for all other tools. */
+  dispatch?: { workflow: string; ref: string; inputs: Record<string, string> };
   providerFailure?: { rule: "rate.github"; retryAfterSeconds: number };
   revocation?: import("../../../packages/github/src/index.js").RevocationEvidence;
 }

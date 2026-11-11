@@ -715,9 +715,19 @@ function dispatchFixture() {
   return f;
 }
 const planHash = 'a'.repeat(64);
+const sourceSha = 'b'.repeat(40);
+const baseMigrateInputs = {
+  mode: 'plan', source_sha: sourceSha, staging_host: 'staging.example.db', staging_database: 'two_bot_staging',
+  staging_branch_id: '', recovery_evidence_ref: 'TWO-1234', acl_plan_ref: 'TWO-5678',
+  expected_pending: '472', expected_store_pending: '', plan_manifest_sha256: '', store_plan_manifest_sha256: '', plan_run_id: '',
+};
+const applyMigrateInputs = {
+  ...baseMigrateInputs, mode: 'apply',
+  plan_manifest_sha256: planHash, store_plan_manifest_sha256: 'c'.repeat(64), plan_run_id: '1234567890',
+};
 for (const [label, args, workflow] of [
-  ['plan', { workflow: 'staging-migrate.yml', ref: 'main', inputs: { mode: 'plan' } }, 'staging-migrate.yml'],
-  ['apply', { workflow: 'staging-migrate.yml', ref: 'main', inputs: { mode: 'apply', plan_hash: planHash } }, 'staging-migrate.yml'],
+  ['plan', { workflow: 'staging-migrate.yml', ref: 'main', inputs: baseMigrateInputs }, 'staging-migrate.yml'],
+  ['apply', { workflow: 'staging-migrate.yml', ref: 'main', inputs: applyMigrateInputs }, 'staging-migrate.yml'],
   ['deploy', { workflow: 'deploy-staging.yml', ref: 'main', inputs: {} }, 'deploy-staging.yml'],
   ['rollback drill', { workflow: 'staging-rollback-drill.yml', ref: 'main', inputs: {} }, 'staging-rollback-drill.yml'],
 ]) test(`github.workflow_dispatch_allowlisted ${label}: scoped actions:write mint, POST 204 dispatch, revoke and audit`, async () => {
@@ -728,7 +738,11 @@ for (const [label, args, workflow] of [
   assert.deepEqual(result.data.pages[0], { workflow, ref: 'main', inputs: args.inputs, dispatched: true });
   assert.equal(f.calls.length, 4); assert.equal(f.calls[2].method, 'POST');
   assert.equal(f.secretCalls, 1); assert.equal(f.events.length, 2); assert.equal(f.events[1].outcome, 'success');
-  assert.equal(f.events[0].operation, 'github.workflow_dispatch_allowlisted'); f.hygiene(result); f.done();
+  assert.equal(f.events[0].operation, 'github.workflow_dispatch_allowlisted');
+  // Audit identifies the write: validated dispatch coordinates on intent + outcome.
+  assert.deepEqual(f.events[0].dispatch, { workflow, ref: 'main', inputs: args.inputs });
+  assert.deepEqual(f.events[1].dispatch, { workflow, ref: 'main', inputs: args.inputs });
+  f.hygiene(result); f.done();
 });
 
 test('workflow dispatch is never cached and identical dispatches mint again', async () => {
@@ -759,19 +773,66 @@ test('workflow dispatch refuses production workflows, other refs and malformed i
   for (const args of [
     { workflow: 'deploy.yml', ref: 'main', inputs: {} },
     { workflow: 'release.yml', ref: 'main', inputs: {} },
-    { workflow: 'staging-migrate.yaml', ref: 'main', inputs: { mode: 'plan' } },
+    { workflow: 'staging-migrate.yaml', ref: 'main', inputs: baseMigrateInputs },
     { workflow: 'deploy-staging.yml', ref: 'production', inputs: {} },
     { workflow: 'deploy-staging.yml', ref: 'topic', inputs: {} },
-    { workflow: 'staging-migrate.yml', ref: 'main', inputs: { mode: 'apply' } },
-    { workflow: 'staging-migrate.yml', ref: 'main', inputs: { mode: 'plan', plan_hash: planHash } },
-    { workflow: 'staging-migrate.yml', ref: 'main', inputs: { mode: 'apply', plan_hash: 'not-hex' } },
-    { workflow: 'staging-migrate.yml', ref: 'main', inputs: { mode: 'delete' } },
     { workflow: 'deploy-staging.yml', ref: 'main', inputs: { mode: 'plan' } },
     { workflow: 'staging-rollback-drill.yml', ref: 'main', inputs: { confirm: 'yes' } },
     { workflow: 'deploy-staging.yml', ref: 'main', inputs: { token } },
   ]) {
     const f = dispatchFixture(); refused(f, await f.call('github.workflow_dispatch_allowlisted', { ...base, ...args }), 'validation.schema');
   }
+});
+
+test('workflow dispatch refuses staging-migrate inputs that do not match the live workflow before secrets', async () => {
+  for (const inputs of [
+    { mode: 'plan', plan_hash: planHash }, // legacy undeclared input
+    { ...baseMigrateInputs, plan_manifest_sha256: planHash }, // plan carrying manifest binding
+    { ...baseMigrateInputs, plan_run_id: '42' }, // plan carrying plan run binding
+    { ...baseMigrateInputs, source_sha: 'not-a-sha' },
+    { ...baseMigrateInputs, staging_host: 'https://staging.example.com:5432/db' }, // free-form URL
+    { ...baseMigrateInputs, staging_host: 'staging-pooler.example.com' }, // pooler refused
+    { ...baseMigrateInputs, staging_database: 'two-bot-staging; DROP' },
+    { ...baseMigrateInputs, acl_plan_ref: 'https://example.com/ref' }, // URL refused
+    { ...baseMigrateInputs, acl_plan_ref: 'user@example' }, // @ refused
+    { ...baseMigrateInputs, recovery_evidence_ref: 'two words' }, // whitespace refused
+    { ...baseMigrateInputs, expected_pending: '472,100' }, // not ascending
+    { ...baseMigrateInputs, expected_pending: '472,472' }, // duplicate
+    { ...baseMigrateInputs, expected_pending: 'abc' },
+    { ...applyMigrateInputs, plan_manifest_sha256: '' }, // apply without manifest binding
+    { ...applyMigrateInputs, store_plan_manifest_sha256: '' }, // apply without store binding
+    { ...applyMigrateInputs, plan_run_id: '' }, // apply without plan run binding
+    { ...applyMigrateInputs, plan_run_id: 'not-numeric' },
+    { ...applyMigrateInputs, mode: 'delete' },
+    { ...applyMigrateInputs, plan_hash: planHash }, // unknown extra key
+  ]) {
+    const f = dispatchFixture(); refused(f, await f.call('github.workflow_dispatch_allowlisted', { ...base, workflow: 'staging-migrate.yml', ref: 'main', inputs }), 'validation.schema');
+  }
+  // Missing source_sha: omit the key entirely.
+  const { source_sha: _omitted, ...missing } = baseMigrateInputs;
+  const f = dispatchFixture(); refused(f, await f.call('github.workflow_dispatch_allowlisted', { ...base, workflow: 'staging-migrate.yml', ref: 'main', inputs: missing }), 'validation.schema');
+});
+
+test('workflow dispatch binds workflows per repository', async () => {
+  const webFixture = () => {
+    const f = fixture();
+    f.config.policy.agents[0].profile = 'devops';
+    f.config.policy.repositories[0].owner = 'TogetherWeOwn';
+    f.config.policy.repositories[0].name = 'two-web-next';
+    f.workspace.repoUrl = 'https://github.com/TogetherWeOwn/two-web-next';
+    return f;
+  };
+  // Live two-web-next has staging-rollback-drill.yml only.
+  for (const workflow of ['staging-migrate.yml', 'deploy-staging.yml']) {
+    const inputs = workflow === 'staging-migrate.yml' ? applyMigrateInputs : {};
+    const f = webFixture();
+    refused(f, await f.call('github.workflow_dispatch_allowlisted', { ...base, workflow, ref: 'main', inputs }), 'policy.repository_workflow_allowlist');
+  }
+  const g = webFixture(); g.mint({ actions: 'write' }); g.identity();
+  g.dispatch('staging-rollback-drill.yml', { inspect: req => assert.deepEqual(JSON.parse(req.body), { ref: 'main', inputs: {} }) }); g.revoke();
+  const ok = await g.call('github.workflow_dispatch_allowlisted', { ...base, workflow: 'staging-rollback-drill.yml', ref: 'main', inputs: {} });
+  assert.equal(ok.error, undefined); assert.deepEqual(g.events[0].dispatch, { workflow: 'staging-rollback-drill.yml', ref: 'main', inputs: {} });
+  g.hygiene(ok); g.done();
 });
 
 test('workflow dispatch non-204 upstream failures and mint scope guards fail closed', async () => {
