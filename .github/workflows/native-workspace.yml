@@ -31,7 +31,7 @@ jobs:
           report.mkdir(mode=0o700)
           (report / 'setup.json').write_text(json.dumps({'event': 'setup started', 'note': 'This is not fixture execution or acceptance evidence; inspect runner report and job conclusion.'}) + '\n')
           PY
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: '24.21.0'
       - name: Locked tokenless setup without lifecycle scripts
