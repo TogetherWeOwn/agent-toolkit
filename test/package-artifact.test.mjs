@@ -360,14 +360,16 @@ test("discord broker packaging mirrors the dispatch-only pinned recipe with disc
   for (const action of discordWorkflow.matchAll(/uses: (actions\/[^\s]+)/g)) {
     assert.match(action[1], /@[0-9a-f]{40}$/);
   }
-  const approved = "1ef428d5948fe50c6df08525e787b08dcce4da38";
+  const approved = "4af09093d16e6ec5ec38c9f96fc30ecf7e39fbc3";
+  const rejected = "1ef428d5948fe50c6df08525e787b08dcce4da38";
+  assert.ok(!discordWorkflow.includes(rejected));
   assert.match(discordWorkflow, new RegExp(`default: ${approved}`));
   assert.match(discordWorkflow, new RegExp(`options:\\n          - ${approved}\\n`));
   assert.match(discordWorkflow, new RegExp(`ref: ${approved}`));
   assert.doesNotMatch(discordWorkflow, /ref: \$\{\{ inputs\.source_sha \}\}/);
   assert.ok(!discordWorkflow.includes("github-broker"));
   const guard = discordWorkflow.match(/run: \|\n([\s\S]*?)      - name: Check out packaging recipe/)[1];
-  for (const value of [approved, "9d99117038d4a2d90f9453e0d04e97d6070c652d", "a".repeat(40), "main", "a".repeat(39), "A".repeat(40), "$(exit 0)", approved + "\n"]) {
+  for (const value of [approved, rejected, "9d99117038d4a2d90f9453e0d04e97d6070c652d", "a".repeat(40), "main", "a".repeat(39), "A".repeat(40), "$(exit 0)", approved + "\n"]) {
     const result = spawnSync("bash", ["-c", guard], {
       env: { PATH: process.env.PATH, SOURCE_SHA: value }, timeout: 5000,
     });
