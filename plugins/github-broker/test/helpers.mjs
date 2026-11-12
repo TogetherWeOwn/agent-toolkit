@@ -49,8 +49,12 @@ export function fixture(options = {}) {
       assert.ok(verify('RSA-SHA256', Buffer.from(`${h}.${p}`), createPublicKey(key), Buffer.from(s, 'base64url')));
     },
   });
-  f.identity = (id = 101) => f.steps.push({ method: 'GET', path: '/repos/synthetic-org/sandbox', body: { id }, inspect: req => assert.equal(req.headers.Authorization, `Bearer ${token}`) });
-  f.read = (path, body, overrides = {}) => f.steps.push({ method: 'GET', path: '/repos/synthetic-org/sandbox' + path, body, ...overrides,
+  f.prefix = () => `/repos/${f.config.policy.repositories[0].owner}/${f.config.policy.repositories[0].name}`;
+  f.identity = (id = 101) => f.steps.push({ method: 'GET', path: f.prefix(), body: { id }, inspect: req => assert.equal(req.headers.Authorization, `Bearer ${token}`) });
+  f.read = (path, body, overrides = {}) => f.steps.push({ method: 'GET', path: f.prefix() + path, body, ...overrides,
+    inspect(req) { assert.equal(req.headers.Authorization, `Bearer ${token}`); overrides.inspect?.(req); },
+  });
+  f.dispatch = (workflow, overrides = {}) => f.steps.push({ method: 'POST', path: `${f.prefix()}/actions/workflows/${workflow}/dispatches`, status: 204, body: undefined, ...overrides,
     inspect(req) { assert.equal(req.headers.Authorization, `Bearer ${token}`); overrides.inspect?.(req); },
   });
   f.revoke = (overrides = {}) => f.steps.push({ method: 'DELETE', path: '/installation/token', status: 204, inspect: req => assert.equal(req.headers.Authorization, `Bearer ${token}`), ...overrides });

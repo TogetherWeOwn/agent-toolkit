@@ -5,7 +5,7 @@ import { closed, integer, oneOf } from "../../core/src/index.js";
 
 export const API_ORIGIN = "https://api.github.com";
 export const API_VERSION = "2022-11-28";
-export type Permissions = Partial<Record<"contents" | "pull_requests" | "checks" | "statuses" | "actions" | "metadata" | "issues", "read">>;
+export type Permissions = Partial<Record<"contents" | "pull_requests" | "checks" | "statuses" | "actions" | "metadata" | "issues", "read" | "write">>;
 export interface Request { url: string; method: "GET" | "POST" | "DELETE"; headers: Record<string, string>; body?: string }
 export interface Response { status: number; headers: Record<string, string>; body: string; receivedAt?: number }
 // Deadline and dispatch marker are worker-local, never serialized to the SDK.
@@ -44,7 +44,9 @@ export function mintScope(value: unknown): { repository_ids: number[]; permissio
   check(v.permissions && typeof v.permissions === "object" && !Array.isArray(v.permissions), "mint.permissions_required");
   const keys = Object.keys(v.permissions);
   check(keys.length > 0 && keys.every(k => permissionNames.includes(k as typeof permissionNames[number])), "mint.permissions_required");
-  const shape = Object.fromEntries(keys.map(k => [k, oneOf(["read"])]));
+  // The sole write this broker allows is actions:write for the single allowlisted
+  // staging-dispatch tool. Every other permission, and actions for reads, stays read.
+  const shape = Object.fromEntries(keys.map(k => [k, oneOf(k === "actions" ? ["read", "write"] : ["read"])]));
   const permissions = closed(shape).parse(v.permissions) as Permissions;
   return { repository_ids, permissions };
 }
@@ -208,7 +210,7 @@ export async function withInstallationToken<T>(options: {
     check(Array.isArray(body.repositories) && body.repositories.length === 1 && body.repositories[0]?.id === scope.repository_ids[0], "mint.returned_repositories");
     check(body.permissions && typeof body.permissions === "object" && !Array.isArray(body.permissions), "mint.returned_permissions");
     const permissions = body.permissions as Record<string, unknown>;
-    check(Object.entries(permissions).every(([k, v]) => v === "read" && (k === "metadata" || Object.hasOwn(scope.permissions, k))) && Object.keys(scope.permissions).every(k => permissions[k] === "read"), "mint.returned_permissions");
+    check(Object.entries(permissions).every(([k, v]) => (v === "read" || (k === "actions" && v === "write")) && (k === "metadata" || Object.hasOwn(scope.permissions, k))) && Object.keys(scope.permissions).every(k => permissions[k] === (scope.permissions as Record<string, unknown>)[k]), "mint.returned_permissions");
     return await use(token, [options.privateKey, jwt, token]);
   } finally {
     try {

@@ -1,11 +1,11 @@
 import type { Schema } from "../../../packages/core/src/index.js";
 
-export const operations = ["github.repo_read", "github.pr_list", "github.pr_get", "github.pr_files", "github.checks_get", "github.rulesets_get", "github.actions_runs_list", "github.issue_read"] as const;
+export const operations = ["github.repo_read", "github.pr_list", "github.pr_get", "github.pr_files", "github.checks_get", "github.rulesets_get", "github.actions_runs_list", "github.issue_read", "github.workflow_dispatch_allowlisted"] as const;
 export type Operation = typeof operations[number];
 export type IdentityLane = "app" | "owner";
-export type Profile = "builder" | "lead" | "reviewer-read" | "release" | "coordinator-read" | "none";
+export type Profile = "builder" | "lead" | "reviewer-read" | "release" | "coordinator-read" | "devops" | "none";
 export type Permission = "contents" | "pull_requests" | "checks" | "statuses" | "actions" | "metadata" | "issues";
-export type Permissions = Partial<Record<Permission, "read">>;
+export type Permissions = Partial<Record<Permission, "read" | "write">>;
 export interface Caller { agentId: string; runId: string; companyId: string; projectId: string }
 export interface Repository { id: number; owner: string; name: string; projectId: string; workspaceId: string }
 export interface Policy {
@@ -18,10 +18,20 @@ export interface Policy {
 export interface SecretRef { type: "secret_ref"; secretId: string }
 export interface Config { appId: number; installationId: number; privateKeySecretRef: SecretRef; policy: Policy }
 export interface Arguments { issueId: string; workspaceId: string; repoId: number; [key: string]: unknown }
-export interface Request { path: string; permission: Permission }
+export interface Request {
+  path: string; permission: Permission;
+  /** Defaults: GET read expecting 200. The sole write uses POST actions:write expecting 204. */
+  level?: "read" | "write"; method?: "GET" | "POST"; body?: string; expectedStatus?: number;
+}
 export interface Tool {
   name: Operation;
   identityLane: IdentityLane;
+  /** Exact `owner/name` repositories this tool may act on, in addition to board policy scope. */
+  repoAllowlist?: ReadonlySet<string>;
+  /** Optional per-repository workflow allowlist (`owner/name` -> workflow filenames), enforced for the dispatch write. */
+  repoWorkflows?: ReadonlyMap<string, ReadonlySet<string>>;
+  /** True for the single non-idempotent write. Write tools are never cached. */
+  write?: boolean;
   description: string;
   inputSchema: Record<string, unknown>;
   schema: Schema<Arguments>;
@@ -35,6 +45,8 @@ export interface Audit {
   policyHash: string; policyRevision: number | null; repoId: number | null; operation: Operation | "unknown";
   phase: "intent" | "outcome" | "refused"; decision: "allow" | "deny"; rule: string;
   requestIds: string[]; outcome: "pending" | "success" | "error";
+  /** Non-secret validated dispatch coordinates for the sole write (workflow, ref, validated inputs). Omitted for all other tools. */
+  dispatch?: { workflow: string; ref: string; inputs: Record<string, string> };
   providerFailure?: { rule: "rate.github"; retryAfterSeconds: number };
   revocation?: import("../../../packages/github/src/index.js").RevocationEvidence;
 }
