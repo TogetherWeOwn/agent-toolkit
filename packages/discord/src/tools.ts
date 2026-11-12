@@ -4,7 +4,7 @@ import { closed, hash, integer, text, type Schema } from "../../core/src/index.j
 import {
   DiscordFailure, header, parse, request, retryAfter, scrub, snowflake, snowflakeJson, snowflakeValue,
   projectGuild, projectChannel, projectMessage, projectMessageMeta, projectSearchMeta, projectMember, projectRole, projectEvent,
-  messageContent, searchQuery, emojiToken, limit, limitJson, limit10, limit10Json, searchLimit, searchLimitJson, object, list,
+  messageContent, searchQuery, emojiToken, limit, limitJson, limit10, limit10Json, searchLimit, searchLimitJson, object, list, pick,
   type Transport, type Response,
 } from "./index.js";
 
@@ -74,7 +74,7 @@ export const readTools: Tool[] = [
   define("discord.message_get", "read", "Read one message in an allowlisted channel.", { channelId: snow, messageId: snow }, { channelId: snowflakeJson, messageId: snowflakeJson }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/messages/${enc(a.messageId as string)}` }), b => projectMessage(b), "read"),
   define("discord.messages_search", "read", "Search messages in an allowlisted guild channel. Bounded query, no raw member corpus retention.", { query: searchQuery(512), channelId: snow, limit: searchLimit }, { query: { type: "string", maxLength: 512 }, channelId: snowflakeJson, limit: searchLimitJson }, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/messages/search?content=${enc(a.query as string)}&channel_id=${enc(a.channelId as string)}&limit=${a.limit}` }), b => { const v = object(b); const msgs = v.total_results !== undefined && Array.isArray(v.messages) ? v.messages : v; return list(Array.isArray(msgs) ? msgs : [], 100).map(m => Array.isArray(m) ? (m[0] ? projectMessage(m[0]) : null) : projectMessage(m)); }, "read"),
   define("discord.pins_list", "read", "List pinned messages in an allowlisted channel.", { channelId: snow }, { channelId: snowflakeJson }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/pins` }), b => list(b, 50).map(projectMessage), "read"),
-  define("discord.reactions_list", "read", "List reactions on a message.", { channelId: snow, messageId: snow, emoji: emojiToken(64) }, { channelId: snowflakeJson, messageId: snowflakeJson, emoji: { type: "string", maxLength: 64 } }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/messages/${enc(a.messageId as string)}/reactions/${enc(a.emoji as string)}` }), b => list(b, 100).map(m => pick(m, ["id", "count", "me"])), "read"),
+  define("discord.reactions_list", "read", "List reactions on a message.", { channelId: snow, messageId: snow, emoji: emojiToken(64) }, { channelId: snowflakeJson, messageId: snowflakeJson, emoji: { type: "string", maxLength: 64 } }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/messages/${enc(a.messageId as string)}/reactions/${enc(a.emoji as string)}` }), b => list(b, 100).map(projectReaction), "read"),
   define("discord.threads_active_list", "read", "List active threads in the bound guild.", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/threads/active` }), b => { const t = object(b).threads; return list(t, 500).map(projectChannel); }, undefined, "thread"),
   define("discord.events_list", "read", "List scheduled events in allowlisted channels of the bound guild.", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/scheduled-events` }), b => list(b, 100).map(projectEvent), undefined, "event"),
   define("discord.event_get", "read", "Read one scheduled event.", { eventId: snow }, { eventId: snowflakeJson }, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/scheduled-events/${enc(a.eventId as string)}` }), b => projectEvent(b)),
@@ -93,7 +93,7 @@ export const readToolsMeta: Tool[] = [
   define("discord.message_get", "read", "Read one message's metadata in an allowlisted channel. Body is not returned.", { channelId: snow, messageId: snow }, { channelId: snowflakeJson, messageId: snowflakeJson }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/messages/${enc(a.messageId as string)}` }), (b, _a, g) => projectMessageMeta(b, g), "read"),
   define("discord.messages_search", "read", "Search messages in an allowlisted guild channel. Returns total_results plus message metadata links only; no message bodies.", { query: searchQuery(512), channelId: snow, limit: searchLimit }, { query: { type: "string", maxLength: 512 }, channelId: snowflakeJson, limit: searchLimitJson }, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/messages/search?content=${enc(a.query as string)}&channel_id=${enc(a.channelId as string)}&limit=${a.limit}` }), (b, _a, g) => projectSearchMeta(b, g), "read"),
   define("discord.pins_list", "read", "List pinned message metadata in an allowlisted channel. Bodies are not returned.", { channelId: snow }, { channelId: snowflakeJson }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/pins` }), (b, _a, g) => list(b, 50).map(m => projectMessageMeta(m, g)), "read"),
-  define("discord.reactions_list", "read", "List reactions on a message.", { channelId: snow, messageId: snow, emoji: emojiToken(64) }, { channelId: snowflakeJson, messageId: snowflakeJson, emoji: { type: "string", maxLength: 64 } }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/messages/${enc(a.messageId as string)}/reactions/${enc(a.emoji as string)}` }), b => list(b, 100).map(m => pick(m, ["id", "count", "me"])), "read"),
+  define("discord.reactions_list", "read", "List reactions on a message.", { channelId: snow, messageId: snow, emoji: emojiToken(64) }, { channelId: snowflakeJson, messageId: snowflakeJson, emoji: { type: "string", maxLength: 64 } }, (a) => ({ method: "GET", path: `/api/v10/channels/${enc(a.channelId as string)}/messages/${enc(a.messageId as string)}/reactions/${enc(a.emoji as string)}` }), b => list(b, 100).map(projectReaction), "read"),
   define("discord.threads_active_list", "read", "List active threads in the bound guild.", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/threads/active` }), b => { const t = object(b).threads; return list(t, 500).map(projectChannel); }, undefined, "thread"),
   define("discord.events_list", "read", "List scheduled events in allowlisted channels of the bound guild.", {}, {}, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/scheduled-events` }), b => list(b, 100).map(projectEvent), undefined, "event"),
   define("discord.event_get", "read", "Read one scheduled event.", { eventId: snow }, { eventId: snowflakeJson }, (a, g) => ({ method: "GET", path: `/api/v10/guilds/${g}/scheduled-events/${enc(a.eventId as string)}` }), b => projectEvent(b)),
@@ -134,10 +134,11 @@ function observeResponse(res: Response, out: string[]): void {
   const id = header(res, "x-request-id") ?? header(res, "x-discord-request-id");
   if (id && /^[A-Za-z0-9-]{6,64}$/.test(id)) out.push(id);
 }
-function pick(m: unknown, fields: string[]): Record<string, unknown> {
-  const o = object(m) as Record<string, unknown>;
-  const out: Record<string, unknown> = {};
-  for (const f of fields) if (o[f] !== undefined) out[f] = o[f];
+function projectReaction(value: unknown): Record<string, unknown> {
+  const out = pick(value, ["id", "count", "me"]);
+  if (typeof out.id !== "string" || !/^[0-9]{17,20}$/.test(out.id) ||
+      (out.count !== undefined && (typeof out.count !== "number" || !Number.isSafeInteger(out.count) || out.count < 0)) ||
+      (out.me !== undefined && typeof out.me !== "boolean")) throw new DiscordFailure("upstream.field");
   return out;
 }
 
