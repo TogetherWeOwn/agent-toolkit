@@ -13,7 +13,9 @@ import { rulesetsGet } from "./tools/rulesets-get.js";
 import { actionsRunsList } from "./tools/actions-runs-list.js";
 import { issueRead } from "./tools/issue-read.js";
 
-export const tools = [repoRead, prList, prGet, prFiles, checksGet, rulesetsGet, actionsRunsList, issueRead];
+import { prCreate, prComment, issueComment, commitFiles } from "./tools/writes.js";
+
+export const tools = [repoRead, prList, prGet, prFiles, checksGet, rulesetsGet, actionsRunsList, issueRead, prCreate, prComment, issueComment, commitFiles];
 const registry = new Map(tools.map(t => [t.name, t]));
 const schemas = new Map(tools.map(t => [t.name, t.schema]));
 interface Cache { value: unknown; at: number; generation: number }
@@ -26,6 +28,8 @@ export class Broker {
   private installations = new Map<string, Bucket>();
   private inFlight = 0;
   private generation = 0;
+  private cacheEpoch = 0;
+  private writing = new Map<string, "active" | "quarantined">();
 
   private pause(key: string, seconds: number, now: number): number {
     const b = this.installations.get(key);
@@ -48,7 +52,8 @@ export class Broker {
   }
 
   async execute(host: Host, name: unknown, input: unknown, context: unknown): Promise<Result> {
-    const event = randomUUID(), generation = ++this.generation;
+    const event = randomUUID(), generation = ++this.generation, cacheEpoch = this.cacheEpoch;
+    let writeAttempted = false, writeSucceeded = false, writeKey: string | null = null;
     let keys: string[] = [];
     const updates = new Map<string, Cache>();
     let caller: Caller | null = null, args: Arguments | null = null;
@@ -59,7 +64,7 @@ export class Broker {
     const emit = async (decision: Audit["decision"], rule: string, outcome: Audit["outcome"]) => {
       try {
         await host.audit({ event, time: host.clock(), agentId: caller?.agentId ?? null, runId: caller?.runId ?? null, companyId: caller?.companyId ?? null,
-          policyHash: policyDigest, policyRevision: revision, repoId: args?.repoId ?? null, operation, phase, decision, rule, requestIds: [...requestIds], outcome, ...(providerFailure ? { providerFailure } : {}), ...(revocation ? { revocation } : {}) });
+          policyHash: policyDigest, policyRevision: revision, repoId: args?.repoId ?? null, operation, phase, decision, rule, requestIds: [...requestIds], outcome, ...(providerFailure ? { providerFailure } : {}), ...(revocation ? { revocation } : {}), ...(writeAttempted ? { writeAttempted: true } : {}) });
       } catch { throw new Denied("audit.unavailable"); }
     };
     try {
@@ -71,6 +76,14 @@ export class Broker {
       policyDigest = policyHash(config); revision = config.policy.revision;
       const repo = await authorize(host, config.policy, caller, tool, args);
       const requests = tool.requests(args); // Path validation precedes secrets and outbound calls.
+      guard(!tool.write || config.appId === 5646907, "identity.write_app");
+      if (tool.write) {
+        const key = `${repo.id}:${args.branch ?? args.head ?? `${operation}:${args.number}`}`;
+        guard(this.writing.get(key) !== "quarantined", "write.quarantined");
+        guard(!this.writing.has(key), "write.concurrent");
+        guard(this.writing.size < 128, "write.capacity");
+        this.writing.set(key, "active"); writeKey = key;
+      }
       const agentKey = `${caller.companyId}:${caller.agentId}`;
       const budgetKey = `${config.appId}:${config.installationId}`;
       installationKey = budgetKey;
@@ -89,12 +102,12 @@ export class Broker {
       for (const [k, v] of this.cache) if (host.clock() - v.at >= 60000) this.cache.delete(k);
       const cached = keys.map(k => this.cache.get(k));
       let values: unknown[];
-      if (cached.every(c => c && host.clock() - c.at < 10000)) {
+      if (!tool.write && this.writing.size === 0 && cached.every(c => c && host.clock() - c.at < 10000)) {
         await revalidate();
         values = cached.map(c => c!.value);
       } else {
-        // Worst case: mint + immutable repo-ID read + N reads + revoke + two probes.
-        this.reserve(this.installations, budgetKey, requests.length + 5, 4000, 3600000, host.clock());
+        // Worst case: mint + repository-ID read + tool requests + revoke + two probes.
+        this.reserve(this.installations, budgetKey, (tool.write?.maxRequests(args) ?? requests.length) + 5, 4000, 3600000, host.clock());
         await revalidate();
         let privateKey: string;
         try { privateKey = await host.secret(config.privateKeySecretRef, caller.companyId); }
@@ -113,13 +126,27 @@ export class Broker {
           return safeId;
         };
         values = await withInstallationToken({ transport: host.http.bind(host), appId: config.appId, installationId: config.installationId, privateKey,
-          scope: { repository_ids: [repo.id], permissions: Object.fromEntries(requests.map(r => [r.permission, "read"])) }, now: host.clock(), observe, onRevocation: evidence => { revocation = evidence; } }, async (token, sensitive) => {
+          scope: { repository_ids: [repo.id], permissions: tool.write?.permissions ?? Object.fromEntries(requests.map(r => [r.permission, "read"])) }, write: !!tool.write, now: host.clock(), observe, onRevocation: evidence => { revocation = evidence; } }, async (token, sensitive) => {
           const clean = (v: unknown) => scrub(v, [...sensitive]);
           await revalidate();
           const prefix = `/repos/${repo.owner}/${repo.name}`;
           const identity = await request(host.http.bind(host), "GET", prefix, token);
           observe(identity, sensitive); guard(identity.status === 200, "upstream.repository");
-          guard(object(parse(identity)).id === repo.id, "policy.repository_identity");
+          const repository = object(parse(identity));
+          guard(repository.id === repo.id, "policy.repository_identity");
+          if (tool.write) {
+            let remaining = tool.write.maxRequests(args!);
+            const value = clean(await tool.write.execute(async (method, path, status, body) => {
+              guard(--remaining >= 0, "write.request_limit");
+              await revalidate();
+              if (method !== "GET") { writeAttempted = true; this.cacheEpoch++; this.cache.clear(); }
+              const res = await request(host.http.bind(host), method, prefix + path, token, body === undefined ? {} : { body: JSON.stringify(body) });
+              observe(res, sensitive); guard(res.status === status, method === "GET" ? "upstream.read" : "upstream.write");
+              return parse(res);
+            }, args!, repository));
+            guard(Buffer.byteLength(JSON.stringify(value)) <= 262144, "output.limit");
+            return [value];
+          }
           const output: unknown[] = [];
           for (const [i, spec] of requests.entries()) {
             await revalidate();
@@ -137,8 +164,9 @@ export class Broker {
         });
       }
       phase = "outcome"; await emit("allow", "policy.allow", "success");
+      writeSucceeded = true;
       for (const [key, update] of updates) {
-        if ((this.cache.get(key)?.generation ?? 0) > generation) continue;
+        if (this.cacheEpoch !== cacheEpoch || this.writing.size > 0 || (this.cache.get(key)?.generation ?? 0) > generation) continue;
         if (this.cache.size >= 128 && !this.cache.has(key)) this.cache.delete(this.cache.keys().next().value!);
         this.cache.set(key, update);
       }
@@ -155,8 +183,18 @@ export class Broker {
         try { this.pause(installationKey, 3660, host.clock()); } catch { /* Capacity remains fail-closed. */ }
       }
       if (phase === "intent") phase = "outcome";
-      try { await emit("deny", rule, "error"); } catch { return response({ ok: false, rule: "audit.unavailable" }, true); }
-      return response({ ok: false, rule, ...(seconds === undefined ? {} : { retryAfterSeconds: seconds }) }, true);
-    } finally { if (reserved) this.inFlight--; }
+      const uncertain = writeAttempted ? { writeAttempted: true, retrySafe: false, targetQuarantined: true } : {};
+      try { await emit("deny", rule, "error"); } catch { return response({ ok: false, rule: "audit.unavailable", ...uncertain }, true); }
+      return response({ ok: false, rule, ...uncertain, ...(seconds === undefined ? {} : { retryAfterSeconds: seconds }) }, true);
+    } finally {
+      if (writeAttempted) { this.cacheEpoch++; this.cache.clear(); }
+      // Native timeouts abandon awaits, not effects. Never readmit an uncertain
+      // target or publish read caches while any such target remains quarantined.
+      if (writeKey) {
+        if (writeAttempted && !writeSucceeded) this.writing.set(writeKey, "quarantined");
+        else this.writing.delete(writeKey);
+      }
+      if (reserved) this.inFlight--;
+    }
   }
 }
