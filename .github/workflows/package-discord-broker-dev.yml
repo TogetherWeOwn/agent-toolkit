@@ -1,0 +1,94 @@
+name: Package Discord broker dev
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Confirm the reviewed source pin (independent of the workflow revision)
+        required: true
+        default: 1ef428d5948fe50c6df08525e787b08dcce4da38
+        type: choice
+        options:
+          - 1ef428d5948fe50c6df08525e787b08dcce4da38
+
+permissions:
+  contents: read
+
+concurrency:
+  group: broker-package-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Validate immutable source selector
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$SOURCE_SHA" = 1ef428d5948fe50c6df08525e787b08dcce4da38
+      - name: Check out packaging recipe
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          path: recipe
+          persist-credentials: false
+      - name: Check out build source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          # A different source requires a reviewed recipe change, not a dispatch argument.
+          ref: 1ef428d5948fe50c6df08525e787b08dcce4da38
+          path: source
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require exact merged source
+        working-directory: source
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          git merge-base --is-ancestor "$SOURCE_SHA" refs/remotes/origin/main
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.21.0'
+      - name: Test packaging recipe
+        run: node --test --test-timeout=10000 recipe/test/package-artifact.test.mjs
+      - run: npm ci --ignore-scripts
+        working-directory: source
+      - run: npm test
+        working-directory: source
+      - name: Require unchanged tracked build inputs
+        working-directory: source
+        run: git diff --exit-code HEAD --
+      - name: Pack without lifecycle scripts
+        working-directory: source/plugins/discord-broker-dev
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/broker-package"
+          npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP/broker-package"
+      - name: Verify archive and record source correspondence
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          RECIPE_SHA: ${{ github.sha }}
+          BROKER_TARGET: discord-broker-dev
+          ARTIFACT_DIR: ${{ runner.temp }}/broker-package
+        run: python3 -I recipe/.github/scripts/broker-artifact.py source "$ARTIFACT_DIR"
+      - name: Upload candidate and evidence (no publication or install)
+        id: artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: discord-broker-dev-${{ inputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/broker-package/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Record artifact location
+        env:
+          ARTIFACT_URL: ${{ steps.artifact.outputs.artifact-url }}
+          ARTIFACT_DIGEST: ${{ steps.artifact.outputs.artifact-digest }}
+        run: |
+          printf '\nArtifact: %s\n\nUpload archive digest (distinct from package digest): `%s`\n' \
+            "$ARTIFACT_URL" "$ARTIFACT_DIGEST" >> "$GITHUB_STEP_SUMMARY"
