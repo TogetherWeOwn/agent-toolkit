@@ -78,7 +78,7 @@ test("recheck reruns only the latest matching run across pages", () => {
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(result.requests.filter(args => args.includes("POST")),
     [["api", "--method", "POST", "repos/TogetherWeOwn/example/actions/runs/42/rerun", "--silent"]]);
-  assert.ok(result.stdout.includes(url));
+  assert.ok(result.stdout.split(/\s+/).some(token => token === url), result.stdout);
 });
 
 test("recheck does nothing without a matching run", () => {
