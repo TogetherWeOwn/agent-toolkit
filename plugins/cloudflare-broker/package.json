@@ -1,0 +1,12 @@
+{
+  "name": "@togetherweown/paperclip-plugin-cloudflare-broker",
+  "version": "0.1.0", "private": true, "type": "module",
+  "description": "Minimal read-only per-agent Cloudflare credential broker",
+  "engines": { "node": ">=24.11.0 <25" }, "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test --test-timeout=30000 test/*.test.mjs"
+  },
+  "dependencies": { "@paperclipai/plugin-sdk": "2026.1023.0" },
+  "paperclipPlugin": { "manifest": "./dist/plugins/cloudflare-broker/src/manifest.js", "worker": "./dist/plugins/cloudflare-broker/src/worker.js" }
+}
