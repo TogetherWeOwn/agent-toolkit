@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import { createServer } from "node:https";
 import test from "node:test";
 
 const workflow = readFileSync(new URL("../.github/workflows/review-replies-recheck.yml", import.meta.url), "utf8");
@@ -38,7 +39,8 @@ if (args.includes("repos/TogetherWeOwn/example/actions/runs/42")) {
   if (process.env.LIST_FAILS === "true") process.exit(1);
   if (!args.includes("--paginate") || !args.includes("--slurp") ||
       !args.includes("repos/TogetherWeOwn/example/actions/runs?head_sha=abc1234&per_page=100")) process.exit(2);
-  input = fs.readFileSync(process.env.PAGES);
+  process.stdout.write(fs.readFileSync(process.env.PAGES));
+  process.exit(0);
 }
 const result = spawnSync("jq", ["-r", args[args.indexOf("--jq") + 1]], {
   input, encoding: "utf8"
@@ -69,6 +71,47 @@ process.exit(result.status);
     rmSync(dir, { recursive: true, force: true });
   }
 }
+
+test("real gh paginates and reruns through the network boundary", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "review-recheck-tls-"));
+  const key = join(dir, "key.pem"), cert = join(dir, "cert.pem");
+  const generated = spawnSync("openssl", ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1",
+    "-subj", "/CN=localhost", "-addext", "subjectAltName=DNS:localhost", "-keyout", key, "-out", cert]);
+  assert.equal(generated.status, 0, generated.stderr?.toString());
+  const requests = [];
+  const server = createServer({ key: readFileSync(key), cert: readFileSync(cert) }, (req, res) => {
+    requests.push(`${req.method} ${req.url}`);
+    res.setHeader("Content-Type", "application/json");
+    if (req.method === "POST") return res.end("{}");
+    if (req.url.includes("/runs/42")) return res.end(JSON.stringify(run(42)));
+    if (!req.url.includes("page=2")) {
+      res.setHeader("Link", `<https://localhost:${server.address().port}${req.url}&page=2>; rel="next"`);
+      return res.end(JSON.stringify({ workflow_runs: [run(41)] }));
+    }
+    return res.end(JSON.stringify({ workflow_runs: [run(42)] }));
+  });
+  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+  try {
+    const result = await new Promise((resolve, reject) => {
+      const child = spawn("bash", ["-c", script], {
+        env: { ...process.env, GH_HOST: `localhost:${server.address().port}`, GH_ENTERPRISE_TOKEN: "test-token",
+          GH_TOKEN: "", SSL_CERT_FILE: cert, REPO: "TogetherWeOwn/example", HEAD_SHA: "abc1234", NO_PROXY: "localhost,127.0.0.1" },
+      });
+      let stdout = "", stderr = "";
+      child.stdout.on("data", data => stdout += data);
+      child.stderr.on("data", data => stderr += data);
+      child.on("error", reject);
+      child.on("close", status => resolve({ status, stdout, stderr }));
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(requests.length, 4);
+    assert.match(requests[1], /page=2/);
+    assert.match(requests[3], /^POST .*\/runs\/42\/rerun$/);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
 
 test("recheck reruns only the latest matching run across pages", () => {
   const result = execute([
@@ -149,10 +192,12 @@ test("recheck excludes review-bot followups and edits but keeps new findings and
   for (const login of ["devin-ai-integration[bot]", "sourcery-ai[bot]", "coderabbitai[bot]", "CodeRabbitAI[bot]"]) {
     assert.equal(eligible("pull_request_review_comment", "created", login, 123), false);
     assert.equal(eligible("pull_request_review_comment", "edited", login, undefined), false);
+    assert.equal(eligible("pull_request_review_comment", "deleted", login, 123), false);
     assert.equal(eligible("pull_request_review_comment", "created", login, undefined), true);
     assert.equal(eligible("pull_request_review", "submitted", login, undefined), true);
   }
-  for (const action of ["created", "edited"]) {
+  assert.match(workflow, /pull_request_review_comment:\n    types: \[created, edited, deleted\]/);
+  for (const action of ["created", "edited", "deleted"]) {
     assert.equal(eligible("pull_request_review_comment", action, "contributor", 123), true);
     assert.equal(eligible("pull_request_review_comment", action, "contributor", 123, "fork/example"), false);
   }

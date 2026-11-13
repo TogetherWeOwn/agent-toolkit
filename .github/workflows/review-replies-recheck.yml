@@ -10,7 +10,7 @@ on:
   pull_request_review:
     types: [submitted]
   pull_request_review_comment:
-    types: [created, edited]
+    types: [created, edited, deleted]
 
 permissions:
   actions: write
@@ -21,7 +21,7 @@ jobs:
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       !(github.event_name == 'pull_request_review_comment' &&
-        (github.event.action == 'edited' || github.event.comment.in_reply_to_id) &&
+        (github.event.action == 'edited' || github.event.action == 'deleted' || github.event.comment.in_reply_to_id) &&
         contains(fromJSON('["devin-ai-integration[bot]","sourcery-ai[bot]","coderabbitai[bot]"]'), github.event.comment.user.login))
     # Apply concurrency only to eligible jobs: skipped bot chatter must not
     # cancel the newest real reply's helper while it waits for the check.
@@ -39,8 +39,8 @@ jobs:
         run: |
           set -euo pipefail
           run=$(gh api --paginate --slurp \
-            "repos/$REPO/actions/runs?head_sha=$HEAD_SHA&per_page=100" \
-            --jq '[.[].workflow_runs[] | select(.name == "PR standards (required entry point)" and .event == "pull_request")]
+            "repos/$REPO/actions/runs?head_sha=$HEAD_SHA&per_page=100" |
+            jq -r '[.[].workflow_runs[] | select(.name == "PR standards (required entry point)" and .event == "pull_request")]
               | max_by(.created_at, .id)
               | if . == null then "" else [.id, .html_url] | @tsv end')
           if [ -z "$run" ]; then
