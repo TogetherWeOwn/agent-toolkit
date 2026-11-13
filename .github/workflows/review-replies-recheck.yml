@@ -1,0 +1,49 @@
+# Ruleset workflows ignore review events and run only on their default PR types.
+# Re-run the existing required check when reviews or thread replies arrive;
+# this helper never passes, replaces or bypasses that check.
+# https://docs.github.com/en/enterprise-cloud@latest/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets
+name: Review replies recheck
+
+on:
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created, edited]
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: review-replies-recheck-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  recheck:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Re-run the latest required PR standards check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          run=$(gh api --paginate --slurp \
+            "repos/$REPO/actions/runs?head_sha=$HEAD_SHA&per_page=100" \
+            --jq '[.[].workflow_runs[] | select(.name == "PR standards (required entry point)" and .event == "pull_request")]
+              | max_by(.created_at, .id)
+              | if . == null then "" else [.id, .status, .html_url] | @tsv end')
+          if [ -z "$run" ]; then
+            printf '%s\n' 'No required PR standards run found for this head; nothing to re-run.'
+            exit 0
+          fi
+          IFS=$'\t' read -r id status url <<< "$run"
+          if [ "$status" != completed ]; then
+            printf '%s\n' 'Required PR standards run is still active; it will read the review threads itself.'
+            exit 0
+          fi
+          gh api --method POST "repos/$REPO/actions/runs/$id/rerun" --silent
+          printf 'Re-requested required PR standards check: %s\n' "$url"
