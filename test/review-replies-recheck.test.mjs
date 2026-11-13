@@ -12,10 +12,11 @@ const name = "PR standards (required entry point)";
 const url = "https://github.com/TogetherWeOwn/example/actions/runs/42";
 const run = (id, status = "completed", extra = {}) => ({
   id, name, status, event: "pull_request", html_url: url, run_attempt: 1,
+  path: ".github/workflows/pr-standards-required.yml", pull_requests: [{ number: 46 }],
   created_at: "2026-11-13T01:00:00Z", ...extra,
 });
 
-function execute(pages, { listFails = false, rerunFails = false, detailFails = false, details = [run(42)] } = {}) {
+function execute(pages, { listFails = false, rerunFails = false, detailFails = false, details = [run(42)], listings = [pages] } = {}) {
   const dir = mkdtempSync(join(tmpdir(), "review-replies-recheck-"));
   try {
     // Fake only the network boundary. Real jq evaluates the workflow's filter.
@@ -39,7 +40,10 @@ if (args.includes("repos/TogetherWeOwn/example/actions/runs/42")) {
   if (process.env.LIST_FAILS === "true") process.exit(1);
   if (!args.includes("--paginate") || !args.includes("--slurp") ||
       !args.includes("repos/TogetherWeOwn/example/actions/runs?head_sha=abc1234&per_page=100")) process.exit(2);
-  process.stdout.write(fs.readFileSync(process.env.PAGES));
+  const listings = JSON.parse(fs.readFileSync(process.env.PAGES));
+  const index = Number(fs.readFileSync(process.env.LIST_COUNT, "utf8"));
+  process.stdout.write(JSON.stringify(listings[Math.min(index, listings.length - 1)]));
+  fs.writeFileSync(process.env.LIST_COUNT, String(index + 1));
   process.exit(0);
 }
 const result = spawnSync("jq", ["-r", args[args.indexOf("--jq") + 1]], {
@@ -51,15 +55,16 @@ process.exit(result.status);
 `, { mode: 0o755 });
     // Advance simulated API states without waiting ten real minutes.
     writeFileSync(join(dir, "sleep"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
-    writeFileSync(join(dir, "pages.json"), JSON.stringify(pages));
+    writeFileSync(join(dir, "pages.json"), JSON.stringify(listings));
+    writeFileSync(join(dir, "list-count"), "0");
     writeFileSync(join(dir, "details.json"), JSON.stringify(details));
     writeFileSync(join(dir, "poll-count"), "0");
     writeFileSync(join(dir, "requests.jsonl"), "");
     const result = spawnSync("bash", ["-c", script], {
       encoding: "utf8", timeout: 5000,
       env: {
-        PATH: `${dir}:${process.env.PATH}`, REPO: "TogetherWeOwn/example", HEAD_SHA: "abc1234",
-        PAGES: join(dir, "pages.json"), REQUESTS: join(dir, "requests.jsonl"),
+        PATH: `${dir}:${process.env.PATH}`, REPO: "TogetherWeOwn/example", HEAD_SHA: "abc1234", PR_NUMBER: "46",
+        PAGES: join(dir, "pages.json"), LIST_COUNT: join(dir, "list-count"), REQUESTS: join(dir, "requests.jsonl"),
         LIST_FAILS: String(listFails), RERUN_FAILS: String(rerunFails), DETAIL_FAILS: String(detailFails),
         DETAILS: join(dir, "details.json"), POLL_COUNT: join(dir, "poll-count"),
       },
@@ -95,7 +100,7 @@ test("real gh paginates and reruns through the network boundary", async () => {
     const result = await new Promise((resolve, reject) => {
       const child = spawn("bash", ["-c", script], {
         env: { ...process.env, GH_HOST: `localhost:${server.address().port}`, GH_ENTERPRISE_TOKEN: "test-token",
-          GH_TOKEN: "", SSL_CERT_FILE: cert, REPO: "TogetherWeOwn/example", HEAD_SHA: "abc1234", NO_PROXY: "localhost,127.0.0.1" },
+          GH_TOKEN: "", SSL_CERT_FILE: cert, REPO: "TogetherWeOwn/example", HEAD_SHA: "abc1234", PR_NUMBER: "46", NO_PROXY: "localhost,127.0.0.1" },
       });
       let stdout = "", stderr = "";
       child.stdout.on("data", data => stdout += data);
@@ -115,7 +120,9 @@ test("real gh paginates and reruns through the network boundary", async () => {
 
 test("recheck reruns only the latest matching run across pages", () => {
   const result = execute([
-    { workflow_runs: [run(43, "completed", { name: "CI" }), run(42), run(44, "completed", { event: "merge_group" })] },
+    { workflow_runs: [run(43, "completed", { name: "CI" }), run(42), run(44, "completed", { event: "merge_group" }),
+      run(45, "completed", { path: ".github/workflows/other.yml" }),
+      run(46, "completed", { pull_requests: [{ number: 47 }] })] },
     { workflow_runs: [run(41, "completed", { created_at: "2026-11-12T01:00:00Z" })] },
   ]);
   assert.equal(result.status, 0, result.stderr);
@@ -124,10 +131,20 @@ test("recheck reruns only the latest matching run across pages", () => {
   assert.ok(result.stdout.split(/\s+/).some(token => token === url), result.stdout);
 });
 
-test("recheck does nothing without a matching run", () => {
+test("recheck fails visibly without a matching run", () => {
   const result = execute([{ workflow_runs: [run(42, "completed", { name: "CI" })] }]);
-  assert.equal(result.status, 0, result.stderr);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stdout, /::error::No required PR standards run/);
   assert.deepEqual(result.requests, []);
+});
+
+test("recheck retries until a newly created required run appears", () => {
+  const empty = [{ workflow_runs: [] }];
+  const present = [{ workflow_runs: [run(42)] }];
+  const result = execute(empty, { listings: [empty, empty, present] });
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(result.requests.filter(args => args.includes("POST")),
+    [["api", "--method", "POST", "repos/TogetherWeOwn/example/actions/runs/42/rerun", "--silent"]]);
 });
 
 test("recheck waits for the latest active run to complete before rerunning it", () => {

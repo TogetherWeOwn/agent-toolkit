@@ -36,16 +36,26 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
-          run=$(gh api --paginate --slurp \
-            "repos/$REPO/actions/runs?head_sha=$HEAD_SHA&per_page=100" |
-            jq -r '[.[].workflow_runs[] | select(.name == "PR standards (required entry point)" and .event == "pull_request")]
-              | max_by(.created_at, .id)
-              | if . == null then "" else [.id, .html_url] | @tsv end')
+          # A review can arrive before GitHub creates the required run.
+          run=''
+          for _ in $(seq 1 12); do
+            run=$(gh api --paginate --slurp \
+              "repos/$REPO/actions/runs?head_sha=$HEAD_SHA&per_page=100" |
+              jq -r --argjson pr "$PR_NUMBER" '[.[].workflow_runs[] |
+                select(.name == "PR standards (required entry point)" and .event == "pull_request"
+                  and .path == ".github/workflows/pr-standards-required.yml"
+                  and any(.pull_requests[]?; .number == $pr))]
+                | max_by(.created_at, .id)
+                | if . == null then "" else [.id, .html_url] | @tsv end')
+            [ -n "$run" ] && break
+            sleep 5
+          done
           if [ -z "$run" ]; then
-            printf '%s\n' 'No required PR standards run found for this head; nothing to re-run.'
-            exit 0
+            printf '%s\n' '::error::No required PR standards run found for this PR and head; re-run this helper after the required run appears.'
+            exit 1
           fi
           IFS=$'\t' read -r id url <<< "$run"
           # The active run may already have fetched threads before this reply.
