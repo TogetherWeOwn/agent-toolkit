@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { register } from '../dist/plugins/cloudflare-broker/src/plugin.js';
+import { scrub } from '../dist/plugins/cloudflare-broker/src/output.js';
 import { JsonRpcCallError, PLUGIN_RPC_ERROR_CODES } from '@paperclipai/plugin-sdk';
 import manifest from '../dist/plugins/cloudflare-broker/src/manifest.js';
 globalThis.fetch = () => { throw Error('Live network is forbidden in fixtures'); };
@@ -36,6 +37,10 @@ test('denies unknown agent, company, none profile, unlisted resources and forged
     assert.ok(r.error); assert.equal(f.secrets, 0); assert.equal(f.calls.length, 0);
   }
 });
+test('allowlisted agents without a project can read deployments', async () => {
+  const f = fixture(); const r = await f.call('workers.listDeployments', { script: 'worker-one' }, { ...run, projectId: '' });
+  assert.equal(r.error, undefined); assert.deepEqual(r.data.result, []); assert.equal(f.calls.length, 1);
+});
 test('GET deployment URL, hidden bearer, no redirects, explicit projection', async () => {
   const f = fixture({ result: { deployments: [{ id: 'deployment', created_on: 'now', source: 'api', strategy: 'percentage', author_email: token, extra: token, versions: [{ version_id: versionId, percentage: 100, token }] }] } });
   const r = await f.call('workers.listDeployments', { script: 'worker-one' }); assert.equal(r.error, undefined);
@@ -61,6 +66,22 @@ test('log query fixes scope, dry read-only body and output fields', async () => 
   assert.deepEqual(JSON.parse(f.calls[0].body), { queryId: 'cloudflare-broker', dry: true, view: 'events', timeframe: { from: logs.from, to: logs.to }, limit: 10,
     parameters: { filterCombination: 'and', filters: [{ key: '$workers.scriptName', operation: 'eq', type: 'string', value: 'worker-one' }], needle: { value: 'safe', isRegex: false, matchCase: true } } });
   assert.deepEqual(r.data.result, [{ timestamp: now, id: 'event', message: 'safe', level: 'info' }]);
+});
+test('maximum-size log response is truncated before scrubbing without blocking the worker', async () => {
+  const event = { $workers: { scriptName: 'worker-one' }, $metadata: { message: '', error: 'a.b@example.com' } };
+  const envelope = { success: true, result: { events: { events: [event] } } };
+  event.$metadata.message = 'a.'.repeat(131072).slice(0, 262144 - Buffer.byteLength(JSON.stringify(envelope)));
+  const body = JSON.stringify(envelope); assert.equal(Buffer.byteLength(body), 262144);
+  const f = fixture({ fetch: async () => new Response(body), timeoutMs: 30000 }); const start = performance.now();
+  const r = await f.call('workers.queryLogs', logs); const elapsed = performance.now() - start;
+  assert.ok(elapsed < 200, `queryLogs took ${elapsed.toFixed(1)} ms`); assert.equal(r.error, undefined);
+  assert.deepEqual(r.data.result, [{ message: 'a.'.repeat(4096), error: '[REDACTED]' }]);
+});
+test('email redaction has bounded work on long at-free strings and still removes email addresses', () => {
+  for (const message of ['a'.repeat(131072), 'a.'.repeat(65536)]) {
+    const start = performance.now(); const result = scrub({ message, error: 'a.b@example.com' }, token); const elapsed = performance.now() - start;
+    assert.ok(elapsed < 200, `scrub took ${elapsed.toFixed(1)} ms`); assert.equal(result.error, '[REDACTED]');
+  }
 });
 test('log windows, limits and raw body are rejected before credentials', async () => {
   for (const change of [{ from: now - 86400001 }, { from: now - 8 * 86400000 }, { from: now + 1 }, { to: now + 60000 }, { limit: 101 }, { limit: 0 }, { from: 'yesterday' }, { body: {} }]) {

@@ -8,7 +8,7 @@ const array = <T>(item: Schema<T>): Schema<T[]> => ({ parse(v) {
 export const configSchema = closed({ accountId: text(32, /^[a-f0-9]{32}$/), apiTokenSecretRef: closed({ type: oneOf(["secret_ref"]), secretId: identifier }),
   policy: closed({ version: integer(1, 1), revision: integer(1, Number.MAX_SAFE_INTEGER), companyId: identifier,
     agents: array(closed({ agentId: identifier, profile: oneOf(["read", "none"]), workerScripts: array(segment), containerApplicationIds: array(segment) })) }) });
-export const callerSchema = closed({ agentId: identifier, runId: identifier, companyId: identifier, projectId: identifier });
+export const callerSchema = closed({ agentId: identifier, runId: identifier, companyId: identifier, projectId: { parse: v => v === "" ? "" : identifier.parse(v) } });
 export const closedJson = (properties: Record<string, unknown>, required = Object.keys(properties)) => ({ type: "object", additionalProperties: false, properties, required });
 export const idJson = { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9_-]*$", maxLength: 100 };
 const script = { script: segment }, app = { applicationId: segment }, scriptJson = { script: idJson }, appJson = { applicationId: idJson };
