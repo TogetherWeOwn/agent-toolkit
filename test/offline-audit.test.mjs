@@ -19,6 +19,24 @@ const good = () => ({ read: async () => 7, close: async () => {} });
 const outcomes = audit => audit.records().map(row => row.outcome);
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
 
+test('rejects transient and relative database paths', () => {
+  for (const path of ['', ':memory:', 'file::memory:?cache=shared', 'relative.sqlite']) {
+    assert.throws(() => new OfflineAudit(path), /persistent absolute/);
+  }
+});
+
+test('a blocked event loop cannot turn an expired operation into success', async t => {
+  for (const phase of ['read', 'close']) {
+    const f = fixture(t), audit = f.open();
+    const delay = () => { const end = performance.now() + 25; while (performance.now() < end) {} };
+    assert.deepEqual(await audit.run({
+      read: async () => { if (phase === 'read') delay(); return 1; },
+      close: async () => { if (phase === 'close') delay(); },
+    }, 5), { ok: false });
+    assert.deepEqual(await f.open().run(good(), 100), { ok: false });
+  }
+});
+
 test('only guarded run admits work and success is recorded first', async t => {
   const f = fixture(t), audit = f.open();
   assert.equal(audit.begin, undefined);

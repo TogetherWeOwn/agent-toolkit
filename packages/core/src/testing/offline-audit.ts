@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
+import { isAbsolute } from "node:path";
 
 /** Synthetic operations only. A fixture acknowledgement is not provider closure evidence. */
 export interface OfflineOperation<T> {
@@ -11,6 +12,7 @@ type Result<T> = { ok: true; value: T } | { ok: false };
 
 async function bounded<T>(fn: (signal: AbortSignal) => Promise<T>, ms: number, parent?: AbortSignal): Promise<T> {
   const controller = new AbortController();
+  const expires = performance.now() + ms;
   let rejectDeadline: (error: Error) => void = () => {};
   const deadline = new Promise<never>((_, reject) => { rejectDeadline = reject; });
   const abort = () => { controller.abort(); rejectDeadline(new Error("cancelled")); };
@@ -18,10 +20,12 @@ async function bounded<T>(fn: (signal: AbortSignal) => Promise<T>, ms: number, p
   else parent?.addEventListener("abort", abort, { once: true });
   const timer = setTimeout(abort, ms);
   try {
-    return await Promise.race([Promise.resolve().then(() => {
+    const value = await Promise.race([Promise.resolve().then(() => {
       if (controller.signal.aborted) throw new Error("cancelled");
       return fn(controller.signal);
     }), deadline]);
+    if (controller.signal.aborted || performance.now() >= expires) throw new Error("cancelled");
+    return value;
   } finally {
     clearTimeout(timer);
     parent?.removeEventListener("abort", abort);
@@ -32,6 +36,7 @@ async function bounded<T>(fn: (signal: AbortSignal) => Promise<T>, ms: number, p
 export class OfflineAudit {
   readonly #db: DatabaseSync;
   constructor(path: string) {
+    if (!isAbsolute(path)) throw new Error("persistent absolute audit path required");
     this.#db = new DatabaseSync(path, { timeout: 1000 });
     this.#db.exec(`PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;
       CREATE TABLE IF NOT EXISTS offline_calls (
