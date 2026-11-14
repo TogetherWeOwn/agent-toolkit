@@ -5,6 +5,8 @@ import { bindingSchema, hash, type Host } from "../contracts.js";
 /** Offline fixture only: callers must enforce authorization, scope and projection separately. */
 export class PreferenceAuditFixture {
   private readonly db: DatabaseSync;
+  // This instance can finish only its own admissions; reopen is not recovery.
+  private readonly owned = new Set<string>();
   constructor(path: string) {
     this.db = new DatabaseSync(path, { timeout: 1000 });
     this.db.exec(`PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;
@@ -19,6 +21,7 @@ export class PreferenceAuditFixture {
   begin(): string {
     const id = randomUUID();
     this.db.prepare("INSERT INTO preference_calls VALUES (?,'pending','unknown')").run(id);
+    this.owned.add(id);
     return id;
   }
   /** One outstanding ambiguous call per database; a rejection is itself audited. */
@@ -29,6 +32,7 @@ export class PreferenceAuditFixture {
       const id = randomUUID();
       this.db.prepare("INSERT INTO preference_calls VALUES (?,?, 'unknown')").run(id, occupied ? "refused" : "pending");
       this.db.exec("COMMIT");
+      if (!occupied) this.owned.add(id);
       return occupied ? null : id;
     } catch (error) {
       this.db.exec("ROLLBACK");
@@ -36,13 +40,16 @@ export class PreferenceAuditFixture {
     }
   }
   bind(id: string, bindingHash: string): void {
+    if (!this.owned.has(id)) throw new Error("audit unavailable");
     const result = this.db.prepare("INSERT INTO preference_identity SELECT id, ? FROM preference_calls WHERE id=? AND outcome='pending'").run(bindingHash, id);
     if (result.changes !== 1) throw new Error("audit unavailable");
   }
   finish(id: string, outcome: "success" | "refused" | "failed", closed: boolean): void {
+    if (!this.owned.has(id)) throw new Error("audit unavailable");
     const result = this.db.prepare("UPDATE preference_calls SET outcome=?, closure=? WHERE id=? AND outcome='pending'")
       .run(outcome, closed ? "confirmed" : "unknown", id);
     if (result.changes !== 1) throw new Error("audit unavailable");
+    this.owned.delete(id);
   }
   records(): unknown[] {
     return this.db.prepare("SELECT c.id,c.outcome,c.closure,i.binding_hash FROM preference_calls c LEFT JOIN preference_identity i ON i.id=c.id ORDER BY c.rowid").all();

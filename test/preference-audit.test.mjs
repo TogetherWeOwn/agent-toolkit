@@ -161,7 +161,12 @@ test('process exit during read or close leaves durable unknown admission', async
 test('interrupted pending intent blocks subsequent work after reopen', async t => {
   const f = fixture(t);
   const id = f.audit.admit();
+  const other = new PreferenceAuditFixture(join(f.dir, 'audit.sqlite'));
+  assert.throws(() => other.finish(id, 'failed', true), /audit unavailable/);
+  other.close();
   f.reopen();
+  assert.throws(() => f.audit.bind(id, 'fabricated'), /audit unavailable/);
+  assert.throws(() => f.audit.finish(id, 'failed', true), /audit unavailable/);
   let called = false;
   const result = await auditedPreferenceRead(f.audit, { read: async () => { called = true; return { outcome: 'refused' }; }, close: async () => true }, 100);
   assert.deepEqual(result, { ok: false, code: 'unavailable' });
