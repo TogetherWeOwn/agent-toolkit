@@ -17,6 +17,20 @@ export class PreferenceAuditFixture {
     this.db.prepare("INSERT INTO preference_calls VALUES (?,'pending','unknown')").run(id);
     return id;
   }
+  /** One outstanding ambiguous call per database; a rejection is itself audited. */
+  admit(): string | null {
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      const occupied = this.db.prepare("SELECT 1 FROM preference_calls WHERE closure='unknown' AND outcome IN ('pending','failed') LIMIT 1").get();
+      const id = randomUUID();
+      this.db.prepare("INSERT INTO preference_calls VALUES (?,?, 'unknown')").run(id, occupied ? "refused" : "pending");
+      this.db.exec("COMMIT");
+      return occupied ? null : id;
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
+  }
   finish(id: string, outcome: "success" | "refused" | "failed", closed: boolean): void {
     const result = this.db.prepare("UPDATE preference_calls SET outcome=?, closure=? WHERE id=? AND outcome='pending'")
       .run(outcome, closed ? "confirmed" : "unknown", id);
@@ -60,8 +74,9 @@ async function bounded<T>(operation: (signal: AbortSignal) => Promise<T>, millis
 export async function auditedPreferenceRead<T>(
   audit: PreferenceAuditFixture, adapter: PreferenceAdapter<T>, milliseconds: number, signal?: AbortSignal,
 ): Promise<{ ok: true; value: T } | { ok: false; code: "refused" | "unavailable" }> {
-  let id: string;
-  try { id = audit.begin(); } catch { return { ok: false, code: "unavailable" }; }
+  let id: string | null;
+  try { id = audit.admit(); } catch { return { ok: false, code: "unavailable" }; }
+  if (id === null) return { ok: false, code: "unavailable" };
   if (!Number.isSafeInteger(milliseconds) || milliseconds < 1 || milliseconds > MAX_OPERATION_MS) {
     try { audit.finish(id, "refused", false); } catch { /* Fail closed. */ }
     return { ok: false, code: "unavailable" };

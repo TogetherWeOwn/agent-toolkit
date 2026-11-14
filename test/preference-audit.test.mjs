@@ -27,10 +27,10 @@ test('audit failure prevents work and outcome failure prevents success', async t
   const f = fixture(t);
   let calls = 0;
   const adapter = { read: async () => { calls++; return { outcome: 'success', value: 1 }; }, close: async () => true };
-  const broken = { begin() { throw Error('secret'); } };
+  const broken = { admit() { throw Error('secret'); } };
   assert.deepEqual(await auditedPreferenceRead(broken, adapter, 100), { ok: false, code: 'unavailable' });
   assert.equal(calls, 0);
-  const badFinish = { begin: () => f.audit.begin(), finish() { throw Error('secret'); } };
+  const badFinish = { admit: () => f.audit.admit(), finish() { throw Error('secret'); } };
   assert.deepEqual(await auditedPreferenceRead(badFinish, adapter, 100), { ok: false, code: 'unavailable' });
   f.reopen();
   assert.equal(f.audit.records()[0].outcome, 'pending');
@@ -48,17 +48,21 @@ test('cancellation, close failure and late read never claim closure', async t =>
   await Promise.resolve(); await Promise.resolve();
   controller.abort();
   assert.deepEqual(await running, { ok: false, code: 'unavailable' });
-  assert.deepEqual(await auditedPreferenceRead(f.audit, { ...ok(), close: async () => false }, 100), { ok: false, code: 'unavailable' });
-  assert.deepEqual(f.audit.records().map(r => r.closure), ['unknown', 'unknown']);
+  const other = fixture(t);
+  assert.deepEqual(await auditedPreferenceRead(other.audit, { ...ok(), close: async () => false }, 100), { ok: false, code: 'unavailable' });
+  assert.equal(f.audit.records()[0].closure, 'unknown');
+  assert.equal(other.audit.records()[0].closure, 'unknown');
 });
 
 test('read and close timeouts return unavailable without a closure claim', async t => {
   const f = fixture(t);
   const never = () => new Promise(() => {});
   assert.deepEqual(await auditedPreferenceRead(f.audit, { read: never, close: async () => true }, 5), { ok: false, code: 'unavailable' });
-  assert.deepEqual(await auditedPreferenceRead(f.audit, { ...ok(), close: never }, 5), { ok: false, code: 'unavailable' });
-  f.reopen();
-  assert.deepEqual(f.audit.records().map(r => r.closure), ['unknown', 'unknown']);
+  const other = fixture(t);
+  assert.deepEqual(await auditedPreferenceRead(other.audit, { ...ok(), close: never }, 5), { ok: false, code: 'unavailable' });
+  f.reopen(); other.reopen();
+  assert.equal(f.audit.records()[0].closure, 'unknown');
+  assert.equal(other.audit.records()[0].closure, 'unknown');
 });
 
 test('uncompleted intent survives reopen and invalid bounds never call adapter', async t => {
@@ -71,4 +75,37 @@ test('uncompleted intent survives reopen and invalid bounds never call adapter',
   assert.deepEqual(await auditedPreferenceRead(f.audit, adapter, 5001), { ok: false, code: 'unavailable' });
   assert.equal(calls, 0);
   assert.equal(f.audit.records()[1].outcome, 'refused');
+});
+
+test('admission is durable and rejects overlap across database connections', async t => {
+  const f = fixture(t);
+  const second = new PreferenceAuditFixture(join(f.dir, 'audit.sqlite'));
+  t.after(() => second.close());
+  let release;
+  let invoked = 0;
+  const running = auditedPreferenceRead(f.audit, {
+    read: () => { invoked++; return new Promise(resolve => { release = resolve; }); },
+    close: async () => true,
+  }, 1000);
+  await Promise.resolve(); await Promise.resolve();
+  const rejected = await auditedPreferenceRead(second, { read: async () => { invoked++; return { outcome: 'refused' }; }, close: async () => true }, 100);
+  assert.deepEqual(rejected, { ok: false, code: 'unavailable' });
+  assert.equal(invoked, 1);
+  release({ outcome: 'success', value: 1 });
+  assert.deepEqual(await running, { ok: true, value: 1 });
+  assert.deepEqual(await auditedPreferenceRead(second, ok(), 100), { ok: true, value: 'synthetic-secret' });
+  const rows = second.records();
+  assert.equal(new Set(rows.map(row => row.id)).size, 3);
+  assert.deepEqual(rows.map(row => row.outcome), ['success', 'refused', 'success']);
+});
+
+test('interrupted pending intent blocks subsequent work after reopen', async t => {
+  const f = fixture(t);
+  const id = f.audit.admit();
+  f.reopen();
+  let called = false;
+  const result = await auditedPreferenceRead(f.audit, { read: async () => { called = true; return { outcome: 'refused' }; }, close: async () => true }, 100);
+  assert.deepEqual(result, { ok: false, code: 'unavailable' });
+  assert.equal(called, false);
+  assert.deepEqual(f.audit.records().map(row => [row.id === id, row.outcome, row.closure]), [[true, 'pending', 'unknown'], [false, 'refused', 'unknown']]);
 });
