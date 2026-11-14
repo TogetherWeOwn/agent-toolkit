@@ -21,10 +21,12 @@ async function bounded<T>(fn: (signal: AbortSignal) => Promise<T>, ms: number, p
   const timer = setTimeout(abort, ms);
   try {
     const value = await Promise.race([Promise.resolve().then(() => {
+      if (performance.now() >= expires) abort();
       if (controller.signal.aborted) throw new Error("cancelled");
       return fn(controller.signal);
     }), deadline]);
-    if (controller.signal.aborted || performance.now() >= expires) throw new Error("cancelled");
+    if (performance.now() >= expires) abort();
+    if (controller.signal.aborted) throw new Error("cancelled");
     return value;
   } finally {
     clearTimeout(timer);

@@ -25,6 +25,24 @@ test('rejects transient and relative database paths', () => {
   }
 });
 
+test('expired queued work is not invoked and elapsed work receives abort', async t => {
+  const delay = () => { const end = performance.now() + 25; while (performance.now() < end) {} };
+  const first = fixture(t).open();
+  let invoked = false;
+  const queued = first.run({ read: async () => { invoked = true; }, close: async () => {} }, 5);
+  delay();
+  assert.deepEqual(await queued, { ok: false });
+  assert.equal(invoked, false);
+  const second = fixture(t).open();
+  let aborted = false;
+  const result = await second.run({ read: async signal => {
+    signal.addEventListener('abort', () => { aborted = true; });
+    delay();
+  }, close: async () => {} }, 5);
+  assert.deepEqual(result, { ok: false });
+  assert.equal(aborted, true);
+});
+
 test('a blocked event loop cannot turn an expired operation into success', async t => {
   for (const phase of ['read', 'close']) {
     const f = fixture(t), audit = f.open();
