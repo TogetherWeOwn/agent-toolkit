@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { PreferenceAuditFixture, auditedPreferenceRead } from '../packages/core/src/testing/preference-audit.ts';
 
 function fixture(t) {
@@ -97,6 +98,30 @@ test('admission is durable and rejects overlap across database connections', asy
   const rows = second.records();
   assert.equal(new Set(rows.map(row => row.id)).size, 3);
   assert.deepEqual(rows.map(row => row.outcome), ['success', 'refused', 'success']);
+});
+
+test('process exit during read or close leaves durable unknown admission', async t => {
+  for (const phase of ['read', 'close']) {
+    const f = fixture(t);
+    const script = `
+      import { PreferenceAuditFixture, auditedPreferenceRead } from ${JSON.stringify(new URL('../packages/core/src/testing/preference-audit.ts', import.meta.url).href)};
+      const audit = new PreferenceAuditFixture(process.argv[1]);
+      const phase = process.argv[2];
+      await auditedPreferenceRead(audit, {
+        read: async () => { if (phase === 'read') process.exit(73); return { outcome: 'success', value: 1 }; },
+        close: async () => { process.exit(74); },
+      }, 1000);
+      process.exit(75);
+    `;
+    const child = spawnSync(process.execPath, ['--input-type=module', '-e', script, join(f.dir, 'audit.sqlite'), phase], { encoding: 'utf8', timeout: 5000 });
+    assert.equal(child.error, undefined);
+    assert.equal(child.status, phase === 'read' ? 73 : 74, child.stderr);
+    f.reopen();
+    let called = false;
+    assert.deepEqual(await auditedPreferenceRead(f.audit, { read: async () => { called = true; return { outcome: 'refused' }; }, close: async () => true }, 100), { ok: false, code: 'unavailable' });
+    assert.equal(called, false);
+    assert.deepEqual(f.audit.records().map(({ outcome, closure }) => [outcome, closure]), [['pending', 'unknown'], ['refused', 'unknown']]);
+  }
 });
 
 test('interrupted pending intent blocks subsequent work after reopen', async t => {
