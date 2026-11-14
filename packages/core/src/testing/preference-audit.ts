@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
+import { bindingSchema, hash, type Host } from "../contracts.js";
 
-/** Offline fixture only: callers must enforce identity, scope and projection separately. */
+/** Offline fixture only: callers must enforce authorization, scope and projection separately. */
 export class PreferenceAuditFixture {
   private readonly db: DatabaseSync;
   constructor(path: string) {
@@ -10,6 +11,9 @@ export class PreferenceAuditFixture {
       CREATE TABLE IF NOT EXISTS preference_calls (
         id TEXT PRIMARY KEY, outcome TEXT NOT NULL CHECK(outcome IN ('pending','success','refused','failed')),
         closure TEXT NOT NULL CHECK(closure IN ('unknown','confirmed'))
+      );
+      CREATE TABLE IF NOT EXISTS preference_identity (
+        id TEXT PRIMARY KEY REFERENCES preference_calls(id), binding_hash TEXT NOT NULL
       );`);
   }
   begin(): string {
@@ -31,13 +35,17 @@ export class PreferenceAuditFixture {
       throw error;
     }
   }
+  bind(id: string, bindingHash: string): void {
+    const result = this.db.prepare("INSERT INTO preference_identity SELECT id, ? FROM preference_calls WHERE id=? AND outcome='pending'").run(bindingHash, id);
+    if (result.changes !== 1) throw new Error("audit unavailable");
+  }
   finish(id: string, outcome: "success" | "refused" | "failed", closed: boolean): void {
     const result = this.db.prepare("UPDATE preference_calls SET outcome=?, closure=? WHERE id=? AND outcome='pending'")
       .run(outcome, closed ? "confirmed" : "unknown", id);
     if (result.changes !== 1) throw new Error("audit unavailable");
   }
   records(): unknown[] {
-    return this.db.prepare("SELECT id,outcome,closure FROM preference_calls ORDER BY rowid").all();
+    return this.db.prepare("SELECT c.id,c.outcome,c.closure,i.binding_hash FROM preference_calls c LEFT JOIN preference_identity i ON i.id=c.id ORDER BY c.rowid").all();
   }
   close(): void { this.db.close(); }
 }
@@ -72,13 +80,21 @@ async function bounded<T>(operation: (signal: AbortSignal) => Promise<T>, millis
 
 /** An ambiguous read can still be running after timeout; a close reply then is not proof of closure. */
 export async function auditedPreferenceRead<T>(
-  audit: PreferenceAuditFixture, adapter: PreferenceAdapter<T>, milliseconds: number, signal?: AbortSignal,
+  audit: PreferenceAuditFixture, adapter: PreferenceAdapter<T>, milliseconds: number, host: Pick<Host, "identity">, signal?: AbortSignal,
 ): Promise<{ ok: true; value: T } | { ok: false; code: "refused" | "unavailable" }> {
   let id: string | null;
   try { id = audit.admit(); } catch { return { ok: false, code: "unavailable" }; }
   if (id === null) return { ok: false, code: "unavailable" };
   if (!Number.isSafeInteger(milliseconds) || milliseconds < 1 || milliseconds > MAX_OPERATION_MS) {
     try { audit.finish(id, "refused", false); } catch { /* Fail closed. */ }
+    return { ok: false, code: "unavailable" };
+  }
+  try {
+    const binding = await bounded(() => host.identity(), milliseconds, signal);
+    if (binding === null) throw new Error("identity unavailable");
+    audit.bind(id, hash(bindingSchema.parse(binding)));
+  } catch {
+    try { audit.finish(id, "refused", true); } catch { /* Fail closed. */ }
     return { ok: false, code: "unavailable" };
   }
   let outcome: "success" | "refused" | "failed" = "failed";

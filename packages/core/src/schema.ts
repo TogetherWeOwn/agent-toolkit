@@ -5,8 +5,10 @@ export const codes = [
 export type Code = (typeof codes)[number];
 
 export class Refusal extends Error {
-  constructor(readonly code: Code) {
+  readonly code: Code;
+  constructor(code: Code) {
     super(code);
+    this.code = code;
   }
 }
 
