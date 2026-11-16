@@ -4,6 +4,24 @@ Reusable, deny-by-default policy helpers and synthetic test fixtures for narrow 
 
 A real tool keeps broad and internal-derived credentials in its trusted broker process and exposes only explicit, runtime-validated operations. Neither prompt instructions nor a model-generated schema is an authorization boundary. Prefer provider-native resource scoping or an existing broker when sufficient.
 
+## Direction
+
+Last reviewed: 2026-11-16. These are current intentions, not commitments or
+release dates. They do not imply that the packages or integrations are complete,
+accepted, installed or enabled.
+
+- Develop typed provider or group packages for Cloudflare, PlanetScale, Neon and
+  GitHub, with bounded policy and audit and credentials retained broker-side.
+- Maintain existing Paperclip-specific packages only; no new capability milestones
+  are planned for them. This does not limit the non-Paperclip provider toolkit.
+- The collector programme is deferred and is not accepted or installed. Live
+  access-gap coverage is unknown.
+
+Non-goals for this direction include promising provider coverage, installations,
+production readiness or a collector roadmap. Existing workspace descriptions and
+historical verification below remain as records, not proof of current deployment.
+For non-security questions or feedback, use the [public issue tracker](https://github.com/TogetherWeOwn/agent-toolkit/issues).
+
 ## Workspace
 
 - `packages/core`: shared bounded closed JSON schemas, ASCII scope guards, binding/lease/cap checks, exact dispatch, fixed-field audit and result/error boundary, durable adapter interfaces.
