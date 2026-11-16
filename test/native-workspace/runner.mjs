@@ -6,6 +6,9 @@ import { createServer } from 'node:net';
 import { mkdtemp, mkdir, lstat, realpath, readFile, writeFile, copyFile, access, rm, symlink, readdir } from 'node:fs/promises';
 import { dirname, basename, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertOriginalGraphAdmission } from './admission.mjs';
+
+assertOriginalGraphAdmission();
 
 const here = dirname(fileURLToPath(import.meta.url));
 const node = process.execPath;

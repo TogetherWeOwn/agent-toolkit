@@ -22,6 +22,8 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '24.21.0'
+      - name: Require original graph admission before resolution
+        run: node --input-type=module -e "import { assertOriginalGraphAdmission } from './test/native-workspace/admission.mjs'; assertOriginalGraphAdmission()"
       - name: Resolve candidate without lifecycle scripts
         run: |
           set -euo pipefail
