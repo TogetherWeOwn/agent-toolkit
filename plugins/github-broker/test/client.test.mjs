@@ -65,6 +65,9 @@ test('REST client permits only fixed reads and current task/workspace selectors'
   const f = fixture();
   for (const [name, input] of [
     ['github.pr_merge', args], ['constructor', args], ['https://other.example', args],
+    ['github.pr_create', { ...base, head: 'agent/example/topic', base: 'main', title: 'feat: example', body: 'Example' }],
+    ['github.pr_comment', { ...args, body: 'Example' }], ['github.issue_comment', { ...args, body: 'Example' }],
+    ['github.commit_files', { ...base, branch: 'agent/example/topic', expectedParent: 'a'.repeat(40), message: 'feat: example', files: [{ path: 'example', contentBase64: 'aGk=' }] }],
     ['github.pr_get', { ...args, issueId: projectId }], ['github.pr_get', { ...args, workspaceId: projectId }],
     ['github.pr_get', { ...args, url: 'https://other.example' }], ['github.pr_get', { ...args, agentId }],
     ['github.pr_get', { ...args, confirmation: true }], ['github.pr_get', { ...args, repoId: '101' }],

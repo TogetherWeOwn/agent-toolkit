@@ -5,8 +5,8 @@ import { closed, integer, oneOf } from "../../core/src/index.js";
 
 export const API_ORIGIN = "https://api.github.com";
 export const API_VERSION = "2022-11-28";
-export type Permissions = Partial<Record<"contents" | "pull_requests" | "checks" | "statuses" | "actions" | "metadata" | "issues", "read">>;
-export interface Request { url: string; method: "GET" | "POST" | "DELETE"; headers: Record<string, string>; body?: string }
+export type Permissions = Partial<Record<"contents" | "pull_requests" | "checks" | "statuses" | "actions" | "metadata" | "issues", "read" | "write">>;
+export interface Request { url: string; method: "GET" | "POST" | "PATCH" | "DELETE"; headers: Record<string, string>; body?: string }
 export interface Response { status: number; headers: Record<string, string>; body: string; receivedAt?: number }
 // Deadline and dispatch marker are worker-local, never serialized to the SDK.
 export type Transport = (request: Request, deadline?: number, onDispatch?: () => void) => Promise<Response>;
@@ -35,7 +35,7 @@ export interface RevocationEvidence {
 function check(value: unknown, rule: string): asserts value { if (!value) throw new GitHubFailure(rule); }
 const id = integer(1, Number.MAX_SAFE_INTEGER);
 const permissionNames = ["contents", "pull_requests", "checks", "statuses", "actions", "metadata", "issues"] as const;
-export function mintScope(value: unknown): { repository_ids: number[]; permissions: Permissions } {
+export function mintScope(value: unknown, allowWrites = false): { repository_ids: number[]; permissions: Permissions } {
   check(value && typeof value === "object" && !Array.isArray(value), "mint.scope_required");
   const v = value as Record<string, unknown>;
   check(Object.keys(v).length === 2 && Object.hasOwn(v, "repository_ids") && Object.hasOwn(v, "permissions"), "mint.scope_required");
@@ -44,7 +44,7 @@ export function mintScope(value: unknown): { repository_ids: number[]; permissio
   check(v.permissions && typeof v.permissions === "object" && !Array.isArray(v.permissions), "mint.permissions_required");
   const keys = Object.keys(v.permissions);
   check(keys.length > 0 && keys.every(k => permissionNames.includes(k as typeof permissionNames[number])), "mint.permissions_required");
-  const shape = Object.fromEntries(keys.map(k => [k, oneOf(["read"])]));
+  const shape = Object.fromEntries(keys.map(k => [k, oneOf(allowWrites && ["contents", "pull_requests", "issues"].includes(k) ? ["read", "write"] : ["read"])]));
   const permissions = closed(shape).parse(v.permissions) as Permissions;
   return { repository_ids, permissions };
 }
@@ -188,8 +188,10 @@ export async function withInstallationToken<T>(options: {
   transport: Transport; appId: number; installationId: number; privateKey: string; scope: unknown; now: number;
   observe(response: Response, sensitive: readonly string[]): string | undefined;
   onRevocation?(evidence: RevocationEvidence): void;
+  write?: boolean;
 }, use: (token: string, sensitive: readonly string[]) => Promise<T>): Promise<T> {
-  const scope = mintScope(options.scope); // Hard guard BEFORE signing or HTTP.
+  check(!options.write || options.appId === 5646907, "mint.write_app");
+  const scope = mintScope(options.scope, options.write === true); // Hard guard BEFORE signing or HTTP.
   id.parse(options.installationId);
   const jwt = buildAppJwt(options.appId, options.privateKey, options.now);
   const minted = await request(options.transport, "POST", `/app/installations/${options.installationId}/access_tokens`, jwt, { body: JSON.stringify(scope) });
@@ -208,7 +210,7 @@ export async function withInstallationToken<T>(options: {
     check(Array.isArray(body.repositories) && body.repositories.length === 1 && body.repositories[0]?.id === scope.repository_ids[0], "mint.returned_repositories");
     check(body.permissions && typeof body.permissions === "object" && !Array.isArray(body.permissions), "mint.returned_permissions");
     const permissions = body.permissions as Record<string, unknown>;
-    check(Object.entries(permissions).every(([k, v]) => v === "read" && (k === "metadata" || Object.hasOwn(scope.permissions, k))) && Object.keys(scope.permissions).every(k => permissions[k] === "read"), "mint.returned_permissions");
+    check(Object.entries(permissions).every(([k, v]) => (k === "metadata" && v === "read") || (Object.hasOwn(scope.permissions, k) && v === scope.permissions[k as keyof Permissions])) && Object.keys(scope.permissions).every(k => permissions[k] === scope.permissions[k as keyof Permissions]), "mint.returned_permissions");
     return await use(token, [options.privateKey, jwt, token]);
   } finally {
     try {

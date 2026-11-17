@@ -1,4 +1,18 @@
-# GitHub read broker acceptance record
+# GitHub broker acceptance record
+
+## P2 source-only delta — acceptance pending
+
+The [P2 source contract](README.md#p2-source-only-write-contract--not-enabled) and [write threat boundary](THREAT-MODEL.md#p2-write-boundary) supersede read-only statements below **only for the four explicitly registered Builder tools**. P1 reads, caller/recovery and operational gates are unchanged. No new artifact pin, install, enablement, live write/canary, credential or permission/config change is authorized or performed. The existing source evidence below is historical, never exact-head evidence for this delta.
+
+Required source acceptance:
+
+1. Actions runs/jobs for the exact source head: unchanged P1 fixtures plus `test/writes.test.mjs`, flat twelve-tool discovery and explicit read-client write refusal. No local full suite/CI mirror is run. Red-before is not claimed for newly written fixtures.
+2. Independent Security review of App-only identity and Builder/repository/branch policy; owner overrides, all APPROVE/other review and out-of-scope writes refused pre-secret/network; workflow and review-instruction guards including old paths; no status/check/Actions writes or bot triggers.
+3. Independent cryptography review of narrow-App write-mode mint, exact returned permission envelope, unchanged JWT/secret/cleanup contract and truthful no-custom-author/committer/signature Git Data request shape. Do not infer Verified signing from fixtures.
+4. Final independent QA of source-only production classification, exact-head CI/Devin/CodeQL/required rules and finding dispositions; squash-merge the exact accepted source head before final approval. This does not accept the installed envelope or waive any rollout prerequisites.
+5. Toolsmith later consumes merged source through a separately reviewed artifact/operational path, preserving P1-before-P2 rollout and new exact-artifact/config/host acceptance. Actual App-authored PR/commit verification, per-caller cleanup and pipeline outcomes remain canary evidence for that later authorization, not this source PR. Operator-only watcher `ourLogins` handoff remains pending.
+
+Residuals must be accepted explicitly: no atomic cross-service policy/ref transaction, no distributed lock or durable idempotency, no rollback claim after write-attempt failure, no workflows permission, no owner lane, no review/merge lane, and no expansion of the recovery REST client. Existing native host envelope/approval and cleanup limitations remain operational gates.
 
 **NOT ACCEPTED FOR ENABLEMENT.** Source and offline fixtures are not evidence of a working live service. The pinned SDK's empty-body response reconstruction is addressed by the temporary mitigation below, pending renewed verification; the host MCP result-envelope defect remains unchanged, with an alternative run-scoped REST caller path pending acceptance. See [README](README.md#known-host-compatibility-blockers). Acceptance of the design is **not** acceptance of an artifact, configuration, installation or running service. Offline fixtures use synthetic RSA keys and installation tokens; historical green results do not apply to a new mitigation head. No runtime changes or live credential calls are part of this source repair.
 

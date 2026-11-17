@@ -93,7 +93,7 @@ function hostFor(ctx: PluginContext, run: ToolRunContext, call: typeof hostCall)
 }
 export function register(ctx: PluginContext, call = createHostCaller()): void {
   const broker = new Broker();
-  for (const tool of tools) ctx.tools.register(tool.name, { displayName: tool.name, description: `READ ONLY. ${tool.description}`, parametersSchema: tool.inputSchema }, async (args, run) => {
+  for (const tool of tools) ctx.tools.register(tool.name, { displayName: tool.name, description: `${tool.write ? "APP-ONLY BUILDER WRITE." : "READ ONLY."} ${tool.description}`, parametersSchema: tool.inputSchema }, async (args, run) => {
     // Gateway identity is the only identity source. Do not merge args into run.
     const result = await broker.execute(hostFor(ctx, run, call), tool.name, args, run);
     const content = result.content[0]!.text;

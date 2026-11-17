@@ -1,6 +1,6 @@
 import type { Schema } from "../../../packages/core/src/index.js";
 
-export const operations = ["github.repo_read", "github.pr_list", "github.pr_get", "github.pr_files", "github.checks_get", "github.rulesets_get", "github.actions_runs_list", "github.issue_read"] as const;
+export const operations = ["github.repo_read", "github.pr_list", "github.pr_get", "github.pr_files", "github.checks_get", "github.rulesets_get", "github.actions_runs_list", "github.issue_read", "github.pr_create", "github.pr_comment", "github.issue_comment", "github.commit_files"] as const;
 export type Operation = typeof operations[number];
 export type IdentityLane = "app" | "owner";
 export type Profile = "builder" | "lead" | "reviewer-read" | "release" | "coordinator-read" | "none";
@@ -13,7 +13,7 @@ export interface Policy {
   companyId: string;
   revision: number;
   repositories: Repository[];
-  agents: { agentId: string; profile: Profile; identityLane: IdentityLane; repositoryIds: number[] }[];
+  agents: { agentId: string; profile: Profile; identityLane: IdentityLane; repositoryIds: number[]; branchSlug?: string }[];
 }
 export interface SecretRef { type: "secret_ref"; secretId: string }
 export interface Config { appId: number; installationId: number; privateKeySecretRef: SecretRef; policy: Policy }
@@ -27,8 +27,14 @@ export interface Tool {
   schema: Schema<Arguments>;
   requests(args: Arguments): Request[];
   project(body: unknown, args: Arguments): unknown;
+  write?: {
+    permissions: Partial<Record<"contents" | "pull_requests" | "issues", "read" | "write">>;
+    maxRequests(args: Arguments): number;
+    execute(api: WriteApi, args: Arguments, repository: Record<string, unknown>): Promise<unknown>;
+  };
 }
-export interface HttpRequest { url: string; method: "GET" | "POST" | "DELETE"; headers: Record<string, string>; body?: string }
+export type WriteApi = (method: "GET" | "POST" | "PATCH", path: string, status: number, body?: unknown) => Promise<unknown>;
+export interface HttpRequest { url: string; method: "GET" | "POST" | "PATCH" | "DELETE"; headers: Record<string, string>; body?: string }
 export interface HttpResponse { status: number; headers: Record<string, string>; body: string }
 export interface Audit {
   event: string; time: number; agentId: string | null; runId: string | null; companyId: string | null;
@@ -37,6 +43,7 @@ export interface Audit {
   requestIds: string[]; outcome: "pending" | "success" | "error";
   providerFailure?: { rule: "rate.github"; retryAfterSeconds: number };
   revocation?: import("../../../packages/github/src/index.js").RevocationEvidence;
+  writeAttempted?: boolean;
 }
 export interface Host {
   config(): Promise<unknown>;
