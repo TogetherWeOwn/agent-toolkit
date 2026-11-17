@@ -1,0 +1,42 @@
+name: Generate fixture lock candidate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'test/native-workspace/package.json'
+      - '.github/workflows/fixture-lock-candidate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.21.0'
+      - name: Require original graph admission before resolution
+        run: node --input-type=module -e "import { assertOriginalGraphAdmission } from './test/native-workspace/admission.mjs'; assertOriginalGraphAdmission()"
+      - name: Resolve candidate without lifecycle scripts
+        run: |
+          set -euo pipefail
+          test "$(node --version)" = v24.21.0
+          test "$(npm --version)" = 11.19.0
+          env -i PATH="$PATH" HOME="$RUNNER_TEMP" \
+            npm --prefix test/native-workspace install --package-lock-only --ignore-scripts --workspaces=false \
+              --registry=https://registry.npmjs.org \
+              --userconfig=/nonexistent-native-witness-npmrc --globalconfig=/dev/null \
+              --cache="$RUNNER_TEMP/native-witness-npm-cache" --no-audit --no-fund
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: fixture-lock-candidate
+          path: test/native-workspace/package-lock.json
+          if-no-files-found: error
+          retention-days: 1

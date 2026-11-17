@@ -15,6 +15,18 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  admission-controls:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.21.0'
+      - run: node --test test/native-workspace/admission.test.mjs
   selection-revision:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -34,6 +46,8 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '24.21.0'
+      - name: Require original graph admission before acquisition
+        run: node --input-type=module -e "import { assertOriginalGraphAdmission } from './test/native-workspace/admission.mjs'; assertOriginalGraphAdmission()"
       - name: Locked tokenless setup without lifecycle scripts
         run: |
           set -euo pipefail

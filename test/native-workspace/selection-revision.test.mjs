@@ -7,6 +7,9 @@ import { join, dirname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import { connect } from 'node:net';
+import { assertOriginalGraphAdmission } from './admission.mjs';
+
+assertOriginalGraphAdmission();
 
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const home = process.env.HOME;
