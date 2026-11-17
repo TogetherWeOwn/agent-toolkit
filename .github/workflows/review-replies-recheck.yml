@@ -1,0 +1,78 @@
+# Ruleset workflows ignore review events and run only on their default PR types.
+# Re-run the existing required check when reviews, thread replies or ready state change;
+# this helper never passes, replaces or bypasses that check.
+# https://docs.github.com/en/enterprise-cloud@latest/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets
+name: Review replies recheck
+
+on:
+  pull_request:
+    types: [ready_for_review]
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created, edited, deleted]
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  recheck:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !(github.event_name == 'pull_request_review_comment' &&
+        (github.event.action == 'edited' || github.event.action == 'deleted' || github.event.comment.in_reply_to_id) &&
+        contains(fromJSON('["devin-ai-integration[bot]","sourcery-ai[bot]","coderabbitai[bot]"]'), github.event.comment.user.login))
+    # Apply concurrency only to eligible jobs: skipped bot chatter must not
+    # cancel the newest real reply's helper while it waits for the check.
+    concurrency:
+      group: review-replies-recheck-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Re-run the latest required PR standards check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          # A review can arrive before GitHub creates the required run.
+          run=''
+          for _ in $(seq 1 12); do
+            run=$(gh api --paginate --slurp \
+              "repos/$REPO/actions/runs?head_sha=$HEAD_SHA&per_page=100" |
+              jq -r --argjson pr "$PR_NUMBER" '[.[].workflow_runs[] |
+                select(.name == "PR standards (required entry point)" and .event == "pull_request"
+                  and .path == ".github/workflows/pr-standards-required.yml"
+                  and any(.pull_requests[]?; .number == $pr))]
+                | max_by(.created_at, .id)
+                | if . == null then "" else [.id, .html_url] | @tsv end')
+            [ -n "$run" ] && break
+            sleep 5
+          done
+          if [ -z "$run" ]; then
+            printf '%s\n' '::error::No required PR standards run found for this PR and head; re-run this helper after the required run appears.'
+            exit 1
+          fi
+          IFS=$'\t' read -r id url <<< "$run"
+          # The active run may already have fetched threads before this reply.
+          # Always refresh it after completion, including helper-triggered attempts.
+          for _ in $(seq 1 60); do
+            current=$(gh api "repos/$REPO/actions/runs/$id" --jq '[.status, .run_attempt] | @tsv')
+            IFS=$'\t' read -r status attempt <<< "$current"
+            [ "$status" = completed ] && break
+            sleep 10
+          done
+          if [ "$status" != completed ]; then
+            printf '%s\n' '::error::Required PR standards run still active after 10 minutes; re-run this helper after it completes.'
+            exit 1
+          fi
+          if [ "$attempt" -ge 50 ]; then
+            printf '%s\n' '::error::Required PR standards run reached the 50-attempt safety limit; push a commit or close and reopen the PR to create a new run.'
+            exit 1
+          fi
+          gh api --method POST "repos/$REPO/actions/runs/$id/rerun" --silent
+          printf 'Re-requested required PR standards check: %s\n' "$url"
