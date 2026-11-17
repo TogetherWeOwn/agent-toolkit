@@ -85,7 +85,7 @@ jobs:
       - run: timeout -k 10 120 npm run typecheck --workspace packages/github
       - run: timeout -k 10 120 npm run typecheck --workspace plugins/github-broker
       - run: timeout -k 10 120 npm run typecheck --workspace plugins/neon-broker
-      - run: timeout -k 10 300 npm run test:covering -- test/source-checks.test.mjs plugins/neon-broker/test/metadata.test.mjs plugins/github-broker/test/discovery.test.mjs
+      - run: timeout -k 10 300 npm run test:covering -- test/source-checks.test.mjs plugins/neon-broker/test/metadata.test.mjs plugins/neon-broker/test/branch-features.test.mjs plugins/github-broker/test/discovery.test.mjs
       - name: Prove source checks emitted no build artifacts
         run: |
           test ! -d dist
