@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createNeonMetadataOperations, MAX_PAGES } from '../dist/plugins/neon-broker/src/metadata.js';
 import { createNeonMetadataTransport, NEON_ORIGIN, RESPONSE_BYTES, REQUEST_TIMEOUT_MS } from '../dist/plugins/neon-broker/src/transport.js';
+import { field, optional, rows, boolean } from '../dist/plugins/neon-broker/src/projection.js';
 import { scope, project, branch, endpoint, cases, canary, fixture, response } from './helpers.mjs';
 
 for (const [name, args, raw, expected] of cases) {
@@ -263,10 +264,42 @@ test('transport refuses CR/LF credentials before invoking injected fetch', async
   }
 });
 
-test('fixed transport exposes only five methods and rejects path injection even at the transport seam', () => {
+test('fixed transport exposes only metadata and branch-feature methods and rejects path injection', () => {
   const transport = createNeonMetadataTransport(() => { throw Error('not called'); });
-  assert.equal(Object.keys(transport).length, 5);
+  assert.deepEqual(Object.keys(transport).sort(), [
+    'getProject', 'listProjectBranches', 'getProjectBranch', 'listProjectBranchEndpoints', 'getProjectEndpoint',
+    'getProjectBranchRealtime', 'getProjectBranchStorage', 'getProjectBranchAiGateway',
+  ].sort());
   assert.throws(() => transport.getProject('../credentials', { credential: canary, signal: new AbortController().signal }));
+});
+
+test('branch feature transport uses fixed paths and rejects unsafe path segments', async () => {
+  const requests = [];
+  const transport = createNeonMetadataTransport((url, init) => { requests.push({ url, init }); return Promise.resolve(response({ ok: true })); });
+  const options = { credential: canary, signal: new AbortController().signal };
+  for (const [method, suffix] of [['getProjectBranchRealtime', 'realtime'], ['getProjectBranchStorage', 'storage'],
+    ['getProjectBranchAiGateway', 'ai_gateway']]) {
+    assert.deepEqual(await transport[method]('project-a', 'br-a', options), { ok: true });
+    const { url, init } = requests.at(-1);
+    assert.equal(url, `${NEON_ORIGIN}/api/v2/projects/project-a/branches/br-a/${suffix}`);
+    assert.equal(init.method, 'GET');
+    assert.equal(init.body, undefined);
+    assert.equal(init.redirect, 'error');
+    assert.throws(() => transport[method]('project-a', '../escape', options));
+  }
+  assert.equal(requests.length, 3);
+});
+
+test('closed projection primitives reject getters, sparse rows and invalid booleans', () => {
+  assert.equal(field({ enabled: true }, 'enabled'), true);
+  assert.equal(optional({}, 'revision'), undefined);
+  assert.throws(() => field(Object.defineProperty({}, 'enabled', { enumerable: true, get() { throw Error('getter'); } }), 'enabled'));
+  assert.throws(() => field(Object.create({ enabled: true }), 'enabled'));
+  assert.deepEqual(rows([true], 1), [true]);
+  assert.throws(() => rows(new Array(1), 1));
+  assert.throws(() => rows([true, false], 1));
+  assert.equal(boolean(false), false);
+  assert.throws(() => boolean('false'));
 });
 
 test('194-operation inventory stays explicit: five implemented, no review/enablement or package completeness', () => {

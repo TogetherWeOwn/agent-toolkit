@@ -1,9 +1,10 @@
 import { closed, identifier, integer, jsonData, oneOf, text } from "../../../packages/core/src/schema.js";
 import type { Json, Prepared, ProviderOperation } from "../compat/provider-contracts.js";
 import { PAGE_SIZE, type NeonMetadataTransport } from "./transport.js";
+import { MAX_ITEMS } from "./limits.js";
 
+export { MAX_ITEMS } from "./limits.js";
 export const MAX_PAGES = 3;
-export const MAX_ITEMS = PAGE_SIZE * MAX_PAGES;
 export const METADATA_OPERATIONS = ["getProject", "listProjectBranches", "getProjectBranch",
   "listProjectBranchEndpoints", "getProjectEndpoint"] as const;
 export type MetadataOperation = typeof METADATA_OPERATIONS[number];
