@@ -12,8 +12,9 @@ import { checksGet, checkSignals } from "./tools/checks-get.js";
 import { rulesetsGet } from "./tools/rulesets-get.js";
 import { actionsRunsList } from "./tools/actions-runs-list.js";
 import { issueRead } from "./tools/issue-read.js";
+import { workflowDispatchAllowlisted } from "./tools/workflow-dispatch-allowlisted.js";
 
-export const tools = [repoRead, prList, prGet, prFiles, checksGet, rulesetsGet, actionsRunsList, issueRead];
+export const tools = [repoRead, prList, prGet, prFiles, checksGet, rulesetsGet, actionsRunsList, issueRead, workflowDispatchAllowlisted];
 const registry = new Map(tools.map(t => [t.name, t]));
 const schemas = new Map(tools.map(t => [t.name, t.schema]));
 interface Cache { value: unknown; at: number; generation: number }
@@ -56,10 +57,11 @@ export class Broker {
     let phase: Audit["phase"] = "refused", reserved = false, installationKey: string | null = null;
     const requestIds: string[] = [];
     let providerFailure: Audit["providerFailure"], revocation: Audit["revocation"];
+    let dispatchCoords: NonNullable<Audit["dispatch"]> | null = null;
     const emit = async (decision: Audit["decision"], rule: string, outcome: Audit["outcome"]) => {
       try {
         await host.audit({ event, time: host.clock(), agentId: caller?.agentId ?? null, runId: caller?.runId ?? null, companyId: caller?.companyId ?? null,
-          policyHash: policyDigest, policyRevision: revision, repoId: args?.repoId ?? null, operation, phase, decision, rule, requestIds: [...requestIds], outcome, ...(providerFailure ? { providerFailure } : {}), ...(revocation ? { revocation } : {}) });
+          policyHash: policyDigest, policyRevision: revision, repoId: args?.repoId ?? null, operation, phase, decision, rule, requestIds: [...requestIds], outcome, ...(dispatchCoords ? { dispatch: { workflow: dispatchCoords.workflow, ref: dispatchCoords.ref, inputs: { ...dispatchCoords.inputs } } } : {}), ...(providerFailure ? { providerFailure } : {}), ...(revocation ? { revocation } : {}) });
       } catch { throw new Denied("audit.unavailable"); }
     };
     try {
@@ -67,6 +69,10 @@ export class Broker {
       if (typeof name === "string" && operations.includes(name as Operation)) operation = name as Operation;
       args = dispatch(schemas, name, input).args;
       const tool = registry.get(operation as Operation)!;
+      // Sole-write dispatch coordinates (validated, non-secret inputs by construction) so the audit identifies the write.
+      if (operation === "github.workflow_dispatch_allowlisted" && typeof args.workflow === "string" && typeof args.ref === "string" && args.inputs !== null && typeof args.inputs === "object" && !Array.isArray(args.inputs)) {
+        dispatchCoords = { workflow: args.workflow, ref: args.ref, inputs: { ...(args.inputs as Record<string, string>) } };
+      }
       const config = parseConfig(await host.config());
       policyDigest = policyHash(config); revision = config.policy.revision;
       const repo = await authorize(host, config.policy, caller, tool, args);
@@ -85,11 +91,13 @@ export class Broker {
         await authorize(host, config.policy, caller!, tool, args!);
         guard(policyHash(parseConfig(await host.config())) === policyDigest, "policy.changed");
       };
+      // The sole write is non-idempotent: never cache it, never serve it from cache.
+      const isWrite = tool.write === true || requests.some(r => (r.method ?? "GET") !== "GET" || (r.level ?? "read") === "write");
       keys = requests.map(r => hash({ policyDigest, caller, args, path: r.path }));
       for (const [k, v] of this.cache) if (host.clock() - v.at >= 60000) this.cache.delete(k);
       const cached = keys.map(k => this.cache.get(k));
       let values: unknown[];
-      if (cached.every(c => c && host.clock() - c.at < 10000)) {
+      if (!isWrite && cached.every(c => c && host.clock() - c.at < 10000)) {
         await revalidate();
         values = cached.map(c => c!.value);
       } else {
@@ -113,7 +121,7 @@ export class Broker {
           return safeId;
         };
         values = await withInstallationToken({ transport: host.http.bind(host), appId: config.appId, installationId: config.installationId, privateKey,
-          scope: { repository_ids: [repo.id], permissions: Object.fromEntries(requests.map(r => [r.permission, "read"])) }, now: host.clock(), observe, onRevocation: evidence => { revocation = evidence; } }, async (token, sensitive) => {
+          scope: { repository_ids: [repo.id], permissions: Object.fromEntries(requests.map(r => [r.permission, r.level ?? "read"])) }, now: host.clock(), observe, onRevocation: evidence => { revocation = evidence; } }, async (token, sensitive) => {
           const clean = (v: unknown) => scrub(v, [...sensitive]);
           await revalidate();
           const prefix = `/repos/${repo.owner}/${repo.name}`;
@@ -123,13 +131,14 @@ export class Broker {
           const output: unknown[] = [];
           for (const [i, spec] of requests.entries()) {
             await revalidate();
-            const res = await request(host.http.bind(host), "GET", prefix + spec.path, token);
+            const expectedStatus = spec.expectedStatus ?? 200;
+            const res = await request(host.http.bind(host), spec.method ?? "GET", prefix + spec.path, token, spec.body === undefined ? {} : { body: spec.body });
             observe(res, sensitive);
-            guard(res.status === 200, "upstream.read"); // Unsolicited 304 never serves stale data.
-            const value = clean(tool.project(parse(res), args!));
+            guard(res.status === expectedStatus, expectedStatus === 204 ? "upstream.dispatch" : "upstream.read"); // Unsolicited 304 never serves stale data.
+            const value = clean(tool.project(expectedStatus === 204 ? null : parse(res), args!));
             guard(Buffer.byteLength(JSON.stringify(value)) <= 262144, "output.limit");
             output.push(value);
-            updates.set(keys[i]!, { value, at: host.clock(), generation });
+            if (!isWrite) updates.set(keys[i]!, { value, at: host.clock(), generation });
           }
           // Request IDs are provider-controlled too; scrub before durable audit.
           requestIds.splice(0, requestIds.length, ...(clean(requestIds) as string[]).filter(x => x !== "[REDACTED]"));

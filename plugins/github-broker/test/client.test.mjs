@@ -61,7 +61,7 @@ for (const [label, change] of [
   assert.equal(f.calls.length, 0);
 });
 
-test('REST client permits only fixed reads and current task/workspace selectors', async () => {
+test('REST client permits only fixed tools and current task/workspace selectors', async () => {
   const f = fixture();
   for (const [name, input] of [
     ['github.pr_merge', args], ['constructor', args], ['https://other.example', args],
@@ -71,13 +71,15 @@ test('REST client permits only fixed reads and current task/workspace selectors'
     ['github.repo_read', { ...base, mode: 'file', ref: 'main', path: '../private' }],
     ['github.repo_read', { ...base, mode: 'tree', ref: 'main', path: 'injected' }],
     ['github.rulesets_get', { ...base, page: 1, perPage: 10, rulesetId: 3 }],
+    ['github.workflow_dispatch_allowlisted', { ...base, workflow: 'deploy.yml', ref: 'main', inputs: {} }],
+    ['github.workflow_dispatch_allowlisted', { ...base, workflow: 'deploy-staging.yml', ref: 'topic', inputs: {} }],
   ]) assert.equal((await f.call(name, input)).error, 'client.context_or_arguments');
   assert.equal(f.calls.length, 0);
   assert.equal((await executeBrokerRead(f.env, 'not-a-uuid', 'github.pr_get', args, f.fetcher)).ok, false);
   assert.equal(f.calls.length, 0);
 });
 
-test('REST client supports all eight closed tool schemas including both missing-discovery reads', async () => {
+test('REST client supports all nine closed tool schemas including both missing-discovery reads and the allowlisted dispatch', async () => {
   const inputs = {
     'github.repo_read': { ...base, mode: 'tree', ref: 'main' },
     'github.pr_list': { ...base, state: 'open', page: 1, perPage: 10 },
@@ -85,6 +87,9 @@ test('REST client supports all eight closed tool schemas including both missing-
     'github.checks_get': { ...base, sha: 'a'.repeat(40), page: 1, perPage: 10 },
     'github.rulesets_get': { ...base, rulesetId: 3 },
     'github.actions_runs_list': { ...base, page: 1, perPage: 10 }, 'github.issue_read': args,
+    // The write tool passes the same closed-schema validation; the server-side
+    // broker still enforces devops profile, repository/workflow allowlist and audit.
+    'github.workflow_dispatch_allowlisted': { ...base, workflow: 'deploy-staging.yml', ref: 'main', inputs: {} },
   };
   for (const [name, input] of Object.entries(inputs)) {
     let calls = 0;

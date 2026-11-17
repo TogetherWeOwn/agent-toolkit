@@ -10,11 +10,12 @@ const variants = {
     { mode: 'compare', base: 'main', head: 'topic' },
   ],
   'github.rulesets_get': [{ page: 1, perPage: 10 }, { rulesetId: 1 }],
+  'github.workflow_dispatch_allowlisted': [{ workflow: 'deploy-staging.yml', ref: 'main', inputs: {} }],
 };
 
-test('all eight tools have flat discovery schemas without weakening closed variants', async () => {
+test('all nine tools have flat discovery schemas without weakening closed variants', async () => {
   const f = fixture();
-  assert.equal(f.handlers.size, 8);
+  assert.equal(f.handlers.size, 9);
   for (const [name, { metadata }] of f.handlers) {
     const schema = metadata.parametersSchema;
     assert.equal(schema.type, 'object');
@@ -41,6 +42,9 @@ test('all eight tools have flat discovery schemas without weakening closed varia
     ['github.rulesets_get', { page: 1 }],
     ['github.rulesets_get', { rulesetId: 1, page: 1, perPage: 10 }],
     ['github.rulesets_get', { rulesetId: 0 }],
+    ['github.workflow_dispatch_allowlisted', {}],
+    ['github.workflow_dispatch_allowlisted', { workflow: 'deploy.yml', ref: 'main', inputs: {} }],
+    ['github.workflow_dispatch_allowlisted', { workflow: 'deploy-staging.yml', ref: 'topic', inputs: {} }],
   ];
   for (const [name, args] of invalid) {
     const g = fixture();
