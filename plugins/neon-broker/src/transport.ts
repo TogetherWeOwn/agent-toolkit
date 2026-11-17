@@ -14,6 +14,11 @@ export interface NeonMetadataTransport {
   listProjectBranchEndpoints(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
   getProjectEndpoint(project: string, endpoint: string, options: MetadataRequestOptions): Promise<unknown>;
 }
+export interface NeonBranchFeatureTransport {
+  getProjectBranchRealtime(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
+  getProjectBranchStorage(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
+  getProjectBranchAiGateway(project: string, branch: string, options: MetadataRequestOptions): Promise<unknown>;
+}
 export type MetadataFetch = (url: string, init: RequestInit) => Promise<Response>;
 
 function id(value: string): string {
@@ -23,7 +28,7 @@ function id(value: string): string {
 
 // No default fetch/global transport, SDK, SQL client, retries or discovery fallback.
 // Construction is a source/test seam, not an installed or enabled runtime tool.
-export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadataTransport {
+export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadataTransport & NeonBranchFeatureTransport {
   async function get(path: string, query: URLSearchParams, options: MetadataRequestOptions): Promise<unknown> {
     if (/[\r\n]/.test(options.credential)) throw Error("UPSTREAM_UNAVAILABLE");
     const expiresAt = performance.now() + REQUEST_TIMEOUT_MS;
@@ -103,5 +108,11 @@ export function createNeonMetadataTransport(fetcher: MetadataFetch): NeonMetadat
       get(`/projects/${id(project)}/branches/${id(branch)}/endpoints`, new URLSearchParams(), options),
     getProjectEndpoint: (project: string, endpoint: string, options: MetadataRequestOptions) =>
       get(`/projects/${id(project)}/endpoints/${id(endpoint)}`, new URLSearchParams(), options),
+    getProjectBranchRealtime: (project: string, branch: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/branches/${id(branch)}/realtime`, new URLSearchParams(), options),
+    getProjectBranchStorage: (project: string, branch: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/branches/${id(branch)}/storage`, new URLSearchParams(), options),
+    getProjectBranchAiGateway: (project: string, branch: string, options: MetadataRequestOptions) =>
+      get(`/projects/${id(project)}/branches/${id(branch)}/ai_gateway`, new URLSearchParams(), options),
   });
 }
