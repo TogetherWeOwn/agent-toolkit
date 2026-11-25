@@ -83,7 +83,7 @@ jobs:
       contents: read
       issues: write
       pull-requests: write
-    uses: TogetherWeOwn/.github/.github/workflows/pr-size-gate.yml@ac9ce8d63e0cebd19ede904ac79137190c329964
+    uses: TogetherWeOwn/.github/.github/workflows/pr-size-gate.yml@bfdaf1532e1605281d366186e4ed9e8cfa0113fc
     with:
       pr-number: ${{ inputs.pr_number || '' }}
       exclude-extra: ""
